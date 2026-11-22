@@ -58,6 +58,15 @@ test('final necesario', () => {
   assert.equal(finalNecesario(60, 5), null); // (90,5 − 24) / 0,6 > 100
 });
 
+test('la nota sale del rendimiento sin redondear antes (Art. 58)', () => {
+  // 0,4 × 50 + 0,6 × 65,825 = 59,495: la primera cifra decimal es 4, queda en 1.
+  assert.equal(calificacionFinal(50, 65.825).nota, 1);
+  assert.equal(calificacionFinal(50, 65.83).nota, 1); // 59,498
+  // Coincide con lo que dice "final necesario".
+  assert.equal(calificacionFinal(50, finalNecesario(50)!).nota, 2); // 59,504
+  assert.equal(calificacionFinal(60, 77.5).nota, 3); // 24 + 46,5 = 70,5 exacto
+});
+
 test('recuperatorio: reemplaza el parcial más bajo si llega a 60 %', () => {
   const p = (nombre: string, porcentaje: number | null, rendida = true): Evaluacion => ({ nombre, componente: 'teoria', ponderacion: 1, porcentaje, rendida });
   // Promedio 40 (30 y 50): recupera con 70 → el 30 pasa a 70.
@@ -90,4 +99,9 @@ test('tras recuperar alcanza con PG ≥ 50', () => {
   assert.equal(r2.firma, false);
   assert.equal(r2.semaforo, 'rojo');
   assert.equal(promedioFirma(r2, { recuperado: true }), null);
+});
+
+test('el rendimiento mostrado no se redondea hacia arriba', () => {
+  assert.equal(calificacionFinal(50, 65.83).rendimiento, 59.49);
+  assert.equal(calificacionFinal(60, 60).rendimiento, 60);
 });

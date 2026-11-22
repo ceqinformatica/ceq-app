@@ -100,6 +100,10 @@ export default function CalculadoraFirma() {
   const cantLab = datos.evaluacionesDb.filter((e) => e.componente === 'laboratorio').length;
   const promedio = combinado ? null : promedioFirma(resultado, { recuperado: datos.recuperado });
   const puedeGuardar = resultado.firma && promedio != null;
+  // Asistencia cumplida o todavía sin cargar (no se descarta lo que no se sabe).
+  const sinFaltaDeAsistencia = [resultado.asistencia, resultado.asistenciaLab].every(
+    (a) => a == null || a.porcentaje == null || a.porcentaje >= a.minimo,
+  );
 
   const guardarMiFirma = async () => {
     if (promedio == null) return;
@@ -171,7 +175,14 @@ export default function CalculadoraFirma() {
         />
       )}
       {!combinado && !resultado.firma && promedio != null && (
-        <Mensaje tipo="info" texto="Te falta la asistencia mínima para poder guardar la firma." />
+        <Mensaje
+          tipo="info"
+          texto={
+            resultado.asistencia.porcentaje == null || (resultado.asistenciaLab != null && resultado.asistenciaLab.porcentaje == null)
+              ? 'Cargá tu asistencia abajo para poder guardar la firma.'
+              : 'Te falta la asistencia mínima para poder guardar la firma.'
+          }
+        />
       )}
       {msgFirma && <Mensaje texto={msgFirma.texto} tipo={msgFirma.tipo} />}
 
@@ -211,14 +222,15 @@ export default function CalculadoraFirma() {
           })
         )}
       </Tarjeta>
-      {!combinado && !datos.recuperado && !tieneRecuperatorio && !pendientesTeoria && puedeRecuperar(resultado.teoria) && (
+      {/* Art. 46 a): para optar al recuperatorio hay que haber cumplido la asistencia. */}
+      {!combinado && !datos.recuperado && !tieneRecuperatorio && !pendientesTeoria && puedeRecuperar(resultado.teoria) && sinFaltaDeAsistencia && (
         <Mensaje tipo="info" texto={`Tu promedio teórico está entre ${RECUPERACION_DESDE} y ${regla.minimoTeoria} %: podés rendir el recuperatorio en el 1.er llamado de finales (ese llamado queda usado). Si sacás ${RECUPERACION_MINIMO} % o más, reemplaza tu parcial más bajo. Cargalo como "Recuperatorio".`} />
       )}
       {regularizado && (
         <Mensaje tipo="exito" texto="Regularización aplicada: ocupa el lugar del parcial que faltaste. Recordá que el llamado en que la rendiste queda usado." />
       )}
       {!regularizado && !datos.evaluacionesDb.some(esRegularizacion) && datos.evaluacionesDb.filter((e) => esParcialTeorico(e) && !e.rendida).length === 1 && (
-        <Mensaje tipo="info" texto='¿Faltaste a ese parcial? Podés rendir la regularización en el 1.º o 2.º llamado de finales (ese llamado queda usado). Cargala como "Regularización". Con dos faltas no se puede regularizar.' />
+        <Mensaje tipo="info" texto='Si faltás a ese parcial, no cuenta como cero: podés rendir la regularización en el 1.º o 2.º llamado de finales (ese llamado queda usado). Cargala como "Regularización". Con dos faltas no se puede regularizar.' />
       )}
       {datos.recuperado && (
         <Mensaje tipo="exito" texto="Recuperación aplicada: reemplazó tu parcial más bajo. Ahora necesitás un promedio de firma de 50 % o más." />
