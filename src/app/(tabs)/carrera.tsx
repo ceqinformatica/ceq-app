@@ -70,14 +70,15 @@ export default function Carrera() {
   /** Hasta qué nivel están todas las obligatorias aprobadas o elegidas (0 = ninguno). */
   const nivelCompleto = useMemo(() => {
     if (!seleccion || !malla) return 0;
+    // El último nivel completo en el que elegiste algo ahora: los niveles que
+    // ya estaban aprobados de antes no cuentan solos.
     let ultimo = 0;
     for (const n of niveles) {
       const delNivel = malla.materiasDb.filter((m) => m.semestre === n && !m.grupo_optativa_id);
       if (!delNivel.every((m) => aprobada(m.id) || seleccion.has(m.id))) break;
-      ultimo = n;
+      if (delNivel.some((m) => seleccion.has(m.id))) ultimo = n;
     }
-    // Solo cuenta si elegiste algo: si todo ya estaba aprobado no hay nada que marcar.
-    return seleccion.size ? ultimo : 0;
+    return ultimo;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [seleccion, malla, niveles]);
   /** Saca de la selección las obligatorias desde el nivel n en adelante. */
@@ -255,14 +256,14 @@ export default function Carrera() {
                       texto={`${n}º`}
                       icono={elegido ? 'checkmark' : undefined}
                       elegido={elegido}
-                      onPress={() => (n === nivelCompleto ? quitarDesdeNivel(n) : hastaNivel(n))}
+                      onPress={() => (elegido ? quitarDesdeNivel(n) : hastaNivel(n))}
                     />
                   );
                 })}
               </View>
               <Text style={[s.filaDetalle, { marginTop: espacio.s }]} accessibilityLiveRegion="polite">
                 {seleccion.size
-                  ? `${nivelCompleto > 0 ? `Todo hasta ${nivelCompleto}º nivel. ` : ''}${seleccion.size} ${seleccion.size === 1 ? 'materia elegida' : 'materias elegidas'}.${nivelCompleto > 0 ? ' Tocá el último nivel de nuevo para sacarlo.' : ''}`
+                  ? `${nivelCompleto > 0 ? `Todo hasta ${nivelCompleto}º nivel. ` : ''}${seleccion.size} ${seleccion.size === 1 ? 'materia elegida' : 'materias elegidas'}.${nivelCompleto > 0 ? ' Tocá un nivel marcado para sacarlo.' : ''}`
                   : 'Todavía no elegiste ninguna.'}
               </Text>
             </Tarjeta>

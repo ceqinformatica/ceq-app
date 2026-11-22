@@ -1,9 +1,9 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useState } from 'react';
-import { Image, KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Hexagono, TramaHex } from '../components/graficos';
-import { Boton, Campo, comportamientoTeclado, logoCeq, Mensaje, s } from '../components/ui';
+import { Boton, Campo, EvitaTeclado, logoCeq, Mensaje, s } from '../components/ui';
 import { entrarConCorreo, entrarConGoogle, registrarseConCorreo } from '../lib/auth';
 import { supabaseConfigurado } from '../lib/supabase';
 import { colores, espacio, fuentes, radio, sombras } from '../tema';
@@ -37,7 +37,7 @@ export default function Login() {
   };
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: colores.marino }} behavior={comportamientoTeclado}>
+    <EvitaTeclado estilo={{ backgroundColor: colores.marino }}>
       <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled" bounces={false}>
         <View style={[est.portada, { paddingTop: insets.top + espacio.xxl }]} onLayout={(e) => setTam({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}>
           {tam.w > 0 && <TramaHex ancho={tam.w} alto={tam.h} opacidad={0.09} tam={44} />}
@@ -119,7 +119,7 @@ export default function Login() {
           </View>
         </View>
       </ScrollView>
-    </KeyboardAvoidingView>
+    </EvitaTeclado>
   );
 }
 
