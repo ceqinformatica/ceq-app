@@ -133,7 +133,7 @@ export default function CalculadoraFirma() {
             </View>
             <Text style={s.filaDetalle}>
               {promedio == null
-                ? `Aparece cuando llegás a ${regla.minimoTeoria} % en teoría${resultado.laboratorio ? ` y ${regla.minimoLaboratorio ?? regla.minimoTeoria} % en laboratorio` : ''}.`
+                ? `Aparece cuando cargás todas las notas y llegás a ${regla.minimoTeoria} % en teoría${resultado.laboratorio ? ` y ${regla.minimoLaboratorio ?? regla.minimoTeoria} % en laboratorio` : ''}.`
                 : datos.firmaGuardada != null
                   ? `Firma guardada: ${pct(datos.firmaGuardada)}.`
                   : 'Es el promedio que cuenta para el final.'}

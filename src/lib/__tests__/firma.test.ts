@@ -149,6 +149,8 @@ test('promedio de firma: (teoría + laboratorio) / 2 si los dos habilitan', () =
   assert.equal(promedioFirma(firma([e('teoria', 45), e('laboratorio', 90)])), null);
   // Sin laboratorio: solo teoría.
   assert.equal(promedioFirma(firma([e('teoria', 62), e('teoria', 71)], false)), 66.5);
+  // Firma asegurada pero con un parcial pendiente: el promedio todavía no es el final.
+  assert.equal(promedioFirma(firma([e('teoria', 100), e('teoria', 100), e('teoria', 0, false)], false)), null);
   // Con un parcial pendiente que todavía puede bajarla, no se da por cerrada.
   assert.equal(promedioFirma(firma([e('teoria', 55), e('teoria', 0, false), e('laboratorio', 80)])), null);
 });

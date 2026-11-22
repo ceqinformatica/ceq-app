@@ -243,12 +243,14 @@ export function pesosIguales(evals: Evaluacion[]): Evaluacion[] {
 }
 
 /**
- * Promedio de firma: si teoría y laboratorio llegan a su mínimo, el
- * promedio de los dos (o solo teoría si no hay laboratorio). null mientras
+ * Promedio de firma: con todas las notas cargadas, si teoría y laboratorio
+ * llegan a su mínimo, el promedio de los dos (o solo teoría si no hay laboratorio). null mientras
  * no se cumpla.
  */
 export function promedioFirma(r: Pick<ResultadoFirma, 'teoria' | 'laboratorio'>): number | null {
-  const llega = (c: ResultadoComponente | null) => c == null || (c.actual != null && c.actual >= c.minimo && (c.asegurado || c.necesario == null));
+  // Solo con todas las notas cargadas: si queda algo pendiente, el promedio
+  // todavía puede cambiar (aunque la firma ya esté asegurada).
+  const llega = (c: ResultadoComponente | null) => c == null || (c.actual != null && c.actual >= c.minimo && c.necesario == null);
   if (!llega(r.teoria) || !llega(r.laboratorio) || r.teoria.actual == null) return null;
   const lab = r.laboratorio?.actual ?? null;
   return redondear(lab == null ? r.teoria.actual : (r.teoria.actual + lab) / 2);
