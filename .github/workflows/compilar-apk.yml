@@ -1,4 +1,7 @@
-# Compila el APK de la app en los servidores de Expo (EAS Build).
+# Compila el APK de la app en los servidores de GitHub (eas build --local),
+# sin gastar el cupo mensual de compilaciones gratis de Expo. Expo solo
+# aporta las credenciales (keystore) guardadas en la cuenta.
+# El APK queda para descargar en Actions > la ejecución > Artifacts.
 # Se ejecuta cada vez que se aprueba un cambio en main, o a mano desde
 # la pestaña Actions ("Run workflow").
 # Necesita el secreto EXPO_TOKEN en Settings > Secrets and variables > Actions.
@@ -19,12 +22,13 @@ permissions:
   contents: read
 
 concurrency:
-  group: compilar-apk
+  group: compilar-apk-${{ github.ref }}-${{ inputs.perfil || 'preview' }}
   cancel-in-progress: true
 
 jobs:
   compilar:
     runs-on: ubuntu-latest
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
 
@@ -44,5 +48,22 @@ jobs:
 
       - run: npm test
 
-      - name: Mandar a compilar a Expo
-        run: eas build --platform android --profile ${{ inputs.perfil || 'preview' }} --non-interactive --no-wait
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Compilar en GitHub
+        env:
+          PERFIL: ${{ inputs.perfil || 'preview' }}
+        run: |
+          perfil="$PERFIL"
+          ext=apk; [ "$perfil" = production ] && ext=aab
+          eas build --platform android --profile "$perfil" --local --non-interactive --output "ceq-$perfil.$ext"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ceq-${{ inputs.perfil || 'preview' }}-${{ github.sha }}
+          path: ceq-*.*
+          retention-days: 30
+          if-no-files-found: error
