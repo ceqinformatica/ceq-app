@@ -136,6 +136,21 @@ select pg_temp.como('00000000-0000-0000-0000-00000000000a');
 select pg_temp.debe_ser('Ana ve el evento oficial', (select count(*) from public.eventos where usuario_id is null), 1);
 reset role;
 
+-- Promedio de firma ------------------------------------------------
+select pg_temp.como('00000000-0000-0000-0000-00000000000a');
+insert into public.materias_estudiante (materia_id, estado, promedio_firma)
+  values ('30000000-0000-0000-0000-000000000002', 'firmada', 70)
+  on conflict (usuario_id, materia_id) do update set promedio_firma = excluded.promedio_firma;
+select pg_temp.debe_ser('Ana guarda su promedio de firma',
+  (select count(*) from public.materias_estudiante where materia_id = '30000000-0000-0000-0000-000000000002' and promedio_firma = 70), 1);
+select pg_temp.debe_fallar('promedio de firma mayor a 100',
+  $$update public.materias_estudiante set promedio_firma = 101 where materia_id = '30000000-0000-0000-0000-000000000002'$$);
+reset role;
+select pg_temp.como('00000000-0000-0000-0000-00000000000b');
+select pg_temp.debe_ser('Beto no ve la firma de Ana',
+  (select count(*) from public.materias_estudiante where promedio_firma is not null), 0);
+reset role;
+
 -- Todas las tablas públicas tienen RLS ------------------------------
 select pg_temp.debe_ser('tablas sin RLS',
   (select count(*) from pg_class c join pg_namespace n on n.oid = c.relnamespace

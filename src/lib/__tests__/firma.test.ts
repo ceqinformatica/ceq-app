@@ -1,7 +1,7 @@
 /// <reference types="node" />
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { evaluarAsistencia, evaluarComponente, evaluarFirma, porcentajeEvaluacion, promedioPonderado, type Evaluacion, type ReglaFirma } from '../firma.ts';
+import { evaluarAsistencia, evaluarComponente, evaluarFirma, pesosIguales, porcentajeEvaluacion, promedioFirma, promedioPonderado, type Evaluacion, type ReglaFirma } from '../firma.ts';
 
 const ev = (o: Partial<Evaluacion>): Evaluacion => ({ nombre: 'x', componente: 'teoria', ponderacion: 0, rendida: true, ...o });
 
@@ -126,4 +126,31 @@ test('nota mínima exacta y todo rendido', () => {
   assert.equal(r.necesario, null);
   const bajo = evaluarComponente([ev({ ponderacion: 40, porcentaje: 59.99 }), ev({ ponderacion: 60, porcentaje: 60 })], 60);
   assert.equal(bajo.semaforo, 'rojo');
+});
+
+test('pesos automáticos: tres parciales valen un tercio cada uno', () => {
+  const evals: Evaluacion[] = [
+    { nombre: '1P', componente: 'teoria', ponderacion: 70, porcentaje: 40, rendida: true },
+    { nombre: '2P', componente: 'teoria', ponderacion: 20, porcentaje: 60, rendida: true },
+    { nombre: '3P', componente: 'teoria', ponderacion: 10, porcentaje: 80, rendida: true },
+  ];
+  assert.equal(promedioPonderado(pesosIguales(evals)), 60);
+});
+
+test('promedio de firma: (teoría + laboratorio) / 2 si los dos habilitan', () => {
+  const regla = { minimoTeoria: 50, minimoLaboratorio: 60, minimoAsistencia: 60, modoLaboratorio: 'separado' as const };
+  const e = (componente: 'teoria' | 'laboratorio', porcentaje: number, rendida = true): Evaluacion => ({ nombre: 'x', componente, ponderacion: 1, porcentaje, rendida });
+  const firma = (evals: Evaluacion[], tieneLaboratorio = true) => evaluarFirma({ regla, tieneLaboratorio, evaluaciones: evals });
+  // Teoría 60 (50, 70), laboratorio 80 → 70.
+  assert.equal(promedioFirma(firma([e('teoria', 50), e('teoria', 70), e('laboratorio', 80)])), 70);
+  // Laboratorio por debajo de 60: todavía no hay firma.
+  assert.equal(promedioFirma(firma([e('teoria', 90), e('laboratorio', 55)])), null);
+  // Teoría por debajo de 50.
+  assert.equal(promedioFirma(firma([e('teoria', 45), e('laboratorio', 90)])), null);
+  // Sin laboratorio: solo teoría.
+  assert.equal(promedioFirma(firma([e('teoria', 62), e('teoria', 71)], false)), 66.5);
+  // Firma asegurada pero con un parcial pendiente: el promedio todavía no es el final.
+  assert.equal(promedioFirma(firma([e('teoria', 100), e('teoria', 100), e('teoria', 0, false)], false)), null);
+  // Con un parcial pendiente que todavía puede bajarla, no se da por cerrada.
+  assert.equal(promedioFirma(firma([e('teoria', 55), e('teoria', 0, false), e('laboratorio', 80)])), null);
 });

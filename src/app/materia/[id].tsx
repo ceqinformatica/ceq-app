@@ -2,7 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Text, View } from 'react-native';
-import { nombreSemestre, SelectorEstado } from '../../components/academico';
+import { nombreSemestre, pct, SelectorEstado } from '../../components/academico';
 import { BarraSuperior, Boton, Campo, Cargando, EstadoVacio, Fila, Insignia, Mensaje, Pantalla, s, Seccion, Tarjeta } from '../../components/ui';
 import { useSesion } from '../../context/SesionProvider';
 import { cargarMalla, guardarEstadoMateria } from '../../datos/academico';
@@ -52,7 +52,7 @@ export default function DetalleMateria() {
       await guardarEstadoMateria(id, estado, notaNum);
       const estados = new Map(malla.estados);
       if (estado === 'pendiente') estados.delete(id);
-      else estados.set(id, { estado, notaFinal: estado === 'aprobada' ? notaNum : null });
+      else estados.set(id, { estado, notaFinal: estado === 'aprobada' ? notaNum : null, promedioFirma: actual?.promedioFirma ?? null });
       setDatos({ ...malla, estados });
       setMsg({ tipo: 'exito', texto: nuevos.length ? `Guardado. Ahora podés cursar: ${nuevos.join(', ')}.` : 'Guardado.' });
     } catch (e) {
@@ -108,8 +108,17 @@ export default function DetalleMateria() {
       )}
       {!notaValida && <Mensaje texto="La nota va de 1 a 5." />}
       <Boton texto="Guardar" icono="checkmark" onPress={guardar} cargando={guardando} deshabilitado={!cambio || !notaValida} estilo={{ marginTop: espacio.m }} />
-      {estado === 'cursando' && (
-        <Boton texto="Calcular mi firma" variante="secundario" icono="calculator-outline" onPress={() => router.push(`/firma/${materia.id}`)} />
+      {(estado === 'firmada' || estado === 'aprobada') && actual?.promedioFirma != null && (
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: espacio.s, marginTop: espacio.m }}>
+          <Ionicons name="ribbon" size={18} color={colores.marino} />
+          <Text style={[s.cuerpo, { fontFamily: fuentes.semibold, color: colores.marino }]}>Tu firma: {pct(actual.promedioFirma)}</Text>
+        </View>
+      )}
+      {estado === 'firmada' && actual?.promedioFirma == null && (
+        <Mensaje tipo="info" texto="Si cargás tus notas en la calculadora de firma, podés guardar ahí tu promedio de firma." />
+      )}
+      {(estado === 'cursando' || estado === 'firmada') && (
+        <Boton texto={estado === 'firmada' ? 'Ver mi firma' : 'Calcular mi firma'} variante="secundario" icono="calculator-outline" onPress={() => router.push(`/firma/${materia.id}`)} />
       )}
       {msg && <Mensaje texto={msg.texto} tipo={msg.tipo} />}
 
