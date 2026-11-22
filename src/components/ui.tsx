@@ -1,14 +1,66 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect } from 'expo-router';
 import { setStatusBarStyle } from 'expo-status-bar';
-import { useCallback, useState, type ComponentProps, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type ComponentProps, type ComponentRef, type ReactNode } from 'react';
 import {
-  ActivityIndicator, Image, KeyboardAvoidingView, Modal, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text,
+  ActivityIndicator, Image, Keyboard, KeyboardAvoidingView, Modal, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text,
   TextInput, View, type TextInputProps, type TextStyle, type ViewStyle,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colores, espacio, fuentes, radio, sombras, texto } from '../tema';
 import { TramaHex } from './graficos';
+
+/**
+ * Deja lugar al teclado para que no tape lo que se escribe.
+ *
+ * - iOS: KeyboardAvoidingView con padding (la ventana nunca se achica sola).
+ * - Android: la app va de borde a borde y, según la versión y si es un Modal,
+ *   la ventana puede achicarse sola o no. En vez de adivinar, se mide cuánto
+ *   del contenedor queda realmente debajo del teclado y solo eso se rellena:
+ *   si la ventana ya se achicó, el hueco da 0 y no se evita dos veces.
+ * - Web: nada.
+ */
+export function EvitaTeclado({ children, estilo }: { children: ReactNode; estilo?: ViewStyle }) {
+  if (Platform.OS === 'ios') return <KeyboardAvoidingView behavior="padding" style={[{ flex: 1 }, estilo]}>{children}</KeyboardAvoidingView>;
+  if (Platform.OS === 'android') return <HuecoTecladoAndroid estilo={estilo}>{children}</HuecoTecladoAndroid>;
+  return <View style={[{ flex: 1 }, estilo]}>{children}</View>;
+}
+
+function HuecoTecladoAndroid({ children, estilo }: { children: ReactNode; estilo?: ViewStyle }) {
+  const ref = useRef<ComponentRef<typeof View>>(null);
+  const arribaTeclado = useRef<number | null>(null);
+  const [hueco, setHueco] = useState(0);
+  const medir = useCallback(() => {
+    const tope = arribaTeclado.current;
+    if (tope == null) {
+      setHueco(0);
+      return;
+    }
+    ref.current?.measureInWindow((_x: number, y: number, _w: number, alto: number) => {
+      if (alto > 0) setHueco(Math.max(0, Math.round(y + alto - tope)));
+    });
+  }, []);
+  useEffect(() => {
+    const mostrar = Keyboard.addListener('keyboardDidShow', (e) => {
+      arribaTeclado.current = e.endCoordinates.screenY;
+      medir();
+      setTimeout(medir, 120); // por si la ventana se achica un instante después
+    });
+    const ocultar = Keyboard.addListener('keyboardDidHide', () => {
+      arribaTeclado.current = null;
+      setHueco(0);
+    });
+    return () => {
+      mostrar.remove();
+      ocultar.remove();
+    };
+  }, [medir]);
+  return (
+    <View ref={ref} onLayout={medir} style={[{ flex: 1 }, estilo, { paddingBottom: hueco }]}>
+      {children}
+    </View>
+  );
+}
 
 export const logoCeq = require('../../assets/logo-ceq.png');
 export type NombreIcono = ComponentProps<typeof Ionicons>['name'];
@@ -30,9 +82,15 @@ export function Pantalla({ children, scroll = true, estilo, cabecera, refrescand
     <RefreshControl refreshing={Boolean(refrescando)} onRefresh={onRefrescar} tintColor={cabecera ? colores.blanco : colores.marino} colors={[colores.marino]} />
   ) : undefined;
   return (
+    <EvitaTeclado estilo={s.pantalla}>
     <SafeAreaView style={s.pantalla} edges={cabecera ? ['left', 'right'] : ['top', 'left', 'right']}>
       {scroll ? (
-        <ScrollView keyboardShouldPersistTaps="handled" refreshControl={refresh} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="interactive"
+          refreshControl={refresh}
+          showsVerticalScrollIndicator={false}
+        >
           {cabecera}
           {contenido}
         </ScrollView>
@@ -43,6 +101,7 @@ export function Pantalla({ children, scroll = true, estilo, cabecera, refrescand
         </>
       )}
     </SafeAreaView>
+    </EvitaTeclado>
   );
 }
 
@@ -422,7 +481,7 @@ export function Hoja({ visible, titulo, onCerrar, children }: { visible: boolean
   const insets = useSafeAreaInsets();
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onCerrar} statusBarTranslucent>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+      <EvitaTeclado>
         <Pressable style={s.velo} onPress={onCerrar} accessibilityLabel="Cerrar" />
         <View style={[s.hoja, { paddingBottom: insets.bottom + espacio.l }]}>
           <View style={s.hojaAsa} />
@@ -430,9 +489,11 @@ export function Hoja({ visible, titulo, onCerrar, children }: { visible: boolean
             <Text style={[s.barraTitulo, { textAlign: 'left' }]}>{titulo}</Text>
             <BotonIcono icono="close" etiqueta="Cerrar" onPress={onCerrar} tamano={20} />
           </View>
-          <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>{children}</ScrollView>
+          <ScrollView keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive" showsVerticalScrollIndicator={false} style={{ flexShrink: 1 }}>
+            {children}
+          </ScrollView>
         </View>
-      </KeyboardAvoidingView>
+      </EvitaTeclado>
     </Modal>
   );
 }
