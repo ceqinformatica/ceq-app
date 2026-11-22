@@ -14,20 +14,35 @@ export const pct = (n: number | null | undefined) => (n == null ? '—' : `${Num
 export const nota = (n: number | null | undefined) => (n == null ? '—' : Number.isInteger(n) ? String(n) : n.toFixed(2).replace('.', ','));
 
 /** Ficha de una materia en la malla. */
-export function FichaMateria({ nombre, codigo, estado, notaFinal, faltan, onPress }: {
+export function FichaMateria({ nombre, codigo, estado, notaFinal, faltan, onPress, seleccionada }: {
   nombre: string; codigo?: string | null; estado: EstadoVisual; notaFinal?: number | null; faltan?: number; onPress: () => void;
+  /** En modo "Marcar varias": undefined = modo normal; true/false = casilla marcada o no. */
+  seleccionada?: boolean;
 }) {
   const c = coloresEstado[estado];
+  const modoSeleccion = seleccionada !== undefined;
   return (
     <Pressable
       onPress={onPress}
-      accessibilityRole="button"
+      accessibilityRole={modoSeleccion ? 'checkbox' : 'button'}
+      accessibilityState={modoSeleccion ? { checked: seleccionada } : undefined}
       accessibilityLabel={`${nombre}, ${c.nombre}${notaFinal != null ? `, nota ${notaFinal}` : ''}`}
-      style={({ pressed }) => [est.ficha, { backgroundColor: c.fondo, borderColor: c.borde }, estado === 'pendiente' && sombras.suave, pressed && { opacity: 0.85 }]}
+      style={({ pressed }) => [
+        est.ficha,
+        { backgroundColor: c.fondo, borderColor: c.borde },
+        estado === 'pendiente' && sombras.suave,
+        seleccionada && { borderColor: colores.marino, borderWidth: 2.5, backgroundColor: colores.cielo },
+        pressed && { opacity: 0.85 },
+      ]}
     >
+      {modoSeleccion && (
+        <View style={[est.casilla, seleccionada && { backgroundColor: colores.marino, borderColor: colores.marino }]}>
+          {seleccionada && <Ionicons name="checkmark" size={15} color={colores.blanco} />}
+        </View>
+      )}
       <View style={est.fichaArriba}>
         {codigo ? <Text style={[est.codigo, { color: c.texto }]} numberOfLines={1}>{codigo}</Text> : <View />}
-        <Ionicons name={c.icono as NombreIcono} size={16} color={c.texto} />
+        {!modoSeleccion && <Ionicons name={c.icono as NombreIcono} size={16} color={c.texto} />}
       </View>
       <Text style={[est.fichaNombre, estado === 'bloqueada' && { color: colores.gris }]} numberOfLines={3}>{nombre}</Text>
       <View style={{ marginTop: 'auto', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -124,6 +139,10 @@ export function SelectorEstado({ valor, onCambio, bloqueada }: { valor: EstadoMa
 
 const est = StyleSheet.create({
   ficha: { flex: 1, minHeight: 118, borderRadius: radio.m, borderWidth: 1, padding: espacio.m, gap: 6 },
+  casilla: {
+    position: 'absolute', top: 8, right: 8, width: 22, height: 22, borderRadius: 7, borderWidth: 2, borderColor: colores.linea,
+    backgroundColor: colores.superficieBlanca, alignItems: 'center', justifyContent: 'center', zIndex: 1,
+  },
   fichaArriba: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   codigo: { fontFamily: fuentes.semibold, fontSize: 10.5, letterSpacing: 0.8, opacity: 0.9 },
   fichaNombre: { fontFamily: fuentes.semibold, fontSize: 14, lineHeight: 18, color: colores.marino },

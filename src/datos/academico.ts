@@ -110,6 +110,41 @@ export async function guardarEstadoMateria(materiaId: string, estado: EstadoMate
   lanzar(error);
 }
 
+export interface CambioEstado {
+  materiaId: string;
+  estado: EstadoMateria;
+  notaFinal: number | null;
+}
+
+/**
+ * Guarda muchos estados de una sola vez (marcar varias aprobadas, deshacer).
+ * No exige prerrequisitos: quien carga en bloque su historial ya los cumplió.
+ */
+export async function guardarEstadosEnBloque(cambios: CambioEstado[]) {
+  if (!cambios.length) return;
+  const borrar = cambios.filter((c) => c.estado === 'pendiente').map((c) => c.materiaId);
+  const guardar = cambios
+    .filter((c) => c.estado !== 'pendiente')
+    .map((c) => ({ materia_id: c.materiaId, estado: c.estado, nota_final: c.estado === 'aprobada' ? c.notaFinal : null }));
+  if (MODO_DEMO) {
+    await esperar(250);
+    const tocadas = new Set(cambios.map((c) => c.materiaId));
+    db.estados = db.estados.filter((e) => !tocadas.has(e.materia_id));
+    for (const g of guardar) {
+      db.estados.push({ usuario_id: UID_DEMO, ...g, fecha: null, periodo: null, updated_at: new Date().toISOString() });
+    }
+    return;
+  }
+  if (guardar.length) {
+    const { error } = await supabase.from('materias_estudiante').upsert(guardar, { onConflict: 'usuario_id,materia_id' });
+    lanzar(error);
+  }
+  if (borrar.length) {
+    const { error } = await supabase.from('materias_estudiante').delete().in('materia_id', borrar);
+    lanzar(error);
+  }
+}
+
 /** Regla que aplica a una materia: la propia, o la general del plan. */
 export function reglaDe(reglas: ReglaFirmaDb[], materiaId: string): ReglaFirma | null {
   const r = reglas.find((x) => x.materia_id === materiaId) ?? reglas.find((x) => x.materia_id == null);
