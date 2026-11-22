@@ -57,7 +57,7 @@ export default function CalculadoraFirma() {
   const { materia, regla } = datos;
   const sem = semaforoVisible(resultado);
   const c = coloresSemaforo[sem];
-  const tituloEstado = resultado.firma ? '¡Estás para firmar!' : c.nombre;
+  const tituloEstado = resultado.firma ? '¡Tenés firma!' : c.nombre;
   const conLab = materia.tiene_laboratorio;
   const combinado = conLab && regla.modoLaboratorio === 'combinado';
 

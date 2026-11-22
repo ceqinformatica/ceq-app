@@ -45,7 +45,7 @@ export function FichaMateria({ nombre, codigo, estado, notaFinal, faltan, onPres
 }
 
 export function InsigniaSemaforo({ semaforo, firma }: { semaforo: Semaforo; firma?: boolean }) {
-  if (firma) return <Insignia texto="Para firmar" color={colores.verde} fondo={colores.verdeFondo} icono="checkmark-circle" />;
+  if (firma) return <Insignia texto="Tenés firma" color={colores.verde} fondo={colores.verdeFondo} icono="checkmark-circle" />;
   const c = coloresSemaforo[semaforo];
   const icono: Record<Semaforo, NombreIcono> = { verde: 'trending-up', amarillo: 'warning', rojo: 'close-circle', sin_datos: 'remove-circle-outline' };
   return <Insignia texto={c.nombre} color={c.texto} fondo={c.fondo} icono={icono[semaforo]} />;
