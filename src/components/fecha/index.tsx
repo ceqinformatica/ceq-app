@@ -21,7 +21,7 @@ export function CampoFechaHora({ etiqueta, modo, valor, onCambio, placeholder, o
       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
         <Text style={[s.etiqueta, { flex: 1 }]}>{etiqueta}</Text>
         {opcional && valor ? (
-          <Pressable onPress={() => onCambio('')} accessibilityRole="button" accessibilityLabel={`Borrar ${etiqueta}`} hitSlop={10} style={{ marginBottom: espacio.xs + 2 }}>
+          <Pressable onPress={() => onCambio('')} accessibilityRole="button" accessibilityLabel={`Borrar ${etiqueta}`} hitSlop={14} style={{ marginBottom: espacio.xs + 2 }}>
             <Ionicons name="close-circle" size={16} color={colores.textoTenue} />
           </Pressable>
         ) : null}

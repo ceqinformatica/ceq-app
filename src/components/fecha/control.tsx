@@ -26,16 +26,17 @@ export function ControlFechaHora({ modo, valor, onCambio, etiqueta, placeholder,
         mode: modo,
         is24Hour: true,
         minimumDate: modo === 'date' ? minimo : undefined,
-        onChange: (e, d) => {
-          if (e.type === 'set' && d) elegir(d);
-        },
+        onValueChange: (_e, d) => elegir(d),
       });
     } else {
+      // Al cerrar sin mover la rueda, queda lo que se veía (por ejemplo, hoy).
+      if (abiertoIos && !valor) elegir(actual);
       setAbiertoIos((a) => !a);
     }
   };
 
-  const mostrado = valor ? (modo === 'date' ? (leerTextoFecha(valor) ? fechaLegible(leerTextoFecha(valor)!) : valor) : valor) : '';
+  const leida = modo === 'date' && valor ? leerTextoFecha(valor) : null;
+  const mostrado = valor ? (leida ? fechaLegible(leida) : valor) : '';
   return (
     <View>
       <Pressable
@@ -58,9 +59,13 @@ export function ControlFechaHora({ modo, valor, onCambio, etiqueta, placeholder,
             display={modo === 'date' ? 'inline' : 'spinner'}
             locale="es-PY"
             minimumDate={modo === 'date' ? minimo : undefined}
-            onChange={(_e, d) => d && elegir(d)}
+            onValueChange={(_e, d) => elegir(d)}
           />
-          <Pressable onPress={() => setAbiertoIos(false)} accessibilityRole="button" hitSlop={8} style={{ paddingVertical: espacio.s }}>
+          <Pressable
+            onPress={() => { if (!valor) elegir(actual); setAbiertoIos(false); }}
+            accessibilityRole="button"
+            accessibilityLabel="Listo, cerrar selector"
+            hitSlop={8} style={{ paddingVertical: espacio.s }}>
             <Text style={s.enlace}>Listo</Text>
           </Pressable>
         </View>

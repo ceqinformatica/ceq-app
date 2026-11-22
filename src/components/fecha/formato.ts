@@ -3,6 +3,13 @@
  * Los selectores devuelven siempre este formato, así el resto de la app no
  * cambia la forma en que lee las fechas.
  */
+/** Hoy a las 00:00, para no dejar elegir días pasados. */
+export const hoy = () => {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return d;
+};
+
 const dos = (n: number) => String(n).padStart(2, '0');
 
 export const textoFecha = (d: Date) => `${dos(d.getDate())}/${dos(d.getMonth() + 1)}/${d.getFullYear()}`;

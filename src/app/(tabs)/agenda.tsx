@@ -10,7 +10,7 @@ import {
 } from '../../datos/agenda';
 import { guardarEstadosEnBloque } from '../../datos/academico';
 import { usarDatos } from '../../datos/usarDatos';
-import { CampoFechaHora } from '../../components/fecha';
+import { CampoFechaHora, hoy } from '../../components/fecha';
 import type { EstadoMateriaDb, EventoDb, HorarioDb, TipoEvento } from '../../lib/tipos-db';
 import { colores, espacio, fuentes, radio, sombras } from '../../tema';
 
@@ -219,8 +219,6 @@ function Detalle({ filas, onBorrar, textoBorrar, nota }: { filas: [string, strin
     </View>
   );
 }
-
-const hoy = () => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; };
 
 const reHora = /^([01]?\d|2[0-3]):([0-5]\d)$/;
 const normalizarHora = (t: string) => {
