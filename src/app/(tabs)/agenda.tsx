@@ -1,4 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { CabeceraMarca, Boton, Campo, Cargando, Chip, EstadoVacio, Hoja, Insignia, Mensaje, Pantalla, s, Segmentado, Tarjeta } from '../../components/ui';
@@ -28,6 +29,16 @@ export default function Agenda() {
   const [dia, setDia] = useState(diaSemanaHoy() === 7 ? 1 : diaSemanaHoy());
   const [nuevaClase, setNuevaClase] = useState(false);
   const [nuevoEvento, setNuevoEvento] = useState(false);
+  const { nueva } = useLocalSearchParams<{ nueva?: string }>();
+
+  // Desde Inicio: "Agregar fecha" abre directo el formulario.
+  useEffect(() => {
+    if (nueva === 'fecha') {
+      setVista('fechas');
+      setNuevoEvento(true);
+      router.setParams({ nueva: undefined });
+    }
+  }, [nueva]);
   const [claseElegida, setClaseElegida] = useState<HorarioDb | null>(null);
   const [eventoElegido, setEventoElegido] = useState<EventoDb | null>(null);
 
@@ -37,7 +48,7 @@ export default function Agenda() {
   return (
     <View style={{ flex: 1, backgroundColor: colores.fondo }}>
       <Pantalla
-        cabecera={<CabeceraMarca titulo="Agenda" sub={vista === 'horario' ? 'Tu semana de clases' : 'Exámenes, entregas y recordatorios'} compacta />}
+        cabecera={<CabeceraMarca titulo="Agenda" sub={vista === 'horario' ? 'Tu semana de clases' : 'Tus exámenes, entregas y recordatorios'} compacta />}
         refrescando={refrescando}
         onRefrescar={recargar}
       >
@@ -139,9 +150,8 @@ export default function Agenda() {
               ...(eventoElegido.materia_id && datos?.nombres.get(eventoElegido.materia_id) ? [['book-outline', datos.nombres.get(eventoElegido.materia_id)!] as [string, string]] : []),
               ['hourglass-outline', cuentaRegresiva(eventoElegido.fecha)],
             ]}
-            onBorrar={eventoElegido.usuario_id ? async () => { await borrarEvento(eventoElegido.id); setEventoElegido(null); recargar(); } : undefined}
+            onBorrar={async () => { await borrarEvento(eventoElegido.id); setEventoElegido(null); recargar(); }}
             textoBorrar="Eliminar fecha"
-            nota={eventoElegido.usuario_id ? undefined : 'Fecha publicada por el CEQ.'}
           />
         )}
       </Hoja>
@@ -173,7 +183,7 @@ function ListaEventos({ datos, onElegir }: { datos: DatosAgenda; onElegir: (e: E
             <View style={{ flex: 1, gap: 3 }}>
               <Text style={s.filaTitulo} numberOfLines={1}>{e.titulo}</Text>
               <Text style={s.filaDetalle} numberOfLines={1}>
-                {[e.materia_id ? datos.nombres.get(e.materia_id) : e.usuario_id ? null : 'CEQ', horaDe(e.fecha)].filter(Boolean).join(' · ')}
+                {[e.materia_id ? datos.nombres.get(e.materia_id) : null, horaDe(e.fecha)].filter(Boolean).join(' · ')}
               </Text>
               <View style={{ flexDirection: 'row', gap: 6, marginTop: 2 }}>
                 <Insignia texto={tipo.texto} icono={tipo.icono} />

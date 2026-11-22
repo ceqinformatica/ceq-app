@@ -13,7 +13,10 @@ export interface Agenda {
   nombres: Map<string, string>;
 }
 
-/** Horario semanal y eventos de hoy en adelante (propios y oficiales del CEQ). */
+/**
+ * Horario semanal y fechas de hoy en adelante. Las fechas son solo las que
+ * carga cada estudiante, porque dependen de su situación académica.
+ */
 export async function cargarAgenda(planId: string | null | undefined): Promise<Agenda> {
   const desde = new Date();
   desde.setHours(0, 0, 0, 0);
@@ -23,17 +26,17 @@ export async function cargarAgenda(planId: string | null | undefined): Promise<A
   if (MODO_DEMO) {
     await esperar();
     horario = [...db.horario];
-    eventos = db.eventos.filter((e) => new Date(e.fecha) >= desde);
+    eventos = db.eventos.filter((e) => e.usuario_id != null && new Date(e.fecha) >= desde);
     nombres = db.materias.map((m) => [m.id, m.nombre]);
   } else {
     const [rH, rE, rM] = await Promise.all([
       supabase.from('horario').select('*').order('dia_semana').order('hora_inicio'),
-      supabase.from('eventos').select('*').gte('fecha', desde.toISOString()).order('fecha').limit(100),
+      supabase.from('eventos').select('*').not('usuario_id', 'is', null).gte('fecha', desde.toISOString()).order('fecha').limit(100),
       planId ? supabase.from('materias').select('id, nombre').eq('plan_id', planId) : Promise.resolve({ data: [], error: null }),
     ]);
     lanzar(rH.error); lanzar(rE.error); lanzar(rM.error);
     horario = rH.data ?? [];
-    eventos = (rE.data ?? []).filter((e) => e.usuario_id != null || e.plan_id == null || e.plan_id === planId);
+    eventos = rE.data ?? [];
     nombres = ((rM.data ?? []) as { id: string; nombre: string }[]).map((m) => [m.id, m.nombre]);
   }
   eventos.sort((a, b) => a.fecha.localeCompare(b.fecha));

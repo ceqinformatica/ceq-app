@@ -124,7 +124,7 @@ export default function Inicio() {
       )}
 
       {/* Próximas fechas */}
-      <Seccion accion={{ texto: 'Ver todas', onPress: () => router.navigate('/agenda') }}>Próximas fechas</Seccion>
+      <Seccion accion={{ texto: '+ Agregar', onPress: () => router.navigate('/agenda?nueva=fecha') }}>Mis próximas fechas</Seccion>
       <Tarjeta estilo={{ paddingVertical: espacio.s }}>
         {cargando && !datos ? (
           <Esqueleto alto={40} />
@@ -141,7 +141,7 @@ export default function Inicio() {
                 <View style={{ flex: 1 }}>
                   <Text style={s.filaTitulo} numberOfLines={1}>{e.titulo}</Text>
                   <Text style={s.filaDetalle} numberOfLines={1}>
-                    {[e.materia_id ? datos.nombres.get(e.materia_id) : e.usuario_id ? null : 'CEQ', horaDe(e.fecha)].filter(Boolean).join(' · ')}
+                    {[e.materia_id ? datos.nombres.get(e.materia_id) : null, horaDe(e.fecha)].filter(Boolean).join(' · ')}
                   </Text>
                 </View>
                 <Text style={[est.cuenta, urgente && { color: colores.amarillo }]}>{cuentaRegresiva(e.fecha)}</Text>
@@ -149,7 +149,12 @@ export default function Inicio() {
             );
           })
         ) : (
-          <EstadoVacio icono="calendar-clear-outline" titulo="Sin fechas próximas" texto="Agregá tus parciales en la Agenda." />
+          <EstadoVacio
+            icono="calendar-clear-outline"
+            titulo="Sin fechas cargadas"
+            texto="Agregá tus parciales, finales y entregas, según tu cursada."
+            accion={{ texto: 'Agregar fecha', onPress: () => router.navigate('/agenda?nueva=fecha') }}
+          />
         )}
       </Tarjeta>
 
