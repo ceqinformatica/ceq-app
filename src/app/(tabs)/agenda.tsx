@@ -44,8 +44,10 @@ export default function Agenda() {
   const [eventoElegido, setEventoElegido] = useState<EventoDb | null>(null);
 
   const clasesDelDia = useMemo(() => datos?.horario.filter((h) => h.dia_semana === dia) ?? [], [datos, dia]);
-  const marcarCursando = (ids: string[]) =>
+  const marcarCursando = (ids: string[]) => {
     setDatos((d) => (d ? { ...d, estados: new Map([...d.estados, ...ids.map((id) => [id, 'cursando'] as const)]) } : d));
+    recargar(); // por si alguna ya tenía otro estado y no se pisó
+  };
   const nombreClase = (h: HorarioDb) => h.titulo || (h.materia_id && datos?.nombres.get(h.materia_id)) || 'Clase';
 
   return (
