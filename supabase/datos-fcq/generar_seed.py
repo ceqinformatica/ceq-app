@@ -57,7 +57,7 @@ def q(texto):
 
 
 def main():
-    planes = sorted(p for p in AQUI.glob("*-20*.json") if not p.name.startswith("calendario"))
+    planes = sorted(p for p in AQUI.glob("*-20*.json") if not p.name.startswith(("calendario", "homologacion")))
     out = [
         "-- =============================================================",
         "-- Catálogo académico de la FCQ-UNA (carreras, planes, materias,",

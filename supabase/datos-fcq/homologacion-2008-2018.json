@@ -1,0 +1,1947 @@
+{
+ "fuente": "Res. CSU N.º 0506-00-2019, Anexo A: equivalencia entre asignaturas del plan 2008 y el plan 2018 de las 7 carreras",
+ "url": "https://www.qui.una.py/v3/wp-content/uploads/2024/03/7.-Homologacion-de-asignaturas-entre-los-planes-academicos-2008-y-2018-para-las-carreras-de-F-B-IQ-QI-CTA-N-e-IA-de-la-FCQ-UNA.pdf",
+ "verificacion": "leído visualmente del PDF escaneado (la capa de texto es un OCR ilegible). Los nombres del plan 2018 coinciden con los de los JSON X-2018 de esta carpeta.",
+ "uso": "Cada fila dice que aprobar la asignatura del plan 2008 equivale a aprobar la del plan 2018. Cuando una asignatura 2008 aparece en dos filas, cubre dos asignaturas 2018; cuando plan_2008 nombra dos asignaturas ('X y Y'), hacen falta ambas.",
+ "carreras": {
+  "F": [
+   {
+    "plan_2008": "Química General",
+    "nivel_2008": null,
+    "plan_2018": "Química General",
+    "nivel_2018": 1,
+    "nota": "Sin nivel en el plan 2008 (materia del curso de ingreso)."
+   },
+   {
+    "plan_2008": "Física I y Física II",
+    "nivel_2008": "curso de ingreso y 1",
+    "plan_2018": "Física",
+    "nivel_2018": 1
+   },
+   {
+    "plan_2008": "Geometría Analítica y Cálculo",
+    "nivel_2008": null,
+    "plan_2018": "Geometría Analítica y Cálculo",
+    "nivel_2018": 1,
+    "nota": "Sin nivel en el plan 2008 (materia del curso de ingreso)."
+   },
+   {
+    "plan_2008": "Biología General",
+    "nivel_2008": 1,
+    "plan_2018": "Biología General",
+    "nivel_2018": 1
+   },
+   {
+    "plan_2008": "Química Inorgánica",
+    "nivel_2008": 1,
+    "plan_2018": "Química Inorgánica",
+    "nivel_2018": 2
+   },
+   {
+    "plan_2008": "Cálculo Diferencial e Integral",
+    "nivel_2008": 1,
+    "plan_2018": "Cálculo Diferencial e Integral",
+    "nivel_2018": 2
+   },
+   {
+    "plan_2008": "Botánica",
+    "nivel_2008": 2,
+    "plan_2018": "Botánica",
+    "nivel_2018": 2
+   },
+   {
+    "plan_2008": "Parasitología",
+    "nivel_2008": 2,
+    "plan_2018": "Parasitología",
+    "nivel_2018": 2
+   },
+   {
+    "plan_2008": "Inglés Técnico (Optativa I)",
+    "nivel_2008": 3,
+    "plan_2018": "Inglés Técnico",
+    "nivel_2018": 2
+   },
+   {
+    "plan_2008": "Seminario de Orientación Profesional",
+    "nivel_2008": 1,
+    "plan_2018": "Seminario de Orientación Profesional",
+    "nivel_2018": 2
+   },
+   {
+    "plan_2008": "Química Orgánica I",
+    "nivel_2008": 2,
+    "plan_2018": "Química Orgánica I",
+    "nivel_2018": 3
+   },
+   {
+    "plan_2008": "Química Analítica I",
+    "nivel_2008": 2,
+    "plan_2018": "Química Analítica I",
+    "nivel_2018": 3
+   },
+   {
+    "plan_2008": "Bioestadística",
+    "nivel_2008": 3,
+    "plan_2018": "Bioestadística",
+    "nivel_2018": 3
+   },
+   {
+    "plan_2008": "Farmacobotánica",
+    "nivel_2008": 3,
+    "plan_2018": "Farmacobotánica",
+    "nivel_2018": 3
+   },
+   {
+    "plan_2008": "Química Orgánica II",
+    "nivel_2008": 3,
+    "plan_2018": "Química Orgánica II",
+    "nivel_2018": 4
+   },
+   {
+    "plan_2008": "Química Analítica II",
+    "nivel_2008": 3,
+    "plan_2018": "Química Analítica II",
+    "nivel_2018": 4
+   },
+   {
+    "plan_2008": "Microbiología General",
+    "nivel_2008": 4,
+    "plan_2018": "Microbiología General",
+    "nivel_2018": 4
+   },
+   {
+    "plan_2008": "Anatomía Humana",
+    "nivel_2008": 2,
+    "plan_2018": "Anatomía Humana",
+    "nivel_2018": 4
+   },
+   {
+    "plan_2008": "Fisicoquímica y Fisicoquímica Farmacéutica (Optativa II)",
+    "nivel_2008": "4 y 6",
+    "plan_2018": "Fisicoquímica Farmacéutica",
+    "nivel_2018": 5
+   },
+   {
+    "plan_2008": "Química Analítica III",
+    "nivel_2008": 4,
+    "plan_2018": "Química Analítica III",
+    "nivel_2018": 5
+   },
+   {
+    "plan_2008": "Farmacognosia",
+    "nivel_2008": 5,
+    "plan_2018": "Farmacognosia",
+    "nivel_2018": 5
+   },
+   {
+    "plan_2008": "Fisiología Humana",
+    "nivel_2008": 4,
+    "plan_2018": "Fisiología Humana",
+    "nivel_2018": 5
+   },
+   {
+    "plan_2008": "Química Farmacéutica I",
+    "nivel_2008": 5,
+    "plan_2018": "Química Farmacéutica I",
+    "nivel_2018": 6
+   },
+   {
+    "plan_2008": "Bioquímica",
+    "nivel_2008": 5,
+    "plan_2018": "Bioquímica",
+    "nivel_2018": 6
+   },
+   {
+    "plan_2008": "Metodología de la Investigación Científica",
+    "nivel_2008": 4,
+    "plan_2018": "Metodología de la Investigación Científica",
+    "nivel_2018": 6
+   },
+   {
+    "plan_2008": "Fisiopatología Humana",
+    "nivel_2008": 5,
+    "plan_2018": "Fisiopatología Humana",
+    "nivel_2018": 6
+   },
+   {
+    "plan_2008": "Química Farmacéutica II",
+    "nivel_2008": 6,
+    "plan_2018": "Química Farmacéutica II",
+    "nivel_2018": 7
+   },
+   {
+    "plan_2008": "Biología Molecular",
+    "nivel_2008": 6,
+    "plan_2018": "Biología Molecular",
+    "nivel_2018": 7
+   },
+   {
+    "plan_2008": "Salud Pública",
+    "nivel_2008": 6,
+    "plan_2018": "Salud Pública",
+    "nivel_2018": 7
+   },
+   {
+    "plan_2008": "Farmacotecnia I",
+    "nivel_2008": 6,
+    "plan_2018": "Farmacotecnia I",
+    "nivel_2018": 7
+   },
+   {
+    "plan_2008": "Toxicología",
+    "nivel_2008": 7,
+    "plan_2018": "Toxicología",
+    "nivel_2018": 7
+   },
+   {
+    "plan_2008": "Farmacotecnia II",
+    "nivel_2008": 7,
+    "plan_2018": "Farmacotecnia II",
+    "nivel_2018": 8
+   },
+   {
+    "plan_2008": "Farmacología I",
+    "nivel_2008": 7,
+    "plan_2018": "Farmacología I",
+    "nivel_2018": 8
+   },
+   {
+    "plan_2008": "Fitoquímica",
+    "nivel_2008": 7,
+    "plan_2018": "Fitoquímica",
+    "nivel_2018": 8
+   },
+   {
+    "plan_2008": "Biofarmacia (Optativa III)",
+    "nivel_2008": 9,
+    "plan_2018": "Biofarmacia",
+    "nivel_2018": 8
+   },
+   {
+    "plan_2008": "Práctica Pre-profesional I",
+    "nivel_2008": 7,
+    "plan_2018": "Pasantía Pre-profesional I",
+    "nivel_2018": 8
+   },
+   {
+    "plan_2008": "Farmacología II",
+    "nivel_2008": 8,
+    "plan_2018": "Farmacología II",
+    "nivel_2018": 9
+   },
+   {
+    "plan_2008": "Tecnología Farmacéutica",
+    "nivel_2008": 8,
+    "plan_2018": "Tecnología Farmacéutica",
+    "nivel_2018": 9
+   },
+   {
+    "plan_2008": "Análisis y Control de Medicamentos y Cosméticos I y Análisis y Control de Medicamentos y Cosméticos II",
+    "nivel_2008": "8 y 9",
+    "plan_2018": "Análisis y Control de Medicamentos y Cosméticos",
+    "nivel_2018": 9
+   },
+   {
+    "plan_2008": "Administración y Marketing Farmacéutico",
+    "nivel_2008": 9,
+    "plan_2018": "Administración y Marketing Farmacéutico",
+    "nivel_2018": 9
+   },
+   {
+    "plan_2008": "Práctica Pre-profesional II",
+    "nivel_2008": 8,
+    "plan_2018": "Pasantía Pre-profesional II",
+    "nivel_2018": 9
+   },
+   {
+    "plan_2008": "Legislación Farmacéutica y Deontología",
+    "nivel_2008": 8,
+    "plan_2018": "Legislación Farmacéutica y Deontología",
+    "nivel_2018": 10
+   },
+   {
+    "plan_2008": "Tecnología Cosmética",
+    "nivel_2008": 9,
+    "plan_2018": "Tecnología Cosmética",
+    "nivel_2018": 10
+   },
+   {
+    "plan_2008": "Biotecnología Farmacéutica (Optativa III)",
+    "nivel_2008": 9,
+    "plan_2018": "Biotecnología Farmacéutica",
+    "nivel_2018": 10
+   },
+   {
+    "plan_2008": "Farmacia Clínica y Atención Farmacéutica",
+    "nivel_2008": 9,
+    "plan_2018": "Farmacia Clínica y Atención Farmacéutica",
+    "nivel_2018": 10
+   },
+   {
+    "plan_2008": "Práctica Profesional",
+    "nivel_2008": 10,
+    "plan_2018": "Pasantía Supervisada",
+    "nivel_2018": 11
+   },
+   {
+    "plan_2008": "Trabajo de Grado",
+    "nivel_2008": 10,
+    "plan_2018": "Trabajo de Grado",
+    "nivel_2018": 11
+   }
+  ],
+  "B": [
+   {
+    "plan_2008": "Química General",
+    "nivel_2008": null,
+    "plan_2018": "Química General",
+    "nivel_2018": 1,
+    "nota": "Sin nivel en el plan 2008 (materia del curso de ingreso)."
+   },
+   {
+    "plan_2008": "Física General (Física I)",
+    "nivel_2008": null,
+    "plan_2018": "Física I",
+    "nivel_2018": 1,
+    "nota": "Sin nivel en el plan 2008 (materia del curso de ingreso)."
+   },
+   {
+    "plan_2008": "Geometría Analítica y Cálculo",
+    "nivel_2008": null,
+    "plan_2018": "Geometría Analítica y Cálculo",
+    "nivel_2018": 1,
+    "nota": "Sin nivel en el plan 2008 (materia del curso de ingreso)."
+   },
+   {
+    "plan_2008": "Biología General",
+    "nivel_2008": 1,
+    "plan_2018": "Biología General",
+    "nivel_2018": 1
+   },
+   {
+    "plan_2008": "Seminario I",
+    "nivel_2008": 1,
+    "plan_2018": "Seminario I",
+    "nivel_2018": 1
+   },
+   {
+    "plan_2008": "Inglés Técnico",
+    "nivel_2008": 2,
+    "plan_2018": "Inglés Básico",
+    "nivel_2018": 1
+   },
+   {
+    "plan_2008": "Química Inorgánica",
+    "nivel_2008": 1,
+    "plan_2018": "Química Inorgánica",
+    "nivel_2018": 2
+   },
+   {
+    "plan_2008": "Química Orgánica I",
+    "nivel_2008": 2,
+    "plan_2018": "Química Orgánica I",
+    "nivel_2018": 2
+   },
+   {
+    "plan_2008": "Física II",
+    "nivel_2008": 1,
+    "plan_2018": "Física II",
+    "nivel_2018": 2
+   },
+   {
+    "plan_2008": "Cálculo Diferencial e Integral",
+    "nivel_2008": 1,
+    "plan_2018": "Cálculo Diferencial e Integral",
+    "nivel_2018": 2
+   },
+   {
+    "plan_2008": "Seminario II",
+    "nivel_2008": 2,
+    "plan_2018": "Seminario II",
+    "nivel_2018": 2
+   },
+   {
+    "plan_2008": "Química Analítica I",
+    "nivel_2008": 2,
+    "plan_2018": "Química Analítica I",
+    "nivel_2018": 3
+   },
+   {
+    "plan_2008": "Química Orgánica II",
+    "nivel_2008": 3,
+    "plan_2018": "Química Orgánica II",
+    "nivel_2018": 3
+   },
+   {
+    "plan_2008": "Anatomía Humana",
+    "nivel_2008": 2,
+    "plan_2018": "Anatomía Humana",
+    "nivel_2018": 3
+   },
+   {
+    "plan_2008": "Bioestadística",
+    "nivel_2008": 3,
+    "plan_2018": "Bioestadística",
+    "nivel_2018": 3
+   },
+   {
+    "plan_2008": "Química Analítica II",
+    "nivel_2008": 3,
+    "plan_2018": "Química Analítica II",
+    "nivel_2018": 4
+   },
+   {
+    "plan_2008": "Bioquímica I",
+    "nivel_2008": 5,
+    "plan_2018": "Bioquímica",
+    "nivel_2018": 4
+   },
+   {
+    "plan_2008": "Histología",
+    "nivel_2008": 3,
+    "plan_2018": "Histología Humana",
+    "nivel_2018": 4
+   },
+   {
+    "plan_2008": "Genética",
+    "nivel_2008": 6,
+    "plan_2018": "Genética",
+    "nivel_2018": 4
+   },
+   {
+    "plan_2008": "Química Analítica III",
+    "nivel_2008": 4,
+    "plan_2018": "Química Analítica III",
+    "nivel_2018": 5
+   },
+   {
+    "plan_2008": "Fisicoquímica",
+    "nivel_2008": 4,
+    "plan_2018": "Fisicoquímica",
+    "nivel_2018": 5
+   },
+   {
+    "plan_2008": "Bioquímica II",
+    "nivel_2008": 6,
+    "plan_2018": "Biología Celular",
+    "nivel_2018": 5
+   },
+   {
+    "plan_2008": "Fisiología Humana",
+    "nivel_2008": 4,
+    "plan_2018": "Fisiología Humana",
+    "nivel_2018": 5
+   },
+   {
+    "plan_2008": "Fisicoquímica Biológica",
+    "nivel_2008": 5,
+    "plan_2018": "Fisicoquímica Biológica",
+    "nivel_2018": 6
+   },
+   {
+    "plan_2008": "Química Ambiental",
+    "nivel_2008": 5,
+    "plan_2018": "Química Ambiental",
+    "nivel_2018": 6
+   },
+   {
+    "plan_2008": "Inmunología",
+    "nivel_2008": 7,
+    "plan_2018": "Inmunología",
+    "nivel_2018": 6
+   },
+   {
+    "plan_2008": "Biología Molecular",
+    "nivel_2008": 6,
+    "plan_2018": "Biología Molecular",
+    "nivel_2018": 6
+   },
+   {
+    "plan_2008": "Fisiopatología",
+    "nivel_2008": 5,
+    "plan_2018": "Fisiopatología Humana",
+    "nivel_2018": 6
+   },
+   {
+    "plan_2008": "Microbiología General",
+    "nivel_2008": 6,
+    "plan_2018": "Microbiología General",
+    "nivel_2018": 7
+   },
+   {
+    "plan_2008": "Inmunología Clínica",
+    "nivel_2008": 8,
+    "plan_2018": "Inmunología Clínica",
+    "nivel_2018": 7
+   },
+   {
+    "plan_2008": "Farmacología",
+    "nivel_2008": 7,
+    "plan_2018": "Farmacología",
+    "nivel_2018": 7
+   },
+   {
+    "plan_2008": "Toxicología",
+    "nivel_2008": 7,
+    "plan_2018": "Toxicología",
+    "nivel_2018": 7
+   },
+   {
+    "plan_2008": "Ética Profesional y Bioética (optativa)",
+    "nivel_2008": 9,
+    "plan_2018": "Ética Profesional y Bioética",
+    "nivel_2018": 7
+   },
+   {
+    "plan_2008": "Bromatología y Bioquímica Nutricional",
+    "nivel_2008": 8,
+    "plan_2018": "Bioquímica Nutricional",
+    "nivel_2018": 8
+   },
+   {
+    "plan_2008": "Parasitología",
+    "nivel_2008": 10,
+    "plan_2018": "Parasitología",
+    "nivel_2018": 8
+   },
+   {
+    "plan_2008": "Hematología",
+    "nivel_2008": 8,
+    "plan_2018": "Hematología",
+    "nivel_2018": 8
+   },
+   {
+    "plan_2008": "Microbiología Clínica",
+    "nivel_2008": 7,
+    "plan_2018": "Microbiología Clínica",
+    "nivel_2018": 8
+   },
+   {
+    "plan_2008": "Metodología de la Investigación",
+    "nivel_2008": 4,
+    "plan_2018": "Metodología de la Investigación",
+    "nivel_2018": 8
+   },
+   {
+    "plan_2008": "Bioquímica Clínica I",
+    "nivel_2008": 9,
+    "plan_2018": "Bioquímica Clínica I",
+    "nivel_2018": 9
+   },
+   {
+    "plan_2008": "Biotecnología",
+    "nivel_2008": 9,
+    "plan_2018": "Biotecnología",
+    "nivel_2018": 9
+   },
+   {
+    "plan_2008": "Química Legal y Forense",
+    "nivel_2008": 10,
+    "plan_2018": "Química Legal y Forense",
+    "nivel_2018": 9
+   },
+   {
+    "plan_2008": "Salud Pública y Epidemiología",
+    "nivel_2008": 9,
+    "plan_2018": "Salud Pública y Epidemiología",
+    "nivel_2018": 9
+   },
+   {
+    "plan_2008": "Bioquímica Clínica II",
+    "nivel_2008": 10,
+    "plan_2018": "Bioquímica Clínica II",
+    "nivel_2018": 10
+   },
+   {
+    "plan_2008": "Pasantía",
+    "nivel_2008": 11,
+    "plan_2018": "Pasantía",
+    "nivel_2018": 11
+   },
+   {
+    "plan_2008": "Trabajo de Grado",
+    "nivel_2008": 11,
+    "plan_2018": "Trabajo de Grado",
+    "nivel_2018": 11
+   }
+  ],
+  "IQ": [
+   {
+    "plan_2008": "Química General",
+    "nivel_2008": null,
+    "plan_2018": "Química General",
+    "nivel_2018": 1,
+    "nota": "Sin nivel en el plan 2008 (materia del curso de ingreso)."
+   },
+   {
+    "plan_2008": "Geometría Analítica y Cálculo",
+    "nivel_2008": null,
+    "plan_2018": "Geometría Analítica",
+    "nivel_2018": 1,
+    "nota": "Sin nivel en el plan 2008 (materia del curso de ingreso)."
+   },
+   {
+    "plan_2008": "Cálculo I",
+    "nivel_2008": 1,
+    "plan_2018": "Cálculo I",
+    "nivel_2018": 1
+   },
+   {
+    "plan_2008": "Guaraní Parlante (optativa)",
+    "nivel_2008": 5,
+    "plan_2018": "Guaraní",
+    "nivel_2018": 1
+   },
+   {
+    "plan_2008": "Seminario I",
+    "nivel_2008": 1,
+    "plan_2018": "Seminario I",
+    "nivel_2018": 1
+   },
+   {
+    "plan_2008": "Informática",
+    "nivel_2008": 1,
+    "plan_2018": "Computación y Algoritmia para Ingeniería",
+    "nivel_2018": 1
+   },
+   {
+    "plan_2008": "Álgebra Lineal",
+    "nivel_2008": 1,
+    "plan_2018": "Álgebra Lineal",
+    "nivel_2018": 2
+   },
+   {
+    "plan_2008": "Química Inorgánica",
+    "nivel_2008": 1,
+    "plan_2018": "Química Inorgánica",
+    "nivel_2018": 2
+   },
+   {
+    "plan_2008": "Cálculo II",
+    "nivel_2008": 2,
+    "plan_2018": "Cálculo II",
+    "nivel_2018": 2
+   },
+   {
+    "plan_2008": "Seminario II",
+    "nivel_2008": 2,
+    "plan_2018": "Seminario II",
+    "nivel_2018": 2
+   },
+   {
+    "plan_2008": "Química Orgánica",
+    "nivel_2008": 2,
+    "plan_2018": "Química Orgánica",
+    "nivel_2018": 3
+   },
+   {
+    "plan_2008": "Ecuaciones Diferenciales",
+    "nivel_2008": 3,
+    "plan_2018": "Ecuaciones Diferenciales",
+    "nivel_2018": 3
+   },
+   {
+    "plan_2008": "Química Analítica I",
+    "nivel_2008": 2,
+    "plan_2018": "Química Analítica I",
+    "nivel_2018": 3
+   },
+   {
+    "plan_2008": "Estadística",
+    "nivel_2008": 2,
+    "plan_2018": "Estadística",
+    "nivel_2018": 3
+   },
+   {
+    "plan_2008": "Termodinámica I",
+    "nivel_2008": 3,
+    "plan_2018": "Termodinámica I",
+    "nivel_2018": 4
+   },
+   {
+    "plan_2008": "Física III",
+    "nivel_2008": 2,
+    "plan_2018": "Física III",
+    "nivel_2018": 4,
+    "nota": "Nivel 2008 tapado por el sello; estimado."
+   },
+   {
+    "plan_2008": "Química Analítica II",
+    "nivel_2008": 3,
+    "plan_2018": "Química Analítica II",
+    "nivel_2018": 4
+   },
+   {
+    "plan_2008": "Cálculo Numérico",
+    "nivel_2008": 4,
+    "plan_2018": "Cálculo Numérico",
+    "nivel_2018": 4,
+    "nota": "Nivel 2008 tapado por el sello; estimado."
+   },
+   {
+    "plan_2008": "Ciencia y Resistencia de los Materiales",
+    "nivel_2008": 4,
+    "plan_2018": "Ciencia y Resistencia de los Materiales",
+    "nivel_2018": 4
+   },
+   {
+    "plan_2008": "Balances de Masa y Energía",
+    "nivel_2008": 4,
+    "plan_2018": "Balances de Masa y Energía",
+    "nivel_2018": 5
+   },
+   {
+    "plan_2008": "Fisicoquímica",
+    "nivel_2008": 4,
+    "plan_2018": "Fisicoquímica",
+    "nivel_2018": 5
+   },
+   {
+    "plan_2008": "Metodología de la Investigación Científica",
+    "nivel_2008": 3,
+    "plan_2018": "Metodología de la Investigación Científica",
+    "nivel_2018": 5,
+    "nota": "Nivel 2008 tapado por el sello; estimado."
+   },
+   {
+    "plan_2008": "Bioquímica",
+    "nivel_2008": 4,
+    "plan_2018": "Bioquímica",
+    "nivel_2018": 5
+   },
+   {
+    "plan_2008": "Tecnología de los Materiales",
+    "nivel_2008": 5,
+    "plan_2018": "Tecnología de los Materiales",
+    "nivel_2018": 5
+   },
+   {
+    "plan_2008": "Termodinámica II",
+    "nivel_2008": 5,
+    "plan_2018": "Termodinámica II",
+    "nivel_2018": 6
+   },
+   {
+    "plan_2008": "Fenómenos de Transporte I",
+    "nivel_2008": 5,
+    "plan_2018": "Fenómenos de Transporte I",
+    "nivel_2018": 6
+   },
+   {
+    "plan_2008": "Microbiología Industrial",
+    "nivel_2008": 6,
+    "plan_2018": "Microbiología Industrial",
+    "nivel_2018": 6,
+    "nota": "Nivel 2008 tapado por el sello; estimado."
+   },
+   {
+    "plan_2008": "Geometría Descriptiva y Diseño Técnico",
+    "nivel_2008": 4,
+    "plan_2018": "Diseño Técnico",
+    "nivel_2018": 6
+   },
+   {
+    "plan_2008": "Análisis Industrial",
+    "nivel_2008": 5,
+    "plan_2018": "Análisis Industrial",
+    "nivel_2018": 6
+   },
+   {
+    "plan_2008": "Fenómenos de Transporte II",
+    "nivel_2008": 6,
+    "plan_2018": "Fenómenos de Transporte II",
+    "nivel_2018": 7
+   },
+   {
+    "plan_2008": "Operaciones Unitarias I",
+    "nivel_2008": 6,
+    "plan_2018": "Operaciones Unitarias I",
+    "nivel_2018": 7
+   },
+   {
+    "plan_2008": "Electrotecnia",
+    "nivel_2008": 6,
+    "plan_2018": "Electrotecnia",
+    "nivel_2018": 7
+   },
+   {
+    "plan_2008": "Higiene y Seguridad Industrial",
+    "nivel_2008": 8,
+    "plan_2018": "Salud, Higiene y Seguridad Industrial",
+    "nivel_2018": 7
+   },
+   {
+    "plan_2008": "Laboratorio de Ingeniería Química I",
+    "nivel_2008": 6,
+    "plan_2018": "Laboratorio de Ingeniería Química I",
+    "nivel_2018": 7
+   },
+   {
+    "plan_2008": "Fenómenos de Transporte III",
+    "nivel_2008": 7,
+    "plan_2018": "Fenómenos de Transporte III",
+    "nivel_2018": 8
+   },
+   {
+    "plan_2008": "Operaciones Unitarias II",
+    "nivel_2008": 7,
+    "plan_2018": "Operaciones Unitarias II",
+    "nivel_2018": 8
+   },
+   {
+    "plan_2008": "Diseño de Reactores",
+    "nivel_2008": 7,
+    "plan_2018": "Diseño de Reactores",
+    "nivel_2018": 8
+   },
+   {
+    "plan_2008": "Legislación Industrial y del Trabajo",
+    "nivel_2008": 7,
+    "plan_2018": "Legislación Industrial y del Trabajo",
+    "nivel_2018": 8
+   },
+   {
+    "plan_2008": "Laboratorio de Ingeniería Química II",
+    "nivel_2008": 7,
+    "plan_2018": "Laboratorio de Ingeniería Química II",
+    "nivel_2018": 8
+   },
+   {
+    "plan_2008": "Operaciones Unitarias III",
+    "nivel_2008": 8,
+    "plan_2018": "Operaciones Unitarias III",
+    "nivel_2018": 9
+   },
+   {
+    "plan_2008": "Instrumentación y Control de Procesos",
+    "nivel_2008": 8,
+    "plan_2018": "Instrumentación y Control de Procesos",
+    "nivel_2018": 9
+   },
+   {
+    "plan_2008": "Ingeniería Bioquímica",
+    "nivel_2008": 8,
+    "plan_2018": "Ingeniería Bioquímica",
+    "nivel_2018": 9
+   },
+   {
+    "plan_2008": "Administración",
+    "nivel_2008": 9,
+    "plan_2018": "Administración",
+    "nivel_2018": 9
+   },
+   {
+    "plan_2008": "Gestión de Calidad",
+    "nivel_2008": 7,
+    "plan_2018": "Gestión de Calidad",
+    "nivel_2018": 9
+   },
+   {
+    "plan_2008": "Laboratorio de Ingeniería Química III",
+    "nivel_2008": 8,
+    "plan_2018": "Laboratorio de Ingeniería Química III",
+    "nivel_2018": 9
+   },
+   {
+    "plan_2008": "Procesos Industriales",
+    "nivel_2008": 9,
+    "plan_2018": "Procesos Industriales",
+    "nivel_2018": 10
+   },
+   {
+    "plan_2008": "Simulación de Procesos",
+    "nivel_2008": 9,
+    "plan_2018": "Simulación y Optimización de Procesos",
+    "nivel_2018": 10
+   },
+   {
+    "plan_2008": "Ingeniería Ambiental",
+    "nivel_2008": 9,
+    "plan_2018": "Ingeniería Ambiental",
+    "nivel_2018": 10
+   },
+   {
+    "plan_2008": "Ingeniería Económica",
+    "nivel_2008": 8,
+    "plan_2018": "Ingeniería Económica",
+    "nivel_2018": 10
+   },
+   {
+    "plan_2008": "Seminario III",
+    "nivel_2008": 9,
+    "plan_2018": "Seminario III",
+    "nivel_2018": 10
+   },
+   {
+    "plan_2008": "Laboratorio de Ingeniería Química IV",
+    "nivel_2008": 9,
+    "plan_2018": "Laboratorio de Ingeniería Química IV",
+    "nivel_2018": 10
+   },
+   {
+    "plan_2008": "Proyecto Industrial",
+    "nivel_2008": 10,
+    "plan_2018": "Proyecto Industrial",
+    "nivel_2018": 11
+   },
+   {
+    "plan_2008": "Pasantía",
+    "nivel_2008": 10,
+    "plan_2018": "Pasantía",
+    "nivel_2018": 11
+   },
+   {
+    "plan_2008": "Trabajo de Grado",
+    "nivel_2008": 10,
+    "plan_2018": "Trabajo de Grado",
+    "nivel_2018": 11
+   }
+  ],
+  "QI": [
+   {
+    "plan_2008": "Geometría Analítica y Cálculo",
+    "nivel_2008": null,
+    "plan_2018": "Geometría Analítica y Cálculo",
+    "nivel_2018": 1,
+    "nota": "Sin nivel en el plan 2008 (materia del curso de ingreso)."
+   },
+   {
+    "plan_2008": "Física I",
+    "nivel_2008": null,
+    "plan_2018": "Física I",
+    "nivel_2018": 1,
+    "nota": "Sin nivel en el plan 2008 (materia del curso de ingreso)."
+   },
+   {
+    "plan_2008": "Química General",
+    "nivel_2008": null,
+    "plan_2018": "Química General",
+    "nivel_2018": 1,
+    "nota": "Sin nivel en el plan 2008 (materia del curso de ingreso)."
+   },
+   {
+    "plan_2008": "Seminario I",
+    "nivel_2008": 1,
+    "plan_2018": "Seminario I",
+    "nivel_2018": 1
+   },
+   {
+    "plan_2008": "Química Inorgánica",
+    "nivel_2008": 1,
+    "plan_2018": "Química Inorgánica",
+    "nivel_2018": 2
+   },
+   {
+    "plan_2008": "Cálculo Diferencial e Integral",
+    "nivel_2008": 1,
+    "plan_2018": "Cálculo Diferencial e Integral",
+    "nivel_2018": 2
+   },
+   {
+    "plan_2008": "Física II",
+    "nivel_2008": 1,
+    "plan_2018": "Física II",
+    "nivel_2018": 2
+   },
+   {
+    "plan_2008": "Biología General",
+    "nivel_2008": 1,
+    "plan_2018": "Biología General",
+    "nivel_2018": 2
+   },
+   {
+    "plan_2008": "Química Orgánica I",
+    "nivel_2008": 2,
+    "plan_2018": "Química Orgánica I",
+    "nivel_2018": 3
+   },
+   {
+    "plan_2008": "Química Analítica I",
+    "nivel_2008": 2,
+    "plan_2018": "Química Analítica I",
+    "nivel_2018": 3
+   },
+   {
+    "plan_2008": "Estadística I",
+    "nivel_2008": 2,
+    "plan_2018": "Estadística I",
+    "nivel_2018": 3
+   },
+   {
+    "plan_2008": "Microbiología General",
+    "nivel_2008": 2,
+    "plan_2018": "Microbiología General",
+    "nivel_2018": 3
+   },
+   {
+    "plan_2008": "Seminario II",
+    "nivel_2008": 2,
+    "plan_2018": "Seminario II",
+    "nivel_2018": 2
+   },
+   {
+    "plan_2008": "Química Orgánica II",
+    "nivel_2008": 3,
+    "plan_2018": "Química Orgánica II",
+    "nivel_2018": 4
+   },
+   {
+    "plan_2008": "Química Analítica II",
+    "nivel_2008": 3,
+    "plan_2018": "Química Analítica II",
+    "nivel_2018": 4
+   },
+   {
+    "plan_2008": "Estadística II",
+    "nivel_2008": 3,
+    "plan_2018": "Estadística II",
+    "nivel_2018": 4
+   },
+   {
+    "plan_2008": "Recursos Naturales",
+    "nivel_2008": 3,
+    "plan_2018": "Recursos Naturales",
+    "nivel_2018": 4
+   },
+   {
+    "plan_2008": "Química Analítica III",
+    "nivel_2008": 4,
+    "plan_2018": "Química Analítica III",
+    "nivel_2018": 5
+   },
+   {
+    "plan_2008": "Fisicoquímica",
+    "nivel_2008": 4,
+    "plan_2018": "Fisicoquímica Aplicada",
+    "nivel_2018": 5
+   },
+   {
+    "plan_2008": "Administración y Mercadotecnia",
+    "nivel_2008": 4,
+    "plan_2018": "Administración Industrial",
+    "nivel_2018": 5
+   },
+   {
+    "plan_2008": "Análisis Microbiológico Industrial",
+    "nivel_2008": 4,
+    "plan_2018": "Análisis Microbiológico Industrial",
+    "nivel_2018": 5
+   },
+   {
+    "plan_2008": "Normalización, Certificación y Acreditación de Laboratorios",
+    "nivel_2008": 10,
+    "plan_2018": "Evaluación de la Conformidad",
+    "nivel_2018": 5
+   },
+   {
+    "plan_2008": "BPM y HACCP",
+    "nivel_2008": 5,
+    "plan_2018": "Gestión y Control de Procesos",
+    "nivel_2018": 6
+   },
+   {
+    "plan_2008": "Química de Alimentos",
+    "nivel_2008": 5,
+    "plan_2018": "Química de Alimentos",
+    "nivel_2018": 6
+   },
+   {
+    "plan_2008": "Análisis Industrial Inorgánico",
+    "nivel_2008": 5,
+    "plan_2018": "Análisis Industrial Inorgánico",
+    "nivel_2018": 6
+   },
+   {
+    "plan_2008": "Química Industrial",
+    "nivel_2008": 5,
+    "plan_2018": "Química Industrial",
+    "nivel_2018": 6
+   },
+   {
+    "plan_2008": "Química Ambiental",
+    "nivel_2008": 5,
+    "plan_2018": "Química Ambiental",
+    "nivel_2018": 6
+   },
+   {
+    "plan_2008": "Análisis de Alimentos",
+    "nivel_2008": 6,
+    "plan_2018": "Análisis de Alimentos",
+    "nivel_2018": 7
+   },
+   {
+    "plan_2008": "Análisis Industrial Orgánico",
+    "nivel_2008": 6,
+    "plan_2018": "Análisis Industrial Orgánico",
+    "nivel_2018": 7
+   },
+   {
+    "plan_2008": "Higiene y Seguridad Industrial",
+    "nivel_2008": 6,
+    "plan_2018": "Seguridad y Salud Ocupacional",
+    "nivel_2018": 7
+   },
+   {
+    "plan_2008": "Control Ambiental en Procesos",
+    "nivel_2008": 6,
+    "plan_2018": "Control Ambiental en Procesos",
+    "nivel_2018": 7
+   },
+   {
+    "plan_2008": "Legislación Industrial y del Trabajo",
+    "nivel_2008": 7,
+    "plan_2018": "Legislación Industrial y del Trabajo",
+    "nivel_2018": 7
+   },
+   {
+    "plan_2008": "Metodología de la Investigación Científica",
+    "nivel_2008": 7,
+    "plan_2018": "Metodología de la Investigación Científica",
+    "nivel_2018": 7
+   },
+   {
+    "plan_2008": "Gestión y Manejo de Residuos",
+    "nivel_2008": 6,
+    "plan_2018": "Gestión y Manejo de Residuos Industriales",
+    "nivel_2018": 8
+   },
+   {
+    "plan_2008": "Química de Suelos y Agroquímicos",
+    "nivel_2008": 7,
+    "plan_2018": "Química de Suelos y Agroquímicos",
+    "nivel_2018": 8
+   },
+   {
+    "plan_2008": "Metrología",
+    "nivel_2008": "7 y 8",
+    "plan_2018": "Metrología",
+    "nivel_2018": 8
+   },
+   {
+    "plan_2008": "Técnicas Analíticas Nucleares",
+    "nivel_2008": 7,
+    "plan_2018": "Técnicas Analíticas Nucleares",
+    "nivel_2018": 8
+   },
+   {
+    "plan_2008": "Gestión de Calidad",
+    "nivel_2008": 7,
+    "plan_2018": "Gestión de Calidad",
+    "nivel_2018": 8
+   },
+   {
+    "plan_2008": "Pasantía",
+    "nivel_2008": 8,
+    "plan_2018": "Pasantía",
+    "nivel_2018": 9
+   },
+   {
+    "plan_2008": "Proyecto",
+    "nivel_2008": 8,
+    "plan_2018": "Trabajo de Grado",
+    "nivel_2018": 9
+   }
+  ],
+  "CTA": [
+   {
+    "plan_2008": "Química General",
+    "nivel_2008": null,
+    "plan_2018": "Química General",
+    "nivel_2018": 1,
+    "nota": "Sin nivel en el plan 2008 (materia del curso de ingreso)."
+   },
+   {
+    "plan_2008": "Biología",
+    "nivel_2008": 1,
+    "plan_2018": "Biología General",
+    "nivel_2018": 1
+   },
+   {
+    "plan_2008": "Geometría Analítica y Cálculo",
+    "nivel_2008": null,
+    "plan_2018": "Geometría Analítica y Cálculo",
+    "nivel_2018": 1,
+    "nota": "Sin nivel en el plan 2008 (materia del curso de ingreso)."
+   },
+   {
+    "plan_2008": "Física I",
+    "nivel_2008": null,
+    "plan_2018": "Física I",
+    "nivel_2018": 1,
+    "nota": "Sin nivel en el plan 2008 (materia del curso de ingreso)."
+   },
+   {
+    "plan_2008": "Seminario I",
+    "nivel_2008": 1,
+    "plan_2018": "Seminario I",
+    "nivel_2018": 1
+   },
+   {
+    "plan_2008": "Estadística I",
+    "nivel_2008": 2,
+    "plan_2018": "Estadística I",
+    "nivel_2018": 1
+   },
+   {
+    "plan_2008": "Química Inorgánica",
+    "nivel_2008": 1,
+    "plan_2018": "Química Inorgánica",
+    "nivel_2018": 2
+   },
+   {
+    "plan_2008": "Cálculo Diferencial e Integral",
+    "nivel_2008": 1,
+    "plan_2018": "Cálculo Diferencial e Integral",
+    "nivel_2018": 2
+   },
+   {
+    "plan_2008": "Física II",
+    "nivel_2008": 1,
+    "plan_2018": "Física II",
+    "nivel_2018": 2
+   },
+   {
+    "plan_2008": "Seminario II",
+    "nivel_2008": 4,
+    "plan_2018": "Seminario II",
+    "nivel_2018": 2
+   },
+   {
+    "plan_2008": "Estadística II",
+    "nivel_2008": 3,
+    "plan_2018": "Estadística II",
+    "nivel_2018": 2
+   },
+   {
+    "plan_2008": "Microbiología General",
+    "nivel_2008": 2,
+    "plan_2018": "Microbiología General",
+    "nivel_2018": 2
+   },
+   {
+    "plan_2008": "Química Orgánica I",
+    "nivel_2008": 2,
+    "plan_2018": "Química Orgánica I",
+    "nivel_2018": 3
+   },
+   {
+    "plan_2008": "Microbiología de Alimentos",
+    "nivel_2008": 3,
+    "plan_2018": "Microbiología de Alimentos",
+    "nivel_2018": 3
+   },
+   {
+    "plan_2008": "Química Analítica I",
+    "nivel_2008": 2,
+    "plan_2018": "Química Analítica I",
+    "nivel_2018": 3
+   },
+   {
+    "plan_2008": "Legislación Alimentaria y Deontología",
+    "nivel_2008": 10,
+    "plan_2018": "Legislación Alimentaria y Deontología",
+    "nivel_2018": 3
+   },
+   {
+    "plan_2008": "Química Orgánica II",
+    "nivel_2008": 3,
+    "plan_2018": "Química Orgánica II",
+    "nivel_2018": 4
+   },
+   {
+    "plan_2008": "Química Analítica II",
+    "nivel_2008": 2,
+    "plan_2018": "Química Analítica II",
+    "nivel_2018": 4
+   },
+   {
+    "plan_2008": "Gestión de Calidad",
+    "nivel_2008": 5,
+    "plan_2018": "Gestión de Calidad",
+    "nivel_2018": 4
+   },
+   {
+    "plan_2008": "Recursos Naturales (vegetal y animal) Optativa I",
+    "nivel_2008": 5,
+    "plan_2018": "Recursos Naturales, Vegetales y Animales",
+    "nivel_2018": 4
+   },
+   {
+    "plan_2008": "Fisicoquímica de Alimentos",
+    "nivel_2008": 4,
+    "plan_2018": "Fisicoquímica de Alimentos",
+    "nivel_2018": 5
+   },
+   {
+    "plan_2008": "Administración y Mercadotecnia",
+    "nivel_2008": 4,
+    "plan_2018": "Administración Industrial",
+    "nivel_2018": 5
+   },
+   {
+    "plan_2008": "Química y Bioquímica de Alimentos",
+    "nivel_2008": 5,
+    "plan_2018": "Química y Bioquímica de Alimentos",
+    "nivel_2018": 5
+   },
+   {
+    "plan_2008": "Tecnología de Alimentos I y Tecnología de Alimentos II",
+    "nivel_2008": "5 y 6",
+    "plan_2018": "Tecnología de Alimentos",
+    "nivel_2018": 6
+   },
+   {
+    "plan_2008": "Introducción a la Ingeniería de Alimentos I y II",
+    "nivel_2008": "5 y 6",
+    "plan_2018": "Introducción a la Ingeniería de Alimentos",
+    "nivel_2018": 6
+   },
+   {
+    "plan_2008": "Higiene y Seguridad en la Industria Alimentaria",
+    "nivel_2008": 6,
+    "plan_2018": "Higiene y Gestión de Inocuidad Alimentaria",
+    "nivel_2018": 6
+   },
+   {
+    "plan_2008": "Alimentación y Nutrición",
+    "nivel_2008": "7 y 8",
+    "plan_2018": "Alimentación, Nutrición y Salud Pública",
+    "nivel_2018": 6
+   },
+   {
+    "plan_2008": "Toxicología de Alimentos",
+    "nivel_2008": 7,
+    "plan_2018": "Toxicología de Alimentos",
+    "nivel_2018": 6
+   },
+   {
+    "plan_2008": "Análisis Sensorial de Alimentos",
+    "nivel_2008": 6,
+    "plan_2018": "Análisis Sensorial de Alimentos",
+    "nivel_2018": 7
+   },
+   {
+    "plan_2008": "Análisis de Alimentos",
+    "nivel_2008": 6,
+    "plan_2018": "Análisis de Alimentos",
+    "nivel_2018": 7
+   },
+   {
+    "plan_2008": "Metodología de la Investigación Científica",
+    "nivel_2008": 7,
+    "plan_2018": "Metodología de la Investigación Científica I",
+    "nivel_2018": 7
+   },
+   {
+    "plan_2008": "Tecnología de Carnes y Derivados",
+    "nivel_2008": 8,
+    "plan_2018": "Tecnología de Carnes y Derivados",
+    "nivel_2018": 7
+   },
+   {
+    "plan_2008": "Tecnología de Lácteos y Derivados",
+    "nivel_2008": 8,
+    "plan_2018": "Tecnología de Lácteos y Derivados",
+    "nivel_2018": 7
+   },
+   {
+    "plan_2008": "Tecnología de Cereales y Derivados",
+    "nivel_2008": 7,
+    "plan_2018": "Tecnología de Cereales y Derivados",
+    "nivel_2018": 8
+   },
+   {
+    "plan_2008": "Tecnología de Vegetales y Derivados",
+    "nivel_2008": 7,
+    "plan_2018": "Tecnología de Vegetales y Derivados",
+    "nivel_2018": 8
+   },
+   {
+    "plan_2008": "Tecnología de Aceites y Grasas",
+    "nivel_2008": 8,
+    "plan_2018": "Tecnología de Grasas y Aceites",
+    "nivel_2018": 8
+   },
+   {
+    "plan_2008": "Tecnología de Bebidas y Afines",
+    "nivel_2008": 8,
+    "plan_2018": "Tecnología de Bebidas y Afines",
+    "nivel_2018": 8
+   },
+   {
+    "plan_2008": "Pasantía",
+    "nivel_2008": 9,
+    "plan_2018": "Pasantía",
+    "nivel_2018": 9
+   },
+   {
+    "plan_2008": "Trabajo de Grado",
+    "nivel_2008": 9,
+    "plan_2018": "Trabajo de Grado",
+    "nivel_2018": 9
+   }
+  ],
+  "N": [
+   {
+    "plan_2008": "Química General",
+    "nivel_2008": null,
+    "plan_2018": "Química General",
+    "nivel_2018": 1,
+    "nota": "Sin nivel en el plan 2008 (materia del curso de ingreso)."
+   },
+   {
+    "plan_2008": "Bioestadística",
+    "nivel_2008": 1,
+    "plan_2018": "Bioestadística Descriptiva",
+    "nivel_2018": 1
+   },
+   {
+    "plan_2008": "Biología Celular",
+    "nivel_2008": 1,
+    "plan_2018": "Biología General",
+    "nivel_2018": 1
+   },
+   {
+    "plan_2008": "Histología y Anatomía Humana",
+    "nivel_2008": 2,
+    "plan_2018": "Anatomía",
+    "nivel_2018": 1
+   },
+   {
+    "plan_2008": "Histología y Anatomía Humana",
+    "nivel_2008": 2,
+    "plan_2018": "Histología",
+    "nivel_2018": 1
+   },
+   {
+    "plan_2008": "Inglés Técnico (Optativa I)",
+    "nivel_2008": 3,
+    "plan_2018": "Inglés Técnico",
+    "nivel_2018": 1
+   },
+   {
+    "plan_2008": "Química Aplicada",
+    "nivel_2008": 1,
+    "plan_2018": "Química Aplicada",
+    "nivel_2018": 2
+   },
+   {
+    "plan_2008": "Alimentación y Cultura",
+    "nivel_2008": 3,
+    "plan_2018": "Alimentación y Cultura",
+    "nivel_2018": 2
+   },
+   {
+    "plan_2008": "Microbiología",
+    "nivel_2008": 2,
+    "plan_2018": "Microbiología Alimentaria",
+    "nivel_2018": 2
+   },
+   {
+    "plan_2008": "Fisiología Humana",
+    "nivel_2008": 3,
+    "plan_2018": "Fisiología Humana",
+    "nivel_2018": 2
+   },
+   {
+    "plan_2008": "Bioquímica",
+    "nivel_2008": 2,
+    "plan_2018": "Bioquímica",
+    "nivel_2018": 3
+   },
+   {
+    "plan_2008": "Saneamiento Alimentario y Ambiental",
+    "nivel_2008": 3,
+    "plan_2018": "Saneamiento Ambiental e Higiene de Alimentos",
+    "nivel_2018": 3
+   },
+   {
+    "plan_2008": "Fisiopatología",
+    "nivel_2008": 4,
+    "plan_2018": "Fisiopatología Humana",
+    "nivel_2018": 3
+   },
+   {
+    "plan_2008": "Nutrición Normal",
+    "nivel_2008": 4,
+    "plan_2018": "Nutrición Básica",
+    "nivel_2018": 3
+   },
+   {
+    "plan_2008": "Nutrición Normal",
+    "nivel_2008": 4,
+    "plan_2018": "Evaluación Nutricional",
+    "nivel_2018": 4
+   },
+   {
+    "plan_2008": "Bromatología y Tecnología de Alimentos",
+    "nivel_2008": 3,
+    "plan_2018": "Bromatología y Tecnología de Alimentos",
+    "nivel_2018": 4
+   },
+   {
+    "plan_2008": "Técnica Culinaria",
+    "nivel_2008": 4,
+    "plan_2018": "Técnica Culinaria",
+    "nivel_2018": 4
+   },
+   {
+    "plan_2008": "Educación Nutricional",
+    "nivel_2008": 7,
+    "plan_2018": "Educación Nutricional",
+    "nivel_2018": 4
+   },
+   {
+    "plan_2008": "Administración de Servicios de Alimentación",
+    "nivel_2008": 5,
+    "plan_2018": "Administración de Servicios de Alimentación",
+    "nivel_2018": 5,
+    "nota": "Nivel 2008 tapado por el sello; estimado."
+   },
+   {
+    "plan_2008": "Nutrición del Adulto",
+    "nivel_2008": 5,
+    "plan_2018": "Nutrición del Adulto",
+    "nivel_2018": 5
+   },
+   {
+    "plan_2008": "Nutrición Deportiva",
+    "nivel_2008": 5,
+    "plan_2018": "Nutrición Deportiva",
+    "nivel_2018": 5
+   },
+   {
+    "plan_2008": "Nutrición Pediátrica",
+    "nivel_2008": 5,
+    "plan_2018": "Nutrición Pediátrica",
+    "nivel_2018": 5
+   },
+   {
+    "plan_2008": "Nutrición y Salud Pública",
+    "nivel_2008": 6,
+    "plan_2018": "Salud Pública",
+    "nivel_2018": 5
+   },
+   {
+    "plan_2008": "Farmacología en Nutrición",
+    "nivel_2008": 5,
+    "plan_2018": "Farmacología Aplicada a la Nutrición",
+    "nivel_2018": 6
+   },
+   {
+    "plan_2008": "Dietoterapia I",
+    "nivel_2008": 6,
+    "plan_2018": "Dietoterapia del Adulto I",
+    "nivel_2018": 6
+   },
+   {
+    "plan_2008": "Metodología de la Investigación",
+    "nivel_2008": 7,
+    "plan_2018": "Metodología de la Investigación I",
+    "nivel_2018": 3
+   },
+   {
+    "plan_2008": "Metodología de la Investigación",
+    "nivel_2008": 7,
+    "plan_2018": "Metodología de la Investigación II",
+    "nivel_2018": 6
+   },
+   {
+    "plan_2008": "Dietoterapia Pediátrica",
+    "nivel_2008": 7,
+    "plan_2018": "Dietoterapia Pediátrica",
+    "nivel_2018": 6
+   },
+   {
+    "plan_2008": "Psicopatología en Nutrición",
+    "nivel_2008": 2,
+    "plan_2018": "Psicología en Nutrición",
+    "nivel_2018": 7
+   },
+   {
+    "plan_2008": "Normalización y Legislación Alimentaria (Optativa I)",
+    "nivel_2008": 3,
+    "plan_2018": "Normalización y Legislación Nutricional",
+    "nivel_2018": 7
+   },
+   {
+    "plan_2008": "Gestión y Marketing Nutricional (Optativa II)",
+    "nivel_2008": 5,
+    "plan_2018": "Marketing en Salud y Nutrición",
+    "nivel_2018": 7
+   },
+   {
+    "plan_2008": "Informática Aplicada (Optativa II)",
+    "nivel_2008": 5,
+    "plan_2018": "Informática Aplicada a la Nutrición",
+    "nivel_2018": 7
+   },
+   {
+    "plan_2008": "Gestión y Planificación Nutricional",
+    "nivel_2008": 6,
+    "plan_2018": "Gestión y Planificación de Proyectos",
+    "nivel_2018": 7
+   },
+   {
+    "plan_2008": "Dietoterapia II",
+    "nivel_2008": 7,
+    "plan_2018": "Dietoterapia del Adulto II",
+    "nivel_2018": 7,
+    "nota": "Nivel 2008 tapado por el sello; estimado."
+   },
+   {
+    "plan_2008": "Nutrición Hospitalaria",
+    "nivel_2008": 6,
+    "plan_2018": "Terapia Nutricional",
+    "nivel_2018": 8
+   },
+   {
+    "plan_2008": "Práctica Profesional Área Servicio de Alimentación",
+    "nivel_2008": 6,
+    "plan_2018": "Práctica Profesional Área Servicio de Alimentación",
+    "nivel_2018": 8
+   },
+   {
+    "plan_2008": "Práctica Profesional Área Salud Pública",
+    "nivel_2008": 7,
+    "plan_2018": "Práctica Profesional Área Salud Pública",
+    "nivel_2018": 9
+   },
+   {
+    "plan_2008": "Práctica Profesional Área Clínica",
+    "nivel_2008": "8 y 9",
+    "plan_2018": "Práctica Profesional Área Nutrición Clínica-Ambulatoria",
+    "nivel_2018": 9
+   },
+   {
+    "plan_2008": "Práctica Profesional Área Clínica",
+    "nivel_2008": "8 y 9",
+    "plan_2018": "Práctica Profesional Área Nutrición Clínica-Hospitalaria",
+    "nivel_2018": 10
+   },
+   {
+    "plan_2008": "Trabajo de Grado",
+    "nivel_2008": "8 y 9",
+    "plan_2018": "Trabajo de Grado",
+    "nivel_2018": 9
+   }
+  ],
+  "IA": [
+   {
+    "plan_2008": "Química General",
+    "nivel_2008": null,
+    "plan_2018": "Química General",
+    "nivel_2018": 1,
+    "nota": "Sin nivel en el plan 2008 (materia del curso de ingreso)."
+   },
+   {
+    "plan_2008": "Geometría Analítica y Cálculo",
+    "nivel_2008": null,
+    "plan_2018": "Geometría Analítica",
+    "nivel_2018": 1,
+    "nota": "Sin nivel en el plan 2008 (materia del curso de ingreso)."
+   },
+   {
+    "plan_2008": "Cálculo I",
+    "nivel_2008": 1,
+    "plan_2018": "Cálculo I",
+    "nivel_2018": 1
+   },
+   {
+    "plan_2008": "Informática",
+    "nivel_2008": 1,
+    "plan_2018": "Computación y Algoritmia para Ingeniería",
+    "nivel_2018": 1
+   },
+   {
+    "plan_2008": "Guaraní (Optativa I)",
+    "nivel_2008": 5,
+    "plan_2018": "Guaraní",
+    "nivel_2018": 1
+   },
+   {
+    "plan_2008": "Seminario I",
+    "nivel_2008": 1,
+    "plan_2018": "Seminario I",
+    "nivel_2018": 1
+   },
+   {
+    "plan_2008": "Cálculo II",
+    "nivel_2008": 2,
+    "plan_2018": "Cálculo II",
+    "nivel_2018": 2
+   },
+   {
+    "plan_2008": "Álgebra Lineal",
+    "nivel_2008": 1,
+    "plan_2018": "Álgebra Lineal",
+    "nivel_2018": 2
+   },
+   {
+    "plan_2008": "Química Inorgánica",
+    "nivel_2008": 1,
+    "plan_2018": "Química Inorgánica",
+    "nivel_2018": 2
+   },
+   {
+    "plan_2008": "Física II",
+    "nivel_2008": 1,
+    "plan_2018": "Física I",
+    "nivel_2018": 2
+   },
+   {
+    "plan_2008": "Seminario II: Ética y Deontología",
+    "nivel_2008": 2,
+    "plan_2018": "Seminario II: Ética y Deontología",
+    "nivel_2018": 2
+   },
+   {
+    "plan_2008": "Geometría Descriptiva y Diseño Técnico",
+    "nivel_2008": 4,
+    "plan_2018": "Expresión Gráfica en Ingeniería",
+    "nivel_2018": 2
+   },
+   {
+    "plan_2008": "Ecuaciones Diferenciales",
+    "nivel_2008": 3,
+    "plan_2018": "Ecuaciones Diferenciales",
+    "nivel_2018": 3
+   },
+   {
+    "plan_2008": "Química Orgánica",
+    "nivel_2008": 2,
+    "plan_2018": "Química Orgánica",
+    "nivel_2018": 3
+   },
+   {
+    "plan_2008": "Química Analítica I",
+    "nivel_2008": 2,
+    "plan_2018": "Química Analítica I",
+    "nivel_2018": 3
+   },
+   {
+    "plan_2008": "Estadística",
+    "nivel_2008": 2,
+    "plan_2018": "Estadística",
+    "nivel_2018": 3
+   },
+   {
+    "plan_2008": "Termodinámica I",
+    "nivel_2008": 3,
+    "plan_2018": "Termodinámica I",
+    "nivel_2018": 4
+   },
+   {
+    "plan_2008": "Física III",
+    "nivel_2008": 2,
+    "plan_2018": "Física III",
+    "nivel_2018": 4
+   },
+   {
+    "plan_2008": "Cálculo Numérico",
+    "nivel_2008": 4,
+    "plan_2018": "Cálculo Numérico",
+    "nivel_2018": 4
+   },
+   {
+    "plan_2008": "Química Analítica II",
+    "nivel_2008": 3,
+    "plan_2018": "Química Analítica II",
+    "nivel_2018": 4
+   },
+   {
+    "plan_2008": "Química y Bioquímica de Alimentos",
+    "nivel_2008": 5,
+    "plan_2018": "Química y Bioquímica de Alimentos",
+    "nivel_2018": 4
+   },
+   {
+    "plan_2008": "Balances de Masa y Energía",
+    "nivel_2008": 4,
+    "plan_2018": "Balances de Masa y Energía",
+    "nivel_2018": 5
+   },
+   {
+    "plan_2008": "Fisicoquímica",
+    "nivel_2008": 4,
+    "plan_2018": "Fisicoquímica de Alimentos",
+    "nivel_2018": 5
+   },
+   {
+    "plan_2008": "Metodología de la Investigación Científica",
+    "nivel_2008": 3,
+    "plan_2018": "Metodología de la Investigación Científica",
+    "nivel_2018": 5
+   },
+   {
+    "plan_2008": "Electrotecnia",
+    "nivel_2008": 6,
+    "plan_2018": "Electrotecnia",
+    "nivel_2018": 5
+   },
+   {
+    "plan_2008": "Ciencia y Resistencia de los Materiales y Tecnología de los Materiales",
+    "nivel_2008": "4 y 5",
+    "plan_2018": "Ciencia y Tecnología de Materiales",
+    "nivel_2018": 5
+   },
+   {
+    "plan_2008": "Fenómenos de Transporte I",
+    "nivel_2008": 5,
+    "plan_2018": "Fenómenos de Transporte I",
+    "nivel_2018": 6
+   },
+   {
+    "plan_2008": "Análisis de Alimentos",
+    "nivel_2008": 6,
+    "plan_2018": "Análisis de Alimentos",
+    "nivel_2018": 6
+   },
+   {
+    "plan_2008": "Termodinámica II",
+    "nivel_2008": 5,
+    "plan_2018": "Termodinámica II",
+    "nivel_2018": 6
+   },
+   {
+    "plan_2008": "Microbiología de Alimentos",
+    "nivel_2008": 5,
+    "plan_2018": "Microbiología de Alimentos",
+    "nivel_2018": 6
+   },
+   {
+    "plan_2008": "Operaciones Unitarias I",
+    "nivel_2008": 6,
+    "plan_2018": "Operaciones Unitarias en Ingeniería de Alimentos I",
+    "nivel_2018": 7
+   },
+   {
+    "plan_2008": "Higiene y Seguridad en la Industria Alimentaria",
+    "nivel_2008": 6,
+    "plan_2018": "Higiene y Gestión de Inocuidad Alimentaria",
+    "nivel_2018": 7
+   },
+   {
+    "plan_2008": "Laboratorio de Ingeniería de Alimentos I",
+    "nivel_2008": 8,
+    "plan_2018": "Laboratorio de Ingeniería de Alimentos I",
+    "nivel_2018": 7,
+    "nota": "Nivel 2008 tapado por el sello; estimado."
+   },
+   {
+    "plan_2008": "Operaciones Unitarias II",
+    "nivel_2008": 7,
+    "plan_2018": "Operaciones Unitarias en Ingeniería de Alimentos II",
+    "nivel_2018": 8,
+    "nota": "Nivel 2008 tapado por el sello; estimado."
+   },
+   {
+    "plan_2008": "Gestión de Calidad",
+    "nivel_2008": 7,
+    "plan_2018": "Gestión de Calidad en la Industria Alimentaria",
+    "nivel_2018": 8
+   },
+   {
+    "plan_2008": "Instrumentación y Control de Procesos",
+    "nivel_2008": 8,
+    "plan_2018": "Instrumentación y Control de Procesos",
+    "nivel_2018": 8
+   },
+   {
+    "plan_2008": "Análisis Sensorial de Alimentos (Optativa III)",
+    "nivel_2008": 10,
+    "plan_2018": "Análisis Sensorial",
+    "nivel_2018": 8
+   },
+   {
+    "plan_2008": "Laboratorio de Ingeniería de Alimentos II",
+    "nivel_2008": 7,
+    "plan_2018": "Laboratorio de Ingeniería de Alimentos II",
+    "nivel_2018": 8
+   },
+   {
+    "plan_2008": "Operaciones Unitarias III",
+    "nivel_2008": 8,
+    "plan_2018": "Operaciones Unitarias en Ingeniería de Alimentos III",
+    "nivel_2018": 9
+   },
+   {
+    "plan_2008": "Procesos en la Industria Alimenticia I",
+    "nivel_2008": 8,
+    "plan_2018": "Procesos en la Industria Alimentaria I",
+    "nivel_2018": 9
+   },
+   {
+    "plan_2008": "Ingeniería Bioquímica",
+    "nivel_2008": 8,
+    "plan_2018": "Ingeniería Bioquímica",
+    "nivel_2018": 9
+   },
+   {
+    "plan_2008": "Administración",
+    "nivel_2008": 9,
+    "plan_2018": "Administración",
+    "nivel_2018": 9
+   },
+   {
+    "plan_2008": "Laboratorio de Ingeniería de Alimentos III",
+    "nivel_2008": 8,
+    "plan_2018": "Laboratorio de Ingeniería de Alimentos III",
+    "nivel_2018": 9
+   },
+   {
+    "plan_2008": "Procesos en la Industria Alimenticia II",
+    "nivel_2008": 9,
+    "plan_2018": "Procesos en la Industria Alimentaria II",
+    "nivel_2018": 10
+   },
+   {
+    "plan_2008": "Simulación de Procesos",
+    "nivel_2008": 9,
+    "plan_2018": "Simulación y Optimización de Procesos Alimentarios",
+    "nivel_2018": 10
+   },
+   {
+    "plan_2008": "Ingeniería Ambiental",
+    "nivel_2008": 9,
+    "plan_2018": "Ingeniería Ambiental",
+    "nivel_2018": 10
+   },
+   {
+    "plan_2008": "Ingeniería Económica",
+    "nivel_2008": 8,
+    "plan_2018": "Ingeniería Económica",
+    "nivel_2018": 10
+   },
+   {
+    "plan_2008": "Seminario III – Selección de tema de Trabajo de Grado",
+    "nivel_2008": 9,
+    "plan_2018": "Seminario III – Selección de tema de Trabajo de Grado",
+    "nivel_2018": 10
+   },
+   {
+    "plan_2008": "Laboratorio de Ingeniería de Alimentos IV",
+    "nivel_2008": 9,
+    "plan_2018": "Laboratorio de Ingeniería de Alimentos IV",
+    "nivel_2018": 10
+   },
+   {
+    "plan_2008": "Pasantía",
+    "nivel_2008": 10,
+    "plan_2018": "Pasantía",
+    "nivel_2018": 11
+   },
+   {
+    "plan_2008": "Trabajo de Grado",
+    "nivel_2008": 10,
+    "plan_2018": "Trabajo de Grado",
+    "nivel_2018": 11
+   }
+  ]
+ },
+ "dudas": [
+  "La homologación es de 2019 y usa los nombres del plan 2018 original; en la modificación 2024 todos siguen existiendo con el mismo nombre, salvo Nutrición, donde 'Trabajo de Grado I' y 'II' pasaron a ser un solo 'Trabajo de Grado'.",
+  "El sello de la universidad tapa algunos niveles del plan 2008 (marcados con nota 'estimado').",
+  "Solo figuran las asignaturas 2008 que tienen equivalente en 2018; la resolución no lista las que no se homologan."
+ ]
+}

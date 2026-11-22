@@ -39,8 +39,33 @@ puede volver a ejecutar para corregir datos sin duplicar filas.
 | Nutrición | 2026 | [0879-00-2025](https://www.qui.una.py/v3/wp-content/uploads/2026/07/NUTRI_Resolucion-N°-0879-N.pdf) | 10 | 303 | 4 (niveles 2, 4, 5, 7) |
 | Ingeniería de Alimentos | 2026 | [0874-00-2025](https://www.qui.una.py/v3/wp-content/uploads/2026/07/IA_Resolucion-N°-0874-IA.pdf) | 11 | 337 | 3 (niveles 5, 6, 8) |
 
-Los planes 2018 (con su modificación de 2024) y 2008 están en curso; ver
-"Pendiente" abajo.
+### Plan 2018
+
+Seis carreras tienen su plan 2018 modificado en 2024 (es el que cursa la mayoría);
+Bioquímica no publica modificación y se cargó el original. El plan 2018 no asigna
+créditos, así que `materias.creditos` queda vacío. En cada nivel se comprobó que
+las horas semanales sumen el total que da la resolución.
+
+| Carrera | Resolución CSU | Niveles | Optativas |
+|---|---|---|---|
+| Farmacia | [0421-00-2024](https://www.qui.una.py/v3/wp-content/uploads/2026/07/Modificacion-del-Proyecto-Academico-2018-Carrera-de-Farmacia-FCQ-UNA.pdf) | 11 | 4 (niveles 3, 6, 8, 10) |
+| Bioquímica | [0699-00-2018](https://www.qui.una.py/v3/wp-content/uploads/2026/10/2°_02-B-201811-1.pdf) (original) | 11 | 4 (niveles 5, 9, 10, 10) |
+| Ingeniería Química | 0423-00-2024 | 11 | 4 (niveles 5, 6, 7, 11) |
+| Química Industrial | 0424-00-2024 | 9 | 3 (niveles 4, 7, 8) |
+| Ciencia y Tecnología de Alimentos | [0425-00-2024](https://www.qui.una.py/v3/wp-content/uploads/2026/07/Modificacion-del-Proyecto-Academico-2018-Carrera-de-CTA-FCQ-UNA.pdf) | 9 | 3 (niveles 4, 5, 9) |
+| Nutrición | [0501-00-2024](https://www.qui.una.py/v3/wp-content/uploads/2026/07/Modificacion-del-Proyecto-Academico-2018-Carrera-de-Nutricion-FCQ-UNA.pdf) | 10 | 4 (niveles 4, 5, 8, 8) |
+| Ingeniería de Alimentos | [0426-00-2024](https://www.qui.una.py/v3/wp-content/uploads/2026/07/Modificacion-del-Proyecto-Academico-2018-Carrera-de-IA-FCQ-UNA.pdf) | 11 | 4 (niveles 5 a 8) |
+
+### Plan 2008 y homologación
+
+`homologacion-2008-2018.json` tiene la tabla oficial de equivalencias entre el
+plan 2008 y el 2018 de las 7 carreras ([Res. CSU 0506-00-2019](https://www.qui.una.py/v3/wp-content/uploads/2024/03/7.-Homologacion-de-asignaturas-entre-los-planes-academicos-2008-y-2018-para-las-carreras-de-F-B-IQ-QI-CTA-N-e-IA-de-la-FCQ-UNA.pdf)).
+Los nombres del lado 2018 coinciden con los de los JSON de esta carpeta. No entra
+en el seed: el esquema todavía no tiene una tabla de homologaciones.
+
+El plan 2008 en sí no se cargó como plan: la facultad solo publica la malla 2008
+de Bioquímica y la 2010 de Química Industrial, y la homologación lista solo las
+materias que tienen equivalente.
 
 ## Reglas de firma y calificación
 
@@ -72,8 +97,9 @@ Cada JSON tiene una lista `dudas`. Las principales:
 - **Calendario:** el 3.er periodo de finales del 2.º semestre figura como enero/febrero de 2026 en la web; por el orden debería ser 2027.
 - No se cargaron reglas de firma por materia: el reglamento permite que una cátedra tenga otro cálculo del PG (Art. 44), pero esas excepciones no están publicadas.
 - Los códigos de asignatura no figuran en las resoluciones; `materias.codigo` queda vacío.
+- **Planes 2018:** cada JSON tiene sus propias `dudas` (por ejemplo, en Bioquímica el sello tapa parte de la tabla y en CTA la Pasantía y el Trabajo de Grado se cargaron con sus horas totales).
 
 ## Pendiente
 
-- Plan 2018 de las 7 carreras, en su versión modificada de 2024 (es el que cursa la mayoría).
-- Plan 2008 (adecuación 2010) y la tabla oficial de homologación 2008 → 2018.
+- Una tabla `homologaciones` en el esquema para usar `homologacion-2008-2018.json` desde la app.
+- Las mallas completas del plan 2008 de las carreras que no las publican.
