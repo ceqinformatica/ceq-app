@@ -24,7 +24,8 @@ src/app/          pantallas (Expo Router)
   login.tsx       entrar con Google o correo
   onboarding.tsx  elegir carrera y plan la primera vez
   perfil.tsx      datos, cambiar carrera, huella, cerrar sesión
-src/components/   piezas de interfaz y pantalla de bloqueo
+src/components/   sistema de diseño (ui, gráficos, carnet, malla) y bloqueo
+src/datos/        lectura y escritura en Supabase para las pantallas, y modo demo
 src/context/      sesión, perfil y bloqueo biométrico
 src/lib/          Supabase, login, biometría, cálculo de firma y progreso
 supabase/migrations/  tablas, seguridad por fila y funciones
@@ -56,6 +57,16 @@ supabase/migrations/  tablas, seguridad por fila y funciones
    - `ceqapp://auth/callback` (la app instalada)
    - `exp://**` (solo para probar con Expo en desarrollo; sacarla antes de
      repartir la app a todos los estudiantes)
+
+### Ver la interfaz sin Supabase (modo demostración)
+
+```bash
+EXPO_PUBLIC_DEMO=1 npx expo start
+```
+
+Arranca con una sesión y datos de ejemplo guardados en memoria (malla, firma,
+agenda, carnet y avisos inventados) para revisar el diseño. Nunca se usa en
+las compilaciones de EAS.
 
 ### 3. Correr la app
 

@@ -1,13 +1,18 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useEffect, useState } from 'react';
-import { Image, Text, View } from 'react-native';
+import { Image, Pressable, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSesion } from '../context/SesionProvider';
 import { salir } from '../lib/auth';
-import { colores, espacio } from '../tema';
-import { Boton, logoCeq, Mensaje, s } from './ui';
+import { colores, espacio, fuentes } from '../tema';
+import { Hexagono, TramaHex } from './graficos';
+import { Boton, logoCeq, Mensaje } from './ui';
 
 export function Bloqueo() {
   const { desbloquear } = useSesion();
+  const insets = useSafeAreaInsets();
   const [error, setError] = useState<string | null>(null);
+  const [tam, setTam] = useState({ w: 0, h: 0 });
 
   const intentar = async () => {
     setError(null);
@@ -21,15 +26,30 @@ export function Bloqueo() {
   }, []);
 
   return (
-    <View style={{ flex: 1, justifyContent: 'center', padding: espacio.xl, backgroundColor: colores.fondo }}>
-      <Image source={logoCeq} style={{ width: 96, height: 96, alignSelf: 'center', marginBottom: espacio.l }} accessibilityLabel="Logo del CEQ" />
-      <Text style={[s.titulo, { textAlign: 'center' }]}>App bloqueada</Text>
-      <Text style={[s.sub, { textAlign: 'center', marginVertical: espacio.m }]}>
-        Usá tu huella o tu rostro para entrar.
-      </Text>
+    <View
+      style={{ flex: 1, backgroundColor: colores.marino, paddingTop: insets.top, paddingBottom: insets.bottom + espacio.xl, paddingHorizontal: espacio.xl }}
+      onLayout={(e) => setTam({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}
+    >
+      {tam.w > 0 && <TramaHex ancho={tam.w} alto={tam.h} opacidad={0.08} tam={44} />}
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+        <Hexagono tamano={112} relleno={colores.blanco}>
+          <Image source={logoCeq} style={{ width: 76, height: 76 }} accessibilityLabel="Logo del CEQ" />
+        </Hexagono>
+        <Text style={{ fontFamily: fuentes.bold, fontSize: 24, color: colores.blanco, marginTop: espacio.xl, textTransform: 'uppercase', letterSpacing: 1 }} accessibilityRole="header">
+          App bloqueada
+        </Text>
+        <Text style={{ fontFamily: fuentes.regular, fontSize: 15, color: colores.celeste, marginTop: espacio.s, textAlign: 'center' }}>
+          Usá tu huella o tu rostro para entrar.
+        </Text>
+        <Pressable onPress={intentar} accessibilityRole="button" accessibilityLabel="Desbloquear" style={({ pressed }) => ({ marginTop: espacio.xxl, width: 84, height: 84, borderRadius: 42, backgroundColor: pressed ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.14)', alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: 'rgba(203,226,250,0.5)' })}>
+          <Ionicons name="finger-print" size={44} color={colores.blanco} />
+        </Pressable>
+      </View>
       <Mensaje texto={error} />
-      <Boton texto="Desbloquear" onPress={intentar} />
-      <Boton texto="Cerrar sesión" variante="secundario" onPress={salir} />
+      <Boton texto="Desbloquear" variante="claro" onPress={intentar} />
+      <Pressable onPress={salir} accessibilityRole="button" style={{ alignSelf: 'center', padding: espacio.m, marginTop: espacio.s }}>
+        <Text style={{ fontFamily: fuentes.semibold, fontSize: 14, color: colores.celeste }}>Cerrar sesión</Text>
+      </Pressable>
     </View>
   );
 }

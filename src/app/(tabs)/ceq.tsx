@@ -1,5 +1,250 @@
-import { Proximamente } from '../../components/ui';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { router } from 'expo-router';
+import * as WebBrowser from 'expo-web-browser';
+import { useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Carnet } from '../../components/Carnet';
+import { BarraProgreso } from '../../components/graficos';
+import { Boton, CabeceraMarca, Campo, Chip, EstadoVacio, Esqueleto, Fila, Hoja, Mensaje, Pantalla, s, Seccion, Tarjeta } from '../../components/ui';
+import { useSesion } from '../../context/SesionProvider';
+import { cargarAvisos, cargarEncuestas, haceCuanto, cargarSocio, cargarTramites, enviarSugerencia, votar, type EncuestaConResultados } from '../../datos/ceq';
+import { usarDatos } from '../../datos/usarDatos';
+import type { TramiteDb } from '../../lib/tipos-db';
+import { colores, espacio, fuentes, radio, sombras } from '../../tema';
+
+async function cargar(uid: string) {
+  const [socio, avisos, tramites, encuestas] = await Promise.all([cargarSocio(uid), cargarAvisos(3), cargarTramites(), cargarEncuestas(uid)]);
+  return { socio, avisos, tramites, encuestas };
+}
 
 export default function Ceq() {
-  return <Proximamente titulo="CEQ" items={['Carnet de socio con QR', 'Avisos del CEQ', 'Guía de trámites', 'Sugerencias', 'Encuestas anónimas']} />;
+  const { sesion, perfil } = useSesion();
+  const uid = sesion?.user.id ?? '';
+  const { datos, cargando, error, refrescando, recargar, setDatos } = usarDatos(() => cargar(uid), [uid]);
+  const [tramite, setTramite] = useState<TramiteDb | null>(null);
+  const [sugerir, setSugerir] = useState(false);
+
+  return (
+    <Pantalla cabecera={<CabeceraMarca titulo="Centro de Estudiantes" sub="de Química · FCQ" />} refrescando={refrescando} onRefrescar={recargar}>
+      <View style={{ marginTop: -espacio.xxl }}>
+        {cargando && !datos ? (
+          <Tarjeta><Esqueleto alto={150} /></Tarjeta>
+        ) : datos?.socio ? (
+          <Pressable onPress={() => router.push('/carnet')} accessibilityRole="button" accessibilityHint="Abre el carnet con el código QR">
+            <Carnet socio={datos.socio} />
+          </Pressable>
+        ) : (
+          <Tarjeta>
+            <View style={{ flexDirection: 'row', gap: espacio.m, alignItems: 'center' }}>
+              <View style={est.iconoGrande}><Ionicons name="card-outline" size={26} color={colores.marino} /></View>
+              <View style={{ flex: 1 }}>
+                <Text style={s.filaTitulo}>Todavía no sos socio</Text>
+                <Text style={s.filaDetalle}>Asociate al CEQ para tener tu carnet digital y los beneficios.</Text>
+              </View>
+            </View>
+          </Tarjeta>
+        )}
+      </View>
+
+      {error && !datos && <Mensaje texto={error} />}
+
+      <View style={est.accesos}>
+        <Acceso icono="megaphone" texto="Avisos" onPress={() => router.push('/avisos')} />
+        <Acceso icono="document-text" texto="Trámites" onPress={() => setTramite(datos?.tramites[0] ?? null)} deshabilitado={!datos?.tramites.length} />
+        <Acceso icono="chatbubble-ellipses" texto="Sugerir" onPress={() => setSugerir(true)} />
+        <Acceso icono="card" texto="Carnet" onPress={() => router.push('/carnet')} deshabilitado={!datos?.socio} />
+      </View>
+
+      <Seccion accion={{ texto: 'Ver todos', onPress: () => router.push('/avisos') }}>Avisos</Seccion>
+      {cargando && !datos ? (
+        <Tarjeta><Esqueleto alto={14} ancho="70%" /><Esqueleto alto={12} estilo={{ marginTop: 10 }} /></Tarjeta>
+      ) : datos?.avisos.length ? (
+        datos.avisos.map((a) => (
+          <Tarjeta key={a.id} onPress={() => router.push(`/aviso/${a.id}`)} etiqueta={a.titulo}>
+            <Text style={est.avisoFecha}>{haceCuanto(a.created_at)}</Text>
+            <Text style={[s.filaTitulo, { fontSize: 16, color: colores.marino }]}>{a.titulo}</Text>
+            <Text style={[s.filaDetalle, { marginTop: 4 }]} numberOfLines={2}>{a.cuerpo}</Text>
+          </Tarjeta>
+        ))
+      ) : (
+        <Tarjeta><EstadoVacio icono="megaphone-outline" titulo="Sin avisos por ahora" /></Tarjeta>
+      )}
+
+      {datos?.encuestas.map((e) => (
+        <Encuesta key={e.id} encuesta={e} onVotado={(nueva) => setDatos({ ...datos, encuestas: datos.encuestas.map((x) => (x.id === nueva.id ? nueva : x)) })} />
+      ))}
+
+      {!!datos?.tramites.length && (
+        <>
+          <Seccion>Guía de trámites</Seccion>
+          <Tarjeta estilo={{ paddingVertical: espacio.xs }}>
+            {datos.tramites.map((t, i) => (
+              <Fila key={t.id} icono="document-text-outline" titulo={t.nombre} detalle={t.descripcion ?? undefined} onPress={() => setTramite(t)} ultima={i === datos.tramites.length - 1} />
+            ))}
+          </Tarjeta>
+        </>
+      )}
+
+      <Tarjeta variante="celeste" onPress={() => setSugerir(true)} etiqueta="Enviar una sugerencia" estilo={{ marginTop: espacio.m }}>
+        <View style={{ flexDirection: 'row', gap: espacio.m, alignItems: 'center' }}>
+          <View style={[est.iconoGrande, { backgroundColor: colores.blanco }]}><Ionicons name="chatbubble-ellipses-outline" size={24} color={colores.marino} /></View>
+          <View style={{ flex: 1 }}>
+            <Text style={[s.filaTitulo, { color: colores.marino }]}>¿Qué podemos mejorar?</Text>
+            <Text style={s.filaDetalle}>Mandale tu sugerencia o reclamo al CEQ.</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={colores.marino} />
+        </View>
+      </Tarjeta>
+
+      <Hoja visible={tramite != null} titulo={tramite?.nombre ?? ''} onCerrar={() => setTramite(null)}>
+        {tramite && <DetalleTramite tramite={tramite} otros={datos?.tramites ?? []} onElegir={setTramite} />}
+      </Hoja>
+      <FormSugerencia visible={sugerir} onCerrar={() => setSugerir(false)} />
+    </Pantalla>
+  );
 }
+
+function Acceso({ icono, texto, onPress, deshabilitado }: { icono: 'megaphone' | 'document-text' | 'chatbubble-ellipses' | 'card'; texto: string; onPress: () => void; deshabilitado?: boolean }) {
+  return (
+    <Pressable onPress={onPress} disabled={deshabilitado} accessibilityRole="button" accessibilityLabel={texto} style={({ pressed }) => [est.acceso, pressed && { opacity: 0.8 }, deshabilitado && { opacity: 0.45 }]}>
+      <View style={est.accesoIcono}><Ionicons name={icono} size={22} color={colores.marino} /></View>
+      <Text style={est.accesoTexto}>{texto}</Text>
+    </Pressable>
+  );
+}
+
+function Encuesta({ encuesta, onVotado }: { encuesta: EncuestaConResultados; onVotado: (e: EncuestaConResultados) => void }) {
+  const [elegida, setElegida] = useState<string | null>(null);
+  const [enviando, setEnviando] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const mostrarResultados = encuesta.yaVote;
+
+  const enviar = async () => {
+    if (!elegida) return;
+    setEnviando(true);
+    setError(null);
+    try {
+      await votar(encuesta.id, elegida);
+      onVotado({ ...encuesta, yaVote: true, total: encuesta.total + 1, opciones: encuesta.opciones.map((o) => (o.id === elegida ? { ...o, votos: o.votos + 1 } : o)) });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'No se pudo votar.');
+    } finally {
+      setEnviando(false);
+    }
+  };
+
+  return (
+    <>
+      <Seccion>Encuesta</Seccion>
+      <Tarjeta>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: espacio.s }}>
+          <Ionicons name="shield-checkmark" size={14} color={colores.verde} />
+          <Text style={[s.filaDetalle, { color: colores.verde, fontFamily: fuentes.medium }]}>Anónima: nadie sabe qué votaste</Text>
+        </View>
+        <Text style={[s.filaTitulo, { fontSize: 16, color: colores.marino, marginBottom: espacio.m }]}>{encuesta.pregunta}</Text>
+        {encuesta.opciones.map((o) => {
+          const porc = encuesta.total ? Math.round((o.votos / encuesta.total) * 100) : 0;
+          if (mostrarResultados) {
+            return (
+              <View key={o.id} style={{ marginBottom: espacio.m }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 2 }}>
+                  <Text style={s.cuerpo}>{o.texto}</Text>
+                  <Text style={[s.cuerpo, { fontFamily: fuentes.semibold, color: colores.marino }]}>{porc} %</Text>
+                </View>
+                <BarraProgreso valor={porc} fondo={colores.lineaSuave} />
+              </View>
+            );
+          }
+          const activo = elegida === o.id;
+          return (
+            <Pressable key={o.id} onPress={() => setElegida(o.id)} accessibilityRole="radio" accessibilityState={{ checked: activo }} style={[est.opcion, activo && { borderColor: colores.marino, backgroundColor: colores.tarjeta }]}>
+              <View style={[s.radio, activo && { borderColor: colores.marino }]}>{activo && <View style={s.radioPunto} />}</View>
+              <Text style={[s.cuerpo, { flex: 1 }]}>{o.texto}</Text>
+            </Pressable>
+          );
+        })}
+        {mostrarResultados ? (
+          <Text style={s.filaDetalle}>{encuesta.total} votos · Ya votaste</Text>
+        ) : (
+          <Boton texto="Votar" onPress={enviar} cargando={enviando} deshabilitado={!elegida} />
+        )}
+        <Mensaje texto={error} />
+      </Tarjeta>
+    </>
+  );
+}
+
+function DetalleTramite({ tramite, otros, onElegir }: { tramite: TramiteDb; otros: TramiteDb[]; onElegir: (t: TramiteDb) => void }) {
+  return (
+    <View>
+      {otros.length > 1 && (
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: espacio.s, marginBottom: espacio.l }}>
+          {otros.map((t) => <Chip key={t.id} texto={t.nombre} elegido={t.id === tramite.id} onPress={() => onElegir(t)} />)}
+        </View>
+      )}
+      {tramite.descripcion ? <Text style={[s.cuerpo, { marginBottom: espacio.l }]}>{tramite.descripcion}</Text> : null}
+      {tramite.pasos.map((p, i) => (
+        <View key={i} style={{ flexDirection: 'row', gap: espacio.m, marginBottom: espacio.m }}>
+          <View style={est.paso}><Text style={est.pasoNumero}>{i + 1}</Text></View>
+          <Text style={[s.cuerpo, { flex: 1, paddingTop: 3 }]}>{p}</Text>
+        </View>
+      ))}
+      <Tarjeta variante="celeste" estilo={{ marginTop: espacio.s }}>
+        {tramite.donde ? <Fila icono="location-outline" fondoIcono={colores.blanco} titulo="Dónde" detalle={tramite.donde} ultima={!tramite.costo} /> : null}
+        {tramite.costo ? <Fila icono="cash-outline" fondoIcono={colores.blanco} titulo="Costo" detalle={tramite.costo} ultima /> : null}
+      </Tarjeta>
+      {tramite.formulario_url ? (
+        <Boton texto="Abrir formulario" icono="open-outline" variante="secundario" onPress={() => WebBrowser.openBrowserAsync(tramite.formulario_url!)} />
+      ) : null}
+      <View style={{ height: espacio.l }} />
+    </View>
+  );
+}
+
+const CATEGORIAS = ['Académico', 'Infraestructura', 'Eventos', 'La app', 'Otro'];
+
+function FormSugerencia({ visible, onCerrar }: { visible: boolean; onCerrar: () => void }) {
+  const [categoria, setCategoria] = useState(CATEGORIAS[0]);
+  const [texto, setTexto] = useState('');
+  const [enviando, setEnviando] = useState(false);
+  const [estado, setEstado] = useState<{ tipo: 'error' | 'exito'; texto: string } | null>(null);
+
+  const enviar = async () => {
+    setEnviando(true);
+    setEstado(null);
+    try {
+      await enviarSugerencia(categoria, texto.trim());
+      setTexto('');
+      setEstado({ tipo: 'exito', texto: '¡Gracias! El CEQ recibió tu sugerencia.' });
+    } catch (e) {
+      setEstado({ tipo: 'error', texto: e instanceof Error ? e.message : 'No se pudo enviar.' });
+    } finally {
+      setEnviando(false);
+    }
+  };
+
+  return (
+    <Hoja visible={visible} titulo="Sugerencia al CEQ" onCerrar={() => { setEstado(null); onCerrar(); }}>
+      <Text style={[s.etiqueta, { marginBottom: espacio.s }]}>Tema</Text>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: espacio.s, marginBottom: espacio.m }}>
+        {CATEGORIAS.map((c) => <Chip key={c} texto={c} elegido={c === categoria} onPress={() => setCategoria(c)} />)}
+      </View>
+      <Campo etiqueta="Contanos" value={texto} onChangeText={setTexto} multiline maxLength={2000} placeholder="Escribí tu idea, reclamo o propuesta" />
+      <Mensaje texto={estado?.texto ?? null} tipo={estado?.tipo} />
+      <Boton texto="Enviar" icono="send" onPress={enviar} cargando={enviando} deshabilitado={texto.trim().length < 3} />
+      <View style={{ height: espacio.l }} />
+    </Hoja>
+  );
+}
+
+const est = StyleSheet.create({
+  iconoGrande: { width: 48, height: 48, borderRadius: 14, backgroundColor: colores.tarjeta, alignItems: 'center', justifyContent: 'center' },
+  accesos: { flexDirection: 'row', gap: espacio.s, marginTop: espacio.l, marginBottom: espacio.s },
+  acceso: { flex: 1, alignItems: 'center', gap: 6, backgroundColor: colores.superficieBlanca, borderRadius: radio.l, paddingVertical: espacio.m, ...sombras.suave },
+  accesoIcono: { width: 44, height: 44, borderRadius: 14, backgroundColor: colores.tarjeta, alignItems: 'center', justifyContent: 'center' },
+  accesoTexto: { fontFamily: fuentes.semibold, fontSize: 12, color: colores.marino },
+  avisoFecha: { fontFamily: fuentes.semibold, fontSize: 11, color: colores.azul, letterSpacing: 0.4, marginBottom: 4, textTransform: 'uppercase' },
+  opcion: { flexDirection: 'row', alignItems: 'center', gap: espacio.m, borderWidth: 1, borderColor: colores.lineaSuave, borderRadius: radio.m, padding: espacio.m, marginBottom: espacio.s },
+  paso: { width: 28, height: 28, borderRadius: 14, backgroundColor: colores.marino, alignItems: 'center', justifyContent: 'center' },
+  pasoNumero: { fontFamily: fuentes.bold, fontSize: 13, color: colores.blanco },
+});
