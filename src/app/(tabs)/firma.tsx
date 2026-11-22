@@ -95,7 +95,7 @@ export default function Firma() {
             <View style={{ flexDirection: 'row', gap: espacio.s }}>
               <Ionicons name="information-circle" size={20} color={colores.marino} />
               <Text style={[s.cuerpo, { flex: 1, fontSize: 14 }]}>
-                Promediamos tus notas según la ponderación de cada evaluación y lo comparamos con el mínimo de tu plan. Si tu materia no tiene una regla propia, usamos el reglamento general de la FCQ: 50 % en teoría, 60 % en prácticos, 60 % de asistencia a teoría y 100 % de las prácticas.
+                Promediamos tus parciales (todos pesan lo mismo) y tu laboratorio, y lo comparamos con el mínimo de tu plan. Si tu materia no tiene una regla propia, usamos el reglamento general de la FCQ: 50 % en teoría, 60 % en prácticos, 60 % de asistencia a teoría y 100 % de las prácticas.
               </Text>
             </View>
           </Tarjeta>

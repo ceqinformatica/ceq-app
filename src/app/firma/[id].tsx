@@ -23,9 +23,10 @@ const ICONO_TIPO: Record<TipoEvaluacion, 'document-text-outline' | 'create-outli
   laboratorio: 'flask-outline',
 };
 
-const TIPOS: { valor: TipoEvaluacion; texto: string; icono: 'document-text' | 'create' | 'flask'; nombre: string }[] = [
+// Solo parciales y laboratorio: los trabajos prácticos se sacaron porque cada
+// docente los cuenta distinto.
+const TIPOS: { valor: TipoEvaluacion; texto: string; icono: 'document-text' | 'flask'; nombre: string }[] = [
   { valor: 'parcial', texto: 'Parcial', icono: 'document-text', nombre: '' },
-  { valor: 'tp', texto: 'Trabajo práctico', icono: 'create', nombre: 'Trabajo práctico' },
   { valor: 'laboratorio', texto: 'Laboratorio', icono: 'flask', nombre: 'Laboratorio' },
 ];
 
@@ -161,7 +162,7 @@ export default function CalculadoraFirma() {
           <EstadoVacio
             icono="document-text-outline"
             titulo="Sin evaluaciones"
-            texto={`Agregá tus parciales, trabajos prácticos${materia.tiene_laboratorio ? ' y el laboratorio' : ' y, si tiene, el laboratorio'}. Todos pesan lo mismo: con tres parciales, cada uno vale un tercio.`}
+            texto={`Agregá tus parciales${materia.tiene_laboratorio ? ' y el laboratorio' : ' y, si tiene, el laboratorio'}. Todos pesan lo mismo: con tres parciales, cada uno vale un tercio.`}
             accion={{ texto: 'Agregar evaluación', onPress: () => setEditando('nueva') }}
           />
         ) : (
@@ -320,7 +321,7 @@ function FormEvaluacion({ visible, evaluacion, materiaId, onCerrar, onGuardado }
     if (!visible) return;
     const e = evaluacion;
     setNombre(e?.nombre ?? '');
-    setTipo(e ? tipoEvaluacion(e) : 'parcial');
+    setTipo(e && tipoEvaluacion(e) === 'laboratorio' ? 'laboratorio' : 'parcial');
     setModo(e && e.porcentaje == null && e.puntaje_total != null ? 'puntaje' : 'porcentaje');
     setPorcentaje(e?.porcentaje != null ? String(Number(e.porcentaje)) : '');
     setObtenido(e?.puntaje_obtenido != null ? String(Number(e.puntaje_obtenido)) : '');
@@ -392,7 +393,7 @@ function FormEvaluacion({ visible, evaluacion, materiaId, onCerrar, onGuardado }
           />
         ))}
       </View>
-      <Campo etiqueta="Nombre" value={nombre} onChangeText={setNombre} placeholder={tipo === 'parcial' ? 'Ej. Primer parcial' : tipo === 'tp' ? 'Ej. Trabajo práctico 1' : 'Laboratorio'} />
+      <Campo etiqueta="Nombre" value={nombre} onChangeText={setNombre} placeholder={tipo === 'laboratorio' ? 'Laboratorio' : 'Ej. Primer parcial'} />
       <Text style={[s.etiqueta, { marginBottom: espacio.s }]}>¿Ya la rendiste?</Text>
       <Segmentado opciones={[{ valor: 'si', texto: 'Sí, tengo la nota' }, { valor: 'no', texto: 'Todavía no' }]} valor={rendida} onCambio={setRendida} />
       {rendida === 'si' && (
