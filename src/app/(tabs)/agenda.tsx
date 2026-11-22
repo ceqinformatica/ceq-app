@@ -281,7 +281,8 @@ function ElegirCursando({ datos, primeraVez, onListo, onSaltar }: {
     setError(null);
     try {
       const ids = candidatas.filter((m) => elegidas.has(m.id)).map((m) => m.id);
-      await guardarEstadosEnBloque(ids.map((materiaId) => ({ materiaId, estado: 'cursando', notaFinal: null })));
+      // soloNuevas: si alguna ya tenía estado (por ejemplo, aprobada desde otro equipo), no se pisa.
+      await guardarEstadosEnBloque(ids.map((materiaId) => ({ materiaId, estado: 'cursando', notaFinal: null })), { soloNuevas: true });
       onListo(ids);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'No se pudo guardar.');
@@ -342,6 +343,8 @@ function usarEleccion(visible: boolean, mias: MateriaAgenda[]) {
 type PropsForm = { visible: boolean; datos?: DatosAgenda | null; onCursando: (ids: string[]) => void; onCerrar: () => void; onListo: () => void };
 
 function FormClase({ visible, diaInicial, datos, onCursando, onCerrar, onListo }: PropsForm & { diaInicial: number }) {
+  const cursando = misMaterias(datos, ['cursando']);
+  const unica = cursando.length === 1 ? cursando[0].id : null;
   const [materia, setMateria] = useState<string | null>(null);
   const [titulo, setTitulo] = useState('');
   const [dia, setDia] = useState(diaInicial);
@@ -352,16 +355,13 @@ function FormClase({ visible, diaInicial, datos, onCursando, onCerrar, onListo }
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (visible) { setMateria(null); setTitulo(''); setDia(diaInicial); setInicio(''); setFin(''); setAula(''); setError(null); }
+    // Si cursás una sola materia, ya queda elegida.
+    if (visible) { setMateria(unica); setTitulo(''); setDia(diaInicial); setInicio(''); setFin(''); setAula(''); setError(null); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible, diaInicial]);
 
-  const mias = misMaterias(datos, ['cursando']);
+  const mias = cursando;
   const eleccion = usarEleccion(visible, mias);
-  // Si cursás una sola materia, ya queda elegida.
-  useEffect(() => {
-    if (visible && mias.length === 1 && materia == null && !titulo) setMateria(mias[0].id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visible, mias.length]);
 
   const hi = normalizarHora(inicio);
   const hf = normalizarHora(fin);
@@ -390,7 +390,7 @@ function FormClase({ visible, diaInicial, datos, onCursando, onCerrar, onListo }
         />
       ) : (
       <>
-      {mias.length > 0 && <SelectorMateria materias={mias} valor={materia} onCambio={setMateria} onOtra={eleccion.abrir} />}
+      {(datos?.materias.length ?? 0) > 0 && <SelectorMateria materias={mias} valor={materia} onCambio={setMateria} onOtra={eleccion.abrir} />}
       {!materia && <Campo etiqueta="Nombre" value={titulo} onChangeText={setTitulo} placeholder="Ej. Tutoría de Física" />}
       <Text style={[s.etiqueta, { marginBottom: espacio.s }]}>Día</Text>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: espacio.s, marginBottom: espacio.m }}>
@@ -468,7 +468,7 @@ function FormEvento({ visible, uid, datos, onCursando, onCerrar, onListo }: Prop
         {TIPOS.map((t) => <Chip key={t.valor} texto={t.texto} icono={t.icono} elegido={tipo === t.valor} onPress={() => setTipo(t.valor)} />)}
       </View>
       <Campo etiqueta="Qué es" value={titulo} onChangeText={setTitulo} placeholder="Ej. Segundo parcial" />
-      {mias.length > 0 && <SelectorMateria materias={mias} valor={materia} onCambio={setMateria} onOtra={eleccion.abrir} />}
+      {(datos?.materias.length ?? 0) > 0 && <SelectorMateria materias={mias} valor={materia} onCambio={setMateria} onOtra={eleccion.abrir} />}
       <View style={{ flexDirection: 'row', gap: espacio.m }}>
         <Campo etiqueta="Fecha" value={fecha} onChangeText={setFecha} placeholder="DD/MM" keyboardType="numbers-and-punctuation" maxLength={10} estilo={{ flex: 1.3 }} />
         <Campo etiqueta="Hora (opcional)" value={horaTxt} onChangeText={setHoraTxt} placeholder="08:00" keyboardType="numbers-and-punctuation" maxLength={5} estilo={{ flex: 1 }} />
