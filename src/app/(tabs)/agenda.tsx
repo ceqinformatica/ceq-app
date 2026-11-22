@@ -10,6 +10,7 @@ import {
 } from '../../datos/agenda';
 import { guardarEstadosEnBloque } from '../../datos/academico';
 import { usarDatos } from '../../datos/usarDatos';
+import { CampoFechaHora } from '../../components/fecha';
 import type { EstadoMateriaDb, EventoDb, HorarioDb, TipoEvento } from '../../lib/tipos-db';
 import { colores, espacio, fuentes, radio, sombras } from '../../tema';
 
@@ -218,6 +219,8 @@ function Detalle({ filas, onBorrar, textoBorrar, nota }: { filas: [string, strin
     </View>
   );
 }
+
+const hoy = () => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; };
 
 const reHora = /^([01]?\d|2[0-3]):([0-5]\d)$/;
 const normalizarHora = (t: string) => {
@@ -472,10 +475,9 @@ function FormEvento({ visible, uid, datos, onCursando, onCerrar, onListo }: Prop
       <Campo etiqueta="Qué es" value={titulo} onChangeText={setTitulo} placeholder="Ej. Segundo parcial" />
       {(datos?.materias.length ?? 0) > 0 && <SelectorMateria materias={mias} valor={materia} onCambio={setMateria} onOtra={eleccion.abrir} />}
       <View style={{ flexDirection: 'row', gap: espacio.m }}>
-        <Campo etiqueta="Fecha" value={fecha} onChangeText={setFecha} placeholder="DD/MM" keyboardType="numbers-and-punctuation" maxLength={10} estilo={{ flex: 1.3 }} />
-        <Campo etiqueta="Hora (opcional)" value={horaTxt} onChangeText={setHoraTxt} placeholder="08:00" keyboardType="numbers-and-punctuation" maxLength={5} estilo={{ flex: 1 }} />
+        <CampoFechaHora etiqueta="Fecha" modo="date" valor={fecha} onCambio={setFecha} minimo={hoy()} estilo={{ flex: 1.4 }} />
+        <CampoFechaHora etiqueta="Hora (opcional)" modo="time" valor={horaTxt} onCambio={setHoraTxt} placeholder="08:00" opcional estilo={{ flex: 1 }} />
       </View>
-      {fecha.length >= 3 && !fechaIso && <Mensaje texto="Escribí la fecha como 15/12 o 15/12/2026." />}
       <Mensaje texto={error} />
       <Boton texto="Guardar fecha" icono="add" onPress={guardar} cargando={guardando} deshabilitado={!valido} />
       <View style={{ height: espacio.l }} />
