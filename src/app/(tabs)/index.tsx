@@ -5,7 +5,7 @@ import { pct, semaforoVisible } from '../../components/academico';
 import { AnilloProgreso } from '../../components/graficos';
 import { CabeceraMarca, EstadoVacio, Esqueleto, Pantalla, s, Seccion, Tarjeta, type NombreIcono } from '../../components/ui';
 import { useSesion } from '../../context/SesionProvider';
-import { aAsistencia, cargarFirmas, cargarMalla, REGLA_POR_DEFECTO, reglaDe, tieneLab } from '../../datos/academico';
+import { aAsistencia, cargarFirmas, cargarMalla, REGLA_POR_DEFECTO, reglaTrasRecuperar, reglaDe, tieneLab } from '../../datos/academico';
 import { cargarAgenda, cuentaRegresiva, diaSemanaHoy, diasHasta, hora, horaDe, partesFecha } from '../../datos/agenda';
 import { cargarAvisos, haceCuanto } from '../../datos/ceq';
 import { usarDatos } from '../../datos/usarDatos';
@@ -30,7 +30,7 @@ async function cargar(planId: string | null | undefined, carreraId: string | nul
     const datos = await cargarFirmas(cursando.map((m) => m.id));
     firmas = cursando.map((m) => {
       const d = datos.get(m.id)!;
-      const r = evaluarFirma({ regla: reglaDe(malla.reglas, m.id) ?? REGLA_POR_DEFECTO, tieneLaboratorio: tieneLab(d.evaluacionesDb), evaluaciones: d.evaluaciones, asistencia: aAsistencia(d.asistencia), asistenciaLab: aAsistencia(d.asistenciaLab) });
+      const r = evaluarFirma({ regla: reglaTrasRecuperar(reglaDe(malla.reglas, m.id) ?? REGLA_POR_DEFECTO, d.recuperado), tieneLaboratorio: tieneLab(d.evaluacionesDb), evaluaciones: d.evaluaciones, asistencia: aAsistencia(d.asistencia), asistenciaLab: aAsistencia(d.asistenciaLab) });
       return { id: m.id, nombre: m.nombre, semaforo: semaforoVisible(r), firma: r.firma, teoria: r.teoria.actual };
     });
   }

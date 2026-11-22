@@ -9,25 +9,28 @@ import {
 } from '../../components/ui';
 import { useSesion } from '../../context/SesionProvider';
 import {
-  aAsistencia, aEvaluacion, borrarEvaluacion, cargarFirmas, cargarMalla, guardarAsistencia, guardarEvaluacion, guardarFirma, REGLA_POR_DEFECTO, reglaDe,
+  aAsistencia, aEvaluacion, borrarEvaluacion, cargarFirmas, cargarMalla, guardarAsistencia, guardarEvaluacion, guardarFirma, REGLA_POR_DEFECTO, reglaDe, reglaTrasRecuperar,
   tieneLab, tipoEvaluacion, type NuevaEvaluacion, type TipoEvaluacion,
 } from '../../datos/academico';
 import { usarDatos } from '../../datos/usarDatos';
-import { evaluarFirma, pesosIguales, porcentajeEvaluacion, promedioFirma, type ResultadoAsistencia, type ResultadoComponente } from '../../lib/firma';
+import { evaluarFirma, porcentajeEvaluacion, promedioFirma, type ResultadoAsistencia, type ResultadoComponente } from '../../lib/firma';
+import { esRecuperatorio, puedeRecuperar, RECUPERACION_DESDE, RECUPERACION_MINIMO } from '../../lib/reglamento-fcq';
 import type { AsistenciaDb, ComponenteDb, EvaluacionDb } from '../../lib/tipos-db';
 import { colores, coloresSemaforo, espacio, fuentes, radio, texto } from '../../tema';
 
-const ICONO_TIPO: Record<TipoEvaluacion, 'document-text-outline' | 'create-outline' | 'flask-outline'> = {
+const ICONO_TIPO: Record<TipoEvaluacion, 'document-text-outline' | 'create-outline' | 'flask-outline' | 'refresh-outline'> = {
   parcial: 'document-text-outline',
   tp: 'create-outline',
   laboratorio: 'flask-outline',
+  recuperatorio: 'refresh-outline',
 };
 
 // Solo parciales y laboratorio: los trabajos prácticos se sacaron porque cada
 // docente los cuenta distinto.
-const TIPOS: { valor: TipoEvaluacion; texto: string; icono: 'document-text' | 'flask'; nombre: string }[] = [
+const TIPOS: { valor: TipoEvaluacion; texto: string; icono: 'document-text' | 'flask' | 'refresh'; nombre: string }[] = [
   { valor: 'parcial', texto: 'Parcial', icono: 'document-text', nombre: '' },
   { valor: 'laboratorio', texto: 'Laboratorio', icono: 'flask', nombre: 'Laboratorio' },
+  { valor: 'recuperatorio', texto: 'Recuperatorio', icono: 'refresh', nombre: 'Recuperatorio' },
 ];
 
 const volver = () => (router.canGoBack() ? router.back() : router.replace('/firma'));
@@ -52,10 +55,11 @@ export default function CalculadoraFirma() {
   const resultado = useMemo(() => {
     if (!datos?.materia) return null;
     return evaluarFirma({
-      regla: datos.regla,
+      // Tras el examen de recuperación alcanza con PG ≥ 50 % (Art. 46).
+      regla: reglaTrasRecuperar(datos.regla, datos.recuperado),
       tieneLaboratorio: tieneLab(datos.evaluacionesDb),
-      // Pesos automáticos: cada evaluación de teoría (o de laboratorio) pesa lo mismo.
-      evaluaciones: pesosIguales(datos.evaluacionesDb.map(aEvaluacion)),
+      // Ya viene con el recuperatorio aplicado y los pesos automáticos (todas iguales).
+      evaluaciones: datos.evaluaciones,
       asistencia: aAsistencia(datos.asistencia),
       asistenciaLab: aAsistencia(datos.asistenciaLab),
     });
@@ -77,9 +81,11 @@ export default function CalculadoraFirma() {
   const tituloEstado = resultado.firma ? '¡Tenés firma!' : c.nombre;
   const conLab = tieneLab(datos.evaluacionesDb);
   const combinado = conLab && regla.modoLaboratorio === 'combinado';
-  const cantTeoria = datos.evaluacionesDb.filter((e) => e.componente === 'teoria').length;
+  const cantTeoria = datos.evaluacionesDb.filter((e) => e.componente === 'teoria' && !esRecuperatorio(e)).length;
+  const tieneRecuperatorio = datos.evaluacionesDb.some(esRecuperatorio);
+  const pendientesTeoria = datos.evaluacionesDb.some((e) => e.componente === 'teoria' && !esRecuperatorio(e) && !e.rendida);
   const cantLab = datos.evaluacionesDb.filter((e) => e.componente === 'laboratorio').length;
-  const promedio = combinado ? null : promedioFirma(resultado);
+  const promedio = combinado ? null : promedioFirma(resultado, { recuperado: datos.recuperado });
   const puedeGuardar = resultado.firma && promedio != null;
 
   const guardarMiFirma = async () => {
@@ -168,13 +174,13 @@ export default function CalculadoraFirma() {
         ) : (
           datos.evaluacionesDb.map((e, i) => {
             const p = porcentajeEvaluacion(aEvaluacion(e));
-            const ok = p != null && p >= (e.componente === 'laboratorio' ? regla.minimoLaboratorio ?? regla.minimoTeoria : regla.minimoTeoria);
+            const ok = p != null && p >= (esRecuperatorio(e) ? RECUPERACION_MINIMO : e.componente === 'laboratorio' ? regla.minimoLaboratorio ?? regla.minimoTeoria : regla.minimoTeoria);
             return (
               <Fila
                 key={e.id}
                 icono={ICONO_TIPO[tipoEvaluacion(e)]}
                 titulo={e.nombre}
-                detalle={e.componente === 'laboratorio' ? `Pesa ${pct(Math.round(1000 / cantLab) / 10)} del laboratorio` : `Pesa ${pct(Math.round(1000 / cantTeoria) / 10)} del teórico`}
+                detalle={esRecuperatorio(e) ? (datos.recuperado ? 'Reemplazó tu parcial más bajo' : 'No cuenta: hace falta 60 % y un promedio teórico entre 30 y 50 %') : e.componente === 'laboratorio' ? `Pesa ${pct(Math.round(1000 / cantLab) / 10)} del laboratorio` : `Pesa ${pct(Math.round(1000 / cantTeoria) / 10)} del teórico`}
                 derecha={
                   e.rendida && p != null ? (
                     <Text style={{ fontFamily: fuentes.bold, fontSize: 16, color: ok ? colores.verde : colores.amarillo }}>{pct(p)}</Text>
@@ -189,6 +195,13 @@ export default function CalculadoraFirma() {
           })
         )}
       </Tarjeta>
+      {!combinado && !datos.recuperado && !tieneRecuperatorio && !pendientesTeoria && puedeRecuperar(resultado.teoria) && (
+        <Mensaje tipo="info" texto={`Tu promedio teórico está entre ${RECUPERACION_DESDE} y ${regla.minimoTeoria} %: podés rendir el examen de recuperación en el 1.er periodo de finales. Si sacás ${RECUPERACION_MINIMO} % o más, reemplaza tu parcial más bajo. Cargalo como "Recuperatorio".`} />
+      )}
+      {datos.recuperado && (
+        <Mensaje tipo="exito" texto="Recuperación aplicada: reemplazó tu parcial más bajo. Ahora necesitás un promedio de firma de 50 % o más." />
+      )}
+
       <Seccion>Asistencia</Seccion>
       <TarjetaAsistencia
         titulo={conLab && regla.minimoAsistenciaLab != null ? 'Teoría' : 'Clases'}
@@ -321,7 +334,7 @@ function FormEvaluacion({ visible, evaluacion, materiaId, onCerrar, onGuardado }
     if (!visible) return;
     const e = evaluacion;
     setNombre(e?.nombre ?? '');
-    setTipo(e && tipoEvaluacion(e) === 'laboratorio' ? 'laboratorio' : 'parcial');
+    setTipo(e ? (tipoEvaluacion(e) === 'tp' ? 'parcial' : tipoEvaluacion(e)) : 'parcial');
     setModo(e && e.porcentaje == null && e.puntaje_total != null ? 'puntaje' : 'porcentaje');
     setPorcentaje(e?.porcentaje != null ? String(Number(e.porcentaje)) : '');
     setObtenido(e?.puntaje_obtenido != null ? String(Number(e.puntaje_obtenido)) : '');
@@ -342,7 +355,8 @@ function FormEvaluacion({ visible, evaluacion, materiaId, onCerrar, onGuardado }
     setGuardando(true);
     setError(null);
     const datos: NuevaEvaluacion = {
-      nombre: nombre.trim(),
+      // El recuperatorio se reconoce por el nombre.
+      nombre: tipo === 'recuperatorio' && !esRecuperatorio({ nombre, componente: 'teoria' }) ? 'Recuperatorio' : nombre.trim(),
       componente: tipo === 'laboratorio' ? 'laboratorio' : 'teoria',
       // Los pesos se reparten solos (todas iguales); se guarda 1 para cada una.
       ponderacion: 1,
@@ -393,7 +407,7 @@ function FormEvaluacion({ visible, evaluacion, materiaId, onCerrar, onGuardado }
           />
         ))}
       </View>
-      <Campo etiqueta="Nombre" value={nombre} onChangeText={setNombre} placeholder={tipo === 'laboratorio' ? 'Laboratorio' : 'Ej. Primer parcial'} />
+      <Campo etiqueta="Nombre" value={nombre} onChangeText={setNombre} placeholder={tipo === 'laboratorio' ? 'Laboratorio' : tipo === 'recuperatorio' ? 'Recuperatorio' : 'Ej. Primer parcial'} />
       <Text style={[s.etiqueta, { marginBottom: espacio.s }]}>¿Ya la rendiste?</Text>
       <Segmentado opciones={[{ valor: 'si', texto: 'Sí, tengo la nota' }, { valor: 'no', texto: 'Todavía no' }]} valor={rendida} onCambio={setRendida} />
       {rendida === 'si' && (

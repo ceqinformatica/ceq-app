@@ -5,7 +5,7 @@
  * Funciones puras. Se usan junto con firma.ts: REGLA_FCQ es la regla de
  * firma por defecto cuando el plan o la materia no tienen una propia.
  */
-import type { ReglaFirma, ResultadoComponente } from './firma.ts';
+import { porcentajeEvaluacion, type Evaluacion, type ReglaFirma, type ResultadoComponente } from './firma.ts';
 
 /**
  * Habilitación a final (Art. 43): teoría ≥ 50 %, prácticos ≥ 60 %,
@@ -60,6 +60,37 @@ export function teoriaTrasRecuperar(
   }
   const pesos = lista.reduce((s, p) => s + p.ponderacion, 0);
   return redondear(lista.reduce((s, p) => s + p.porcentaje * p.ponderacion, 0) / pesos);
+}
+
+/** Una evaluación es el examen de recuperación si su nombre lo dice. */
+export const esRecuperatorio = (e: { nombre: string; componente: string }) =>
+  e.componente === 'teoria' && /recuperat|recuperaci/i.test(e.nombre);
+
+/**
+ * Examen de recuperación (Art. 46) aplicado a las evaluaciones de una
+ * materia. Si ya se rindieron todos los parciales teóricos, su promedio
+ * quedó entre 30 % y el mínimo, y la recuperación llegó a 60 %, esa nota
+ * reemplaza el parcial teórico más bajo. La recuperación nunca cuenta como
+ * un parcial más: se saca de la lista. `recuperado` indica que se aplicó;
+ * en ese caso, para habilitar alcanza con PG ≥ 50 %.
+ */
+export function aplicarRecuperatorio<E extends Evaluacion>(evals: E[], minimoTeoria = REGLA_FCQ.minimoTeoria): { evaluaciones: E[]; recuperado: boolean } {
+  const recs = evals.filter(esRecuperatorio);
+  const resto = evals.filter((e) => !esRecuperatorio(e));
+  if (!recs.length) return { evaluaciones: evals, recuperado: false };
+  const teoricas = resto.filter((e) => e.componente === 'teoria');
+  const notas = teoricas.map((e) => (e.rendida ? porcentajeEvaluacion(e) : null));
+  const rec = Math.max(...recs.map((e) => (e.rendida ? porcentajeEvaluacion(e) ?? -1 : -1)));
+  if (!teoricas.length || notas.some((n) => n == null) || rec < RECUPERACION_MINIMO) return { evaluaciones: resto, recuperado: false };
+  const prom = (notas as number[]).reduce((a, b) => a + b, 0) / notas.length;
+  if (prom < RECUPERACION_DESDE || prom >= minimoTeoria) return { evaluaciones: resto, recuperado: false };
+  let iMin = 0;
+  notas.forEach((n, i) => { if ((n as number) < (notas[iMin] as number)) iMin = i; });
+  const bajo = teoricas[iMin];
+  const evaluaciones = resto.map((e) =>
+    e === bajo ? { ...e, porcentaje: Math.max(notas[iMin] as number, rec), puntajeObtenido: null, puntajeTotal: null } : e,
+  );
+  return { evaluaciones, recuperado: true };
 }
 
 /** Promedio General (Art. 44): (teórico + práctico) / 2; sin prácticos, solo el teórico. */

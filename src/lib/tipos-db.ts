@@ -77,7 +77,7 @@ export type OpcionEncuestaDb = { id: string; encuesta_id: string; texto: string;
 export type YaVotaronDb = { encuesta_id: string; usuario_id: string }
 export type ExamenFinalDb = {
   id: string; usuario_id: string; materia_id: string; periodo: string | null; llamado: number | null; fecha: string | null;
-  nota: number; created_at: string;
+  nota: number; created_at: string; porcentaje?: number | null;
 }
 export type DispositivoDb = { token: string; usuario_id: string; plataforma: string | null; updated_at: string }
 
@@ -103,7 +103,7 @@ export type Database = {
       encuestas: Tabla<EncuestaDb, 'id' | 'abierta' | 'cierra_en' | 'created_at'>;
       opciones_encuesta: Tabla<OpcionEncuestaDb, 'id' | 'orden'>;
       ya_votaron: Tabla<YaVotaronDb>;
-      examenes_finales: Tabla<ExamenFinalDb, 'id' | 'usuario_id' | 'periodo' | 'llamado' | 'fecha' | 'created_at'>;
+      examenes_finales: Tabla<ExamenFinalDb, 'id' | 'usuario_id' | 'periodo' | 'llamado' | 'fecha' | 'created_at' | 'porcentaje'>;
       dispositivos: Tabla<DispositivoDb, 'usuario_id' | 'plataforma' | 'updated_at'>;
     };
     Views: {

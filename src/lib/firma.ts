@@ -247,11 +247,14 @@ export function pesosIguales(evals: Evaluacion[]): Evaluacion[] {
  * llegan a su mínimo, el promedio de los dos (o solo teoría si no hay laboratorio). null mientras
  * no se cumpla.
  */
-export function promedioFirma(r: Pick<ResultadoFirma, 'teoria' | 'laboratorio'>): number | null {
+export function promedioFirma(r: Pick<ResultadoFirma, 'teoria' | 'laboratorio'>, opciones: { recuperado?: boolean } = {}): number | null {
   // Solo con todas las notas cargadas: si queda algo pendiente, el promedio
   // todavía puede cambiar (aunque la firma ya esté asegurada).
   const llega = (c: ResultadoComponente | null) => c == null || (c.actual != null && c.actual >= c.minimo && c.necesario == null);
   if (!llega(r.teoria) || !llega(r.laboratorio) || r.teoria.actual == null) return null;
   const lab = r.laboratorio?.actual ?? null;
-  return redondear(lab == null ? r.teoria.actual : (r.teoria.actual + lab) / 2);
+  const pg = redondear(lab == null ? r.teoria.actual : (r.teoria.actual + lab) / 2);
+  // Tras el examen de recuperación (Art. 46) se exige PG ≥ 50 %.
+  if (opciones.recuperado && pg < 50) return null;
+  return pg;
 }
