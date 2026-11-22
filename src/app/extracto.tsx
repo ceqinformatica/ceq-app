@@ -13,6 +13,8 @@ import { textoDePdf } from '../lib/texto-pdf';
 import type { MateriaDb } from '../lib/tipos-db';
 import { colores, espacio, fuentes, radio } from '../tema';
 
+const SIN_MATERIAS: MateriaDb[] = [];
+
 const volver = () => (router.canGoBack() ? router.back() : router.replace('/carrera'));
 
 /** Una fila del extracto con la materia que se le asignó y si se importa. */
@@ -62,15 +64,18 @@ export default function ImportarExtracto() {
   const enCurso = useRef(false);
   const [eligiendoPara, setEligiendoPara] = useState<number | null>(null);
 
-  const materias = malla?.materiasDb ?? [];
+  const materias = malla?.materiasDb ?? SIN_MATERIAS;
   const porId = useMemo(() => new Map(materias.map((m) => [m.id, m])), [materias]);
 
+  const eligiendoPdf = useRef(false);
   const elegirPdf = async () => {
+    if (eligiendoPdf.current || enCurso.current) return;
+    eligiendoPdf.current = true;
     setError(null);
-    const r = await DocumentPicker.getDocumentAsync({ type: 'application/pdf', copyToCacheDirectory: true, multiple: false });
-    if (r.canceled || !r.assets?.[0]) return;
-    setPaso({ tipo: 'leyendo' });
     try {
+      const r = await DocumentPicker.getDocumentAsync({ type: 'application/pdf', copyToCacheDirectory: true, multiple: false });
+      if (r.canceled || !r.assets?.[0]) return;
+      setPaso({ tipo: 'leyendo' });
       const texto = textoDePdf(await bytesDelPdf(r.assets[0]));
       const extracto = texto ? leerExtracto(texto) : null;
       if (!extracto || extracto.filas.length === 0) {
@@ -91,6 +96,8 @@ export default function ImportarExtracto() {
     } catch (e) {
       setPaso({ tipo: 'inicio' });
       setError(e instanceof Error ? `No pudimos leer el PDF: ${e.message}` : 'No pudimos leer el PDF.');
+    } finally {
+      eligiendoPdf.current = false;
     }
   };
 
@@ -103,7 +110,11 @@ export default function ImportarExtracto() {
     setError(null);
     try {
       const { existentes, aprobadas } = await cargarParaImportar();
-      const confirmadas = renglones.filter((r) => r.incluir && r.materiaId).map((r) => ({ fila: r.fila, materia: { id: r.materiaId! } }));
+      // Una materia por fila: si por algo quedó repetida, vale la primera.
+      const vistas = new Set<string>();
+      const confirmadas = renglones
+        .filter((r) => r.incluir && r.materiaId && !vistas.has(r.materiaId) && vistas.add(r.materiaId))
+        .map((r) => ({ fila: r.fila, materia: { id: r.materiaId! } }));
       const plan = planDeImportacion(confirmadas, existentes, aprobadas);
       await importarExtracto(plan);
       setPaso({ tipo: 'listo', finales: plan.intentos.length, aprobadas: plan.aprobadasSinNota.length, repetidas: plan.repetidas });
@@ -140,6 +151,7 @@ export default function ImportarExtracto() {
             onCambiar={cambiar}
             onElegirMateria={setEligiendoPara}
             onOtroPdf={elegirPdf}
+            importando={importando}
             error={error}
           />
         )}
@@ -168,10 +180,15 @@ export default function ImportarExtracto() {
         visible={eligiendoPara != null}
         nombreExtracto={eligiendoPara != null ? renglones[eligiendoPara]?.fila.nombre ?? '' : ''}
         materias={materias}
-        ocupadas={new Set(renglones.filter((_, k) => k !== eligiendoPara).map((r) => r.materiaId).filter((x): x is string => x != null))}
+        ocupadas={new Set(renglones.filter((r, k) => k !== eligiendoPara && r.incluir).map((r) => r.materiaId).filter((x): x is string => x != null))}
         onCerrar={() => setEligiendoPara(null)}
         onElegir={(id) => {
-          if (eligiendoPara != null) cambiar(eligiendoPara, { materiaId: id, incluir: id != null, confianza: id != null ? 1 : 0 });
+          if (eligiendoPara != null) {
+            // Si otra fila desmarcada tenía esa materia, se la saca: una materia va en una sola fila.
+            setRenglones((rs) => rs.map((r, k) =>
+              k === eligiendoPara ? { ...r, materiaId: id, incluir: id != null, confianza: id != null ? 1 : 0 }
+                : id != null && r.materiaId === id ? { ...r, materiaId: null, incluir: false, confianza: 0 } : r));
+          }
           setEligiendoPara(null);
         }}
       />
@@ -212,9 +229,9 @@ function Inicio({ onElegir, error }: { onElegir: () => void; error: string | nul
   );
 }
 
-function Revision({ extracto, renglones, porId, planAnio, onCambiar, onElegirMateria, onOtroPdf, error }: {
+function Revision({ extracto, renglones, porId, planAnio, onCambiar, onElegirMateria, onOtroPdf, importando, error }: {
   extracto: Extracto; renglones: Renglon[]; porId: Map<string, MateriaDb>; planAnio: number | null;
-  onCambiar: (i: number, c: Partial<Renglon>) => void; onElegirMateria: (i: number) => void; onOtroPdf: () => void; error: string | null;
+  onCambiar: (i: number, c: Partial<Renglon>) => void; onElegirMateria: (i: number) => void; onOtroPdf: () => void; importando: boolean; error: string | null;
 }) {
   const indices = renglones.map((r, i) => ({ r, i }));
   const seguras = indices.filter(({ r }) => r.materiaId && r.confianza >= UMBRAL_SEGURO);
@@ -272,7 +289,7 @@ function Revision({ extracto, renglones, porId, planAnio, onCambiar, onElegirMat
       ))}
 
       <Mensaje texto={error} />
-      <Boton texto="Elegir otro PDF" variante="fantasma" icono="refresh" onPress={onOtroPdf} estilo={{ marginTop: espacio.m }} />
+      <Boton texto="Elegir otro PDF" variante="fantasma" icono="refresh" onPress={onOtroPdf} deshabilitado={importando} estilo={{ marginTop: espacio.m }} />
     </>
   );
 }
