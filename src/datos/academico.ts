@@ -5,6 +5,7 @@
  */
 import type { Asistencia, Evaluacion, ReglaFirma } from '../lib/firma';
 import type { EstadoEstudiante, EstadoMateria, GrupoOptativas, Materia, Prerrequisito, UnidadAvance } from '../lib/progreso';
+import { REGLA_FCQ } from '../lib/reglamento-fcq';
 import { supabase } from '../lib/supabase';
 import type { AsistenciaDb, ComponenteDb, EvaluacionDb, GrupoOptativasDb, MateriaDb, Plan, PrerrequisitoDb, ReglaFirmaDb } from '../lib/tipos-db';
 import { db, esperar, idDemo, MODO_DEMO, UID_DEMO } from './demo';
@@ -123,13 +124,8 @@ export function reglaDe(reglas: ReglaFirmaDb[], materiaId: string): ReglaFirma |
   };
 }
 
-/**
- * Regla general de la FCQ (habilitación a final, Art. 43): teoría ≥ 50 %,
- * prácticos ≥ 60 %, asistencia a teoría ≥ 60 % y 100 % de las prácticas.
- * Se usa cuando la materia o el plan no tienen una regla propia cargada.
- * Es la misma que REGLA_FCQ de src/lib/reglamento-fcq.ts.
- */
-export const REGLA_POR_DEFECTO: ReglaFirma = { minimoTeoria: 50, minimoLaboratorio: 60, minimoAsistencia: 60, minimoAsistenciaLab: 100, modoLaboratorio: 'separado', pesoLaboratorio: null };
+/** Regla general de la FCQ (Art. 43), cuando la materia o el plan no tienen una propia. */
+export const REGLA_POR_DEFECTO: ReglaFirma = REGLA_FCQ;
 
 /* ------------------------------------------------------------------ */
 /* Firma                                                               */

@@ -28,8 +28,23 @@ export async function entrarConGoogle(): Promise<string | null> {
   const code = queryParams?.code;
   if (typeof code !== 'string') return 'Google no devolvió el código de acceso.';
 
-  const { error: errCanje } = await supabase.auth.exchangeCodeForSession(code);
-  return errCanje ? errCanje.message : null;
+  return canjearCodigo(code);
+}
+
+/**
+ * Canjea el código de un enlace de retorno (Google o confirmación de correo)
+ * por una sesión. En Android el mismo retorno puede llegar por dos caminos
+ * (openAuthSessionAsync y la ruta auth/callback); se canjea una sola vez,
+ * porque el segundo intento fallaría y mostraría un error falso.
+ */
+const canjes = new Map<string, Promise<string | null>>();
+export function canjearCodigo(code: string): Promise<string | null> {
+  let canje = canjes.get(code);
+  if (!canje) {
+    canje = supabase.auth.exchangeCodeForSession(code).then(({ error }) => (error ? error.message : null));
+    canjes.set(code, canje);
+  }
+  return canje;
 }
 
 export async function entrarConCorreo(correo: string, clave: string): Promise<string | null> {

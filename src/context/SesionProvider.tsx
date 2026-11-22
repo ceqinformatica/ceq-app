@@ -13,6 +13,8 @@ interface SesionCtx {
   cargando: boolean;
   sesion: Session | null;
   perfil: Perfil | null;
+  /** Error al leer el perfil (por ejemplo sin internet). Mientras haya error no se manda al onboarding. */
+  errorPerfil: string | null;
   /** true cuando hay que pasar la huella o el rostro antes de ver la app. */
   bloqueado: boolean;
   desbloquear: () => Promise<boolean>;
@@ -26,12 +28,24 @@ export function SesionProvider({ children }: { children: ReactNode }) {
   const [cargando, setCargando] = useState(true);
   const [sesion, setSesion] = useState<Session | null>(null);
   const [perfil, setPerfil] = useState<Perfil | null>(null);
+  const [errorPerfil, setErrorPerfil] = useState<string | null>(null);
   const [bloqueado, setBloqueado] = useState(false);
   const enFondoDesde = useRef<number | null>(null);
 
   const cargarPerfil = useCallback(async (uid: string | undefined) => {
-    if (!uid) return setPerfil(null);
-    const { data } = await supabase.from('perfiles').select('*').eq('id', uid).maybeSingle();
+    if (!uid) {
+      setPerfil(null);
+      setErrorPerfil(null);
+      return;
+    }
+    const { data, error } = await supabase.from('perfiles').select('*').eq('id', uid).maybeSingle();
+    if (error) {
+      // Sin conexión no hay que confundir "no se pudo leer" con "no tiene carrera":
+      // se conserva el perfil anterior y se avisa.
+      setErrorPerfil('No pudimos cargar tu perfil. Revisá tu conexión.');
+      return;
+    }
+    setErrorPerfil(null);
     setPerfil(data ?? null);
   }, []);
 
@@ -45,7 +59,7 @@ export function SesionProvider({ children }: { children: ReactNode }) {
     }
     let activo = true;
     (async () => {
-      const { data } = await supabase.auth.getSession();
+      const { data } = await supabase.auth.getSession().catch(() => ({ data: { session: null } }));
       if (!activo) return;
       setSesion(data.session);
       if (data.session && (await biometriaActiva())) setBloqueado(true);
@@ -101,7 +115,7 @@ export function SesionProvider({ children }: { children: ReactNode }) {
   );
 
   return (
-    <Ctx.Provider value={{ cargando, sesion, perfil, bloqueado, desbloquear, recargarPerfil, actualizarPerfil }}>
+    <Ctx.Provider value={{ cargando, sesion, perfil, errorPerfil, bloqueado, desbloquear, recargarPerfil, actualizarPerfil }}>
       {children}
     </Ctx.Provider>
   );

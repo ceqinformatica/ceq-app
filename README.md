@@ -36,7 +36,9 @@ supabase/migrations/  tablas, seguridad por fila y funciones
 ### 1. Supabase (proyecto nuevo, separado de reservas)
 
 1. Crear un proyecto en [supabase.com](https://supabase.com) llamado `ceq-app`.
-2. En **SQL Editor**, pegar y ejecutar `supabase/migrations/20261122000000_esquema_inicial.sql`.
+2. En **SQL Editor**, pegar y ejecutar, en orden, los archivos de `supabase/migrations/`:
+   `20261122000000_esquema_inicial.sql` y después `20261122010000_ajustes_seguridad.sql`.
+   El segundo se puede volver a ejecutar sin problema.
 3. Copiar `.env.example` a `.env` y completar la URL y la clave `anon` (Project Settings > API).
 4. Después de entrar por primera vez a la app, nombrarse admin desde el SQL Editor:
    ```sql
@@ -53,7 +55,8 @@ supabase/migrations/  tablas, seguridad por fila y funciones
 4. En Supabase, activar el proveedor Google y pegar el ID y el secreto del cliente.
 5. En Supabase, Authentication > URL Configuration > Redirect URLs, agregar:
    - `ceqapp://auth/callback` (la app instalada)
-   - `exp://**` (para probar con Expo en desarrollo)
+   - `exp://**` (solo para probar con Expo en desarrollo; sacarla antes de
+     repartir la app a todos los estudiantes)
 
 ### Ver la interfaz sin Supabase (modo demostración)
 
@@ -73,6 +76,11 @@ npm start          # abre Expo; escanear el QR con un build de desarrollo
 npm test           # pruebas del cálculo de firma y progreso
 npm run typecheck  # revisión de tipos
 ```
+
+Cada PR corre además el workflow **Verificar** en GitHub: tipos, pruebas de
+la lógica y pruebas de seguridad de la base (`supabase/tests/politicas.sql`),
+que arma la base desde cero en un Postgres temporal y comprueba que ningún
+estudiante pueda ver ni cambiar datos de otro.
 
 La huella y Google necesitan un build de desarrollo (no Expo Go):
 

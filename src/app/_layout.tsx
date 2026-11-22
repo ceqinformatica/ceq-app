@@ -7,14 +7,14 @@ import { ActivityIndicator, Image, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Bloqueo } from '../components/Bloqueo';
 import { Hexagono } from '../components/graficos';
-import { logoCeq } from '../components/ui';
+import { Boton, EstadoVacio, logoCeq, Mensaje } from '../components/ui';
 import { SesionProvider, useSesion } from '../context/SesionProvider';
 import { colores } from '../tema';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
 function Navegacion() {
-  const { cargando, sesion, perfil, bloqueado } = useSesion();
+  const { cargando, sesion, perfil, errorPerfil, bloqueado, recargarPerfil } = useSesion();
 
   if (cargando) {
     return (
@@ -27,6 +27,17 @@ function Navegacion() {
     );
   }
   if (sesion && bloqueado) return <Bloqueo />;
+
+  // Sin perfil por un error de red: reintentar en vez de mandar al onboarding.
+  if (sesion && !perfil && errorPerfil) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', padding: 24, backgroundColor: colores.fondo }}>
+        <EstadoVacio icono="cloud-offline-outline" titulo="Sin conexión" texto="No pudimos cargar tu perfil. Revisá tu internet y probá de nuevo." />
+        <Mensaje texto={errorPerfil} />
+        <Boton texto="Reintentar" icono="refresh" onPress={recargarPerfil} />
+      </View>
+    );
+  }
 
   const conCarrera = Boolean(perfil?.plan_id);
   return (
