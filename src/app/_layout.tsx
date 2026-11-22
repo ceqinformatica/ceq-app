@@ -53,6 +53,7 @@ function Navegacion() {
         <Stack.Screen name="perfil" />
         <Stack.Screen name="materia/[id]" />
         <Stack.Screen name="firma/[id]" />
+        <Stack.Screen name="extracto" />
         <Stack.Screen name="carnet" />
         <Stack.Screen name="avisos" />
         <Stack.Screen name="aviso/[id]" />

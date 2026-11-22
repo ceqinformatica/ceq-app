@@ -241,6 +241,16 @@ export default function Carrera() {
                   <Ionicons name="chevron-forward" size={18} color={colores.textoTenue} />
                 </View>
               </Tarjeta>
+              <Tarjeta variante="borde" onPress={() => router.push('/extracto')} etiqueta="Importar extracto del EALU">
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: espacio.m }}>
+                  <View style={est.icono}><Ionicons name="document-text-outline" size={20} color={colores.marino} /></View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[s.filaTitulo, { color: colores.marino }]}>Importar extracto del EALU</Text>
+                    <Text style={s.filaDetalle}>Subí el PDF de notas finales y cargamos tus aprobadas con nota.</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={18} color={colores.textoTenue} />
+                </View>
+              </Tarjeta>
             </>
           )}
           <LeyendaMalla />
