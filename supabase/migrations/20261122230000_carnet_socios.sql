@@ -28,13 +28,15 @@ create unique index if not exists socios_codigo_qr_key on public.socios (codigo_
 -- escribir la C.I. de otro en su perfil): la elige el admin al dar el alta.
 create or replace function public.socios_completar()
 returns trigger language plpgsql set search_path = public as $$
+declare n bigint;
 begin
   new.ci := regexp_replace(coalesce(new.ci, ''), '[^0-9A-Za-z]', '', 'g');
   if new.ci = '' then raise exception 'Falta la cédula del socio'; end if;
   if new.numero_socio is null or btrim(new.numero_socio) = '' then
     -- Saltea números que el admin ya cargó a mano.
     loop
-      new.numero_socio := 'CEQ-' || lpad(nextval('public.numero_socio_seq')::text, 4, '0');
+      n := nextval('public.numero_socio_seq');
+      new.numero_socio := 'CEQ-' || case when n < 10000 then lpad(n::text, 4, '0') else n::text end;
       exit when not exists (select 1 from public.socios where upper(numero_socio) = new.numero_socio);
     end loop;
   end if;

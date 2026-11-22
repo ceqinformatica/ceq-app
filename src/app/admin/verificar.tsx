@@ -45,7 +45,8 @@ export default function VerificarCarnet() {
       setResultado(await verificarCarnet(valor));
       setEscaneando(false);
     } catch (e) {
-      ultimoLeido.current = null; // permite volver a escanear el mismo QR
+      // permite volver a escanear el mismo QR, con una pausa para no reintentar sin parar
+      setTimeout(() => (ultimoLeido.current = null), 2000);
       setError(e instanceof Error ? e.message : 'No se pudo verificar.');
     } finally {
       enCurso.current = false;
