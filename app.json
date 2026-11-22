@@ -54,6 +54,12 @@
     "experiments": {
       "typedRoutes": false
     },
-    "primaryColor": "#173874"
+    "primaryColor": "#173874",
+    "owner": "ceq-una",
+    "extra": {
+      "eas": {
+        "projectId": "6ae14514-4160-4347-a495-b2bf88094bc1"
+      }
+    }
   }
 }
