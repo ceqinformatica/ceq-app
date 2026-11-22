@@ -42,13 +42,13 @@ export default function Perfil() {
     <Pantalla>
       <Tarjeta>
         <Text style={s.seccion}>Cuenta</Text>
-        <Text style={{ fontSize: 17, fontWeight: '600', color: colores.texto }}>{perfil?.nombre ?? 'Sin nombre'}</Text>
+        <Text style={s.fuerte}>{perfil?.nombre ?? 'Sin nombre'}</Text>
         <Text style={s.sub}>{sesion?.user.email}</Text>
       </Tarjeta>
 
       <Tarjeta>
         <Text style={s.seccion}>Situación académica</Text>
-        <Text style={{ fontSize: 16, color: colores.texto }}>{carrera ?? '...'}</Text>
+        <Text style={s.fuerte}>{carrera ?? '...'}</Text>
         <Text style={s.sub}>
           {plan ?? ''}
           {perfil?.anio_ingreso ? ` · Ingreso ${perfil.anio_ingreso}` : ''}
@@ -66,8 +66,8 @@ export default function Perfil() {
           <Text style={s.sub}>Este celular no tiene huella ni reconocimiento facial configurados.</Text>
         ) : (
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: espacio.m }}>
-            <Text style={{ flex: 1, fontSize: 16, color: colores.texto }}>Desbloquear con {bio?.nombre ?? 'huella'}</Text>
-            <Switch value={bio?.activa ?? false} onValueChange={cambiarBio} disabled={!bio} trackColor={{ true: colores.primario }} />
+            <Text style={[s.cuerpo, { flex: 1 }]}>Desbloquear con {bio?.nombre ?? 'huella'}</Text>
+            <Switch value={bio?.activa ?? false} onValueChange={cambiarBio} disabled={!bio} trackColor={{ true: colores.marino, false: colores.linea }} />
           </View>
         )}
         <Text style={[s.sub, { marginTop: espacio.s }]}>Tus datos biométricos nunca salen del celular.</Text>

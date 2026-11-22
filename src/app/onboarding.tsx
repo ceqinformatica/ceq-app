@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Text } from 'react-native';
-import { Boton, Campo, Mensaje, Opcion, Pantalla, Tarjeta, Titulo, s } from '../components/ui';
+import { Boton, Campo, Encabezado, Mensaje, Opcion, Pantalla, Tarjeta, Titulo, s } from '../components/ui';
 import { useSesion } from '../context/SesionProvider';
 import { salir } from '../lib/auth';
 import { listarCarreras, listarPlanes } from '../lib/catalogo';
@@ -48,15 +48,16 @@ export default function Onboarding() {
 
   return (
     <Pantalla>
+      <Encabezado />
       <Titulo sub="Con esto armamos tu malla y tu progreso">Contanos qué estudiás</Titulo>
 
       <Campo etiqueta="Tu nombre" value={nombre} onChangeText={setNombre} />
 
       <Text style={s.seccion}>Carrera</Text>
-      {carreras == null && !error && <ActivityIndicator color={colores.primario} />}
+      {carreras == null && !error && <ActivityIndicator color={colores.marino} />}
       {carreras?.length === 0 && (
         <Tarjeta>
-          <Text style={{ color: colores.textoSuave }}>Todavía no hay carreras cargadas. El CEQ las está preparando.</Text>
+          <Text style={s.cuerpo}>Todavía no hay carreras cargadas. El CEQ las está preparando.</Text>
         </Tarjeta>
       )}
       {carreras?.map((c) => (
@@ -66,7 +67,7 @@ export default function Onboarding() {
       {carreraId && (
         <>
           <Text style={s.seccion}>Plan de estudios</Text>
-          {planes == null && <ActivityIndicator color={colores.primario} />}
+          {planes == null && <ActivityIndicator color={colores.marino} />}
           {planes?.map((p) => (
             <Opcion key={p.id} texto={p.nombre} detalle={p.vigente ? 'Vigente' : undefined} elegida={p.id === planId} onPress={() => setPlanId(p.id)} />
           ))}
