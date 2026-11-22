@@ -1,6 +1,7 @@
 import type { Session } from '@supabase/supabase-js';
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { AppState } from 'react-native';
+import { db as demo, MODO_DEMO, UID_DEMO } from '../datos/demo';
 import { biometriaActiva, verificarIdentidad } from '../lib/biometria';
 import { supabase } from '../lib/supabase';
 import type { Perfil } from '../lib/tipos-db';
@@ -35,6 +36,13 @@ export function SesionProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
+    // Modo demostración: sesión falsa con datos de ejemplo, sin Supabase.
+    if (MODO_DEMO) {
+      setSesion({ user: { id: UID_DEMO, email: demo.correo } } as Session);
+      setPerfil(demo.perfil);
+      setCargando(false);
+      return;
+    }
     let activo = true;
     (async () => {
       const { data } = await supabase.auth.getSession();
@@ -79,6 +87,11 @@ export function SesionProvider({ children }: { children: ReactNode }) {
   const actualizarPerfil = useCallback<SesionCtx['actualizarPerfil']>(
     async (cambios) => {
       if (!sesion) return 'No hay sesión.';
+      if (MODO_DEMO) {
+        demo.perfil = { ...demo.perfil, ...cambios };
+        setPerfil(demo.perfil);
+        return null;
+      }
       const { data, error } = await supabase.from('perfiles').update(cambios).eq('id', sesion.user.id).select('*').single();
       if (error) return error.message;
       setPerfil(data);

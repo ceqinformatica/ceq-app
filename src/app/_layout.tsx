@@ -3,9 +3,11 @@ import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { ActivityIndicator, View } from 'react-native';
+import { ActivityIndicator, Image, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Bloqueo } from '../components/Bloqueo';
+import { Hexagono } from '../components/graficos';
+import { logoCeq } from '../components/ui';
 import { SesionProvider, useSesion } from '../context/SesionProvider';
 import { colores } from '../tema';
 
@@ -16,8 +18,11 @@ function Navegacion() {
 
   if (cargando) {
     return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colores.fondo }}>
-        <ActivityIndicator color={colores.marino} size="large" />
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colores.marino, gap: 28 }}>
+        <Hexagono tamano={104} relleno={colores.blanco}>
+          <Image source={logoCeq} style={{ width: 70, height: 70 }} accessibilityLabel="Logo del CEQ" />
+        </Hexagono>
+        <ActivityIndicator color={colores.blanco} />
       </View>
     );
   }
@@ -25,7 +30,7 @@ function Navegacion() {
 
   const conCarrera = Boolean(perfil?.plan_id);
   return (
-    <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colores.fondo } }}>
+    <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colores.fondo }, animation: 'slide_from_right' }}>
       <Stack.Protected guard={!sesion}>
         <Stack.Screen name="login" />
       </Stack.Protected>
@@ -34,7 +39,12 @@ function Navegacion() {
       </Stack.Protected>
       <Stack.Protected guard={Boolean(sesion) && conCarrera}>
         <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="perfil" options={{ presentation: 'modal', headerShown: true, title: 'Mi perfil' }} />
+        <Stack.Screen name="perfil" />
+        <Stack.Screen name="materia/[id]" />
+        <Stack.Screen name="firma/[id]" />
+        <Stack.Screen name="carnet" />
+        <Stack.Screen name="avisos" />
+        <Stack.Screen name="aviso/[id]" />
       </Stack.Protected>
       <Stack.Screen name="auth/callback" />
     </Stack>
@@ -54,7 +64,7 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <SesionProvider>
-        <StatusBar style="dark" />
+        <StatusBar style="light" />
         <Navegacion />
       </SesionProvider>
     </SafeAreaProvider>
