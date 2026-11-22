@@ -49,7 +49,8 @@ update public.perfiles set rol = 'admin' where id = '00000000-0000-0000-0000-000
 
 insert into public.carreras (id, nombre, semestres) values ('10000000-0000-0000-0000-000000000001', 'Química', 10);
 insert into public.planes (id, carrera_id, nombre) values ('20000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000001', 'Plan 2018');
-insert into public.materias (id, plan_id, nombre, semestre) values ('30000000-0000-0000-0000-000000000001', '20000000-0000-0000-0000-000000000001', 'Química General', 1);
+insert into public.materias (id, plan_id, nombre, semestre) values ('30000000-0000-0000-0000-000000000001', '20000000-0000-0000-0000-000000000001', 'Química General', 1),
+  ('30000000-0000-0000-0000-000000000002', '20000000-0000-0000-0000-000000000001', 'Física I', 1);
 insert into public.encuestas (id, pregunta) values ('40000000-0000-0000-0000-000000000001', '¿Te gusta la app?');
 insert into public.opciones_encuesta (id, encuesta_id, texto) values
   ('50000000-0000-0000-0000-000000000001', '40000000-0000-0000-0000-000000000001', 'Sí'),
@@ -66,7 +67,7 @@ reset role;
 
 -- Estudiante Ana ----------------------------------------------------
 select pg_temp.como('00000000-0000-0000-0000-00000000000a');
-select pg_temp.debe_ser('Ana lee el catálogo', (select count(*) from public.materias), 1);
+select pg_temp.debe_ser('Ana lee el catálogo', (select count(*) from public.materias), 2);
 select pg_temp.debe_ser('Ana ve solo su perfil', (select count(*) from public.perfiles), 1);
 select pg_temp.debe_ser('Ana no ve evaluaciones de Beto', (select count(*) from public.evaluaciones), 0);
 select pg_temp.debe_fallar('Ana no edita el catálogo', $$insert into public.carreras (nombre, semestres) values ('Trucha', 5)$$);
@@ -90,6 +91,24 @@ select public.votar('40000000-0000-0000-0000-000000000001', '50000000-0000-0000-
 select pg_temp.debe_fallar('Ana no vota dos veces', $$select public.votar('40000000-0000-0000-0000-000000000001', '50000000-0000-0000-0000-000000000002')$$);
 select pg_temp.debe_ser('resultados visibles', (select votos from public.resultados_encuesta where opcion_id = '50000000-0000-0000-0000-000000000001'), 1);
 select pg_temp.debe_ser('Ana no ve carnets ajenos', (select count(*) from public.socios), 0);
+insert into public.examenes_finales (materia_id, llamado, nota) values ('30000000-0000-0000-0000-000000000001', 1, 1);
+select pg_temp.debe_ser('aplazo no aprueba la materia', (select count(*) from public.materias_estudiante where estado = 'aprobada'), 0);
+insert into public.examenes_finales (materia_id, llamado, nota) values ('30000000-0000-0000-0000-000000000001', 2, 5);
+select pg_temp.debe_ser('final aprobado aprueba con su nota', (select nota_final::int from public.materias_estudiante where estado = 'aprobada'), 5);
+select pg_temp.debe_fallar('Ana no carga finales a nombre de Beto',
+  $$insert into public.examenes_finales (usuario_id, materia_id, nota) values ('00000000-0000-0000-0000-00000000000b', '30000000-0000-0000-0000-000000000001', 5)$$);
+select pg_temp.debe_fallar('mismo llamado dos veces',
+  $$insert into public.examenes_finales (materia_id, periodo, llamado, nota) values ('30000000-0000-0000-0000-000000000001', '2025-1', 3, 1), ('30000000-0000-0000-0000-000000000001', '2025-1', 3, 2)$$);
+delete from public.examenes_finales where nota = 5;
+select pg_temp.debe_ser('borrar el final aprobado vuelve a firmada', (select count(*) from public.materias_estudiante where estado = 'firmada' and nota_final is null), 1);
+update public.materias_estudiante set estado = 'aprobada', nota_final = 4 where materia_id = '30000000-0000-0000-0000-000000000001';
+delete from public.examenes_finales where nota = 1;
+select pg_temp.debe_ser('borrar un aplazo no toca una aprobada a mano', (select nota_final::int from public.materias_estudiante where estado = 'aprobada'), 4);
+insert into public.examenes_finales (materia_id, nota) values ('30000000-0000-0000-0000-000000000002', 3);
+update public.examenes_finales set materia_id = '30000000-0000-0000-0000-000000000001' where materia_id = '30000000-0000-0000-0000-000000000002';
+select pg_temp.debe_ser('mover un intento desaprueba la materia vieja', (select count(*) from public.materias_estudiante where materia_id = '30000000-0000-0000-0000-000000000002' and estado = 'aprobada'), 0);
+delete from public.examenes_finales;
+select pg_temp.debe_fallar('nota de final fuera de escala', $$insert into public.examenes_finales (materia_id, nota) values ('30000000-0000-0000-0000-000000000001', 6)$$);
 reset role;
 
 -- Estudiante Beto ---------------------------------------------------
@@ -98,6 +117,7 @@ select pg_temp.debe_ser('Beto ve solo su evaluación', (select count(*) from pub
 select pg_temp.debe_ser('Beto no ve eventos de Ana', (select count(*) from public.eventos), 0);
 select pg_temp.debe_ser('Beto no ve sugerencias de Ana', (select count(*) from public.sugerencias), 0);
 select pg_temp.debe_ser('Beto no borra notas de Ana', pg_temp.filas($q$delete from public.evaluaciones where nombre = '1P'$q$), 0);
+select pg_temp.debe_ser('Beto no ve finales de Ana', (select count(*) from public.examenes_finales), 0);
 reset role;
 
 -- Admin -------------------------------------------------------------

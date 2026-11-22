@@ -37,7 +37,7 @@ export type Perfil = {
 }
 export type MateriaEstudianteDb = {
   usuario_id: string; materia_id: string; estado: EstadoMateriaDb; nota_final: number | null; fecha: string | null;
-  periodo: string | null; updated_at: string;
+  periodo: string | null; updated_at: string; nota_desde_final?: boolean;
 }
 export type EvaluacionDb = {
   id: string; usuario_id: string; materia_id: string; nombre: string; componente: ComponenteDb; ponderacion: number;
@@ -75,6 +75,10 @@ export type SugerenciaDb = {
 export type EncuestaDb = { id: string; pregunta: string; abierta: boolean; cierra_en: string | null; created_at: string }
 export type OpcionEncuestaDb = { id: string; encuesta_id: string; texto: string; orden: number }
 export type YaVotaronDb = { encuesta_id: string; usuario_id: string }
+export type ExamenFinalDb = {
+  id: string; usuario_id: string; materia_id: string; periodo: string | null; llamado: number | null; fecha: string | null;
+  nota: number; created_at: string;
+}
 export type DispositivoDb = { token: string; usuario_id: string; plataforma: string | null; updated_at: string }
 
 export type Database = {
@@ -87,7 +91,7 @@ export type Database = {
       prerrequisitos: Tabla<PrerrequisitoDb, 'tipo'>;
       reglas_firma: Tabla<ReglaFirmaDb, 'id' | 'materia_id' | 'minimo_teoria' | 'minimo_laboratorio' | 'minimo_asistencia' | 'minimo_asistencia_lab' | 'modo_laboratorio' | 'peso_laboratorio' | 'notas'>;
       perfiles: Tabla<Perfil, 'nombre' | 'ci' | 'carrera_id' | 'plan_id' | 'anio_ingreso' | 'rol' | 'avatar_url' | 'created_at' | 'updated_at'>;
-      materias_estudiante: Tabla<MateriaEstudianteDb, 'usuario_id' | 'estado' | 'nota_final' | 'fecha' | 'periodo' | 'updated_at'>;
+      materias_estudiante: Tabla<MateriaEstudianteDb, 'usuario_id' | 'estado' | 'nota_final' | 'fecha' | 'periodo' | 'updated_at' | 'nota_desde_final'>;
       evaluaciones: Tabla<EvaluacionDb, 'id' | 'usuario_id' | 'componente' | 'porcentaje' | 'puntaje_obtenido' | 'puntaje_total' | 'rendida' | 'fecha' | 'orden' | 'created_at'>;
       asistencias: Tabla<AsistenciaDb, 'usuario_id' | 'componente' | 'clases_dictadas' | 'clases_asistidas' | 'clases_totales'>;
       horario: Tabla<HorarioDb, 'id' | 'usuario_id' | 'materia_id' | 'titulo' | 'aula'>;
@@ -99,6 +103,7 @@ export type Database = {
       encuestas: Tabla<EncuestaDb, 'id' | 'abierta' | 'cierra_en' | 'created_at'>;
       opciones_encuesta: Tabla<OpcionEncuestaDb, 'id' | 'orden'>;
       ya_votaron: Tabla<YaVotaronDb>;
+      examenes_finales: Tabla<ExamenFinalDb, 'id' | 'usuario_id' | 'periodo' | 'llamado' | 'fecha' | 'created_at'>;
       dispositivos: Tabla<DispositivoDb, 'usuario_id' | 'plataforma' | 'updated_at'>;
     };
     Views: {
