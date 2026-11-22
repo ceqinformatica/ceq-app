@@ -29,7 +29,7 @@ const m = (id: string, nombre: string, semestre: number, lab = false, grupo: str
 });
 
 const materias: MateriaDb[] = [
-  m('qg1', 'Química General I', 1, true), m('mat1', 'Matemática I', 1), m('fis1', 'Física I', 1, true), m('bio', 'Biología General', 1, true),
+  m('qg1', 'Química General I', 1, true), m('mat1', 'Matemática I', 1), m('fis1', 'Física I', 1, true), m('bio', 'Biología General', 1, true), m('sem1', 'Seminario I', 1),
   m('qg2', 'Química General II', 2, true), m('mat2', 'Matemática II', 2), m('fis2', 'Física II', 2, true), m('est', 'Estadística', 2),
   m('qi', 'Química Inorgánica', 3, true), m('qo1', 'Química Orgánica I', 3, true), m('qa1', 'Química Analítica I', 3, true), m('fq1', 'Fisicoquímica I', 3),
   m('qo2', 'Química Orgánica II', 4, true), m('qa2', 'Química Analítica II', 4, true), m('fq2', 'Fisicoquímica II', 4, true), m('bq', 'Bioquímica', 4, true),

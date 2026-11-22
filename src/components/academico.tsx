@@ -110,8 +110,14 @@ export function LeyendaMalla() {
 }
 
 /** Selector de estado de una materia (4 opciones con su color). */
-export function SelectorEstado({ valor, onCambio, bloqueada }: { valor: EstadoMateria; onCambio: (e: EstadoMateria) => void; bloqueada?: boolean }) {
-  const opciones: EstadoMateria[] = ['pendiente', 'cursando', 'firmada', 'aprobada'];
+export function SelectorEstado({ valor, onCambio, bloqueada, sinFirma }: {
+  valor: EstadoMateria;
+  onCambio: (e: EstadoMateria) => void;
+  bloqueada?: boolean;
+  /** Seminarios: no tienen firma ni final, solo cursando o aprobado. */
+  sinFirma?: boolean;
+}) {
+  const opciones: EstadoMateria[] = sinFirma && valor !== 'firmada' ? ['pendiente', 'cursando', 'aprobada'] : ['pendiente', 'cursando', 'firmada', 'aprobada'];
   return (
     <View style={est.selector}>
       {opciones.map((o) => {
