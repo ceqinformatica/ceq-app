@@ -5,6 +5,9 @@
 
 export type EstadoMateria = 'pendiente' | 'cursando' | 'firmada' | 'aprobada';
 
+/** Los seminarios no llevan nota: se aprueban o no, sin firma ni final. */
+export const esSeminario = (nombre: string) => /^\s*seminario/i.test(nombre);
+
 export interface Materia {
   id: string;
   nombre: string;
@@ -137,7 +140,7 @@ export function promedioGeneral(
   let pesos = 0;
   for (const m of materias) {
     const e = estados.get(m.id);
-    if (e?.estado !== 'aprobada' || e.notaFinal == null) continue;
+    if (e?.estado !== 'aprobada' || e.notaFinal == null || esSeminario(m.nombre)) continue;
     const w = ponderarPor === 'ninguno' ? 1 : peso(m, ponderarPor) || 0;
     if (w <= 0) continue;
     suma += e.notaFinal * w;

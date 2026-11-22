@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { aplazosDeLaCursada, esSeminario, notaAprobada, promedios, type IntentoFinal } from '../finales.ts';
 import { pesosIguales, evaluarFirma, type Evaluacion } from '../firma.ts';
 import { REGLA_FCQ, aplicarRecuperatorio, aplicarRegularizacion } from '../reglamento-fcq.ts';
-import type { EstadoEstudiante } from '../progreso.ts';
+import { promedioGeneral, type EstadoEstudiante } from '../progreso.ts';
 
 const ev = (o: Partial<Evaluacion>): Evaluacion => ({ nombre: 'Parcial', componente: 'teoria', ponderacion: 1, rendida: true, ...o });
 
@@ -78,6 +78,8 @@ test('los seminarios no entran en el promedio', () => {
   ]);
   const p = promedios([{ id: 'sem', nombre: 'Seminario I' }, { id: 'q', nombre: 'Química' }], estados, []);
   assert.equal(p.sinAplazos, 3);
+  const g = promedioGeneral([{ id: 'sem', nombre: 'Seminario I', semestre: 1 }, { id: 'q', nombre: 'Química', semestre: 1 }], estados);
+  assert.equal(g, 3);
 });
 
 test('un llamado usado para regularizar no cuenta como final', () => {

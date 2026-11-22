@@ -24,6 +24,13 @@ alter table public.examenes_finales
 alter table public.examenes_finales
   add column if not exists cursada_anterior boolean not null default false;
 
+-- Un llamado se carga una vez por cursada: los de la cursada anterior no
+-- chocan con los nuevos del mismo periodo.
+drop index if exists public.examenes_finales_un_intento;
+create unique index if not exists examenes_finales_un_intento
+  on public.examenes_finales (usuario_id, materia_id, periodo, llamado)
+  where periodo is not null and llamado is not null and not cursada_anterior;
+
 -- Solo los finales aprueban la materia.
 create or replace function public.recalcular_final(u uuid, m uuid)
 returns void language plpgsql set search_path = public as $$
@@ -33,7 +40,7 @@ declare
 begin
   select max(nota), max(fecha) into mejor, ultima
   from public.examenes_finales
-  where usuario_id = u and materia_id = m and tipo = 'final' and nota >= 2;
+  where usuario_id = u and materia_id = m and tipo = 'final' and not cursada_anterior and nota >= 2;
 
   if mejor is not null then
     insert into public.materias_estudiante (usuario_id, materia_id, estado, nota_final, fecha, nota_desde_final)
@@ -57,7 +64,8 @@ begin
   end if;
   if tg_op in ('INSERT', 'UPDATE')
      and (tg_op = 'INSERT' or new.usuario_id is distinct from old.usuario_id or new.materia_id is distinct from old.materia_id
-          or new.nota is distinct from old.nota or new.fecha is distinct from old.fecha or new.tipo is distinct from old.tipo) then
+          or new.nota is distinct from old.nota or new.fecha is distinct from old.fecha or new.tipo is distinct from old.tipo
+          or new.cursada_anterior is distinct from old.cursada_anterior) then
     perform public.recalcular_final(new.usuario_id, new.materia_id);
   end if;
   return null;

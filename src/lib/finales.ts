@@ -2,7 +2,7 @@
  * Intentos de examen final (1.º, 2.º y 3.er llamado) y promedios
  * con y sin aplazos. Funciones puras.
  */
-import type { EstadoEstudiante, Materia } from './progreso.ts';
+import { esSeminario, type EstadoEstudiante, type Materia } from './progreso.ts';
 
 export interface IntentoFinal {
   materiaId: string;
@@ -18,8 +18,7 @@ export interface IntentoFinal {
 /** Solo los exámenes finales cuentan para aprobar y para los promedios. */
 const esFinal = (i: Pick<IntentoFinal, 'tipo'>) => (i.tipo ?? 'final') === 'final';
 
-/** Los seminarios no llevan nota: se aprueban o no. */
-export const esSeminario = (nombre: string) => /^\s*seminario/i.test(nombre);
+export { esSeminario };
 
 const redondear = (n: number) => Math.round(n * 100) / 100;
 

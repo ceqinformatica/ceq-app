@@ -187,6 +187,11 @@ update public.examenes_finales set nota = 1;
 update public.examenes_finales set cursada_anterior = true where materia_id = '30000000-0000-0000-0000-000000000001';
 select pg_temp.debe_ser('Ana marca sus finales como de una cursada anterior',
   (select count(*) from public.examenes_finales where cursada_anterior), 1);
+-- En la nueva cursada puede cargar el mismo periodo y llamado.
+insert into public.examenes_finales (materia_id, periodo, llamado, nota) values ('30000000-0000-0000-0000-000000000001', '2026-1', 1, 2);
+select pg_temp.debe_ser('nueva cursada aprueba con el mismo llamado',
+  (select count(*) from public.materias_estudiante where materia_id = '30000000-0000-0000-0000-000000000001' and estado = 'aprobada' and nota_final = 2), 1);
+delete from public.examenes_finales where not cursada_anterior;
 reset role;
 select pg_temp.como('00000000-0000-0000-0000-00000000000b');
 update public.examenes_finales set cursada_anterior = false;

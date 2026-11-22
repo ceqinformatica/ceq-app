@@ -280,7 +280,7 @@ export async function guardarFinales(materiaId: string, periodo: string, llamado
     const hoy = new Date().toISOString();
     for (const f of filas) db.finales.push({ id: idDemo(), usuario_id: UID_DEMO, fecha: null, created_at: hoy, cursada_anterior: false, ...f });
     // Igual que el trigger de la base.
-    const notas = db.finales.filter((f) => f.materia_id === materiaId && (f.tipo ?? 'final') === 'final' && f.nota != null).map((f) => f.nota as number);
+    const notas = db.finales.filter((f) => f.materia_id === materiaId && (f.tipo ?? 'final') === 'final' && !f.cursada_anterior && f.nota != null).map((f) => f.nota as number);
     const mejor = Math.max(0, ...notas);
     const e = db.estados.find((x) => x.materia_id === materiaId);
     if (mejor >= 2) {
