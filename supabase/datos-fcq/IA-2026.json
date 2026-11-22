@@ -1,0 +1,847 @@
+{
+ "carrera": "IA",
+ "plan": "Plan 2026",
+ "anio": 2026,
+ "fuente": "Res. CSU N.º 0874-00-2025, Tabla 2.1 (págs. 17-20)",
+ "url": "https://www.qui.una.py/v3/wp-content/uploads/2026/07/IA_Resolucion-N°-0874-IA.pdf",
+ "verificacion": "leído visualmente del PDF escaneado; créditos por nivel verificados. Niveles 1 a 4 iguales a Ing. Química 2026 (sin la optativa de idioma del nivel 4).",
+ "columnas": [
+  "nivel",
+  "asignatura",
+  "T",
+  "RP",
+  "P",
+  "creditos",
+  "prerrequisitos"
+ ],
+ "materias": [
+  [
+   1,
+   "Cálculo I",
+   4,
+   3,
+   0,
+   9,
+   []
+  ],
+  [
+   1,
+   "Computación y Algoritmia para Ingeniería",
+   2,
+   3,
+   0,
+   6,
+   []
+  ],
+  [
+   1,
+   "Geometría Analítica",
+   3,
+   2,
+   0,
+   6,
+   []
+  ],
+  [
+   1,
+   "Guaraní",
+   3,
+   0,
+   0,
+   4,
+   []
+  ],
+  [
+   1,
+   "Química General",
+   2,
+   2,
+   3,
+   8,
+   []
+  ],
+  [
+   2,
+   "Álgebra Lineal",
+   3,
+   2,
+   0,
+   6,
+   [
+    "Geometría Analítica"
+   ]
+  ],
+  [
+   2,
+   "Cálculo II",
+   4,
+   2,
+   0,
+   8,
+   [
+    "Cálculo I",
+    "Geometría Analítica"
+   ]
+  ],
+  [
+   2,
+   "Física I",
+   3,
+   2,
+   2,
+   8,
+   [
+    "Cálculo I",
+    "Geometría Analítica"
+   ]
+  ],
+  [
+   2,
+   "Química Inorgánica",
+   2,
+   1,
+   3,
+   7,
+   [
+    "Química General"
+   ]
+  ],
+  [
+   3,
+   "Ecuaciones Diferenciales",
+   2,
+   2,
+   0,
+   5,
+   [
+    "Álgebra Lineal",
+    "Cálculo II",
+    "Física I"
+   ]
+  ],
+  [
+   3,
+   "Estadística",
+   2,
+   2,
+   0,
+   5,
+   [
+    "Cálculo I",
+    "Computación y Algoritmia para Ingeniería"
+   ]
+  ],
+  [
+   3,
+   "Física II",
+   2,
+   2,
+   2,
+   7,
+   [
+    "Física I"
+   ]
+  ],
+  [
+   3,
+   "Química Analítica I",
+   3,
+   0,
+   3,
+   7,
+   [
+    "Química Inorgánica"
+   ]
+  ],
+  [
+   3,
+   "Química Orgánica",
+   4,
+   2,
+   3,
+   11,
+   [
+    "Química Inorgánica"
+   ]
+  ],
+  [
+   4,
+   "Cálculo Numérico",
+   2,
+   2,
+   0,
+   5,
+   [
+    "Computación y Algoritmia para Ingeniería",
+    "Ecuaciones Diferenciales"
+   ]
+  ],
+  [
+   4,
+   "Diseño Técnico",
+   2,
+   0,
+   0,
+   3,
+   [
+    "Computación y Algoritmia para Ingeniería"
+   ]
+  ],
+  [
+   4,
+   "Física III",
+   2,
+   2,
+   2,
+   7,
+   [
+    "Ecuaciones Diferenciales",
+    "Física II"
+   ]
+  ],
+  [
+   4,
+   "Química Analítica II",
+   3,
+   0,
+   3,
+   7,
+   [
+    "Química Analítica I",
+    "Química Orgánica"
+   ]
+  ],
+  [
+   4,
+   "Termodinámica I",
+   2,
+   3,
+   0,
+   6,
+   [
+    "Ecuaciones Diferenciales",
+    "Física II"
+   ]
+  ],
+  [
+   5,
+   "Balances de Masa y Energía",
+   2,
+   3,
+   0,
+   6,
+   [
+    "Termodinámica I",
+    "Cálculo Numérico"
+   ]
+  ],
+  [
+   5,
+   "Ciencia y Tecnología de Materiales",
+   3,
+   0,
+   0,
+   4,
+   [
+    "Química Inorgánica",
+    "Termodinámica I"
+   ]
+  ],
+  [
+   5,
+   "Fisicoquímica",
+   3,
+   2,
+   3,
+   9,
+   [
+    "Termodinámica I",
+    "Química Analítica II"
+   ]
+  ],
+  [
+   5,
+   "Metodología de la Investigación Científica",
+   2,
+   2,
+   0,
+   5,
+   [
+    "Estadística"
+   ]
+  ],
+  [
+   5,
+   "Química y Bioquímica de Alimentos",
+   3,
+   0,
+   3,
+   7,
+   [
+    "Química Analítica II"
+   ]
+  ],
+  [
+   6,
+   "Análisis Sensorial de Alimentos",
+   2,
+   0,
+   2,
+   4,
+   [
+    "Química y Bioquímica de Alimentos"
+   ]
+  ],
+  [
+   6,
+   "Fenómenos de Transporte",
+   2,
+   2,
+   0,
+   5,
+   [
+    "Balances de Masa y Energía"
+   ]
+  ],
+  [
+   6,
+   "Microbiología de Alimentos",
+   3,
+   0,
+   3,
+   7,
+   [
+    "Química y Bioquímica de Alimentos"
+   ]
+  ],
+  [
+   6,
+   "Termodinámica II",
+   3,
+   2,
+   0,
+   6,
+   [
+    "Balances de Masa y Energía",
+    "Fisicoquímica"
+   ]
+  ],
+  [
+   7,
+   "Análisis de Alimentos",
+   2,
+   0,
+   4,
+   6,
+   [
+    "Microbiología de Alimentos",
+    "Análisis Sensorial de Alimentos"
+   ]
+  ],
+  [
+   7,
+   "Electrotecnia",
+   2,
+   2,
+   0,
+   5,
+   [
+    "Física III"
+   ]
+  ],
+  [
+   7,
+   "Higiene y Gestión de Inocuidad Alimentaria",
+   2,
+   0,
+   0,
+   3,
+   [
+    "Microbiología de Alimentos"
+   ]
+  ],
+  [
+   7,
+   "Laboratorio de Ingeniería de Alimentos I",
+   2,
+   0,
+   3,
+   5,
+   [
+    "Fenómenos de Transporte",
+    "Termodinámica II",
+    "Metodología de la Investigación Científica"
+   ]
+  ],
+  [
+   7,
+   "Operaciones Unitarias I",
+   2,
+   3,
+   0,
+   6,
+   [
+    "Fenómenos de Transporte"
+   ]
+  ],
+  [
+   7,
+   "Transferencia de Masa y Energía",
+   3,
+   2,
+   0,
+   6,
+   [
+    "Fenómenos de Transporte",
+    "Termodinámica II"
+   ]
+  ],
+  [
+   8,
+   "Gestión de Calidad",
+   2,
+   2,
+   0,
+   5,
+   [
+    "Higiene y Gestión de Inocuidad Alimentaria",
+    "Estadística"
+   ]
+  ],
+  [
+   8,
+   "Instrumentación y Control de Procesos",
+   2,
+   2,
+   0,
+   5,
+   [
+    "Operaciones Unitarias I",
+    "Electrotecnia"
+   ]
+  ],
+  [
+   8,
+   "Laboratorio de Ingeniería de Alimentos II",
+   2,
+   0,
+   3,
+   5,
+   [
+    "Transferencia de Masa y Energía",
+    "Operaciones Unitarias I"
+   ]
+  ],
+  [
+   8,
+   "Operaciones Unitarias II",
+   2,
+   3,
+   0,
+   6,
+   [
+    "Transferencia de Masa y Energía",
+    "Operaciones Unitarias I"
+   ]
+  ],
+  [
+   8,
+   "Seguridad Industrial y Salud Ocupacional",
+   2,
+   1,
+   0,
+   4,
+   [
+    "Laboratorio de Ingeniería de Alimentos I"
+   ]
+  ],
+  [
+   9,
+   "Administración",
+   2,
+   0,
+   0,
+   3,
+   [
+    "Gestión de Calidad"
+   ]
+  ],
+  [
+   9,
+   "Ingeniería Bioquímica",
+   2,
+   2,
+   3,
+   8,
+   [
+    "Operaciones Unitarias II",
+    "Microbiología de Alimentos"
+   ]
+  ],
+  [
+   9,
+   "Laboratorio de Ingeniería de Alimentos III",
+   2,
+   0,
+   3,
+   5,
+   [
+    "Operaciones Unitarias II",
+    "Instrumentación y Control de Procesos"
+   ]
+  ],
+  [
+   9,
+   "Legislación Industrial Alimentaria y del Trabajo",
+   2,
+   0,
+   0,
+   3,
+   [
+    "Gestión de Calidad",
+    "Seguridad Industrial y Salud Ocupacional"
+   ]
+  ],
+  [
+   9,
+   "Operaciones Unitarias III",
+   3,
+   2,
+   0,
+   6,
+   [
+    "Operaciones Unitarias II"
+   ]
+  ],
+  [
+   9,
+   "Procesos en la Industria Alimentaria I",
+   3,
+   3,
+   0,
+   8,
+   [
+    "Operaciones Unitarias II"
+   ]
+  ],
+  [
+   10,
+   "Conservación y Envasado de Alimentos",
+   2,
+   0,
+   3,
+   5,
+   [
+    "Procesos en la Industria Alimentaria I",
+    "Operaciones Unitarias III",
+    "Laboratorio de Ingeniería de Alimentos III",
+    "Ingeniería Bioquímica"
+   ]
+  ],
+  [
+   10,
+   "Ingeniería Ambiental",
+   4,
+   2,
+   0,
+   8,
+   [
+    "Ingeniería Bioquímica",
+    "Operaciones Unitarias III"
+   ]
+  ],
+  [
+   10,
+   "Ingeniería Económica",
+   2,
+   0,
+   0,
+   3,
+   [
+    "Administración"
+   ]
+  ],
+  [
+   10,
+   "Procesos en la Industria Alimentaria II",
+   4,
+   2,
+   0,
+   8,
+   [
+    "Procesos en la Industria Alimentaria I",
+    "Operaciones Unitarias III"
+   ]
+  ],
+  [
+   10,
+   "Proyecto Industrial",
+   2,
+   0,
+   0,
+   3,
+   [
+    "Operaciones Unitarias III",
+    "Laboratorio de Ingeniería de Alimentos III",
+    "Procesos en la Industria Alimentaria I",
+    "Administración",
+    "Legislación Industrial Alimentaria y del Trabajo"
+   ]
+  ],
+  [
+   10,
+   "Simulación y Optimización de Procesos",
+   2,
+   2,
+   0,
+   5,
+   [
+    "Operaciones Unitarias III"
+   ]
+  ],
+  [
+   11,
+   "Pasantía",
+   2,
+   0,
+   0,
+   19,
+   [
+    "*nivel 10"
+   ],
+   "2 h semanales + 400 h semestrales"
+  ],
+  [
+   11,
+   "Trabajo de Grado",
+   2,
+   0,
+   0,
+   19,
+   [
+    "*nivel 10"
+   ],
+   "2 h semanales + 400 h semestrales"
+  ]
+ ],
+ "optativas": {
+  "grupos": [
+   {
+    "nombre": "Optativas",
+    "cantidad_exigida": 3,
+    "niveles": [
+     5,
+     6,
+     8
+    ],
+    "nota": "Mínimo 135 h / 12 créditos"
+   }
+  ],
+  "columnas": [
+   "semestre_oferta",
+   "asignatura",
+   "T",
+   "RP",
+   "P",
+   "creditos",
+   "prerrequisitos"
+  ],
+  "materias": [
+   [
+    1,
+    "Alimentación, Nutrición y Salud Pública",
+    3,
+    0,
+    0,
+    4,
+    [
+     "Química y Bioquímica de Alimentos"
+    ]
+   ],
+   [
+    1,
+    "Competencias Empresariales",
+    3,
+    0,
+    0,
+    4,
+    [
+     "Higiene y Gestión de Inocuidad Alimentaria"
+    ]
+   ],
+   [
+    1,
+    "Diseño de Experimentos",
+    3,
+    0,
+    0,
+    4,
+    [
+     "Metodología de la Investigación Científica"
+    ]
+   ],
+   [
+    1,
+    "Física Avanzada",
+    3,
+    0,
+    0,
+    4,
+    [
+     "Física III"
+    ]
+   ],
+   [
+    1,
+    "Inteligencia Artificial Aplicada a la Ingeniería",
+    3,
+    0,
+    0,
+    4,
+    [
+     "Cálculo Numérico"
+    ]
+   ],
+   [
+    1,
+    "Marketing, Innovación y Desarrollo de Productos Alimentarios",
+    3,
+    0,
+    0,
+    4,
+    [
+     "Análisis de Alimentos"
+    ]
+   ],
+   [
+    1,
+    "Métodos Numéricos",
+    3,
+    0,
+    0,
+    4,
+    [
+     "Cálculo Numérico"
+    ]
+   ],
+   [
+    1,
+    "Recursos Naturales",
+    3,
+    0,
+    0,
+    4,
+    [
+     "Química Orgánica"
+    ]
+   ],
+   [
+    1,
+    "Redacción Científica",
+    3,
+    0,
+    0,
+    4,
+    [
+     "Metodología de la Investigación Científica"
+    ]
+   ],
+   [
+    2,
+    "Envases y Embalajes",
+    2,
+    0,
+    1,
+    4,
+    [
+     "Química Inorgánica"
+    ]
+   ],
+   [
+    2,
+    "Flujo en Medios Porosos",
+    3,
+    0,
+    0,
+    4,
+    [
+     "Fenómenos de Transporte"
+    ]
+   ],
+   [
+    2,
+    "Gestión de Operaciones",
+    3,
+    0,
+    0,
+    4,
+    [
+     "Operaciones Unitarias I"
+    ]
+   ],
+   [
+    2,
+    "Habilidades Blandas",
+    3,
+    0,
+    0,
+    4,
+    []
+   ],
+   [
+    2,
+    "Inglés Técnico",
+    3,
+    0,
+    0,
+    4,
+    []
+   ],
+   [
+    2,
+    "Portugués",
+    3,
+    0,
+    0,
+    4,
+    []
+   ],
+   [
+    2,
+    "Procesos de Separación por Membranas Aplicados a la Industria",
+    3,
+    0,
+    0,
+    4,
+    [
+     "Transferencia de Masa y Energía"
+    ]
+   ],
+   [
+    2,
+    "Producción más Limpia",
+    3,
+    0,
+    0,
+    4,
+    [
+     "Operaciones Unitarias I"
+    ]
+   ],
+   [
+    2,
+    "Tecnología Cervecera",
+    3,
+    0,
+    0,
+    4,
+    [
+     "Microbiología de Alimentos"
+    ]
+   ]
+  ]
+ },
+ "dudas": [
+  "Las últimas 3 optativas del 2.º semestre (Procesos de Separación por Membranas, Producción más Limpia, Tecnología Cervecera) se tomaron de la Tabla 1; su reparto T/RP/P se asumió 3-0-0 (45 h)."
+ ]
+}

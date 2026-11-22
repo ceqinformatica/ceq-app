@@ -1,0 +1,728 @@
+{
+ "carrera": "F",
+ "plan": "Plan 2018",
+ "anio": 2018,
+ "fuente": "Res. CSU N.º 0421-00-2024 (modifica el Proyecto Académico 2018), malla con correlatividades (págs. 9-11)",
+ "url": "https://www.qui.una.py/v3/wp-content/uploads/2026/07/Modificacion-del-Proyecto-Academico-2018-Carrera-de-Farmacia-FCQ-UNA.pdf",
+ "verificacion": "leído visualmente del PDF escaneado; horas semanales por nivel verificadas contra el total del nivel",
+ "columnas": [
+  "nivel",
+  "asignatura",
+  "T+RP",
+  "-",
+  "Lab",
+  "creditos",
+  "prerrequisitos"
+ ],
+ "materias": [
+  [
+   1,
+   "Química General",
+   5,
+   0,
+   2,
+   null,
+   []
+  ],
+  [
+   1,
+   "Física",
+   5,
+   0,
+   2,
+   null,
+   []
+  ],
+  [
+   1,
+   "Geometría Analítica y Cálculo",
+   5,
+   0,
+   0,
+   null,
+   []
+  ],
+  [
+   1,
+   "Biología General",
+   2,
+   0,
+   3,
+   null,
+   []
+  ],
+  [
+   1,
+   "Guaraní",
+   2,
+   0,
+   0,
+   null,
+   []
+  ],
+  [
+   2,
+   "Química Inorgánica",
+   4,
+   0,
+   3,
+   null,
+   [
+    "Química General"
+   ]
+  ],
+  [
+   2,
+   "Cálculo Diferencial e Integral",
+   6,
+   0,
+   0,
+   null,
+   [
+    "Geometría Analítica y Cálculo"
+   ]
+  ],
+  [
+   2,
+   "Botánica",
+   2,
+   0,
+   2,
+   null,
+   [
+    "Biología General"
+   ]
+  ],
+  [
+   2,
+   "Parasitología",
+   2,
+   0,
+   1,
+   null,
+   [
+    "Biología General"
+   ]
+  ],
+  [
+   2,
+   "Inglés Técnico",
+   4,
+   0,
+   0,
+   null,
+   []
+  ],
+  [
+   2,
+   "Seminario de Orientación Profesional",
+   2,
+   0,
+   0,
+   null,
+   []
+  ],
+  [
+   3,
+   "Química Orgánica I",
+   4,
+   0,
+   4,
+   null,
+   [
+    "Química Inorgánica"
+   ]
+  ],
+  [
+   3,
+   "Química Analítica I",
+   3,
+   0,
+   4,
+   null,
+   [
+    "Química Inorgánica"
+   ]
+  ],
+  [
+   3,
+   "Bioestadística",
+   5,
+   0,
+   0,
+   null,
+   []
+  ],
+  [
+   3,
+   "Farmacobotánica",
+   2,
+   0,
+   3,
+   null,
+   [
+    "Botánica"
+   ]
+  ],
+  [
+   4,
+   "Química Orgánica II",
+   4,
+   0,
+   4,
+   null,
+   [
+    "Química Orgánica I"
+   ]
+  ],
+  [
+   4,
+   "Química Analítica II",
+   3,
+   0,
+   4,
+   null,
+   [
+    "Química Analítica I"
+   ]
+  ],
+  [
+   4,
+   "Microbiología General",
+   4,
+   0,
+   3,
+   null,
+   [
+    "Biología General"
+   ]
+  ],
+  [
+   4,
+   "Anatomía Humana",
+   2,
+   0,
+   2,
+   null,
+   [
+    "Biología General"
+   ]
+  ],
+  [
+   5,
+   "Fisicoquímica Farmacéutica",
+   4,
+   0,
+   3,
+   null,
+   [
+    "Cálculo Diferencial e Integral",
+    "Física",
+    "Química Orgánica I",
+    "Química Analítica II"
+   ]
+  ],
+  [
+   5,
+   "Química Analítica III",
+   3,
+   0,
+   3,
+   null,
+   [
+    "Química Analítica II"
+   ]
+  ],
+  [
+   5,
+   "Farmacognosia",
+   3,
+   0,
+   4,
+   null,
+   [
+    "Farmacobotánica",
+    "Química Analítica II"
+   ]
+  ],
+  [
+   5,
+   "Fisiología Humana",
+   4,
+   0,
+   2,
+   null,
+   [
+    "Anatomía Humana"
+   ]
+  ],
+  [
+   6,
+   "Química Farmacéutica I",
+   4,
+   0,
+   3,
+   null,
+   [
+    "Química Orgánica II"
+   ]
+  ],
+  [
+   6,
+   "Bioquímica",
+   4,
+   0,
+   2,
+   null,
+   [
+    "Química Orgánica II"
+   ]
+  ],
+  [
+   6,
+   "Metodología de la Investigación Científica",
+   4,
+   0,
+   0,
+   null,
+   [
+    "Bioestadística"
+   ]
+  ],
+  [
+   6,
+   "Fisiopatología Humana",
+   3,
+   0,
+   2,
+   null,
+   [
+    "Fisiología Humana"
+   ]
+  ],
+  [
+   7,
+   "Química Farmacéutica II",
+   4,
+   0,
+   3,
+   null,
+   [
+    "Química Farmacéutica I"
+   ]
+  ],
+  [
+   7,
+   "Biología Molecular",
+   4,
+   0,
+   2,
+   null,
+   [
+    "Bioquímica"
+   ]
+  ],
+  [
+   7,
+   "Salud Pública",
+   2,
+   0,
+   2,
+   null,
+   [
+    "Metodología de la Investigación Científica"
+   ]
+  ],
+  [
+   7,
+   "Farmacotecnia I",
+   3,
+   0,
+   3,
+   null,
+   [
+    "Química Analítica II",
+    "Farmacobotánica"
+   ]
+  ],
+  [
+   7,
+   "Toxicología",
+   3,
+   0,
+   3,
+   null,
+   [
+    "Fisiopatología Humana",
+    "Química Analítica III",
+    "Bioquímica"
+   ]
+  ],
+  [
+   8,
+   "Farmacotecnia II",
+   3,
+   0,
+   3,
+   null,
+   [
+    "Farmacotecnia I",
+    "Fisicoquímica Farmacéutica"
+   ]
+  ],
+  [
+   8,
+   "Farmacología I",
+   4,
+   0,
+   3,
+   null,
+   [
+    "Biología Molecular",
+    "Fisiopatología Humana"
+   ]
+  ],
+  [
+   8,
+   "Fitoquímica",
+   4,
+   0,
+   3,
+   null,
+   [
+    "Farmacognosia",
+    "Química Orgánica II"
+   ]
+  ],
+  [
+   8,
+   "Biofarmacia",
+   2,
+   0,
+   2,
+   null,
+   [
+    "Farmacotecnia I"
+   ]
+  ],
+  [
+   8,
+   "Pasantía Pre-profesional I",
+   0,
+   0,
+   0,
+   null,
+   [
+    "*nivel 7"
+   ],
+   "50 h semestrales"
+  ],
+  [
+   9,
+   "Farmacología II",
+   5,
+   0,
+   3,
+   null,
+   [
+    "Farmacología I"
+   ]
+  ],
+  [
+   9,
+   "Tecnología Farmacéutica",
+   4,
+   0,
+   4,
+   null,
+   [
+    "Farmacotecnia II",
+    "Biofarmacia"
+   ]
+  ],
+  [
+   9,
+   "Análisis y Control de Medicamentos y Cosméticos",
+   4,
+   0,
+   4,
+   null,
+   [
+    "Química Analítica III",
+    "Farmacotecnia II"
+   ]
+  ],
+  [
+   9,
+   "Administración y Marketing Farmacéutico",
+   4,
+   0,
+   0,
+   null,
+   [
+    "Farmacotecnia II"
+   ]
+  ],
+  [
+   9,
+   "Pasantía Pre-profesional II",
+   0,
+   0,
+   0,
+   null,
+   [
+    "*nivel 7",
+    "Farmacotecnia II",
+    "Farmacología I",
+    "Fitoquímica",
+    "Biofarmacia"
+   ],
+   "50 h semestrales; hasta el 8.º nivel aprobado, excepto Pasantía Pre-profesional I"
+  ],
+  [
+   10,
+   "Gestión de Calidad",
+   5,
+   0,
+   0,
+   null,
+   [
+    "Análisis y Control de Medicamentos y Cosméticos"
+   ]
+  ],
+  [
+   10,
+   "Legislación Farmacéutica y Deontología",
+   4,
+   0,
+   0,
+   null,
+   [
+    "Tecnología Farmacéutica",
+    "Análisis y Control de Medicamentos y Cosméticos"
+   ]
+  ],
+  [
+   10,
+   "Tecnología Cosmética",
+   4,
+   0,
+   4,
+   null,
+   [
+    "Tecnología Farmacéutica"
+   ]
+  ],
+  [
+   10,
+   "Biotecnología Farmacéutica",
+   2,
+   0,
+   2,
+   null,
+   [
+    "Biología Molecular",
+    "Microbiología General"
+   ]
+  ],
+  [
+   10,
+   "Farmacia Clínica y Atención Farmacéutica",
+   2,
+   0,
+   2,
+   null,
+   [
+    "Farmacología II",
+    "Salud Pública"
+   ]
+  ],
+  [
+   11,
+   "Pasantía Supervisada",
+   0,
+   0,
+   0,
+   null,
+   [
+    "*nivel 10"
+   ],
+   "470 h semestrales"
+  ],
+  [
+   11,
+   "Trabajo de Grado",
+   0,
+   0,
+   0,
+   null,
+   [
+    "*nivel 10"
+   ],
+   "240 h semestrales"
+  ]
+ ],
+ "optativas": {
+  "grupos": [
+   {
+    "nombre": "Optativa I",
+    "cantidad_exigida": 1,
+    "niveles": [
+     3
+    ],
+    "materias": [
+     "Informática",
+     "Animales de Laboratorio"
+    ]
+   },
+   {
+    "nombre": "Optativa II",
+    "cantidad_exigida": 1,
+    "niveles": [
+     6
+    ],
+    "materias": [
+     "Primeros Auxilios",
+     "Radiofarmacia"
+    ]
+   },
+   {
+    "nombre": "Optativa III",
+    "cantidad_exigida": 1,
+    "niveles": [
+     8
+    ],
+    "materias": [
+     "Inmunología",
+     "Farmacoeconomía"
+    ]
+   },
+   {
+    "nombre": "Optativa IV",
+    "cantidad_exigida": 1,
+    "niveles": [
+     10
+    ],
+    "materias": [
+     "Emprendedorismo y Plan de Negocios",
+     "Análisis Microbiológico Farmacéutico y Cosmético",
+     "Gerenciamiento de Plantas Farmacéuticas"
+    ]
+   }
+  ],
+  "columnas": [
+   "semestre_oferta",
+   "asignatura",
+   "T+RP",
+   "-",
+   "Lab",
+   "creditos",
+   "prerrequisitos"
+  ],
+  "materias": [
+   [
+    0,
+    "Informática",
+    2,
+    0,
+    2,
+    null,
+    []
+   ],
+   [
+    0,
+    "Animales de Laboratorio",
+    2,
+    0,
+    2,
+    null,
+    [
+     "Biología General"
+    ]
+   ],
+   [
+    0,
+    "Primeros Auxilios",
+    2,
+    0,
+    2,
+    null,
+    [
+     "Anatomía Humana"
+    ]
+   ],
+   [
+    0,
+    "Radiofarmacia",
+    2,
+    0,
+    2,
+    null,
+    [
+     "Química Analítica III"
+    ]
+   ],
+   [
+    0,
+    "Inmunología",
+    2,
+    0,
+    2,
+    null,
+    [
+     "Bioquímica",
+     "Microbiología General"
+    ]
+   ],
+   [
+    0,
+    "Farmacoeconomía",
+    2,
+    0,
+    2,
+    null,
+    [
+     "Salud Pública"
+    ]
+   ],
+   [
+    0,
+    "Emprendedorismo y Plan de Negocios",
+    2,
+    0,
+    2,
+    null,
+    [
+     "Administración y Marketing Farmacéutico"
+    ]
+   ],
+   [
+    0,
+    "Análisis Microbiológico Farmacéutico y Cosmético",
+    2,
+    0,
+    2,
+    null,
+    [
+     "Análisis y Control de Medicamentos y Cosméticos",
+     "Microbiología General"
+    ]
+   ],
+   [
+    0,
+    "Gerenciamiento de Plantas Farmacéuticas",
+    2,
+    0,
+    2,
+    null,
+    [
+     "Tecnología Farmacéutica"
+    ]
+   ]
+  ]
+ },
+ "dudas": [
+  "El plan 2018 no asigna créditos.",
+  "Las optativas figuran con 60 h; el reparto 2 h teoría + 2 h laboratorio se tomó de la fila 'Optativa' de la malla y puede variar por asignatura."
+ ]
+}

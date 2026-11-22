@@ -1,0 +1,639 @@
+{
+ "carrera": "CTA",
+ "plan": "Plan 2026",
+ "anio": 2026,
+ "fuente": "Res. CSU N.º 0872-00-2025, Tabla 2.1 (págs. 15-19, apaisadas)",
+ "url": "https://www.qui.una.py/v3/wp-content/uploads/2026/07/CTA_Resolucion-N°-0872.pdf",
+ "verificacion": "leído visualmente del PDF escaneado; créditos por nivel verificados",
+ "columnas": [
+  "nivel",
+  "asignatura",
+  "T",
+  "RP",
+  "P",
+  "creditos",
+  "prerrequisitos"
+ ],
+ "materias": [
+  [
+   1,
+   "Biología General",
+   2,
+   0,
+   3,
+   5,
+   []
+  ],
+  [
+   1,
+   "Física I",
+   3,
+   3,
+   0,
+   8,
+   []
+  ],
+  [
+   1,
+   "Geometría Analítica y Cálculo",
+   3,
+   3,
+   0,
+   8,
+   []
+  ],
+  [
+   1,
+   "Química General",
+   2,
+   2,
+   3,
+   8,
+   []
+  ],
+  [
+   2,
+   "Cálculo Diferencial e Integral",
+   3,
+   3,
+   0,
+   8,
+   [
+    "Geometría Analítica y Cálculo"
+   ]
+  ],
+  [
+   2,
+   "Física II",
+   3,
+   1,
+   2,
+   7,
+   [
+    "Física I"
+   ]
+  ],
+  [
+   2,
+   "Guaraní",
+   3,
+   0,
+   0,
+   4,
+   []
+  ],
+  [
+   2,
+   "Microbiología General",
+   3,
+   0,
+   3,
+   7,
+   [
+    "Biología General"
+   ]
+  ],
+  [
+   2,
+   "Química Inorgánica",
+   2,
+   1,
+   3,
+   7,
+   [
+    "Química General"
+   ]
+  ],
+  [
+   2,
+   "Recursos Naturales",
+   2,
+   0,
+   0,
+   3,
+   [
+    "Biología General"
+   ]
+  ],
+  [
+   3,
+   "Estadística I",
+   2,
+   2,
+   0,
+   5,
+   []
+  ],
+  [
+   3,
+   "Microbiología de Alimentos",
+   3,
+   0,
+   3,
+   7,
+   [
+    "Microbiología General"
+   ]
+  ],
+  [
+   3,
+   "Química Analítica I",
+   3,
+   0,
+   4,
+   8,
+   [
+    "Química Inorgánica"
+   ]
+  ],
+  [
+   3,
+   "Química Orgánica I",
+   4,
+   2,
+   4,
+   12,
+   [
+    "Química Inorgánica"
+   ]
+  ],
+  [
+   4,
+   "Gestión Gastronómica y Restauración Colectiva",
+   2,
+   0,
+   3,
+   5,
+   [
+    "Microbiología de Alimentos"
+   ]
+  ],
+  [
+   4,
+   "Estadística II",
+   4,
+   0,
+   0,
+   5,
+   [
+    "Estadística I"
+   ]
+  ],
+  [
+   4,
+   "Química Analítica II",
+   3,
+   0,
+   4,
+   8,
+   [
+    "Química Analítica I"
+   ]
+  ],
+  [
+   4,
+   "Química Orgánica II",
+   4,
+   2,
+   4,
+   12,
+   [
+    "Química Orgánica I"
+   ]
+  ],
+  [
+   5,
+   "Administración Industrial y Marketing",
+   3,
+   0,
+   0,
+   4,
+   [
+    "Estadística II"
+   ]
+  ],
+  [
+   5,
+   "Evaluación de la Conformidad",
+   2,
+   1,
+   0,
+   4,
+   [
+    "Química Analítica II"
+   ]
+  ],
+  [
+   5,
+   "Fisicoquímica de Alimentos",
+   4,
+   0,
+   4,
+   9,
+   [
+    "Física II",
+    "Cálculo Diferencial e Integral",
+    "Química Orgánica I",
+    "Química Analítica II"
+   ]
+  ],
+  [
+   5,
+   "Química Analítica III",
+   3,
+   0,
+   3,
+   7,
+   [
+    "Química Analítica II",
+    "Física II",
+    "Química Orgánica I"
+   ]
+  ],
+  [
+   5,
+   "Química y Bioquímica de Alimentos",
+   3,
+   0,
+   3,
+   7,
+   [
+    "Química Orgánica II",
+    "Química Analítica II"
+   ]
+  ],
+  [
+   6,
+   "Análisis Sensorial de Alimentos",
+   2,
+   0,
+   2,
+   4,
+   [
+    "Estadística II",
+    "Química y Bioquímica de Alimentos"
+   ]
+  ],
+  [
+   6,
+   "Gestión de Calidad",
+   2,
+   0,
+   2,
+   4,
+   [
+    "Evaluación de la Conformidad"
+   ]
+  ],
+  [
+   6,
+   "Biotecnología Alimentaria",
+   2,
+   0,
+   3,
+   5,
+   [
+    "Química y Bioquímica de Alimentos",
+    "Microbiología de Alimentos"
+   ]
+  ],
+  [
+   6,
+   "Higiene y Gestión de Inocuidad Alimentaria",
+   2,
+   0,
+   0,
+   3,
+   [
+    "Microbiología de Alimentos"
+   ]
+  ],
+  [
+   6,
+   "Introducción a la Ingeniería de Alimentos",
+   2,
+   2,
+   0,
+   5,
+   [
+    "Fisicoquímica de Alimentos",
+    "Química y Bioquímica de Alimentos"
+   ]
+  ],
+  [
+   6,
+   "Tecnología de Alimentos",
+   2,
+   0,
+   3,
+   5,
+   [
+    "Microbiología de Alimentos",
+    "Química y Bioquímica de Alimentos"
+   ]
+  ],
+  [
+   6,
+   "Toxicología de Alimentos",
+   2,
+   0,
+   3,
+   5,
+   [
+    "Microbiología de Alimentos",
+    "Química y Bioquímica de Alimentos"
+   ]
+  ],
+  [
+   7,
+   "Alimentación, Nutrición y Salud Pública",
+   3,
+   0,
+   0,
+   4,
+   [
+    "Química y Bioquímica de Alimentos"
+   ]
+  ],
+  [
+   7,
+   "Análisis de Alimentos",
+   2,
+   0,
+   4,
+   6,
+   [
+    "Estadística II",
+    "Química y Bioquímica de Alimentos"
+   ]
+  ],
+  [
+   7,
+   "Legislación Industrial Alimentaria y del Trabajo",
+   2,
+   0,
+   0,
+   3,
+   [
+    "Higiene y Gestión de Inocuidad Alimentaria"
+   ]
+  ],
+  [
+   7,
+   "Metodología de la Investigación Científica",
+   2,
+   2,
+   0,
+   5,
+   [
+    "Estadística II",
+    "Tecnología de Alimentos"
+   ]
+  ],
+  [
+   7,
+   "Tecnología de Carnes y Derivados",
+   2,
+   0,
+   3,
+   5,
+   [
+    "Tecnología de Alimentos",
+    "Introducción a la Ingeniería de Alimentos"
+   ]
+  ],
+  [
+   7,
+   "Tecnología de Lácteos y Derivados",
+   2,
+   0,
+   3,
+   5,
+   [
+    "Tecnología de Alimentos",
+    "Introducción a la Ingeniería de Alimentos"
+   ]
+  ],
+  [
+   8,
+   "Envases y Embalajes",
+   2,
+   0,
+   1,
+   4,
+   [
+    "Tecnología de Alimentos"
+   ]
+  ],
+  [
+   8,
+   "Seguridad Industrial y Salud Ocupacional",
+   2,
+   1,
+   0,
+   4,
+   [
+    "Legislación Industrial Alimentaria y del Trabajo"
+   ]
+  ],
+  [
+   8,
+   "Tecnología de Aceites y Grasas",
+   2,
+   0,
+   3,
+   5,
+   [
+    "Análisis de Alimentos",
+    "Tecnología de Alimentos",
+    "Introducción a la Ingeniería de Alimentos"
+   ]
+  ],
+  [
+   8,
+   "Tecnología de Bebidas y Afines",
+   2,
+   0,
+   3,
+   5,
+   [
+    "Análisis de Alimentos",
+    "Tecnología de Alimentos",
+    "Introducción a la Ingeniería de Alimentos"
+   ]
+  ],
+  [
+   8,
+   "Tecnología de Cereales y Derivados",
+   2,
+   0,
+   3,
+   5,
+   [
+    "Análisis de Alimentos",
+    "Tecnología de Alimentos",
+    "Introducción a la Ingeniería de Alimentos"
+   ]
+  ],
+  [
+   8,
+   "Tecnología de Vegetales y Derivados",
+   2,
+   0,
+   3,
+   5,
+   [
+    "Análisis de Alimentos",
+    "Tecnología de Alimentos",
+    "Introducción a la Ingeniería de Alimentos"
+   ]
+  ],
+  [
+   9,
+   "Pasantía",
+   2,
+   0,
+   0,
+   13,
+   [
+    "*nivel 8"
+   ],
+   "2 h semanales + 300 h semestrales"
+  ],
+  [
+   9,
+   "Trabajo de Grado",
+   2,
+   0,
+   0,
+   9,
+   [
+    "*nivel 8"
+   ],
+   "2 h semanales + 200 h semestrales"
+  ]
+ ],
+ "optativas": {
+  "grupos": [
+   {
+    "nombre": "Optativas",
+    "cantidad_exigida": 3,
+    "niveles": [
+     4,
+     7,
+     8
+    ],
+    "nota": "Mínimo 135 h / 12 créditos"
+   }
+  ],
+  "columnas": [
+   "semestre_oferta",
+   "asignatura",
+   "T",
+   "RP",
+   "P",
+   "creditos",
+   "prerrequisitos"
+  ],
+  "materias": [
+   [
+    1,
+    "Competencias Empresariales",
+    3,
+    0,
+    0,
+    4,
+    [
+     "Tecnología de Alimentos",
+     "Administración Industrial y Marketing",
+     "Gestión de Calidad"
+    ]
+   ],
+   [
+    1,
+    "Diseño de Experimentos",
+    3,
+    0,
+    0,
+    4,
+    [
+     "Estadística II",
+     "Tecnología de Alimentos"
+    ]
+   ],
+   [
+    1,
+    "Marketing, Innovación y Desarrollo de Productos Alimentarios",
+    3,
+    0,
+    0,
+    4,
+    [
+     "Tecnología de Alimentos",
+     "Administración Industrial y Marketing"
+    ]
+   ],
+   [
+    1,
+    "Redacción Científica",
+    3,
+    0,
+    0,
+    4,
+    [
+     "Estadística II"
+    ]
+   ],
+   [
+    2,
+    "Gestión y Manejo de Residuos",
+    3,
+    0,
+    0,
+    4,
+    [
+     "Introducción a la Ingeniería de Alimentos"
+    ]
+   ],
+   [
+    2,
+    "Habilidades Blandas",
+    3,
+    0,
+    0,
+    4,
+    []
+   ],
+   [
+    2,
+    "Herramientas Informáticas",
+    3,
+    0,
+    0,
+    4,
+    []
+   ],
+   [
+    2,
+    "Inglés Técnico",
+    3,
+    0,
+    0,
+    4,
+    []
+   ],
+   [
+    2,
+    "Tecnología Cervecera",
+    3,
+    0,
+    0,
+    4,
+    [
+     "Microbiología de Alimentos"
+    ]
+   ]
+  ]
+ },
+ "dudas": []
+}

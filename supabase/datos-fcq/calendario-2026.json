@@ -1,0 +1,42 @@
+{
+  "fuente": "Res. N.º 9048/2025 del Consejo Directivo, Calendario de Actividades 2026 (resumen publicado en https://www.qui.una.py/v3/academico/calendario-academico-fcq/)",
+  "pdf": "https://www.qui.una.py/v3/wp-content/uploads/2026/07/RNo9048-2025-CALENDARIO-DE-ACTIVIDADES-2026.pdf",
+  "ingresantes": {"matriculacion": ["2026-02-09", "2026-02-13"], "reunion_informativa": "2026-02-19T09:00"},
+  "semestres": [
+    {
+      "numero": 1,
+      "clases": ["2026-02-23", "2026-06-06"],
+      "matriculacion_ordinaria": ["2026-02-16", "2026-03-16"],
+      "matriculacion_extraordinaria": ["2026-03-17", "2026-04-06"],
+      "matriculacion_extemporanea": ["2026-04-07", "2026-05-25"],
+      "aranceles_vencimientos": ["2026-03-23", "2026-04-15", "2026-05-13", "2026-06-08"],
+      "finales": [
+        {"periodo": 1, "inscripcion": ["2026-06-10", "2026-06-25"], "examenes": ["2026-06-15", "2026-06-27"]},
+        {"periodo": 2, "inscripcion": ["2026-06-25", "2026-07-09"], "examenes": ["2026-06-29", "2026-07-11"]},
+        {"periodo": 3, "inscripcion": ["2026-07-09", "2026-07-23"], "examenes": ["2026-07-13", "2026-07-25"]}
+      ],
+      "horario_finales": {"anteproyecto": "2026-04-20", "modificaciones_hasta": "2026-05-19", "publicacion": "2026-05-29"}
+    },
+    {
+      "numero": 2,
+      "clases": ["2026-08-03", "2026-11-14"],
+      "matriculacion_ordinaria": ["2026-07-29", "2026-08-24"],
+      "matriculacion_extraordinaria": ["2026-08-25", "2026-09-22"],
+      "matriculacion_extemporanea": ["2026-09-23", "2026-11-02"],
+      "aranceles_vencimientos": ["2026-08-31", "2026-09-18", "2026-10-16", "2026-11-18"],
+      "finales": [
+        {"periodo": 1, "inscripcion": ["2026-11-19", "2026-12-03"], "examenes": ["2026-11-23", "2026-12-05"]},
+        {"periodo": 2, "inscripcion": ["2026-12-03", "2026-12-17"], "examenes": ["2026-12-07", "2026-12-19"]},
+        {"periodo": 3, "inscripcion": ["2027-01-28", "2027-02-11"], "examenes": ["2027-02-01", "2027-02-13"], "nota": "La web dice enero/febrero de 2026; por el orden del calendario corresponde a 2027 (sin confirmar)."}
+      ],
+      "horario_finales": {"anteproyecto": "2026-09-25", "modificaciones_hasta": "2026-10-23", "publicacion": "2026-11-06"}
+    }
+  ],
+  "solicitudes": {
+    "gratuidad_arancel_0": ["2026-02-06", "2026-07-17"],
+    "admision_directa_egresados": ["2026-02-06", "2026-07-17"],
+    "matriculacion_simultanea_y_traslados": ["2026-02-20", "2026-07-31"],
+    "prorroga_y_readmision": ["2026-02-06", "2026-07-17"],
+    "homologacion_convalidacion": ["2026-02-20", "2026-07-31"]
+  }
+}
