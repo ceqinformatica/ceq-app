@@ -5,6 +5,7 @@
  */
 import type { Asistencia, Evaluacion, ReglaFirma } from '../lib/firma';
 import type { EstadoEstudiante, EstadoMateria, GrupoOptativas, Materia, Prerrequisito, UnidadAvance } from '../lib/progreso';
+import type { IntentoAImportar, PlanImportacion } from '../lib/extracto-ealu';
 import { REGLA_FCQ } from '../lib/reglamento-fcq';
 import { supabase } from '../lib/supabase';
 import type { AsistenciaDb, ComponenteDb, EvaluacionDb, GrupoOptativasDb, MateriaDb, Plan, PrerrequisitoDb, ReglaFirmaDb } from '../lib/tipos-db';
@@ -106,8 +107,65 @@ export async function guardarEstadoMateria(materiaId: string, estado: EstadoMate
     lanzar(error);
     return;
   }
-  const { error } = await supabase.from('materias_estudiante').upsert({ materia_id: materiaId, estado, nota_final: nota }, { onConflict: 'usuario_id,materia_id' });
+  const { error } = await supabase.from('materias_estudiante').upsert({ materia_id: materiaId, estado, nota_final: nota, nota_desde_final: false }, { onConflict: 'usuario_id,materia_id' });
   lanzar(error);
+}
+
+/** Intentos de final ya cargados y materias aprobadas, para no duplicar al importar. */
+export async function cargarParaImportar(): Promise<{ existentes: IntentoAImportar[]; aprobadas: Set<string> }> {
+  if (MODO_DEMO) {
+    await esperar(100);
+    return { existentes: [], aprobadas: new Set(db.estados.filter((e) => e.estado === 'aprobada').map((e) => e.materia_id)) };
+  }
+  const [intentos, estados] = await Promise.all([
+    supabase.from('examenes_finales').select('materia_id, fecha, nota'),
+    supabase.from('materias_estudiante').select('materia_id').eq('estado', 'aprobada'),
+  ]);
+  lanzar(intentos.error);
+  lanzar(estados.error);
+  return {
+    existentes: (intentos.data ?? []) as IntentoAImportar[],
+    aprobadas: new Set((estados.data ?? []).map((e: { materia_id: string }) => e.materia_id)),
+  };
+}
+
+/**
+ * Carga lo que salió del extracto del EALU. Los finales van a
+ * examenes_finales (la base aprueba la materia con esa nota); las aprobadas
+ * sin nota se marcan aprobadas sin tocar las que ya lo estaban.
+ */
+export async function importarExtracto(plan: PlanImportacion) {
+  if (MODO_DEMO) {
+    await esperar(200);
+    const hoy = new Date().toISOString();
+    const aprobar = (materia_id: string, nota: number | null, fecha: string | null) => {
+      db.estados = db.estados.filter((e) => e.materia_id !== materia_id);
+      db.estados.push({ usuario_id: UID_DEMO, materia_id, estado: 'aprobada', nota_final: nota, fecha, periodo: null, updated_at: hoy });
+    };
+    // Como el trigger de la base: aprueba con la mejor nota aprobada (≥ 2).
+    const mejor = new Map<string, IntentoAImportar>();
+    for (const i of plan.intentos) {
+      if (i.nota < 2) continue;
+      const m = mejor.get(i.materia_id);
+      if (!m || i.nota > m.nota) mejor.set(i.materia_id, i);
+    }
+    mejor.forEach((i) => aprobar(i.materia_id, i.nota, i.fecha));
+    plan.aprobadasSinNota.forEach((m) => aprobar(m, null, null));
+    return;
+  }
+  if (plan.intentos.length) {
+    const { error } = await supabase.from('examenes_finales').insert(plan.intentos);
+    lanzar(error);
+  }
+  if (plan.aprobadasSinNota.length) {
+    const { error } = await supabase
+      .from('materias_estudiante')
+      .upsert(
+        plan.aprobadasSinNota.map((materia_id) => ({ materia_id, estado: 'aprobada' as const, nota_final: null, nota_desde_final: false })),
+        { onConflict: 'usuario_id,materia_id' },
+      );
+    lanzar(error);
+  }
 }
 
 export interface CambioEstado {
@@ -125,7 +183,7 @@ export async function guardarEstadosEnBloque(cambios: CambioEstado[]) {
   const borrar = cambios.filter((c) => c.estado === 'pendiente').map((c) => c.materiaId);
   const guardar = cambios
     .filter((c) => c.estado !== 'pendiente')
-    .map((c) => ({ materia_id: c.materiaId, estado: c.estado, nota_final: c.estado === 'aprobada' ? c.notaFinal : null }));
+    .map((c) => ({ materia_id: c.materiaId, estado: c.estado, nota_final: c.estado === 'aprobada' ? c.notaFinal : null, nota_desde_final: false }));
   if (MODO_DEMO) {
     await esperar(250);
     const tocadas = new Set(cambios.map((c) => c.materiaId));
