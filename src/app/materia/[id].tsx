@@ -3,6 +3,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Text, View } from 'react-native';
 import { nombreSemestre, pct, SelectorEstado } from '../../components/academico';
+import { TarjetaFinales } from '../../components/finales';
 import { BarraSuperior, Boton, Campo, Cargando, EstadoVacio, Fila, Insignia, Mensaje, Pantalla, s, Seccion, Tarjeta } from '../../components/ui';
 import { useSesion } from '../../context/SesionProvider';
 import { cargarMalla, guardarEstadoMateria } from '../../datos/academico';
@@ -16,7 +17,7 @@ export default function DetalleMateria() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { perfil } = useSesion();
   const planId = perfil?.plan_id ?? '';
-  const { datos: malla, cargando, error, setDatos } = usarDatos(() => cargarMalla(planId, perfil?.carrera_id), [planId]);
+  const { datos: malla, cargando, error, setDatos, recargar } = usarDatos(() => cargarMalla(planId, perfil?.carrera_id), [planId]);
 
   const materia = malla?.materiasDb.find((m) => m.id === id);
   const actual = malla?.estados.get(id ?? '');
@@ -114,13 +115,17 @@ export default function DetalleMateria() {
           <Text style={[s.cuerpo, { fontFamily: fuentes.semibold, color: colores.marino }]}>Tu firma: {pct(actual.promedioFirma)}</Text>
         </View>
       )}
-      {estado === 'firmada' && actual?.promedioFirma == null && (
-        <Mensaje tipo="info" texto="Si cargás tus notas en la calculadora de firma, podés guardar ahí tu promedio de firma." />
-      )}
       {(estado === 'cursando' || estado === 'firmada') && (
         <Boton texto={estado === 'firmada' ? 'Ver mi firma' : 'Calcular mi firma'} variante="secundario" icono="calculator-outline" onPress={() => router.push(`/firma/${materia.id}`)} />
       )}
       {msg && <Mensaje texto={msg.texto} tipo={msg.tipo} />}
+
+      {(actual?.estado === 'firmada' || actual?.estado === 'aprobada') && (
+        <>
+          <Seccion estilo={{ marginTop: espacio.xl }}>Finales</Seccion>
+          <TarjetaFinales materiaId={materia.id} firma={actual.promedioFirma ?? null} onGuardado={() => recargar()} />
+        </>
+      )}
 
       <Seccion estilo={{ marginTop: espacio.xl }}>Prerrequisitos</Seccion>
       <Tarjeta estilo={{ paddingVertical: espacio.xs }}>

@@ -19,6 +19,7 @@ async function cargar(planId: string, carreraId?: string | null) {
     const regla = reglaDe(malla.reglas, m.id);
     const resultado = evaluarFirma({
       regla: regla ?? REGLA_POR_DEFECTO,
+      recuperado: f.recuperado,
       tieneLaboratorio: tieneLab(f.evaluacionesDb),
       evaluaciones: f.evaluaciones,
       asistencia: aAsistencia(f.asistencia),

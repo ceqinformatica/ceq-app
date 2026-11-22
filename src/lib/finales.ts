@@ -68,3 +68,35 @@ export function promedios(
   const prom = (xs: number[]) => (xs.length ? redondear(xs.reduce((s, x) => s + x, 0) / xs.length) : null);
   return { sinAplazos: prom(notasAprobadas), conAplazos: prom(todas), aplazos };
 }
+
+/** Periodo académico de una fecha: "2026-1" (feb–jul) o "2026-2" (ago–dic). Enero cuenta como el 2.º del año anterior. */
+export function periodoDe(fecha: Date = new Date()): string {
+  const anio = fecha.getFullYear();
+  const mes = fecha.getMonth(); // 0 = enero
+  if (mes === 0) return `${anio - 1}-2`;
+  return `${anio}-${mes <= 6 ? 1 : 2}`;
+}
+
+export interface LlamadoCargado {
+  llamado: 1 | 2 | 3;
+  /** Porcentaje del examen final (0 a 100), si lo cargó así. */
+  porcentaje: number | null;
+  /** Nota del llamado (1 a 5). */
+  nota: number;
+}
+
+/**
+ * Nota de un llamado: con el porcentaje del final y el promedio de firma
+ * (0,4 × firma + 0,6 × final, el final tiene que llegar a 60 %), o la nota
+ * cargada directo. null si el llamado quedó vacío.
+ */
+export function notaDelLlamado(
+  firma: number | null,
+  porcentaje: number | null,
+  notaDirecta: number | null,
+  calcular: (pg: number, ef: number) => { nota: number },
+): number | null {
+  if (porcentaje != null && firma != null) return calcular(firma, porcentaje).nota;
+  if (notaDirecta != null && notaDirecta >= 1 && notaDirecta <= 5) return Math.round(notaDirecta);
+  return null;
+}

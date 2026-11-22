@@ -8,6 +8,7 @@ import { Boton, CabeceraMarca, Cargando, Chip, Dato, EstadoVacio, Mensaje, Panta
 import { useSesion } from '../../context/SesionProvider';
 import { cargarMalla, guardarEstadosEnBloque, type CambioEstado } from '../../datos/academico';
 import { usarDatos } from '../../datos/usarDatos';
+import { promedios } from '../../lib/finales';
 import { calcularProgreso, promedioGeneral, requisitosFaltantes } from '../../lib/progreso';
 import { colores, espacio, fuentes, radio, sombras } from '../../tema';
 
@@ -121,7 +122,9 @@ export default function Carrera() {
   const vista = useMemo(() => {
     if (!malla) return null;
     const progreso = calcularProgreso(malla.materias, malla.grupos, malla.estados, malla.unidad);
-    const promedio = promedioGeneral(malla.materias, malla.estados);
+    // Promedio sin aplazos (nota con la que aprobó) y con aplazos (todos los finales).
+    const prom = promedios(malla.materias, malla.estados, malla.intentos);
+    const promedio = malla.intentos.length ? prom.sinAplazos : promedioGeneral(malla.materias, malla.estados);
     const cursando = malla.materias.filter((m) => malla.estados.get(m.id)?.estado === 'cursando').length;
     const estadoDe = (id: string): { estado: EstadoVisual; faltan: number } => {
       const e = malla.estados.get(id)?.estado ?? 'pendiente';
@@ -145,7 +148,7 @@ export default function Carrera() {
     }
     // Niveles en orden y las optativas al final.
     const orden = (n: number) => (n === OPTATIVAS ? Infinity : n);
-    return { progreso, promedio, cursando, estadoDe, semestres: [...semestres.entries()].sort((a, b) => orden(a[0]) - orden(b[0])) };
+    return { progreso, promedio, prom, cursando, estadoDe, semestres: [...semestres.entries()].sort((a, b) => orden(a[0]) - orden(b[0])) };
   }, [malla, filtro]);
 
   const sub = [malla?.carrera, malla?.plan?.nombre].filter(Boolean).join(' · ') || 'Tu malla y tu avance';
@@ -171,7 +174,7 @@ export default function Carrera() {
               <View style={{ flex: 1, gap: espacio.m }}>
                 <View style={{ flexDirection: 'row' }}>
                   <Dato valor={`${vista.progreso.obligatoriasAprobadas}/${vista.progreso.obligatoriasTotales}`} etiqueta="Obligatorias" />
-                  <Dato valor={nota(vista.promedio)} etiqueta="Promedio" />
+                  <Dato valor={nota(vista.promedio)} etiqueta={vista.prom.aplazos ? `Promedio · ${nota(vista.prom.conAplazos)} con aplazos` : 'Promedio'} />
                 </View>
                 <View style={{ flexDirection: 'row' }}>
                   <Dato valor={String(vista.cursando)} etiqueta="Cursando" color={colores.amarillo} />

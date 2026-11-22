@@ -6,9 +6,10 @@
 import { pesosIguales, type Asistencia, type Evaluacion, type ReglaFirma } from '../lib/firma';
 import type { EstadoEstudiante, EstadoMateria, GrupoOptativas, Materia, Prerrequisito, UnidadAvance } from '../lib/progreso';
 import type { IntentoAImportar, PlanImportacion } from '../lib/extracto-ealu';
-import { REGLA_FCQ } from '../lib/reglamento-fcq';
+import type { IntentoFinal, LlamadoCargado } from '../lib/finales';
+import { aplicarRecuperatorio, esRecuperatorio, REGLA_FCQ } from '../lib/reglamento-fcq';
 import { supabase } from '../lib/supabase';
-import type { AsistenciaDb, ComponenteDb, EvaluacionDb, GrupoOptativasDb, MateriaDb, Plan, PrerrequisitoDb, ReglaFirmaDb } from '../lib/tipos-db';
+import type { AsistenciaDb, ComponenteDb, EvaluacionDb, ExamenFinalDb, GrupoOptativasDb, MateriaDb, Plan, PrerrequisitoDb, ReglaFirmaDb } from '../lib/tipos-db';
 import { db, esperar, idDemo, MODO_DEMO, UID_DEMO } from './demo';
 
 export interface Malla {
@@ -21,6 +22,8 @@ export interface Malla {
   estados: Map<string, EstadoEstudiante>;
   reglas: ReglaFirmaDb[];
   unidad: UnidadAvance;
+  /** Intentos de final (todos los llamados), para los promedios con y sin aplazos. */
+  intentos: IntentoFinal[];
 }
 
 const aMateria = (m: MateriaDb): Materia => ({ id: m.id, nombre: m.nombre, semestre: m.semestre, horas: m.horas, creditos: m.creditos, grupoOptativaId: m.grupo_optativa_id });
@@ -38,6 +41,7 @@ export async function cargarMalla(planId: string, carreraId?: string | null): Pr
   let grupos: GrupoOptativasDb[];
   let pre: PrerrequisitoDb[];
   let reglas: ReglaFirmaDb[];
+  let finalesDb: Pick<ExamenFinalDb, 'materia_id' | 'nota' | 'llamado' | 'periodo' | 'fecha'>[];
   let estadosDb: { materia_id: string; estado: EstadoMateria; nota_final: number | null; promedio_firma?: number | null }[];
 
   if (MODO_DEMO) {
@@ -50,6 +54,7 @@ export async function cargarMalla(planId: string, carreraId?: string | null): Pr
     pre = db.prerrequisitos.filter((p) => ids.has(p.materia_id));
     reglas = db.reglas.filter((r) => r.plan_id === planId);
     estadosDb = db.estados.filter((e) => ids.has(e.materia_id));
+    finalesDb = db.finales.filter((f) => ids.has(f.materia_id));
   } else {
     const [rPlan, rCarrera, rMat, rGr, rReg] = await Promise.all([
       supabase.from('planes').select('*').eq('id', planId).maybeSingle(),
@@ -66,16 +71,19 @@ export async function cargarMalla(planId: string, carreraId?: string | null): Pr
     reglas = rReg.data ?? [];
     const ids = materiasDb.map((m) => m.id);
     if (ids.length) {
-      const [rPre, rEst] = await Promise.all([
+      const [rPre, rEst, rFin] = await Promise.all([
         supabase.from('prerrequisitos').select('*').in('materia_id', ids),
         supabase.from('materias_estudiante').select('materia_id, estado, nota_final, promedio_firma').in('materia_id', ids),
+        supabase.from('examenes_finales').select('materia_id, nota, llamado, periodo, fecha').in('materia_id', ids),
       ]);
-      lanzar(rPre.error); lanzar(rEst.error);
+      lanzar(rPre.error); lanzar(rEst.error); lanzar(rFin.error);
       pre = rPre.data ?? [];
       estadosDb = (rEst.data ?? []) as typeof estadosDb;
+      finalesDb = (rFin.data ?? []) as typeof finalesDb;
     } else {
       pre = [];
       estadosDb = [];
+      finalesDb = [];
     }
   }
 
@@ -89,6 +97,7 @@ export async function cargarMalla(planId: string, carreraId?: string | null): Pr
     estados: new Map(estadosDb.map((e) => [e.materia_id, { estado: e.estado, notaFinal: e.nota_final, promedioFirma: e.promedio_firma == null ? null : Number(e.promedio_firma) }])),
     reglas,
     unidad: plan?.unidad_avance ?? 'materias',
+    intentos: finalesDb.map((f) => ({ materiaId: f.materia_id, nota: Number(f.nota), llamado: f.llamado, periodo: f.periodo, fecha: f.fecha })),
   };
 }
 
@@ -235,6 +244,48 @@ export async function guardarEstadosEnBloque(cambios: CambioEstado[], opciones: 
   }
 }
 
+/** Intentos de final de una materia (todos los periodos). */
+export async function cargarFinales(materiaId: string): Promise<ExamenFinalDb[]> {
+  if (MODO_DEMO) {
+    await esperar(100);
+    return db.finales.filter((f) => f.materia_id === materiaId);
+  }
+  const { data, error } = await supabase.from('examenes_finales').select('*').eq('materia_id', materiaId).order('periodo').order('llamado');
+  lanzar(error);
+  return (data ?? []) as ExamenFinalDb[];
+}
+
+/**
+ * Guarda los tres llamados de un periodo: borra los de ese periodo y carga
+ * los que tienen nota. La base aprueba la materia con la mejor nota (≥ 2) o
+ * la vuelve a firmada si ya no hay ninguna aprobada.
+ */
+export async function guardarFinales(materiaId: string, periodo: string, llamados: LlamadoCargado[]) {
+  const filas = llamados.map((l) => ({ materia_id: materiaId, periodo, llamado: l.llamado, nota: l.nota, porcentaje: l.porcentaje }));
+  if (MODO_DEMO) {
+    await esperar(200);
+    db.finales = db.finales.filter((f) => !(f.materia_id === materiaId && f.periodo === periodo));
+    const hoy = new Date().toISOString();
+    for (const f of filas) db.finales.push({ id: idDemo(), usuario_id: UID_DEMO, fecha: null, created_at: hoy, ...f });
+    // Igual que el trigger de la base.
+    const mejor = Math.max(0, ...db.finales.filter((f) => f.materia_id === materiaId && f.nota >= 2).map((f) => f.nota));
+    const e = db.estados.find((x) => x.materia_id === materiaId);
+    if (mejor >= 2) {
+      if (e) Object.assign(e, { estado: 'aprobada', nota_final: mejor, nota_desde_final: true });
+      else db.estados.push({ usuario_id: UID_DEMO, materia_id: materiaId, estado: 'aprobada', nota_final: mejor, fecha: null, periodo: null, updated_at: hoy, nota_desde_final: true });
+    } else if (e?.nota_desde_final) {
+      Object.assign(e, { estado: 'firmada', nota_final: null, nota_desde_final: false });
+    }
+    return;
+  }
+  const borrar = await supabase.from('examenes_finales').delete().eq('materia_id', materiaId).eq('periodo', periodo);
+  lanzar(borrar.error);
+  if (filas.length) {
+    const { error } = await supabase.from('examenes_finales').insert(filas);
+    lanzar(error);
+  }
+}
+
 /** Regla que aplica a una materia: la propia, o la general del plan. */
 export function reglaDe(reglas: ReglaFirmaDb[], materiaId: string): ReglaFirma | null {
   const r = reglas.find((x) => x.materia_id === materiaId) ?? reglas.find((x) => x.materia_id == null);
@@ -261,6 +312,8 @@ export interface DatosFirma {
   evaluaciones: Evaluacion[];
   asistencia: AsistenciaDb | null;
   asistenciaLab: AsistenciaDb | null;
+  /** Se aplicó el examen de recuperación (Art. 46): alcanza con PG ≥ 50 %. */
+  recuperado: boolean;
 }
 
 export const aEvaluacion = (e: EvaluacionDb): Evaluacion => ({
@@ -292,10 +345,12 @@ export async function cargarFirmas(materiaIds: string[]): Promise<Map<string, Da
   const mapa = new Map<string, DatosFirma>();
   for (const id of materiaIds) {
     const evaluacionesDb = evals.filter((e) => e.materia_id === id);
+    // Recuperatorio (reemplaza el parcial más bajo) y pesos automáticos.
+    const rec = aplicarRecuperatorio(evaluacionesDb.map(aEvaluacion));
     mapa.set(id, {
       evaluacionesDb,
-      // Pesos automáticos: todas las evaluaciones de un componente pesan igual.
-      evaluaciones: pesosIguales(evaluacionesDb.map(aEvaluacion)),
+      evaluaciones: pesosIguales(rec.evaluaciones),
+      recuperado: rec.recuperado,
       asistencia: asis.find((a) => a.materia_id === id && a.componente === 'teoria') ?? null,
       asistenciaLab: asis.find((a) => a.materia_id === id && a.componente === 'laboratorio') ?? null,
     });
@@ -342,7 +397,7 @@ export async function guardarAsistencia(materiaId: string, componente: Component
 /* Tipos de evaluación                                                 */
 /* ------------------------------------------------------------------ */
 
-export type TipoEvaluacion = 'parcial' | 'tp' | 'laboratorio';
+export type TipoEvaluacion = 'parcial' | 'tp' | 'laboratorio' | 'recuperatorio';
 
 /**
  * Tipo de una evaluación para mostrar. La base guarda solo el componente
@@ -350,6 +405,7 @@ export type TipoEvaluacion = 'parcial' | 'tp' | 'laboratorio';
  */
 export function tipoEvaluacion(e: { componente: ComponenteDb; nombre: string }): TipoEvaluacion {
   if (e.componente === 'laboratorio') return 'laboratorio';
+  if (esRecuperatorio(e)) return 'recuperatorio';
   return /trabajo|pr[aá]ctic|\btps?\b/i.test(e.nombre) ? 'tp' : 'parcial';
 }
 

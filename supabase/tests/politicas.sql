@@ -151,6 +151,16 @@ select pg_temp.debe_ser('Beto no ve la firma de Ana',
   (select count(*) from public.materias_estudiante where promedio_firma is not null), 0);
 reset role;
 
+-- Porcentaje del final -----------------------------------------------
+select pg_temp.como('00000000-0000-0000-0000-00000000000a');
+insert into public.examenes_finales (materia_id, periodo, llamado, nota, porcentaje)
+  values ('30000000-0000-0000-0000-000000000002', '2026-2', 1, 4, 88.5);
+select pg_temp.debe_ser('Ana guarda el porcentaje del final',
+  (select count(*) from public.examenes_finales where porcentaje = 88.5), 1);
+select pg_temp.debe_fallar('porcentaje del final mayor a 100',
+  $$insert into public.examenes_finales (materia_id, periodo, llamado, nota, porcentaje) values ('30000000-0000-0000-0000-000000000002', '2026-2', 2, 4, 120)$$);
+reset role;
+
 -- Todas las tablas públicas tienen RLS ------------------------------
 select pg_temp.debe_ser('tablas sin RLS',
   (select count(*) from pg_class c join pg_namespace n on n.oid = c.relnamespace
