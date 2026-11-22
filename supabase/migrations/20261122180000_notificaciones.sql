@@ -65,6 +65,10 @@ create table if not exists public.notificaciones (
   creada_por       uuid references auth.users(id) on delete set null default auth.uid(),
   created_at       timestamptz not null default now()
 );
+-- Si la tabla ya existía de una versión anterior, actualizar los estados válidos.
+alter table public.notificaciones drop constraint if exists notificaciones_estado_check;
+alter table public.notificaciones add constraint notificaciones_estado_check
+  check (estado in ('pendiente', 'enviada', 'cancelada', 'sin_destinatarios', 'error'));
 create unique index if not exists notificaciones_un_aviso on public.notificaciones (aviso_id) where aviso_id is not null;
 create index if not exists notificaciones_pendientes on public.notificaciones (programada_para) where estado = 'pendiente';
 create index if not exists notificaciones_recientes on public.notificaciones (created_at desc);
@@ -122,7 +126,8 @@ select 'aviso', coalesce(nullif(btrim(left(a.titulo, 120)), ''), 'Aviso del CEQ'
        coalesce(nullif(btrim(left(a.cuerpo, 180)), ''), 'Nuevo aviso del CEQ'),
        a.id, a.carrera_id, a.created_at, 'enviada', a.created_at, 0, null
 from public.avisos a
-where not exists (select 1 from public.notificaciones n where n.aviso_id = a.id)
+where a.publicado and a.notificar
+  and not exists (select 1 from public.notificaciones n where n.aviso_id = a.id)
 on conflict (aviso_id) where aviso_id is not null do nothing;
 
 drop trigger if exists avisos_notificar on public.avisos;
