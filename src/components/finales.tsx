@@ -16,7 +16,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { cargarFinales, guardarFinales, guardarFirma, recursarMateria } from '../datos/academico';
-import { aplazosDeLaCursada, notaDelLlamado, periodoDe, type LlamadoCargado } from '../lib/finales';
+import { aplazosDeLaCursada, firmaVencida, notaDelLlamado, periodoDe, type LlamadoCargado } from '../lib/finales';
 import { calificacionFinal, CONCEPTO, finalNecesario, type Nota } from '../lib/reglamento-fcq';
 import type { ExamenFinalDb } from '../lib/tipos-db';
 import { colores, espacio, fuentes } from '../tema';
@@ -34,6 +34,9 @@ const TIPOS_DEL_LLAMADO: Record<1 | 2 | 3, Tipo[]> = {
   3: ['no', 'final'],
 };
 const A_DB = { recu: 'recuperatorio', regu: 'regularizacion' } as const;
+
+/** Porcentaje con dos decimales: junto al límite de aprobación, uno solo engaña (65,84 se vería 65,8). */
+const pct2 = (n: number) => `${Number.isInteger(n) ? n : n.toFixed(2).replace('.', ',').replace(/0$/, '')} %`;
 
 /** null si está vacío; NaN si no es un número (se marca como inválido, no como vacío). */
 const num = (t: string) => (t.trim() === '' ? null : Number(t.replace(',', '.').trim()));
@@ -136,6 +139,8 @@ export function TarjetaFinales({ materiaId, firma: firmaGuardadaEnMateria, aprob
   const despuesDeAprobar = primeraAprobada != null && filas.some((f) => f.llamado > primeraAprobada && f.tipo !== 'no');
   const necesario = firma != null ? finalNecesario(firma) : null;
   const cursada = aplazosDeLaCursada(finales ?? []);
+  // Art. 49 y 62: dos periodos sin aprobar vencen la firma.
+  const vencida = !cursada.debeRecursar && (firmaVencida(finales ?? [], periodo) || firmaVencida(finales ?? [], periodoDe()));
 
   const cambiarTipo = (ll: number, t: Tipo) => {
     setTipos({ ...tipos, [ll]: t });
@@ -209,7 +214,7 @@ export function TarjetaFinales({ materiaId, firma: firmaGuardadaEnMateria, aprob
       ) : (
         <View style={{ marginBottom: espacio.m }}>
           <Text style={{ fontFamily: fuentes.semibold, fontSize: 16, color: colores.marino }}>Firma {pct(firma)}</Text>
-          <Text style={s.filaDetalle}>{necesario == null ? 'Con esta firma no alcanza para aprobar.' : `Para aprobar necesitás ${pct(necesario)} en el final.`}</Text>
+          <Text style={s.filaDetalle}>{necesario == null ? 'Con esta firma no alcanza para aprobar.' : `Para aprobar necesitás ${pct2(necesario)} en el final.`}</Text>
         </View>
       )}
 
@@ -248,7 +253,7 @@ export function TarjetaFinales({ materiaId, firma: firmaGuardadaEnMateria, aprob
             </View>
           )}
           {f.tipo === 'final' && f.rendimiento != null && (
-            <Text style={[s.filaDetalle, { marginTop: 4 }]}>Nota final {pct(f.rendimiento)} (40 % firma + 60 % final)</Text>
+            <Text style={[s.filaDetalle, { marginTop: 4 }]}>Nota final {pct2(f.rendimiento)} (40 % firma + 60 % final)</Text>
           )}
           {f.tipo === 'final' && firma != null && (
             <Enlace
@@ -279,9 +284,14 @@ export function TarjetaFinales({ materiaId, firma: firmaGuardadaEnMateria, aprob
       )}
 
       {/* Volver a cursar: con 3 aplazos, o si se venció la firma. */}
-      {!aprobada && (cursada.debeRecursar ? (
+      {!aprobada && (cursada.debeRecursar || vencida ? (
         <View style={{ marginTop: espacio.m }}>
-          <Mensaje tipo="error" texto={`Tenés ${cursada.aplazos} aplazos: tenés que volver a cursar la materia. Tu laboratorio se conserva.`} />
+          <Mensaje
+            tipo="error"
+            texto={cursada.debeRecursar
+              ? `Tenés ${cursada.aplazos} aplazos: tenés que volver a cursar la materia. Tu laboratorio se conserva.`
+              : 'Tu firma vence después de dos periodos sin aprobar: tenés que volver a cursar la materia. Tu laboratorio se conserva.'}
+          />
           <Boton texto={confirmarRecursar ? 'Sí, volver a cursar' : 'Volver a cursar'} icono="refresh" variante={confirmarRecursar ? 'peligro' : 'secundario'} onPress={recursar} cargando={guardando} />
           {confirmarRecursar && <Enlace texto="Cancelar" onPress={() => setConfirmarRecursar(false)} />}
         </View>

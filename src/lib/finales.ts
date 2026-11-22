@@ -127,3 +127,23 @@ export function aplazosDeLaCursada(
   const aprobo = propios.some((f) => (f.nota as number) >= 2);
   return { aplazos, debeRecursar: !aprobo && aplazos >= APLAZOS_PARA_RECURSAR };
 }
+
+/**
+ * Vigencia de la firma (Art. 49, 50 y 62): la habilitación dura dos periodos
+ * académicos en que se ofrece la materia. Si en la cursada actual ya se usaron
+ * llamados (final, Recu o Regu) en dos periodos distintos sin aprobar, la
+ * firma venció: un llamado en un tercer periodo ya no corresponde y hay que
+ * volver a cursar. Solo cuenta los periodos cargados, así que no avisa de más
+ * si la materia no se ofreció en algún semestre.
+ */
+export function firmaVencida(
+  finales: { nota: number | null; tipo?: string | null; periodo?: string | null; cursada_anterior?: boolean | null }[],
+  periodoActual: string,
+): boolean {
+  const propios = finales.filter((f) => !f.cursada_anterior);
+  if (propios.some((f) => (f.tipo ?? 'final') === 'final' && f.nota != null && f.nota >= 2)) return false;
+  const periodos = [...new Set(propios.map((f) => f.periodo).filter((p): p is string => !!p))].sort();
+  if (periodos.length < 2) return false;
+  // Venció si ya hay un tercer periodo cargado o si el que se mira es posterior a los dos usados.
+  return periodos.length > 2 || periodoActual > periodos[1];
+}

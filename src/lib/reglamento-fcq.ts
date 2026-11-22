@@ -133,7 +133,8 @@ export type Nota = 1 | 2 | 3 | 4 | 5;
 
 /** Escala de la FCQ (Art. 58), con redondeo desde 0,5. */
 export function notaDesdeRendimiento(rendimiento: number): Nota {
-  const r = Math.round(rendimiento);
+  // El margen evita que un 59,5 calculado como 59,4999… baje de nota.
+  const r = Math.round(rendimiento + 1e-9);
   if (r >= 91) return 5;
   if (r >= 81) return 4;
   if (r >= 71) return 3;
@@ -156,12 +157,18 @@ export interface CalificacionFinal {
   aprobado: boolean;
 }
 
-/** Calificación final (Art. 57): 0,40 × PG + 0,60 × EF, con EF ≥ 60 %. */
+/**
+ * Calificación final (Art. 57): 0,40 × PG + 0,60 × EF, con EF ≥ 60 %.
+ * La nota sale del rendimiento sin redondear antes (Art. 58: se mira la
+ * primera cifra decimal). Redondear primero a dos decimales convertía un
+ * 59,495 en 59,5 y lo aprobaba.
+ */
 export function calificacionFinal(pg: number, examenFinal: number): CalificacionFinal {
   if (examenFinal < FINAL_MINIMO) return { rendimiento: null, nota: 1, aprobado: false };
-  const rendimiento = redondear(0.4 * pg + 0.6 * examenFinal);
-  const nota = notaDesdeRendimiento(rendimiento);
-  return { rendimiento, nota, aprobado: nota >= 2 };
+  const exacto = 0.4 * pg + 0.6 * examenFinal;
+  const nota = notaDesdeRendimiento(exacto);
+  // Se muestra truncado a dos decimales: un 59,498 se ve 59,49 y no 59,5, que confundiría con la nota.
+  return { rendimiento: Math.floor(exacto * 100 + 1e-9) / 100, nota, aprobado: nota >= 2 };
 }
 
 /** Nota mínima que necesita en el final para aprobar con nota `objetivo` (2 por defecto). null si no alcanza. */

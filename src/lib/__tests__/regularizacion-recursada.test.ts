@@ -107,3 +107,20 @@ test('tres aplazos en la cursada: hay que recursar', () => {
     { aplazos: 1, debeRecursar: false },
   );
 });
+
+test('la firma vence después de dos periodos sin aprobar (Art. 49 y 62)', async () => {
+  const { firmaVencida } = await import('../finales.ts');
+  const f = (periodo: string, nota: number | null, tipo = 'final') => ({ periodo, nota, tipo });
+  // Un periodo con aplazos: sigue vigente.
+  assert.equal(firmaVencida([f('2026-1', 1), f('2026-1', 1)], '2026-1'), false);
+  assert.equal(firmaVencida([f('2026-1', 1)], '2026-2'), false);
+  // Dos periodos usados: vigente mientras mira el segundo, vencida en el siguiente.
+  assert.equal(firmaVencida([f('2026-1', 1), f('2026-2', 1)], '2026-2'), false);
+  assert.equal(firmaVencida([f('2026-1', 1), f('2026-2', 1)], '2027-1'), true);
+  // La regularización también usa el periodo (Art. 50).
+  assert.equal(firmaVencida([f('2026-1', null, 'regularizacion'), f('2026-2', 1)], '2027-1'), true);
+  // Si aprobó, no vence nada.
+  assert.equal(firmaVencida([f('2026-1', 1), f('2026-2', 3)], '2027-1'), false);
+  // Al recursar, lo anterior no cuenta.
+  assert.equal(firmaVencida([{ ...f('2025-1', 1), cursada_anterior: true }, { ...f('2025-2', 1), cursada_anterior: true }, f('2026-1', 1)], '2026-2'), false);
+});
