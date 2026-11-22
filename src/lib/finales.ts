@@ -3,6 +3,7 @@
  * con y sin aplazos. Funciones puras.
  */
 import { esSeminario, type EstadoEstudiante, type Materia } from './progreso.ts';
+import type { TipoExamen } from './tipos-db.ts';
 
 export interface IntentoFinal {
   materiaId: string;
@@ -11,8 +12,8 @@ export interface IntentoFinal {
   llamado?: number | null;
   periodo?: string | null;
   fecha?: string | null;
-  /** 'regularizacion' = llamado usado para regularizar un parcial: sin nota, no cuenta. */
-  tipo?: 'final' | 'regularizacion';
+  /** Regularización o recuperatorio: llamado usado sin nota de final, no cuenta. */
+  tipo?: TipoExamen;
 }
 
 /** Solo los exámenes finales cuentan para aprobar y para los promedios. */
@@ -87,8 +88,8 @@ export function periodoDe(fecha: Date = new Date()): string {
 
 export interface LlamadoCargado {
   llamado: 1 | 2 | 3;
-  /** 'regularizacion': el llamado se usó para regularizar (sin nota). */
-  tipo?: 'final' | 'regularizacion';
+  /** Regularización o recuperatorio: el llamado queda usado, sin nota. */
+  tipo?: TipoExamen;
   /** Porcentaje del examen final (0 a 100), si lo cargó así. */
   porcentaje: number | null;
   /** Nota del llamado (1 a 5); null si se usó para regularizar. */
