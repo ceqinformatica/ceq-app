@@ -29,6 +29,8 @@ export interface Prerrequisito {
 export interface EstadoEstudiante {
   estado: EstadoMateria;
   notaFinal?: number | null;
+  /** Promedio con el que firmó (0 a 100), si lo guardó desde la calculadora. */
+  promedioFirma?: number | null;
 }
 
 export type UnidadAvance = 'materias' | 'creditos' | 'horas';

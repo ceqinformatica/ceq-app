@@ -37,7 +37,7 @@ export type Perfil = {
 }
 export type MateriaEstudianteDb = {
   usuario_id: string; materia_id: string; estado: EstadoMateriaDb; nota_final: number | null; fecha: string | null;
-  periodo: string | null; updated_at: string; nota_desde_final?: boolean;
+  periodo: string | null; updated_at: string; nota_desde_final?: boolean; promedio_firma?: number | null;
 }
 export type EvaluacionDb = {
   id: string; usuario_id: string; materia_id: string; nombre: string; componente: ComponenteDb; ponderacion: number;
@@ -91,7 +91,7 @@ export type Database = {
       prerrequisitos: Tabla<PrerrequisitoDb, 'tipo'>;
       reglas_firma: Tabla<ReglaFirmaDb, 'id' | 'materia_id' | 'minimo_teoria' | 'minimo_laboratorio' | 'minimo_asistencia' | 'minimo_asistencia_lab' | 'modo_laboratorio' | 'peso_laboratorio' | 'notas'>;
       perfiles: Tabla<Perfil, 'nombre' | 'ci' | 'carrera_id' | 'plan_id' | 'anio_ingreso' | 'rol' | 'avatar_url' | 'created_at' | 'updated_at'>;
-      materias_estudiante: Tabla<MateriaEstudianteDb, 'usuario_id' | 'estado' | 'nota_final' | 'fecha' | 'periodo' | 'updated_at' | 'nota_desde_final'>;
+      materias_estudiante: Tabla<MateriaEstudianteDb, 'usuario_id' | 'estado' | 'nota_final' | 'fecha' | 'periodo' | 'updated_at' | 'nota_desde_final' | 'promedio_firma'>;
       evaluaciones: Tabla<EvaluacionDb, 'id' | 'usuario_id' | 'componente' | 'porcentaje' | 'puntaje_obtenido' | 'puntaje_total' | 'rendida' | 'fecha' | 'orden' | 'created_at'>;
       asistencias: Tabla<AsistenciaDb, 'usuario_id' | 'componente' | 'clases_dictadas' | 'clases_asistidas' | 'clases_totales'>;
       horario: Tabla<HorarioDb, 'id' | 'usuario_id' | 'materia_id' | 'titulo' | 'aula'>;

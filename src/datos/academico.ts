@@ -3,7 +3,7 @@
  * pantallas. Usa Supabase, o los datos de ejemplo en modo demostración.
  * El cálculo vive en src/lib/progreso.ts y src/lib/firma.ts.
  */
-import type { Asistencia, Evaluacion, ReglaFirma } from '../lib/firma';
+import { pesosIguales, type Asistencia, type Evaluacion, type ReglaFirma } from '../lib/firma';
 import type { EstadoEstudiante, EstadoMateria, GrupoOptativas, Materia, Prerrequisito, UnidadAvance } from '../lib/progreso';
 import { REGLA_FCQ } from '../lib/reglamento-fcq';
 import { supabase } from '../lib/supabase';
@@ -37,7 +37,7 @@ export async function cargarMalla(planId: string, carreraId?: string | null): Pr
   let grupos: GrupoOptativasDb[];
   let pre: PrerrequisitoDb[];
   let reglas: ReglaFirmaDb[];
-  let estadosDb: { materia_id: string; estado: EstadoMateria; nota_final: number | null }[];
+  let estadosDb: { materia_id: string; estado: EstadoMateria; nota_final: number | null; promedio_firma?: number | null }[];
 
   if (MODO_DEMO) {
     await esperar();
@@ -67,7 +67,7 @@ export async function cargarMalla(planId: string, carreraId?: string | null): Pr
     if (ids.length) {
       const [rPre, rEst] = await Promise.all([
         supabase.from('prerrequisitos').select('*').in('materia_id', ids),
-        supabase.from('materias_estudiante').select('materia_id, estado, nota_final').in('materia_id', ids),
+        supabase.from('materias_estudiante').select('materia_id, estado, nota_final, promedio_firma').in('materia_id', ids),
       ]);
       lanzar(rPre.error); lanzar(rEst.error);
       pre = rPre.data ?? [];
@@ -85,7 +85,7 @@ export async function cargarMalla(planId: string, carreraId?: string | null): Pr
     materias: materiasDb.map(aMateria),
     grupos: grupos.map(aGrupo),
     prerrequisitos: pre.map(aPre),
-    estados: new Map(estadosDb.map((e) => [e.materia_id, { estado: e.estado, notaFinal: e.nota_final }])),
+    estados: new Map(estadosDb.map((e) => [e.materia_id, { estado: e.estado, notaFinal: e.nota_final, promedioFirma: e.promedio_firma == null ? null : Number(e.promedio_firma) }])),
     reglas,
     unidad: plan?.unidad_avance ?? 'materias',
   };
@@ -108,6 +108,36 @@ export async function guardarEstadoMateria(materiaId: string, estado: EstadoMate
   }
   const { error } = await supabase.from('materias_estudiante').upsert({ materia_id: materiaId, estado, nota_final: nota }, { onConflict: 'usuario_id,materia_id' });
   lanzar(error);
+}
+
+/**
+ * Guarda el promedio de firma de la materia. Si estaba pendiente o cursando
+ * pasa a firmada; si ya estaba aprobada queda aprobada y solo se guarda el
+ * promedio.
+ */
+export async function guardarFirma(materiaId: string, promedio: number) {
+  if (MODO_DEMO) {
+    await esperar(150);
+    const previo = db.estados.find((e) => e.materia_id === materiaId);
+    if (previo && previo.estado === 'aprobada') {
+      previo.promedio_firma = promedio;
+      return;
+    }
+    db.estados = db.estados.filter((e) => e.materia_id !== materiaId);
+    db.estados.push({ usuario_id: UID_DEMO, materia_id: materiaId, estado: 'firmada', nota_final: null, fecha: null, periodo: null, updated_at: new Date().toISOString(), promedio_firma: promedio });
+    return;
+  }
+  const { data, error } = await supabase.from('materias_estudiante').select('estado').eq('materia_id', materiaId).maybeSingle();
+  lanzar(error);
+  if ((data as { estado: EstadoMateria } | null)?.estado === 'aprobada') {
+    const r = await supabase.from('materias_estudiante').update({ promedio_firma: promedio }).eq('materia_id', materiaId);
+    lanzar(r.error);
+    return;
+  }
+  const r = await supabase
+    .from('materias_estudiante')
+    .upsert({ materia_id: materiaId, estado: 'firmada', nota_final: null, nota_desde_final: false, promedio_firma: promedio }, { onConflict: 'usuario_id,materia_id' });
+  lanzar(r.error);
 }
 
 /** Regla que aplica a una materia: la propia, o la general del plan. */
@@ -169,7 +199,8 @@ export async function cargarFirmas(materiaIds: string[]): Promise<Map<string, Da
     const evaluacionesDb = evals.filter((e) => e.materia_id === id);
     mapa.set(id, {
       evaluacionesDb,
-      evaluaciones: evaluacionesDb.map(aEvaluacion),
+      // Pesos automáticos: todas las evaluaciones de un componente pesan igual.
+      evaluaciones: pesosIguales(evaluacionesDb.map(aEvaluacion)),
       asistencia: asis.find((a) => a.materia_id === id && a.componente === 'teoria') ?? null,
       asistenciaLab: asis.find((a) => a.materia_id === id && a.componente === 'laboratorio') ?? null,
     });

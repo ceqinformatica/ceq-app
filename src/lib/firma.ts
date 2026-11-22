@@ -232,3 +232,24 @@ export function evaluarFirma(params: {
 
   return { teoria, laboratorio, asistencia, asistenciaLab, semaforo, firma };
 }
+
+/**
+ * Pesos automáticos: todas las evaluaciones de un mismo componente pesan
+ * lo mismo (tres parciales → 33,3 % cada uno). Así el estudiante no tiene
+ * que cargar ponderaciones.
+ */
+export function pesosIguales(evals: Evaluacion[]): Evaluacion[] {
+  return evals.map((e) => ({ ...e, ponderacion: 1 }));
+}
+
+/**
+ * Promedio de firma: si teoría y laboratorio llegan a su mínimo, el
+ * promedio de los dos (o solo teoría si no hay laboratorio). null mientras
+ * no se cumpla.
+ */
+export function promedioFirma(r: Pick<ResultadoFirma, 'teoria' | 'laboratorio'>): number | null {
+  const llega = (c: ResultadoComponente | null) => c == null || (c.actual != null && c.actual >= c.minimo && (c.asegurado || c.necesario == null));
+  if (!llega(r.teoria) || !llega(r.laboratorio) || r.teoria.actual == null) return null;
+  const lab = r.laboratorio?.actual ?? null;
+  return redondear(lab == null ? r.teoria.actual : (r.teoria.actual + lab) / 2);
+}

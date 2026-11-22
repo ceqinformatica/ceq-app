@@ -9,11 +9,11 @@ import {
 } from '../../components/ui';
 import { useSesion } from '../../context/SesionProvider';
 import {
-  aAsistencia, aEvaluacion, borrarEvaluacion, cargarFirmas, cargarMalla, guardarAsistencia, guardarEvaluacion, REGLA_POR_DEFECTO, reglaDe,
+  aAsistencia, aEvaluacion, borrarEvaluacion, cargarFirmas, cargarMalla, guardarAsistencia, guardarEvaluacion, guardarFirma, REGLA_POR_DEFECTO, reglaDe,
   tieneLab, tipoEvaluacion, type NuevaEvaluacion, type TipoEvaluacion,
 } from '../../datos/academico';
 import { usarDatos } from '../../datos/usarDatos';
-import { evaluarFirma, porcentajeEvaluacion, type ResultadoAsistencia, type ResultadoComponente } from '../../lib/firma';
+import { evaluarFirma, pesosIguales, porcentajeEvaluacion, promedioFirma, type ResultadoAsistencia, type ResultadoComponente } from '../../lib/firma';
 import type { AsistenciaDb, ComponenteDb, EvaluacionDb } from '../../lib/tipos-db';
 import { colores, coloresSemaforo, espacio, fuentes, radio, texto } from '../../tema';
 
@@ -36,7 +36,8 @@ async function cargar(planId: string, materiaId: string) {
   const materia = malla.materiasDb.find((m) => m.id === materiaId) ?? null;
   const firmas = await cargarFirmas([materiaId]);
   const regla = reglaDe(malla.reglas, materiaId);
-  return { materia, regla: regla ?? REGLA_POR_DEFECTO, reglaOficial: Boolean(regla), ...firmas.get(materiaId)! };
+  const estado = malla.estados.get(materiaId);
+  return { materia, regla: regla ?? REGLA_POR_DEFECTO, reglaOficial: Boolean(regla), firmaGuardada: estado?.promedioFirma ?? null, ...firmas.get(materiaId)! };
 }
 
 export default function CalculadoraFirma() {
@@ -44,13 +45,16 @@ export default function CalculadoraFirma() {
   const { perfil } = useSesion();
   const { datos, cargando, error, recargar, setDatos } = usarDatos(() => cargar(perfil?.plan_id ?? '', id ?? ''), [perfil?.plan_id, id]);
   const [editando, setEditando] = useState<EvaluacionDb | 'nueva' | null>(null);
+  const [guardandoFirma, setGuardandoFirma] = useState(false);
+  const [msgFirma, setMsgFirma] = useState<{ texto: string; tipo: 'error' | 'exito' } | null>(null);
 
   const resultado = useMemo(() => {
     if (!datos?.materia) return null;
     return evaluarFirma({
       regla: datos.regla,
       tieneLaboratorio: tieneLab(datos.evaluacionesDb),
-      evaluaciones: datos.evaluacionesDb.map(aEvaluacion),
+      // Pesos automáticos: cada evaluación de teoría (o de laboratorio) pesa lo mismo.
+      evaluaciones: pesosIguales(datos.evaluacionesDb.map(aEvaluacion)),
       asistencia: aAsistencia(datos.asistencia),
       asistenciaLab: aAsistencia(datos.asistenciaLab),
     });
@@ -71,9 +75,26 @@ export default function CalculadoraFirma() {
   const c = coloresSemaforo[sem];
   const tituloEstado = resultado.firma ? '¡Tenés firma!' : c.nombre;
   const conLab = tieneLab(datos.evaluacionesDb);
-  const sumaTeoria = datos.evaluacionesDb.filter((e) => e.componente === 'teoria').reduce((a, e) => a + Number(e.ponderacion), 0);
-  const sumaLab = datos.evaluacionesDb.filter((e) => e.componente === 'laboratorio').reduce((a, e) => a + Number(e.ponderacion), 0);
   const combinado = conLab && regla.modoLaboratorio === 'combinado';
+  const cantTeoria = datos.evaluacionesDb.filter((e) => e.componente === 'teoria').length;
+  const cantLab = datos.evaluacionesDb.filter((e) => e.componente === 'laboratorio').length;
+  const promedio = combinado ? null : promedioFirma(resultado);
+  const puedeGuardar = resultado.firma && promedio != null;
+
+  const guardarMiFirma = async () => {
+    if (promedio == null) return;
+    setGuardandoFirma(true);
+    setMsgFirma(null);
+    try {
+      await guardarFirma(materia.id, promedio);
+      setDatos({ ...datos, firmaGuardada: promedio });
+      setMsgFirma({ tipo: 'exito', texto: `Listo. Tu firma en ${materia.nombre} es ${pct(promedio)}.` });
+    } catch (e) {
+      setMsgFirma({ tipo: 'error', texto: e instanceof Error ? e.message : 'No se pudo guardar la firma.' });
+    } finally {
+      setGuardandoFirma(false);
+    }
+  };
 
   const actualizarAsistencia = (componente: ComponenteDb, a: AsistenciaDb) => {
     setDatos({ ...datos, ...(componente === 'teoria' ? { asistencia: a } : { asistenciaLab: a }) });
@@ -103,7 +124,36 @@ export default function CalculadoraFirma() {
         <BloqueComponente titulo={combinado ? 'Nota final (teoría + laboratorio)' : 'Teoría'} r={resultado.teoria} />
         {resultado.laboratorio && <View style={{ height: 1, backgroundColor: colores.lineaSuave, marginVertical: espacio.m }} />}
         {resultado.laboratorio && <BloqueComponente titulo="Laboratorio" r={resultado.laboratorio} />}
+        {!combinado && (
+          <>
+            <View style={{ height: 1, backgroundColor: colores.lineaSuave, marginVertical: espacio.m }} />
+            <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' }}>
+              <Text style={s.filaTitulo}>{resultado.laboratorio ? 'Promedio de firma (teoría + lab) ÷ 2' : 'Promedio de firma'}</Text>
+              <Text style={{ fontFamily: fuentes.bold, fontSize: 22, color: promedio == null ? colores.textoSuave : colores.marino }}>{pct(promedio)}</Text>
+            </View>
+            <Text style={s.filaDetalle}>
+              {promedio == null
+                ? `Aparece cuando llegás a ${regla.minimoTeoria} % en teoría${resultado.laboratorio ? ` y ${regla.minimoLaboratorio ?? regla.minimoTeoria} % en laboratorio` : ''}.`
+                : datos.firmaGuardada != null
+                  ? `Firma guardada: ${pct(datos.firmaGuardada)}.`
+                  : 'Es el promedio que cuenta para el final.'}
+            </Text>
+          </>
+        )}
       </Tarjeta>
+      {!combinado && (
+        <Boton
+          texto={datos.firmaGuardada != null && datos.firmaGuardada === promedio ? 'Firma guardada' : 'Guardar firma'}
+          icono="ribbon-outline"
+          onPress={guardarMiFirma}
+          cargando={guardandoFirma}
+          deshabilitado={!puedeGuardar || datos.firmaGuardada === promedio}
+        />
+      )}
+      {!combinado && !resultado.firma && promedio != null && (
+        <Mensaje tipo="info" texto="Te falta la asistencia mínima para poder guardar la firma." />
+      )}
+      {msgFirma && <Mensaje texto={msgFirma.texto} tipo={msgFirma.tipo} />}
 
       <Seccion accion={{ texto: '+ Agregar', onPress: () => setEditando('nueva') }}>Evaluaciones</Seccion>
       <Tarjeta estilo={{ paddingVertical: espacio.xs }}>
@@ -111,7 +161,7 @@ export default function CalculadoraFirma() {
           <EstadoVacio
             icono="document-text-outline"
             titulo="Sin evaluaciones"
-            texto={`Agregá tus parciales, trabajos prácticos${materia.tiene_laboratorio ? ' y el laboratorio' : ' y, si tiene, el laboratorio'}, cada uno con su ponderación.`}
+            texto={`Agregá tus parciales, trabajos prácticos${materia.tiene_laboratorio ? ' y el laboratorio' : ' y, si tiene, el laboratorio'}. Todos pesan lo mismo: con tres parciales, cada uno vale un tercio.`}
             accion={{ texto: 'Agregar evaluación', onPress: () => setEditando('nueva') }}
           />
         ) : (
@@ -123,7 +173,7 @@ export default function CalculadoraFirma() {
                 key={e.id}
                 icono={ICONO_TIPO[tipoEvaluacion(e)]}
                 titulo={e.nombre}
-                detalle={e.componente === 'laboratorio' ? `Pesa ${Number(e.ponderacion)} % del laboratorio` : `Pesa ${Number(e.ponderacion)} % del teórico`}
+                detalle={e.componente === 'laboratorio' ? `Pesa ${pct(Math.round(1000 / cantLab) / 10)} del laboratorio` : `Pesa ${pct(Math.round(1000 / cantTeoria) / 10)} del teórico`}
                 derecha={
                   e.rendida && p != null ? (
                     <Text style={{ fontFamily: fuentes.bold, fontSize: 16, color: ok ? colores.verde : colores.amarillo }}>{pct(p)}</Text>
@@ -138,13 +188,6 @@ export default function CalculadoraFirma() {
           })
         )}
       </Tarjeta>
-      {sumaTeoria > 0 && Math.round(sumaTeoria) !== 100 && (
-        <Mensaje tipo="info" texto={`Las ponderaciones del teórico suman ${Math.round(sumaTeoria * 10) / 10} %. Cuando sepas cómo se reparte el resto, completalas hasta 100 %.`} />
-      )}
-      {sumaLab > 0 && Math.round(sumaLab) !== 100 && (
-        <Mensaje tipo="info" texto={`Las ponderaciones del laboratorio suman ${Math.round(sumaLab * 10) / 10} %.`} />
-      )}
-
       <Seccion>Asistencia</Seccion>
       <TarjetaAsistencia
         titulo={conLab && regla.minimoAsistenciaLab != null ? 'Teoría' : 'Clases'}
@@ -265,7 +308,6 @@ function FormEvaluacion({ visible, evaluacion, materiaId, onCerrar, onGuardado }
 }) {
   const [nombre, setNombre] = useState('');
   const [tipo, setTipo] = useState<TipoEvaluacion>('parcial');
-  const [ponderacion, setPonderacion] = useState('');
   const [modo, setModo] = useState<'porcentaje' | 'puntaje'>('porcentaje');
   const [porcentaje, setPorcentaje] = useState('');
   const [obtenido, setObtenido] = useState('');
@@ -279,7 +321,6 @@ function FormEvaluacion({ visible, evaluacion, materiaId, onCerrar, onGuardado }
     const e = evaluacion;
     setNombre(e?.nombre ?? '');
     setTipo(e ? tipoEvaluacion(e) : 'parcial');
-    setPonderacion(e ? String(Number(e.ponderacion)) : '');
     setModo(e && e.porcentaje == null && e.puntaje_total != null ? 'puntaje' : 'porcentaje');
     setPorcentaje(e?.porcentaje != null ? String(Number(e.porcentaje)) : '');
     setObtenido(e?.puntaje_obtenido != null ? String(Number(e.puntaje_obtenido)) : '');
@@ -289,9 +330,8 @@ function FormEvaluacion({ visible, evaluacion, materiaId, onCerrar, onGuardado }
   }, [visible, evaluacion]);
 
   const num = (t: string) => (t.trim() === '' ? null : Number(t.replace(',', '.')));
-  const pond = num(ponderacion);
   const valido =
-    nombre.trim().length > 0 && pond != null && pond > 0 && pond <= 100 &&
+    nombre.trim().length > 0 &&
     (rendida === 'no' ||
       (modo === 'porcentaje' ? num(porcentaje) != null && num(porcentaje)! >= 0 && num(porcentaje)! <= 100 : num(obtenido) != null && num(total) != null && num(total)! > 0 && num(obtenido)! <= num(total)!));
 
@@ -303,7 +343,8 @@ function FormEvaluacion({ visible, evaluacion, materiaId, onCerrar, onGuardado }
     const datos: NuevaEvaluacion = {
       nombre: nombre.trim(),
       componente: tipo === 'laboratorio' ? 'laboratorio' : 'teoria',
-      ponderacion: pond!,
+      // Los pesos se reparten solos (todas iguales); se guarda 1 para cada una.
+      ponderacion: 1,
       porcentaje: rendida === 'si' && modo === 'porcentaje' ? num(porcentaje) : null,
       puntaje_obtenido: rendida === 'si' && modo === 'puntaje' ? num(obtenido) : null,
       puntaje_total: modo === 'puntaje' ? num(total) : null,
@@ -346,27 +387,12 @@ function FormEvaluacion({ visible, evaluacion, materiaId, onCerrar, onGuardado }
             onPress={() => {
               // Sugiere el nombre si el actual es uno de los sugeridos o está vacío.
               if (!nombre.trim() || TIPOS.some((x) => x.nombre && x.nombre === nombre.trim())) setNombre(t.nombre);
-              if (t.valor === 'laboratorio' && !ponderacion) setPonderacion('100');
               setTipo(t.valor);
             }}
           />
         ))}
       </View>
       <Campo etiqueta="Nombre" value={nombre} onChangeText={setNombre} placeholder={tipo === 'parcial' ? 'Ej. Primer parcial' : tipo === 'tp' ? 'Ej. Trabajo práctico 1' : 'Laboratorio'} />
-      <Campo
-        etiqueta={tipo === 'laboratorio' ? '¿Cuánto pesa en la nota de laboratorio? (%)' : '¿Cuánto pesa en el promedio teórico? (%)'}
-        value={ponderacion}
-        onChangeText={setPonderacion}
-        keyboardType="decimal-pad"
-        placeholder={tipo === 'laboratorio' ? '100' : 'Ej. 30'}
-        ayuda={
-          tipo === 'tp'
-            ? 'Depende de la materia: si el TP cuenta como un 3er parcial, poné lo mismo que un parcial (ej. 33 %); si es parte de un parcial, poné solo esa parte (ej. 10 %).'
-            : tipo === 'laboratorio'
-              ? 'Si tenés una sola nota de laboratorio, dejá 100 %.'
-              : 'Ej. con dos parciales iguales, cada uno pesa 50 %.'
-        }
-      />
       <Text style={[s.etiqueta, { marginBottom: espacio.s }]}>¿Ya la rendiste?</Text>
       <Segmentado opciones={[{ valor: 'si', texto: 'Sí, tengo la nota' }, { valor: 'no', texto: 'Todavía no' }]} valor={rendida} onCambio={setRendida} />
       {rendida === 'si' && (
