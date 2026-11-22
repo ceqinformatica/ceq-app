@@ -1,11 +1,11 @@
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Linking, Platform, Switch, Text, View } from 'react-native';
+import { Alert, Linking, Platform, Switch, Text, View } from 'react-native';
 import { Hexagono } from '../components/graficos';
 import { BarraSuperior, Boton, Fila, Mensaje, Pantalla, s, Seccion, Tarjeta } from '../components/ui';
 import { useSesion } from '../context/SesionProvider';
 import { db, MODO_DEMO } from '../datos/demo';
-import { salir } from '../lib/auth';
+import { eliminarCuenta, salir } from '../lib/auth';
 import { registrarEsteCelular, type EstadoRegistro } from '../lib/notificaciones';
 import { activarBiometria, biometriaActiva, biometriaDisponible, desactivarBiometria } from '../lib/biometria';
 import { supabase } from '../lib/supabase';
@@ -20,6 +20,28 @@ export default function Perfil() {
   const [bio, setBio] = useState<{ disponible: boolean; nombre: string; activa: boolean } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [push, setPush] = useState<EstadoRegistro | null>(null);
+  const [borrando, setBorrando] = useState(false);
+
+  const borrarDeVerdad = async () => {
+    setBorrando(true);
+    const err = await eliminarCuenta();
+    setBorrando(false);
+    if (err) setError(err);
+  };
+
+  const pedirBorrarCuenta = () => {
+    if (MODO_DEMO) return;
+    const titulo = '¿Eliminar tu cuenta?';
+    const detalle = 'Se borran tu perfil, tus materias, notas, finales y agenda. No se puede deshacer.';
+    if (Platform.OS === 'web') {
+      if (window.confirm(`${titulo}\n\n${detalle}`)) borrarDeVerdad();
+      return;
+    }
+    Alert.alert(titulo, detalle, [
+      { text: 'Cancelar', style: 'cancel' },
+      { text: 'Eliminar', style: 'destructive', onPress: borrarDeVerdad },
+    ]);
+  };
 
   // Sin pedir permiso: solo saber si este celular ya recibe notificaciones.
   useEffect(() => {
@@ -146,6 +168,7 @@ export default function Perfil() {
 
       <Mensaje texto={error} />
       <Boton texto="Cerrar sesión" variante="peligro" icono="log-out-outline" onPress={salir} estilo={{ marginTop: espacio.xl }} />
+      {!MODO_DEMO && <Boton texto="Eliminar mi cuenta" variante="fantasma" icono="trash-outline" onPress={pedirBorrarCuenta} cargando={borrando} estilo={{ marginTop: espacio.m }} />}
       <Text style={{ fontFamily: fuentes.regular, fontSize: 11.5, color: colores.textoTenue, textAlign: 'center', marginTop: espacio.l }}>
         App del CEQ · Centro de Estudiantes de Química
       </Text>
