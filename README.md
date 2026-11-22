@@ -79,6 +79,16 @@ npx eas-cli@latest build --profile preview --platform android
 EAS devuelve un enlace para descargar el APK. Para Play Store se usa
 `--profile production` (genera un .aab).
 
+## Estilo visual
+
+La app usa la identidad de la página web del CEQ: tipografía **Inter**, azul
+marino `#173874` para títulos, botones e íconos, tarjetas celestes `#EFF7FE`,
+títulos en mayúsculas y el logo hexagonal. Todo está centralizado en
+`src/tema.ts`. Los íconos son Ionicons de línea, en marino.
+
+El logo disponible es de 192 px; para el ícono de la app conviene reemplazar
+`assets/logo-ceq.png` por una versión de al menos 1024 px.
+
 ## Reglas de firma
 
 El cálculo vive en `src/lib/firma.ts` y lee los mínimos de la tabla

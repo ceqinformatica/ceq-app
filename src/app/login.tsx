@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { Text, View } from 'react-native';
-import { Boton, Campo, Mensaje, Pantalla, Tarjeta, Titulo } from '../components/ui';
+import { Image, Text, View } from 'react-native';
+import { Boton, Campo, logoCeq, Mensaje, Pantalla, s, Tarjeta } from '../components/ui';
 import { entrarConCorreo, entrarConGoogle, registrarseConCorreo } from '../lib/auth';
 import { supabaseConfigurado } from '../lib/supabase';
-import { colores, espacio } from '../tema';
+import { colores, espacio, fuentes } from '../tema';
 
 export default function Login() {
   const [modo, setModo] = useState<'inicio' | 'entrar' | 'registro'>('inicio');
@@ -25,22 +25,23 @@ export default function Login() {
   };
 
   return (
-    <Pantalla estilo={{ paddingTop: espacio.xxl * 2 }}>
-      <Titulo sub="Tu vida académica en la FCQ, en un solo lugar">CEQ</Titulo>
+    <Pantalla estilo={{ paddingTop: espacio.xxl }}>
+      <View style={{ alignItems: 'center', marginBottom: espacio.xl }}>
+        <Image source={logoCeq} style={{ width: 112, height: 112 }} accessibilityLabel="Logo del CEQ" />
+        <Text style={{ fontFamily: fuentes.bold, fontSize: 34, color: colores.marino, marginTop: espacio.s }}>CEQ</Text>
+        <Text style={[s.titulo, { fontSize: 20, lineHeight: 25, textAlign: 'center' }]}>Centro de Estudiantes{'\n'}de Química</Text>
+        <Text style={[s.sub, { textAlign: 'center', marginTop: espacio.s }]}>Tu vida académica en la FCQ, en un solo lugar</Text>
+      </View>
 
       {!supabaseConfigurado && (
-        <Tarjeta>
-          <Text style={{ color: colores.rojo }}>
-            Falta configurar Supabase. Copiá .env.example a .env y completá la URL y la clave pública.
-          </Text>
-        </Tarjeta>
+        <Mensaje texto="Falta configurar Supabase. Copiá .env.example a .env y completá la URL y la clave pública." />
       )}
 
       {modo === 'inicio' && (
         <View>
           <Boton texto="Entrar con Google" onPress={() => ejecutar(entrarConGoogle)} cargando={cargando} />
           <Boton texto="Entrar con correo" variante="secundario" onPress={() => setModo('entrar')} />
-          <Boton texto="Crear cuenta con correo" variante="secundario" onPress={() => setModo('registro')} />
+          <Boton texto="Crear cuenta" variante="secundario" onPress={() => setModo('registro')} />
         </View>
       )}
 

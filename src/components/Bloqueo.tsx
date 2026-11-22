@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Text, View } from 'react-native';
+import { Image, Text, View } from 'react-native';
 import { useSesion } from '../context/SesionProvider';
 import { salir } from '../lib/auth';
 import { colores, espacio } from '../tema';
-import { Boton, Mensaje } from './ui';
+import { Boton, logoCeq, Mensaje, s } from './ui';
 
 export function Bloqueo() {
   const { desbloquear } = useSesion();
@@ -22,8 +22,9 @@ export function Bloqueo() {
 
   return (
     <View style={{ flex: 1, justifyContent: 'center', padding: espacio.xl, backgroundColor: colores.fondo }}>
-      <Text style={{ fontSize: 24, fontWeight: '700', color: colores.texto, textAlign: 'center' }}>App bloqueada</Text>
-      <Text style={{ fontSize: 15, color: colores.textoSuave, textAlign: 'center', marginVertical: espacio.m }}>
+      <Image source={logoCeq} style={{ width: 96, height: 96, alignSelf: 'center', marginBottom: espacio.l }} accessibilityLabel="Logo del CEQ" />
+      <Text style={[s.titulo, { textAlign: 'center' }]}>App bloqueada</Text>
+      <Text style={[s.sub, { textAlign: 'center', marginVertical: espacio.m }]}>
         Usá tu huella o tu rostro para entrar.
       </Text>
       <Mensaje texto={error} />

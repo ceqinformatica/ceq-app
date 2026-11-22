@@ -2,7 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { Tabs } from 'expo-router/tabs';
 import type { ComponentProps } from 'react';
 import type { ColorValue } from 'react-native';
-import { colores } from '../../tema';
+import { colores, fuentes } from '../../tema';
 
 type Icono = ComponentProps<typeof Ionicons>['name'];
 const icono = (nombre: Icono) => ({ color, size }: { color: ColorValue; size: number }) => <Ionicons name={nombre} color={color as string} size={size} />;
@@ -12,9 +12,10 @@ export default function TabsLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: colores.primario,
+        tabBarActiveTintColor: colores.marino,
         tabBarInactiveTintColor: colores.textoSuave,
-        tabBarStyle: { backgroundColor: colores.superficie, borderTopColor: colores.borde },
+        tabBarStyle: { backgroundColor: colores.blanco, borderTopColor: colores.linea },
+        tabBarLabelStyle: { fontFamily: fuentes.medium, fontSize: 11 },
       }}
     >
       <Tabs.Screen name="index" options={{ title: 'Inicio', tabBarIcon: icono('home-outline') }} />
