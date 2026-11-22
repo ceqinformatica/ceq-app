@@ -11,13 +11,17 @@ import { usarDatos } from '../../datos/usarDatos';
 import { calcularProgreso, promedioGeneral, requisitosFaltantes } from '../../lib/progreso';
 import { colores, espacio, fuentes, radio, sombras } from '../../tema';
 
-type Filtro = 'todas' | 'disponibles' | 'cursando' | 'aprobadas';
+type Filtro = 'todas' | 'disponibles' | 'cursando' | 'aprobadas' | 'optativas';
 const FILTROS: { valor: Filtro; texto: string }[] = [
   { valor: 'todas', texto: 'Todas' },
   { valor: 'disponibles', texto: 'Puedo cursar' },
   { valor: 'cursando', texto: 'Cursando' },
   { valor: 'aprobadas', texto: 'Aprobadas' },
+  { valor: 'optativas', texto: 'Optativas' },
 ];
+
+/** Las optativas van en su propio bloque, al final, aunque la malla las ubique en un nivel. */
+const OPTATIVAS = 0;
 
 export default function Carrera() {
   const { perfil } = useSesion();
@@ -128,15 +132,20 @@ export default function Carrera() {
     const semestres = new Map<number, typeof malla.materiasDb>();
     for (const m of malla.materiasDb) {
       const { estado } = estadoDe(m.id);
+      const optativa = m.grupo_optativa_id != null;
       const pasa =
         filtro === 'todas' ||
+        (filtro === 'optativas' && optativa) ||
         (filtro === 'disponibles' && estado === 'pendiente') ||
         (filtro === 'cursando' && estado === 'cursando') ||
         (filtro === 'aprobadas' && estado === 'aprobada');
       if (!pasa) continue;
-      semestres.set(m.semestre, [...(semestres.get(m.semestre) ?? []), m]);
+      const clave = optativa ? OPTATIVAS : m.semestre;
+      semestres.set(clave, [...(semestres.get(clave) ?? []), m]);
     }
-    return { progreso, promedio, cursando, estadoDe, semestres: [...semestres.entries()].sort((a, b) => a[0] - b[0]) };
+    // Niveles en orden y las optativas al final.
+    const orden = (n: number) => (n === OPTATIVAS ? Infinity : n);
+    return { progreso, promedio, cursando, estadoDe, semestres: [...semestres.entries()].sort((a, b) => orden(a[0]) - orden(b[0])) };
   }, [malla, filtro]);
 
   const sub = [malla?.carrera, malla?.plan?.nombre].filter(Boolean).join(' · ') || 'Tu malla y tu avance';
@@ -210,7 +219,7 @@ export default function Carrera() {
               </Text>
               <Text style={[s.etiqueta, { marginBottom: espacio.s }]}>Aprobé todo hasta el nivel</Text>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: espacio.s }}>
-                {[...new Set(malla.materiasDb.map((m) => m.semestre))].sort((a, b) => a - b).map((n) => (
+                {[...new Set(malla.materiasDb.filter((m) => !m.grupo_optativa_id).map((m) => m.semestre))].sort((a, b) => a - b).map((n) => (
                   <Chip key={n} texto={`${n}º`} onPress={() => hastaNivel(n)} />
                 ))}
               </View>
@@ -256,7 +265,7 @@ export default function Carrera() {
                       : undefined
                   }
                 >
-                  {nombreSemestre(sem)}
+                  {sem === OPTATIVAS ? 'Optativas' : nombreSemestre(sem)}
                   <Text style={{ fontFamily: fuentes.regular, fontSize: 13, color: colores.textoSuave }}>{'   '}{aprobadas}/{materias.length} aprobadas</Text>
                 </Seccion>
                 {filas.map((fila, i) => (
@@ -267,7 +276,7 @@ export default function Carrera() {
                         <FichaMateria
                           key={m.id}
                           nombre={m.nombre}
-                          codigo={m.grupo_optativa_id ? 'OPTATIVA' : m.codigo}
+                          codigo={m.grupo_optativa_id ? `${m.semestre}º NIVEL` : m.codigo}
                           estado={estado}
                           faltan={faltan}
                           notaFinal={malla.estados.get(m.id)?.notaFinal}

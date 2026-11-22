@@ -208,7 +208,7 @@ export interface CambioEstado {
  * Guarda muchos estados de una sola vez (marcar varias aprobadas, deshacer).
  * No exige prerrequisitos: quien carga en bloque su historial ya los cumplió.
  */
-export async function guardarEstadosEnBloque(cambios: CambioEstado[]) {
+export async function guardarEstadosEnBloque(cambios: CambioEstado[], opciones: { soloNuevas?: boolean } = {}) {
   if (!cambios.length) return;
   const borrar = cambios.filter((c) => c.estado === 'pendiente').map((c) => c.materiaId);
   const guardar = cambios
@@ -217,14 +217,16 @@ export async function guardarEstadosEnBloque(cambios: CambioEstado[]) {
   if (MODO_DEMO) {
     await esperar(250);
     const tocadas = new Set(cambios.map((c) => c.materiaId));
-    db.estados = db.estados.filter((e) => !tocadas.has(e.materia_id));
+    const existentes = new Set(db.estados.map((e) => e.materia_id));
+    if (!opciones.soloNuevas) db.estados = db.estados.filter((e) => !tocadas.has(e.materia_id));
     for (const g of guardar) {
+      if (opciones.soloNuevas && existentes.has(g.materia_id)) continue;
       db.estados.push({ usuario_id: UID_DEMO, ...g, fecha: null, periodo: null, updated_at: new Date().toISOString() });
     }
     return;
   }
   if (guardar.length) {
-    const { error } = await supabase.from('materias_estudiante').upsert(guardar, { onConflict: 'usuario_id,materia_id' });
+    const { error } = await supabase.from('materias_estudiante').upsert(guardar, { onConflict: 'usuario_id,materia_id', ignoreDuplicates: !!opciones.soloNuevas });
     lanzar(error);
   }
   if (borrar.length) {

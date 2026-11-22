@@ -6,10 +6,11 @@ import { CabeceraMarca, Boton, Campo, Cargando, Chip, EstadoVacio, Hoja, Insigni
 import { useSesion } from '../../context/SesionProvider';
 import {
   borrarClase, borrarEvento, cargarAgenda, crearClase, crearEvento, cuentaRegresiva, DIAS, DIAS_CORTOS, diaSemanaHoy, diasHasta, hora, horaDe,
-  partesFecha, type Agenda as DatosAgenda,
+  partesFecha, type Agenda as DatosAgenda, type MateriaAgenda,
 } from '../../datos/agenda';
+import { guardarEstadosEnBloque } from '../../datos/academico';
 import { usarDatos } from '../../datos/usarDatos';
-import type { EventoDb, HorarioDb, TipoEvento } from '../../lib/tipos-db';
+import type { EstadoMateriaDb, EventoDb, HorarioDb, TipoEvento } from '../../lib/tipos-db';
 import { colores, espacio, fuentes, radio, sombras } from '../../tema';
 
 /** Paleta suave para distinguir materias en el horario (siempre dentro de la familia azul del CEQ + acentos). */
@@ -24,7 +25,7 @@ const TIPOS: { valor: TipoEvento; texto: string; icono: 'school' | 'document-tex
 
 export default function Agenda() {
   const { perfil, sesion } = useSesion();
-  const { datos, cargando, error, refrescando, recargar } = usarDatos(() => cargarAgenda(perfil?.plan_id), [perfil?.plan_id]);
+  const { datos, setDatos, cargando, error, refrescando, recargar } = usarDatos(() => cargarAgenda(perfil?.plan_id), [perfil?.plan_id]);
   const [vista, setVista] = useState<'horario' | 'fechas'>('horario');
   const [dia, setDia] = useState(diaSemanaHoy() === 7 ? 1 : diaSemanaHoy());
   const [nuevaClase, setNuevaClase] = useState(false);
@@ -43,6 +44,10 @@ export default function Agenda() {
   const [eventoElegido, setEventoElegido] = useState<EventoDb | null>(null);
 
   const clasesDelDia = useMemo(() => datos?.horario.filter((h) => h.dia_semana === dia) ?? [], [datos, dia]);
+  const marcarCursando = (ids: string[]) => {
+    setDatos((d) => (d ? { ...d, estados: new Map([...d.estados, ...ids.map((id) => [id, 'cursando'] as const)]) } : d));
+    recargar(); // por si alguna ya tenía otro estado y no se pisó
+  };
   const nombreClase = (h: HorarioDb) => h.titulo || (h.materia_id && datos?.nombres.get(h.materia_id)) || 'Clase';
 
   return (
@@ -126,8 +131,8 @@ export default function Agenda() {
         <Text style={s.flotanteTexto}>{vista === 'horario' ? 'Clase' : 'Fecha'}</Text>
       </Pressable>
 
-      <FormClase visible={nuevaClase} diaInicial={dia} nombres={datos?.nombres} onCerrar={() => setNuevaClase(false)} onListo={() => { setNuevaClase(false); recargar(); }} />
-      <FormEvento visible={nuevoEvento} uid={sesion?.user.id ?? ''} nombres={datos?.nombres} onCerrar={() => setNuevoEvento(false)} onListo={() => { setNuevoEvento(false); recargar(); }} />
+      <FormClase visible={nuevaClase} diaInicial={dia} datos={datos} onCursando={marcarCursando} onCerrar={() => setNuevaClase(false)} onListo={() => { setNuevaClase(false); recargar(); }} />
+      <FormEvento visible={nuevoEvento} uid={sesion?.user.id ?? ''} datos={datos} onCursando={marcarCursando} onCerrar={() => setNuevoEvento(false)} onListo={() => { setNuevoEvento(false); recargar(); }} />
 
       <Hoja visible={claseElegida != null} titulo={claseElegida ? nombreClase(claseElegida) : ''} onCerrar={() => setClaseElegida(null)}>
         {claseElegida && (
@@ -220,23 +225,128 @@ const normalizarHora = (t: string) => {
   return m ? `${m[1].padStart(2, '0')}:${m[2]}:00` : null;
 };
 
-function SelectorMateria({ nombres, valor, onCambio }: { nombres?: Map<string, string>; valor: string | null; onCambio: (id: string | null) => void }) {
-  const lista = [...(nombres?.entries() ?? [])];
-  if (!lista.length) return null;
+/** Materias que se ofrecen al cargar una clase o una fecha: solo las tuyas. */
+const misMaterias = (datos: DatosAgenda | null | undefined, incluir: EstadoMateriaDb[]) =>
+  datos?.materias.filter((m) => incluir.includes(datos.estados.get(m.id) ?? 'pendiente')) ?? [];
+
+function SelectorMateria({ materias, valor, onCambio, onOtra }: {
+  materias: MateriaAgenda[]; valor: string | null; onCambio: (id: string | null) => void; onOtra: () => void;
+}) {
   return (
     <>
       <Text style={[s.etiqueta, { marginBottom: espacio.s }]}>Materia</Text>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: espacio.s, paddingBottom: espacio.m }}>
-        <Chip texto="Ninguna" elegido={valor == null} onPress={() => onCambio(null)} />
-        {lista.map(([id, n]) => (
-          <Chip key={id} texto={n} elegido={valor === id} onPress={() => onCambio(id)} />
-        ))}
-      </ScrollView>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: espacio.s, marginBottom: espacio.m }}>
+        {materias.map((m) => <Chip key={m.id} texto={m.nombre} elegido={valor === m.id} onPress={() => onCambio(m.id)} />)}
+        <Chip texto="Otra cosa" elegido={valor == null} onPress={() => onCambio(null)} />
+        <Chip texto="Sumar materia" icono="add" onPress={onOtra} />
+      </View>
     </>
   );
 }
 
-function FormClase({ visible, diaInicial, nombres, onCerrar, onListo }: { visible: boolean; diaInicial: number; nombres?: Map<string, string>; onCerrar: () => void; onListo: () => void }) {
+/**
+ * Paso previo: marcar qué materias estás cursando. Se guardan como "Cursando"
+ * en tu carrera, y desde ahí la agenda solo te ofrece esas.
+ */
+function ElegirCursando({ datos, primeraVez, onListo, onSaltar }: {
+  datos: DatosAgenda; primeraVez: boolean; onListo: (ids: string[]) => void; onSaltar: () => void;
+}) {
+  const candidatas = useMemo(() => datos.materias.filter((m) => !datos.estados.has(m.id)), [datos]);
+  const niveles = useMemo(() => {
+    const n = [...new Set(candidatas.filter((m) => !m.optativa).map((m) => m.semestre))].sort((a, b) => a - b);
+    return candidatas.some((m) => m.optativa) ? [...n, 0] : n; // 0 = optativas
+  }, [candidatas]);
+  const nivelSugerido = useMemo(() => {
+    // El nivel donde vas: el más alto con algo aprobado o firmado, si te queda algo ahí.
+    const hechos = datos.materias.filter((m) => !m.optativa && datos.estados.has(m.id)).map((m) => m.semestre);
+    const tope = hechos.length ? Math.max(...hechos) : 1;
+    return niveles.find((n) => n !== 0 && n >= tope) ?? niveles[0] ?? 1;
+  }, [datos, niveles]);
+  const [nivel, setNivel] = useState(nivelSugerido);
+  const [busqueda, setBusqueda] = useState('');
+  const [elegidas, setElegidas] = useState<Set<string>>(new Set());
+  const [guardando, setGuardando] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const q = busqueda.trim().toLowerCase();
+  const visibles = q
+    ? candidatas.filter((m) => m.nombre.toLowerCase().includes(q))
+    : candidatas.filter((m) => (nivel === 0 ? m.optativa : !m.optativa && m.semestre === nivel));
+  const alternar = (id: string) => setElegidas((prev) => {
+    const n = new Set(prev);
+    if (n.has(id)) n.delete(id); else n.add(id);
+    return n;
+  });
+
+  const guardar = async () => {
+    setGuardando(true);
+    setError(null);
+    try {
+      const ids = candidatas.filter((m) => elegidas.has(m.id)).map((m) => m.id);
+      // soloNuevas: si alguna ya tenía estado (por ejemplo, aprobada desde otro equipo), no se pisa.
+      await guardarEstadosEnBloque(ids.map((materiaId) => ({ materiaId, estado: 'cursando', notaFinal: null })), { soloNuevas: true });
+      onListo(ids);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'No se pudo guardar.');
+    } finally {
+      setGuardando(false);
+    }
+  };
+
+  return (
+    <>
+      <Text style={[s.cuerpo, { marginBottom: espacio.m }]}>
+        {primeraVez
+          ? 'Primero marcá las materias que estás cursando. Después, al cargar clases o fechas, solo te van a aparecer esas.'
+          : 'Marcá las otras materias que estás cursando.'}
+      </Text>
+      <Campo etiqueta="Buscar" value={busqueda} onChangeText={setBusqueda} placeholder="Nombre de la materia" />
+      {!q && niveles.length > 1 && (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: espacio.s, paddingBottom: espacio.m }}>
+          {niveles.map((n) => <Chip key={n} texto={n === 0 ? 'Optativas' : `${n}º nivel`} elegido={nivel === n} onPress={() => setNivel(n)} />)}
+        </ScrollView>
+      )}
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: espacio.s, marginBottom: espacio.m }}>
+        {visibles.map((m) => (
+          <Chip key={m.id} texto={m.nombre} icono={elegidas.has(m.id) ? 'checkmark' : undefined} elegido={elegidas.has(m.id)} onPress={() => alternar(m.id)} />
+        ))}
+        {visibles.length === 0 && <Text style={s.filaDetalle}>{q ? 'No hay materias pendientes con ese nombre.' : 'No te quedan materias en este nivel.'}</Text>}
+      </View>
+      <Mensaje texto={error} />
+      <Boton
+        texto={elegidas.size ? `Curso ${elegidas.size === 1 ? 'esta materia' : `estas ${elegidas.size}`}` : 'Elegí al menos una'}
+        icono="checkmark"
+        onPress={guardar}
+        cargando={guardando}
+        deshabilitado={!elegidas.size}
+      />
+      <Boton texto={primeraVez ? 'Es otra cosa, sin materia' : 'Volver'} variante="fantasma" onPress={onSaltar} />
+      <View style={{ height: espacio.l }} />
+    </>
+  );
+}
+
+/** Controla el paso "¿qué estás cursando?" dentro de un formulario. */
+function usarEleccion(visible: boolean, mias: MateriaAgenda[]) {
+  const [eligiendo, setEligiendo] = useState(false);
+  const [saltada, setSaltada] = useState(false);
+  useEffect(() => {
+    if (visible) { setEligiendo(false); setSaltada(false); }
+  }, [visible]);
+  const primeraVez = mias.length === 0;
+  return {
+    mostrar: eligiendo || (primeraVez && !saltada),
+    primeraVez,
+    abrir: () => setEligiendo(true),
+    cerrar: () => { setEligiendo(false); setSaltada(true); },
+  };
+}
+
+type PropsForm = { visible: boolean; datos?: DatosAgenda | null; onCursando: (ids: string[]) => void; onCerrar: () => void; onListo: () => void };
+
+function FormClase({ visible, diaInicial, datos, onCursando, onCerrar, onListo }: PropsForm & { diaInicial: number }) {
+  const cursando = misMaterias(datos, ['cursando']);
+  const unica = cursando.length === 1 ? cursando[0].id : null;
   const [materia, setMateria] = useState<string | null>(null);
   const [titulo, setTitulo] = useState('');
   const [dia, setDia] = useState(diaInicial);
@@ -247,8 +357,13 @@ function FormClase({ visible, diaInicial, nombres, onCerrar, onListo }: { visibl
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (visible) { setMateria(null); setTitulo(''); setDia(diaInicial); setInicio(''); setFin(''); setAula(''); setError(null); }
+    // Si cursás una sola materia, ya queda elegida.
+    if (visible) { setMateria(unica); setTitulo(''); setDia(diaInicial); setInicio(''); setFin(''); setAula(''); setError(null); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible, diaInicial]);
+
+  const mias = cursando;
+  const eleccion = usarEleccion(visible, mias);
 
   const hi = normalizarHora(inicio);
   const hf = normalizarHora(fin);
@@ -267,8 +382,17 @@ function FormClase({ visible, diaInicial, nombres, onCerrar, onListo }: { visibl
   };
 
   return (
-    <Hoja visible={visible} titulo="Nueva clase" onCerrar={onCerrar}>
-      <SelectorMateria nombres={nombres} valor={materia} onCambio={setMateria} />
+    <Hoja visible={visible} titulo={eleccion.mostrar ? '¿Qué estás cursando?' : 'Nueva clase'} onCerrar={onCerrar}>
+      {eleccion.mostrar && datos ? (
+        <ElegirCursando
+          datos={datos}
+          primeraVez={eleccion.primeraVez}
+          onListo={(ids) => { onCursando(ids); setMateria(ids[0] ?? null); eleccion.cerrar(); }}
+          onSaltar={eleccion.cerrar}
+        />
+      ) : (
+      <>
+      {(datos?.materias.length ?? 0) > 0 && <SelectorMateria materias={mias} valor={materia} onCambio={setMateria} onOtra={eleccion.abrir} />}
       {!materia && <Campo etiqueta="Nombre" value={titulo} onChangeText={setTitulo} placeholder="Ej. Tutoría de Física" />}
       <Text style={[s.etiqueta, { marginBottom: espacio.s }]}>Día</Text>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: espacio.s, marginBottom: espacio.m }}>
@@ -283,11 +407,13 @@ function FormClase({ visible, diaInicial, nombres, onCerrar, onListo }: { visibl
       <Mensaje texto={error} />
       <Boton texto="Agregar al horario" icono="add" onPress={guardar} cargando={guardando} deshabilitado={!valido} />
       <View style={{ height: espacio.l }} />
+      </>
+      )}
     </Hoja>
   );
 }
 
-function FormEvento({ visible, uid, nombres, onCerrar, onListo }: { visible: boolean; uid: string; nombres?: Map<string, string>; onCerrar: () => void; onListo: () => void }) {
+function FormEvento({ visible, uid, datos, onCursando, onCerrar, onListo }: PropsForm & { uid: string }) {
   const [titulo, setTitulo] = useState('');
   const [tipo, setTipo] = useState<TipoEvento>('examen');
   const [materia, setMateria] = useState<string | null>(null);
@@ -299,6 +425,10 @@ function FormEvento({ visible, uid, nombres, onCerrar, onListo }: { visible: boo
   useEffect(() => {
     if (visible) { setTitulo(''); setTipo('examen'); setMateria(null); setFecha(''); setHoraTxt(''); setError(null); }
   }, [visible]);
+
+  // Para fechas también sirven las firmadas: ahí van los finales.
+  const mias = misMaterias(datos, ['cursando', 'firmada']);
+  const eleccion = usarEleccion(visible, mias);
 
   const fechaIso = (() => {
     const m = /^(\d{1,2})\/(\d{1,2})(?:\/(\d{4}))?$/.exec(fecha.trim());
@@ -326,12 +456,21 @@ function FormEvento({ visible, uid, nombres, onCerrar, onListo }: { visible: boo
   };
 
   return (
-    <Hoja visible={visible} titulo="Nueva fecha" onCerrar={onCerrar}>
+    <Hoja visible={visible} titulo={eleccion.mostrar ? '¿Qué estás cursando?' : 'Nueva fecha'} onCerrar={onCerrar}>
+      {eleccion.mostrar && datos ? (
+        <ElegirCursando
+          datos={datos}
+          primeraVez={eleccion.primeraVez}
+          onListo={(ids) => { onCursando(ids); setMateria(ids[0] ?? null); eleccion.cerrar(); }}
+          onSaltar={eleccion.cerrar}
+        />
+      ) : (
+      <>
       <View style={{ flexDirection: 'row', gap: espacio.s, marginBottom: espacio.m, flexWrap: 'wrap' }}>
         {TIPOS.map((t) => <Chip key={t.valor} texto={t.texto} icono={t.icono} elegido={tipo === t.valor} onPress={() => setTipo(t.valor)} />)}
       </View>
       <Campo etiqueta="Qué es" value={titulo} onChangeText={setTitulo} placeholder="Ej. Segundo parcial" />
-      <SelectorMateria nombres={nombres} valor={materia} onCambio={setMateria} />
+      {(datos?.materias.length ?? 0) > 0 && <SelectorMateria materias={mias} valor={materia} onCambio={setMateria} onOtra={eleccion.abrir} />}
       <View style={{ flexDirection: 'row', gap: espacio.m }}>
         <Campo etiqueta="Fecha" value={fecha} onChangeText={setFecha} placeholder="DD/MM" keyboardType="numbers-and-punctuation" maxLength={10} estilo={{ flex: 1.3 }} />
         <Campo etiqueta="Hora (opcional)" value={horaTxt} onChangeText={setHoraTxt} placeholder="08:00" keyboardType="numbers-and-punctuation" maxLength={5} estilo={{ flex: 1 }} />
@@ -340,6 +479,8 @@ function FormEvento({ visible, uid, nombres, onCerrar, onListo }: { visible: boo
       <Mensaje texto={error} />
       <Boton texto="Guardar fecha" icono="add" onPress={guardar} cargando={guardando} deshabilitado={!valido} />
       <View style={{ height: espacio.l }} />
+      </>
+      )}
     </Hoja>
   );
 }

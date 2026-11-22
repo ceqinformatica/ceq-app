@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase';
-import type { EventoDb, HorarioDb, TipoEvento } from '../lib/tipos-db';
+import type { EstadoMateriaDb, EventoDb, HorarioDb, TipoEvento } from '../lib/tipos-db';
 import { db, esperar, idDemo, MODO_DEMO, UID_DEMO } from './demo';
 
 function lanzar(error: { message: string } | null) {
@@ -11,6 +11,17 @@ export interface Agenda {
   eventos: EventoDb[];
   /** id de materia → nombre, para mostrar. */
   nombres: Map<string, string>;
+  /** Materias del plan, en orden de la malla (para elegir cuáles cursás). */
+  materias: MateriaAgenda[];
+  /** Tu estado en cada materia que no está pendiente. */
+  estados: Map<string, EstadoMateriaDb>;
+}
+
+export interface MateriaAgenda {
+  id: string;
+  nombre: string;
+  semestre: number;
+  optativa: boolean;
 }
 
 /**
@@ -22,26 +33,42 @@ export async function cargarAgenda(planId: string | null | undefined): Promise<A
   desde.setHours(0, 0, 0, 0);
   let horario: HorarioDb[];
   let eventos: EventoDb[];
-  let nombres: [string, string][];
+  type Fila = { id: string; nombre: string; semestre: number; grupo_optativa_id: string | null; orden: number };
+  let filas: Fila[];
+  let estados: { materia_id: string; estado: EstadoMateriaDb }[];
   if (MODO_DEMO) {
     await esperar();
     horario = [...db.horario];
     eventos = db.eventos.filter((e) => e.usuario_id != null && new Date(e.fecha) >= desde);
-    nombres = db.materias.map((m) => [m.id, m.nombre]);
+    filas = db.materias;
+    estados = db.estados;
   } else {
-    const [rH, rE, rM] = await Promise.all([
+    const [rH, rE, rM, rS] = await Promise.all([
       supabase.from('horario').select('*').order('dia_semana').order('hora_inicio'),
       supabase.from('eventos').select('*').not('usuario_id', 'is', null).gte('fecha', desde.toISOString()).order('fecha').limit(100),
-      planId ? supabase.from('materias').select('id, nombre').eq('plan_id', planId) : Promise.resolve({ data: [], error: null }),
+      planId
+        ? supabase.from('materias').select('id, nombre, semestre, grupo_optativa_id, orden').eq('plan_id', planId)
+        : Promise.resolve({ data: [], error: null }),
+      supabase.from('materias_estudiante').select('materia_id, estado'),
     ]);
-    lanzar(rH.error); lanzar(rE.error); lanzar(rM.error);
+    lanzar(rH.error); lanzar(rE.error); lanzar(rM.error); lanzar(rS.error);
     horario = rH.data ?? [];
     eventos = rE.data ?? [];
-    nombres = ((rM.data ?? []) as { id: string; nombre: string }[]).map((m) => [m.id, m.nombre]);
+    filas = (rM.data ?? []) as Fila[];
+    estados = (rS.data ?? []) as typeof estados;
   }
   eventos.sort((a, b) => a.fecha.localeCompare(b.fecha));
   horario.sort((a, b) => a.dia_semana - b.dia_semana || a.hora_inicio.localeCompare(b.hora_inicio));
-  return { horario, eventos, nombres: new Map(nombres) };
+  const materias = [...filas]
+    .sort((a, b) => a.semestre - b.semestre || a.orden - b.orden)
+    .map((m) => ({ id: m.id, nombre: m.nombre, semestre: m.semestre, optativa: m.grupo_optativa_id != null }));
+  return {
+    horario,
+    eventos,
+    nombres: new Map(materias.map((m) => [m.id, m.nombre])),
+    materias,
+    estados: new Map(estados.filter((e) => e.estado !== 'pendiente').map((e) => [e.materia_id, e.estado])),
+  };
 }
 
 export type NuevaClase = Pick<HorarioDb, 'materia_id' | 'titulo' | 'dia_semana' | 'hora_inicio' | 'hora_fin' | 'aula'>;
