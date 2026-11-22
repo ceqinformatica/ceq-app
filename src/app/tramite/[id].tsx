@@ -5,7 +5,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { BarraSuperior, Boton, Cargando, EstadoVacio, Fila, Insignia, Pantalla, s, Seccion, Tarjeta } from '../../components/ui';
 import { cargarTramite } from '../../datos/tramites';
 import { usarDatos } from '../../datos/usarDatos';
-import { TEXTO_MODALIDAD } from '../../lib/tramites';
+import { esHttps, TEXTO_MODALIDAD } from '../../lib/tramites';
 import { colores, espacio, fuentes, texto } from '../../tema';
 
 const volver = () => (router.canGoBack() ? router.back() : router.replace('/tramites'));
@@ -91,12 +91,12 @@ export default function Tramite() {
         </>
       )}
 
-      {t.formulario_url ? (
-        <Boton texto={t.modalidad === 'etramite' ? 'Ir a e-Trámite' : 'Descargar formulario'} icono="download-outline" onPress={() => WebBrowser.openBrowserAsync(t.formulario_url!)} estilo={{ marginTop: espacio.s }} />
+      {esHttps(t.formulario_url) ? (
+        <Boton texto={t.modalidad === 'etramite' ? 'Ir a e-Trámite' : 'Descargar formulario'} icono="download-outline" onPress={() => WebBrowser.openBrowserAsync(t.formulario_url!.trim())} estilo={{ marginTop: espacio.s }} />
       ) : null}
-      {t.fuente_url ? (
+      {esHttps(t.fuente_url) ? (
         <Tarjeta variante="borde" estilo={{ marginTop: espacio.m, paddingVertical: espacio.xs }}>
-          <Fila icono="link-outline" titulo="Ver la fuente oficial" detalle="Página de la FCQ de donde salió esta información" onPress={() => WebBrowser.openBrowserAsync(t.fuente_url!)} ultima />
+          <Fila icono="link-outline" titulo="Ver la fuente oficial" detalle="Página de la FCQ de donde salió esta información" onPress={() => WebBrowser.openBrowserAsync(t.fuente_url!.trim())} ultima />
         </Tarjeta>
       ) : null}
       <Text style={[s.filaDetalle, { marginTop: espacio.l, marginBottom: espacio.xl }]}>

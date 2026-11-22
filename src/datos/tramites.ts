@@ -24,10 +24,16 @@ export async function cargarTramites(): Promise<TramiteDb[]> {
   return data ?? [];
 }
 
-export async function cargarTramite(id: string): Promise<TramiteDb | null> {
+/** Para el estudiante: un oculto no se muestra (RLS hace lo mismo en Supabase, salvo al admin). */
+export async function cargarTramite(id: string, incluirOcultos = false): Promise<TramiteDb | null> {
   if (MODO_DEMO) {
     await esperar(100);
-    return db.tramites.find((t) => t.id === id) ?? null;
+    return db.tramites.find((t) => t.id === id && (incluirOcultos || t.publicado)) ?? null;
+  }
+  if (!incluirOcultos) {
+    const { data, error } = await supabase.from('tramites').select('*').eq('id', id).eq('publicado', true).maybeSingle();
+    lanzar(error);
+    return data;
   }
   const { data, error } = await supabase.from('tramites').select('*').eq('id', id).maybeSingle();
   lanzar(error);

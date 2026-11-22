@@ -28,7 +28,7 @@ export default function EditarTramite() {
 
   useEffect(() => {
     if (!id) return;
-    cargarTramite(id)
+    cargarTramite(id, true)
       .then((t) => {
         if (!t) return setError('Este trámite ya no existe.');
         setF(aFormulario(t));
@@ -56,8 +56,12 @@ export default function EditarTramite() {
     }
   };
 
+  // Los de la guía inicial (con clave) solo se ocultan: si se borraran,
+  // volverían a aparecer al re-ejecutar la migración.
+  const deLaGuia = clave != null;
+
   const borrar = async () => {
-    if (!id) return;
+    if (!id || deLaGuia) return;
     if (!confirmarBorrar) return setConfirmarBorrar(true);
     setGuardando(true);
     try {
@@ -121,7 +125,10 @@ export default function EditarTramite() {
 
       <Mensaje texto={error} />
       <Boton texto={editando ? 'Guardar cambios' : 'Agregar trámite'} icono="checkmark" onPress={guardar} cargando={guardando} />
-      {editando && (
+      {editando && deLaGuia && (
+        <Text style={[s.filaDetalle, { marginTop: espacio.m }]}>Este trámite es de la guía inicial de la FCQ: para sacarlo de la app, apagá "Visible en la app".</Text>
+      )}
+      {editando && !deLaGuia && (
         <>
           {confirmarBorrar && <Mensaje texto="¿Seguro? El trámite desaparece de la app para todos. Si solo querés esconderlo, apagá Visible. Tocá de nuevo para borrarlo." />}
           <Boton texto={confirmarBorrar ? 'Sí, borrar' : 'Borrar trámite'} variante="peligro" icono="trash-outline" onPress={borrar} deshabilitado={guardando} estilo={{ marginTop: espacio.m }} />
