@@ -54,6 +54,8 @@ export type AsistenciaDb = {
 export type HorarioDb = {
   id: string; usuario_id: string; materia_id: string | null; titulo: string | null; dia_semana: number;
   hora_inicio: string; hora_fin: string; aula: string | null;
+  /** Minutos antes de la clase para avisar; null = sin aviso. */
+  aviso_minutos: number | null; avisado_el: string | null;
 }
 export type EventoDb = {
   id: string; usuario_id: string | null; materia_id: string | null; plan_id: string | null; tipo: TipoEvento;
@@ -108,7 +110,7 @@ export type Database = {
       materias_estudiante: Tabla<MateriaEstudianteDb, 'usuario_id' | 'estado' | 'nota_final' | 'fecha' | 'periodo' | 'updated_at' | 'nota_desde_final' | 'promedio_firma'>;
       evaluaciones: Tabla<EvaluacionDb, 'id' | 'usuario_id' | 'componente' | 'porcentaje' | 'puntaje_obtenido' | 'puntaje_total' | 'rendida' | 'fecha' | 'orden' | 'created_at'>;
       asistencias: Tabla<AsistenciaDb, 'usuario_id' | 'componente' | 'clases_dictadas' | 'clases_asistidas' | 'clases_totales'>;
-      horario: Tabla<HorarioDb, 'id' | 'usuario_id' | 'materia_id' | 'titulo' | 'aula'>;
+      horario: Tabla<HorarioDb, 'id' | 'usuario_id' | 'materia_id' | 'titulo' | 'aula' | 'aviso_minutos' | 'avisado_el'>;
       eventos: Tabla<EventoDb, 'id' | 'usuario_id' | 'materia_id' | 'plan_id' | 'tipo' | 'aviso_minutos' | 'notificado' | 'created_at'>;
       socios: Tabla<SocioDb, 'id' | 'usuario_id' | 'numero_socio' | 'vigente_hasta' | 'foto_path' | 'updated_at'>;
       avisos: Tabla<AvisoDb, 'id' | 'imagen_url' | 'notificar' | 'publicado' | 'autor_id' | 'created_at' | 'publicar_en' | 'carrera_id'>;
