@@ -58,7 +58,8 @@
           "color": "#173874",
           "defaultChannel": "avisos"
         }
-      ]
+      ],
+      "@react-native-google-signin/google-signin"
     ],
     "scheme": "ceqapp",
     "experiments": {

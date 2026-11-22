@@ -382,6 +382,23 @@ select pg_temp.debe_ser('la clase de las 00:15 del martes se avisa el lunes a la
 select pg_temp.debe_ser('la clase sin aviso nunca se encola',
   (select count(*) from public.notificaciones where titulo = 'Sin aviso'), 0);
 
+-- Borrar mi cuenta ----------------------------------------------------
+reset role;
+insert into auth.users (id, email, raw_user_meta_data) values
+  ('00000000-0000-0000-0000-0000000000cc', 'carla@ejemplo.com', '{"full_name":"Carla"}');
+insert into public.evaluaciones (usuario_id, materia_id, nombre, ponderacion, porcentaje)
+  values ('00000000-0000-0000-0000-0000000000cc', '30000000-0000-0000-0000-000000000001', '1P de Carla', 30, 70);
+select pg_temp.como(null);
+select pg_temp.debe_fallar('anon no puede borrar cuentas', 'select public.eliminar_mi_cuenta()');
+select pg_temp.como('00000000-0000-0000-0000-0000000000cc');
+select public.eliminar_mi_cuenta();
+reset role;
+select pg_temp.debe_ser('se borra el usuario', (select count(*) from auth.users where id = '00000000-0000-0000-0000-0000000000cc'), 0);
+select pg_temp.debe_ser('se borra su perfil', (select count(*) from public.perfiles where id = '00000000-0000-0000-0000-0000000000cc'), 0);
+select pg_temp.debe_ser('se borran sus notas', (select count(*) from public.evaluaciones where usuario_id = '00000000-0000-0000-0000-0000000000cc'), 0);
+select pg_temp.debe_ser('los demás usuarios siguen', (select count(*) from auth.users where id in ('00000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-00000000000b')), 2);
+select pg_temp.debe_ser('las notas de Beto siguen', (select (count(*) > 0)::int from public.evaluaciones where usuario_id = '00000000-0000-0000-0000-00000000000b'), 1);
+
 -- Todas las tablas públicas tienen RLS ------------------------------
 select pg_temp.debe_ser('tablas sin RLS',
   (select count(*) from pg_class c join pg_namespace n on n.oid = c.relnamespace
