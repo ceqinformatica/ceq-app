@@ -396,6 +396,42 @@ reset role;
 select pg_temp.debe_fallar('sin sesión no se recursa',
   $$set local role anon; select public.recursar_materia('30000000-0000-0000-0000-000000000002')$$);
 
+-- Recordatorios antes de clase ----------------------------------------
+-- Horas de Paraguay: lunes 23/11/2026.
+create or replace function pg_temp.py(t text) returns timestamptz language sql as $$
+  select t::timestamp at time zone 'America/Asuncion'
+$$;
+grant execute on all functions in schema pg_temp to anon, authenticated;
+select pg_temp.como('00000000-0000-0000-0000-00000000000b');
+insert into public.horario (titulo, dia_semana, hora_inicio, hora_fin, aula, aviso_minutos)
+  values ('Química Orgánica', 1, '07:30', '09:30', 'Aula 12', 30);
+insert into public.horario (titulo, dia_semana, hora_inicio, hora_fin) values ('Sin aviso', 1, '07:15', '08:00');
+insert into public.horario (titulo, dia_semana, hora_inicio, hora_fin, aviso_minutos) values ('Muy temprano', 2, '00:15', '01:00', 60);
+select pg_temp.debe_fallar('aviso de 1 minuto no se acepta',
+  $$insert into public.horario (titulo, dia_semana, hora_inicio, hora_fin, aviso_minutos) values ('x', 3, '08:00', '09:00', 1)$$);
+select pg_temp.debe_fallar('Beto no ejecuta el encolador', 'select public.encolar_recordatorios_clases()');
+reset role;
+select pg_temp.como('00000000-0000-0000-0000-00000000000a');
+select pg_temp.debe_ser('Ana no ve el horario de Beto', (select count(*) from public.horario), 0);
+select pg_temp.debe_ser('Ana no cambia el aviso de Beto', pg_temp.filas('update public.horario set aviso_minutos = 5'), 0);
+reset role;
+
+select pg_temp.debe_ser('a las 06:59 todavía no', public.encolar_recordatorios_clases(pg_temp.py('2026-11-23 06:59')), 0);
+select pg_temp.debe_ser('a las 07:00 avisa la clase de las 07:30', public.encolar_recordatorios_clases(pg_temp.py('2026-11-23 07:00')), 1);
+select pg_temp.debe_ser('no repite el mismo día', public.encolar_recordatorios_clases(pg_temp.py('2026-11-23 07:10')), 0);
+select public.procesar_notificaciones();
+select pg_temp.debe_ser('el aviso de clase llega a Beto con el aula',
+  (select count(*) from net.pedidos where body -> 0 ->> 'title' = 'Química Orgánica'
+     and body -> 0 ->> 'body' = 'Empieza a las 07:30 en Aula 12.' and body::text like '%celuCompartido01%'), 1);
+select pg_temp.debe_ser('la semana siguiente vuelve a avisar', public.encolar_recordatorios_clases(pg_temp.py('2026-11-30 07:05')), 1);
+select pg_temp.debe_ser('ya empezada la clase no avisa', public.encolar_recordatorios_clases(pg_temp.py('2026-12-07 07:31')), 0);
+update public.horario set hora_inicio = '08:00' where titulo = 'Química Orgánica';
+select pg_temp.debe_ser('si cambia la hora vuelve a avisar ese día', public.encolar_recordatorios_clases(pg_temp.py('2026-11-30 07:40')), 1);
+select pg_temp.debe_ser('la clase de las 00:15 del martes se avisa el lunes a la noche',
+  public.encolar_recordatorios_clases(pg_temp.py('2026-11-23 23:20')), 1);
+select pg_temp.debe_ser('la clase sin aviso nunca se encola',
+  (select count(*) from public.notificaciones where titulo = 'Sin aviso'), 0);
+
 -- Borrar mi cuenta ----------------------------------------------------
 reset role;
 insert into auth.users (id, email, raw_user_meta_data) values
