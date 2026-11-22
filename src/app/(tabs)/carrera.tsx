@@ -1,5 +1,5 @@
-import { router } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useMemo, useState } from 'react';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { FichaMateria, LeyendaMalla, nombreSemestre, nota, type EstadoVisual } from '../../components/academico';
@@ -29,6 +29,15 @@ export default function Carrera() {
   const [guardando, setGuardando] = useState(false);
   const [aviso, setAviso] = useState<{ texto: string; deshacer?: CambioEstado[]; error?: boolean } | null>(null);
 
+  // Al salir de la pestaña se descarta el "Deshacer": si después se cambia una
+  // materia a mano, deshacer pisaría ese cambio.
+  useFocusEffect(
+    useCallback(() => () => {
+      setAviso(null);
+      setSeleccion(null);
+    }, []),
+  );
+
   const aprobada = (id: string) => malla?.estados.get(id)?.estado === 'aprobada';
   const elegibles = (filtroM: (m: { semestre: number; grupo_optativa_id: string | null }) => boolean) =>
     (malla?.materiasDb ?? []).filter((m) => !aprobada(m.id) && filtroM(m)).map((m) => m.id);
@@ -47,7 +56,7 @@ export default function Carrera() {
       return n;
     });
   /** Obligatorias de los niveles 1 a N (las optativas se eligen una por una). */
-  const hastaNivel = (n: number) => setSeleccion(new Set(elegibles((m) => m.semestre <= n && !m.grupo_optativa_id)));
+  const hastaNivel = (n: number) => setSeleccion((sel) => new Set([...(sel ?? []), ...elegibles((m) => m.semestre <= n && !m.grupo_optativa_id)]));
   const semestreCompleto = (sem: number) => {
     const ids = elegibles((m) => m.semestre === sem && !m.grupo_optativa_id);
     setSeleccion((sel) => {
@@ -60,13 +69,15 @@ export default function Carrera() {
 
   /** Aplica cambios a la malla en pantalla sin volver a cargar. */
   const aplicar = (cambios: CambioEstado[]) => {
-    if (!malla) return;
-    const estados = new Map(malla.estados);
-    for (const c of cambios) {
-      if (c.estado === 'pendiente') estados.delete(c.materiaId);
-      else estados.set(c.materiaId, { estado: c.estado, notaFinal: c.notaFinal });
-    }
-    setDatos({ ...malla, estados });
+    setDatos((actual) => {
+      if (!actual) return actual;
+      const estados = new Map(actual.estados);
+      for (const c of cambios) {
+        if (c.estado === 'pendiente') estados.delete(c.materiaId);
+        else estados.set(c.materiaId, { estado: c.estado, notaFinal: c.notaFinal });
+      }
+      return { ...actual, estados };
+    });
   };
 
   const marcarAprobadas = async () => {
