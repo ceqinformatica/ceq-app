@@ -10,6 +10,12 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { colores, espacio, fuentes, radio, sombras, texto } from '../tema';
 import { TramaHex } from './graficos';
 
+/**
+ * Comportamiento ante el teclado. En Android la app va de borde a borde, así
+ * que la ventana ya no se achica sola: hay que dejar lugar a mano igual que en iOS.
+ */
+export const comportamientoTeclado = Platform.OS === 'web' ? undefined : 'padding';
+
 export const logoCeq = require('../../assets/logo-ceq.png');
 export type NombreIcono = ComponentProps<typeof Ionicons>['name'];
 
@@ -30,9 +36,16 @@ export function Pantalla({ children, scroll = true, estilo, cabecera, refrescand
     <RefreshControl refreshing={Boolean(refrescando)} onRefresh={onRefrescar} tintColor={cabecera ? colores.blanco : colores.marino} colors={[colores.marino]} />
   ) : undefined;
   return (
+    <KeyboardAvoidingView behavior={comportamientoTeclado} style={s.pantalla}>
     <SafeAreaView style={s.pantalla} edges={cabecera ? ['left', 'right'] : ['top', 'left', 'right']}>
       {scroll ? (
-        <ScrollView keyboardShouldPersistTaps="handled" refreshControl={refresh} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="interactive"
+          automaticallyAdjustKeyboardInsets
+          refreshControl={refresh}
+          showsVerticalScrollIndicator={false}
+        >
           {cabecera}
           {contenido}
         </ScrollView>
@@ -43,6 +56,7 @@ export function Pantalla({ children, scroll = true, estilo, cabecera, refrescand
         </>
       )}
     </SafeAreaView>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -422,7 +436,7 @@ export function Hoja({ visible, titulo, onCerrar, children }: { visible: boolean
   const insets = useSafeAreaInsets();
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onCerrar} statusBarTranslucent>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+      <KeyboardAvoidingView behavior={comportamientoTeclado} style={{ flex: 1 }}>
         <Pressable style={s.velo} onPress={onCerrar} accessibilityLabel="Cerrar" />
         <View style={[s.hoja, { paddingBottom: insets.bottom + espacio.l }]}>
           <View style={s.hojaAsa} />
@@ -430,7 +444,9 @@ export function Hoja({ visible, titulo, onCerrar, children }: { visible: boolean
             <Text style={[s.barraTitulo, { textAlign: 'left' }]}>{titulo}</Text>
             <BotonIcono icono="close" etiqueta="Cerrar" onPress={onCerrar} tamano={20} />
           </View>
-          <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>{children}</ScrollView>
+          <ScrollView keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive" showsVerticalScrollIndicator={false} style={{ flexShrink: 1 }}>
+            {children}
+          </ScrollView>
         </View>
       </KeyboardAvoidingView>
     </Modal>

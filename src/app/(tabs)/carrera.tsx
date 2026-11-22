@@ -62,6 +62,31 @@ export default function Carrera() {
     });
   /** Obligatorias de los niveles 1 a N (las optativas se eligen una por una). */
   const hastaNivel = (n: number) => setSeleccion((sel) => new Set([...(sel ?? []), ...elegibles((m) => m.semestre <= n && !m.grupo_optativa_id)]));
+  /** Niveles con obligatorias, en orden. */
+  const niveles = useMemo(
+    () => [...new Set((malla?.materiasDb ?? []).filter((m) => !m.grupo_optativa_id).map((m) => m.semestre))].sort((a, b) => a - b),
+    [malla],
+  );
+  /** Hasta qué nivel están todas las obligatorias aprobadas o elegidas (0 = ninguno). */
+  const nivelCompleto = useMemo(() => {
+    if (!seleccion || !malla) return 0;
+    let ultimo = 0;
+    for (const n of niveles) {
+      const delNivel = malla.materiasDb.filter((m) => m.semestre === n && !m.grupo_optativa_id);
+      if (!delNivel.every((m) => aprobada(m.id) || seleccion.has(m.id))) break;
+      ultimo = n;
+    }
+    // Solo cuenta si elegiste algo: si todo ya estaba aprobado no hay nada que marcar.
+    return seleccion.size ? ultimo : 0;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [seleccion, malla, niveles]);
+  /** Saca de la selección las obligatorias desde el nivel n en adelante. */
+  const quitarDesdeNivel = (n: number) =>
+    setSeleccion((sel) => {
+      if (!sel) return sel;
+      const quitar = new Set(elegibles((m) => m.semestre >= n && !m.grupo_optativa_id));
+      return new Set([...sel].filter((id) => !quitar.has(id)));
+    });
   const semestreCompleto = (sem: number) => {
     const ids = elegibles((m) => m.semestre === sem && !m.grupo_optativa_id);
     setSeleccion((sel) => {
@@ -222,10 +247,24 @@ export default function Carrera() {
               </Text>
               <Text style={[s.etiqueta, { marginBottom: espacio.s }]}>Aprobé todo hasta el nivel</Text>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: espacio.s }}>
-                {[...new Set(malla.materiasDb.filter((m) => !m.grupo_optativa_id).map((m) => m.semestre))].sort((a, b) => a - b).map((n) => (
-                  <Chip key={n} texto={`${n}º`} onPress={() => hastaNivel(n)} />
-                ))}
+                {niveles.map((n) => {
+                  const elegido = n <= nivelCompleto;
+                  return (
+                    <Chip
+                      key={n}
+                      texto={`${n}º`}
+                      icono={elegido ? 'checkmark' : undefined}
+                      elegido={elegido}
+                      onPress={() => (n === nivelCompleto ? quitarDesdeNivel(n) : hastaNivel(n))}
+                    />
+                  );
+                })}
               </View>
+              <Text style={[s.filaDetalle, { marginTop: espacio.s }]} accessibilityLiveRegion="polite">
+                {seleccion.size
+                  ? `${nivelCompleto > 0 ? `Todo hasta ${nivelCompleto}º nivel. ` : ''}${seleccion.size} ${seleccion.size === 1 ? 'materia elegida' : 'materias elegidas'}.${nivelCompleto > 0 ? ' Tocá el último nivel de nuevo para sacarlo.' : ''}`
+                  : 'Todavía no elegiste ninguna.'}
+              </Text>
             </Tarjeta>
           ) : (
             <>
