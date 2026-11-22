@@ -271,8 +271,8 @@ export async function guardarFinales(materiaId: string, periodo: string, llamado
     periodo,
     llamado: l.llamado,
     tipo: l.tipo ?? ('final' as const),
-    nota: l.tipo === 'regularizacion' ? null : l.nota,
-    porcentaje: l.tipo === 'regularizacion' ? null : l.porcentaje,
+    nota: l.tipo && l.tipo !== 'final' ? null : l.nota,
+    porcentaje: l.tipo && l.tipo !== 'final' ? null : l.porcentaje,
   }));
   if (MODO_DEMO) {
     await esperar(200);

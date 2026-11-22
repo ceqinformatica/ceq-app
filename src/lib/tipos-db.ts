@@ -75,10 +75,12 @@ export type SugerenciaDb = {
 export type EncuestaDb = { id: string; pregunta: string; abierta: boolean; cierra_en: string | null; created_at: string }
 export type OpcionEncuestaDb = { id: string; encuesta_id: string; texto: string; orden: number }
 export type YaVotaronDb = { encuesta_id: string; usuario_id: string }
+/** Para qué se usó un llamado: final, regularización (1.º o 2.º) o recuperatorio (1.º). */
+export type TipoExamen = 'final' | 'regularizacion' | 'recuperatorio';
 export type ExamenFinalDb = {
   id: string; usuario_id: string; materia_id: string; periodo: string | null; llamado: number | null; fecha: string | null;
   nota: number | null; created_at: string; porcentaje?: number | null;
-  tipo?: 'final' | 'regularizacion'; cursada_anterior?: boolean;
+  tipo?: TipoExamen; cursada_anterior?: boolean;
 }
 export type DispositivoDb = { token: string; usuario_id: string; plataforma: string | null; updated_at: string }
 

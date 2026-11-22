@@ -212,13 +212,13 @@ export default function CalculadoraFirma() {
         )}
       </Tarjeta>
       {!combinado && !datos.recuperado && !tieneRecuperatorio && !pendientesTeoria && puedeRecuperar(resultado.teoria) && (
-        <Mensaje tipo="info" texto={`Tu promedio teórico está entre ${RECUPERACION_DESDE} y ${regla.minimoTeoria} %: podés rendir el examen de recuperación en el 1.er periodo de finales. Si sacás ${RECUPERACION_MINIMO} % o más, reemplaza tu parcial más bajo. Cargalo como "Recuperatorio".`} />
+        <Mensaje tipo="info" texto={`Tu promedio teórico está entre ${RECUPERACION_DESDE} y ${regla.minimoTeoria} %: podés rendir el recuperatorio en el 1.er llamado de finales (ese llamado queda usado). Si sacás ${RECUPERACION_MINIMO} % o más, reemplaza tu parcial más bajo. Cargalo como "Recuperatorio".`} />
       )}
       {regularizado && (
         <Mensaje tipo="exito" texto="Regularización aplicada: ocupa el lugar del parcial que faltaste. Recordá que el llamado en que la rendiste queda usado." />
       )}
       {!regularizado && !datos.evaluacionesDb.some(esRegularizacion) && datos.evaluacionesDb.filter((e) => esParcialTeorico(e) && !e.rendida).length === 1 && (
-        <Mensaje tipo="info" texto='¿Faltaste a ese parcial? Podés rendir la regularización en el 1.er o 2.º periodo de finales (usa un llamado). Cargala como "Regularización". Con dos faltas no se puede regularizar.' />
+        <Mensaje tipo="info" texto='¿Faltaste a ese parcial? Podés rendir la regularización en el 1.º o 2.º llamado de finales (ese llamado queda usado). Cargala como "Regularización". Con dos faltas no se puede regularizar.' />
       )}
       {datos.recuperado && (
         <Mensaje tipo="exito" texto="Recuperación aplicada: reemplazó tu parcial más bajo. Ahora necesitás un promedio de firma de 50 % o más." />

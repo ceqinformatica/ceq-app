@@ -178,6 +178,16 @@ select pg_temp.debe_fallar('tipo de examen inválido',
   $$insert into public.examenes_finales (materia_id, periodo, llamado, tipo, nota) values ('30000000-0000-0000-0000-000000000001', '2026-1', 2, 'otro', 3)$$);
 select pg_temp.debe_fallar('el llamado de la regularización ya está usado',
   $$insert into public.examenes_finales (materia_id, periodo, llamado, nota) values ('30000000-0000-0000-0000-000000000001', '2026-1', 1, 4)$$);
+select pg_temp.debe_fallar('regularización en el 3.er llamado',
+  $$insert into public.examenes_finales (materia_id, periodo, llamado, tipo) values ('30000000-0000-0000-0000-000000000001', '2026-2', 3, 'regularizacion')$$);
+select pg_temp.debe_fallar('recuperatorio en el 2.º llamado',
+  $$insert into public.examenes_finales (materia_id, periodo, llamado, tipo) values ('30000000-0000-0000-0000-000000000001', '2026-2', 2, 'recuperatorio')$$);
+select pg_temp.debe_fallar('recuperatorio con nota',
+  $$insert into public.examenes_finales (materia_id, periodo, llamado, tipo, nota) values ('30000000-0000-0000-0000-000000000001', '2026-2', 1, 'recuperatorio', 4)$$);
+insert into public.examenes_finales (materia_id, periodo, llamado, tipo) values ('30000000-0000-0000-0000-000000000001', '2026-2', 1, 'recuperatorio');
+select pg_temp.debe_ser('el recuperatorio no aprueba la materia',
+  (select count(*) from public.materias_estudiante where materia_id = '30000000-0000-0000-0000-000000000001' and estado = 'firmada'), 1);
+delete from public.examenes_finales where tipo = 'recuperatorio';
 -- Pasar una regularización a final con nota aprueba la materia.
 update public.examenes_finales set tipo = 'final', nota = 3 where tipo = 'regularizacion';
 select pg_temp.debe_ser('cambiar a final con nota aprueba',
