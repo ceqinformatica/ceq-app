@@ -77,13 +77,17 @@ test('recuperatorio: reemplaza el parcial más bajo si llega a 60 %', () => {
 });
 
 test('tras recuperar alcanza con PG ≥ 50', () => {
-  const regla = { ...REGLA_FCQ, minimoTeoria: 0 };
   const p = (nombre: string, porcentaje: number, componente: 'teoria' | 'laboratorio' = 'teoria'): Evaluacion => ({ nombre, componente, ponderacion: 1, porcentaje, rendida: true });
   // 35, 35, 35 + recuperatorio 60 → teoría 43,3; con laboratorio 80 el PG es 61,7.
   const { evaluaciones, recuperado } = aplicarRecuperatorio([p('1P', 35), p('2P', 35), p('3P', 35), p('Recuperatorio', 60), p('Lab', 80, 'laboratorio')]);
-  const r = evaluarFirma({ regla, tieneLaboratorio: true, evaluaciones });
+  const asis = { asistencia: { clasesDictadas: 10, clasesAsistidas: 10 }, asistenciaLab: { clasesDictadas: 5, clasesAsistidas: 5 } };
+  const r = evaluarFirma({ regla: REGLA_FCQ, tieneLaboratorio: true, evaluaciones, recuperado, ...asis });
+  assert.equal(r.firma, true);
   assert.equal(promedioFirma(r, { recuperado }), 61.67);
-  // Sin laboratorio, 43,3 no llega a 50.
+  // Sin laboratorio, 43,3 no llega a 50: no hay firma y el semáforo queda en rojo.
   const sinLab = aplicarRecuperatorio([p('1P', 35), p('2P', 35), p('3P', 35), p('Recuperatorio', 60)]);
-  assert.equal(promedioFirma(evaluarFirma({ regla, tieneLaboratorio: false, evaluaciones: sinLab.evaluaciones }), { recuperado: true }), null);
+  const r2 = evaluarFirma({ regla: REGLA_FCQ, tieneLaboratorio: false, evaluaciones: sinLab.evaluaciones, recuperado: sinLab.recuperado, ...asis });
+  assert.equal(r2.firma, false);
+  assert.equal(r2.semaforo, 'rojo');
+  assert.equal(promedioFirma(r2, { recuperado: true }), null);
 });

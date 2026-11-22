@@ -286,10 +286,6 @@ export async function guardarFinales(materiaId: string, periodo: string, llamado
   }
 }
 
-/** Regla con la que se evalúa la firma: tras recuperar no se exige el mínimo teórico, sino PG ≥ 50 %. */
-export const reglaTrasRecuperar = (regla: ReglaFirma, recuperado: boolean): ReglaFirma =>
-  recuperado ? { ...regla, minimoTeoria: 0 } : regla;
-
 /** Regla que aplica a una materia: la propia, o la general del plan. */
 export function reglaDe(reglas: ReglaFirmaDb[], materiaId: string): ReglaFirma | null {
   const r = reglas.find((x) => x.materia_id === materiaId) ?? reglas.find((x) => x.materia_id == null);

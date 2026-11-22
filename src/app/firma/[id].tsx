@@ -9,7 +9,7 @@ import {
 } from '../../components/ui';
 import { useSesion } from '../../context/SesionProvider';
 import {
-  aAsistencia, aEvaluacion, borrarEvaluacion, cargarFirmas, cargarMalla, guardarAsistencia, guardarEvaluacion, guardarFirma, REGLA_POR_DEFECTO, reglaDe, reglaTrasRecuperar,
+  aAsistencia, aEvaluacion, borrarEvaluacion, cargarFirmas, cargarMalla, guardarAsistencia, guardarEvaluacion, guardarFirma, REGLA_POR_DEFECTO, reglaDe,
   tieneLab, tipoEvaluacion, type NuevaEvaluacion, type TipoEvaluacion,
 } from '../../datos/academico';
 import { usarDatos } from '../../datos/usarDatos';
@@ -56,7 +56,8 @@ export default function CalculadoraFirma() {
     if (!datos?.materia) return null;
     return evaluarFirma({
       // Tras el examen de recuperación alcanza con PG ≥ 50 % (Art. 46).
-      regla: reglaTrasRecuperar(datos.regla, datos.recuperado),
+      regla: datos.regla,
+      recuperado: datos.recuperado,
       tieneLaboratorio: tieneLab(datos.evaluacionesDb),
       // Ya viene con el recuperatorio aplicado y los pesos automáticos (todas iguales).
       evaluaciones: datos.evaluaciones,

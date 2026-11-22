@@ -69,6 +69,9 @@ export interface ResultadoFirma {
   firma: boolean;
 }
 
+/** PG mínimo después del examen de recuperación (Art. 46). */
+export const PG_MINIMO_RECUPERADO = 50;
+
 /** Margen en puntos sobre el mínimo para considerar "en riesgo" (amarillo). */
 export const MARGEN_RIESGO = 5;
 
@@ -185,8 +188,14 @@ export function evaluarFirma(params: {
   evaluaciones: Evaluacion[];
   asistencia?: Asistencia | null;
   asistenciaLab?: Asistencia | null;
+  /**
+   * Se aplicó el examen de recuperación (Art. 46): ya no se exige el mínimo
+   * teórico, sino PG = (teoría + laboratorio) / 2 ≥ 50 %.
+   */
+  recuperado?: boolean;
 }): ResultadoFirma {
-  const { regla, tieneLaboratorio, evaluaciones } = params;
+  const { tieneLaboratorio, evaluaciones, recuperado } = params;
+  const regla = recuperado ? { ...params.regla, minimoTeoria: 0 } : params.regla;
   const teoriaEvals = evaluaciones.filter((e) => e.componente === 'teoria');
   const labEvals = evaluaciones.filter((e) => e.componente === 'laboratorio');
 
@@ -228,9 +237,19 @@ export function evaluarFirma(params: {
   const cumple = (c: ResultadoComponente | null) =>
     c == null || c.asegurado || (c.necesario == null && c.actual != null && c.actual >= c.minimo);
   const cumpleAsis = (a: ResultadoAsistencia | null) => a == null || (a.porcentaje != null && a.porcentaje >= a.minimo);
-  const firma = cumple(teoria) && cumple(laboratorio) && cumpleAsis(asistencia) && cumpleAsis(asistenciaLab);
+  let firma = cumple(teoria) && cumple(laboratorio) && cumpleAsis(asistencia) && cumpleAsis(asistenciaLab);
+  let sem = semaforo;
+  if (recuperado) {
+    const t = teoria.actual;
+    const l = laboratorio?.actual ?? null;
+    const pg = t == null ? null : laboratorio ? (l == null ? null : (t + l) / 2) : t;
+    if (pg == null || pg < PG_MINIMO_RECUPERADO) {
+      firma = false;
+      sem = pg == null ? peor(sem, 'amarillo') : 'rojo';
+    }
+  }
 
-  return { teoria, laboratorio, asistencia, asistenciaLab, semaforo, firma };
+  return { teoria, laboratorio, asistencia, asistenciaLab, semaforo: sem, firma };
 }
 
 /**
@@ -255,6 +274,6 @@ export function promedioFirma(r: Pick<ResultadoFirma, 'teoria' | 'laboratorio'>,
   const lab = r.laboratorio?.actual ?? null;
   const pg = redondear(lab == null ? r.teoria.actual : (r.teoria.actual + lab) / 2);
   // Tras el examen de recuperación (Art. 46) se exige PG ≥ 50 %.
-  if (opciones.recuperado && pg < 50) return null;
+  if (opciones.recuperado && pg < PG_MINIMO_RECUPERADO) return null;
   return pg;
 }
