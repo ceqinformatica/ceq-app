@@ -5,6 +5,8 @@
  *   npx supabase gen types typescript --project-id <id> > src/lib/tipos-db.ts
  */
 
+import type { TramiteNuevo } from './tramites';
+
 export type RolUsuario = 'estudiante' | 'validador' | 'admin';
 export type EstadoMateriaDb = 'pendiente' | 'cursando' | 'firmada' | 'aprobada';
 export type ComponenteDb = 'teoria' | 'laboratorio';
@@ -67,10 +69,7 @@ export type AvisoDb = {
   /** Cuándo aparece para los estudiantes (avisos programados). */
   publicar_en?: string; carrera_id?: string | null;
 }
-export type TramiteDb = {
-  id: string; nombre: string; descripcion: string | null; pasos: string[]; costo: string | null; donde: string | null;
-  formulario_url: string | null; orden: number;
-}
+export type TramiteDb = TramiteNuevo & { id: string; orden: number; publicado: boolean; updated_at: string };
 export type SugerenciaDb = {
   id: string; usuario_id: string | null; categoria: string | null; texto: string;
   estado: 'recibida' | 'en_revision' | 'respondida'; respuesta: string | null; created_at: string;
@@ -114,7 +113,7 @@ export type Database = {
       socios: Tabla<SocioDb, 'id' | 'usuario_id' | 'numero_socio' | 'vigente_hasta' | 'foto_path' | 'updated_at'>;
       avisos: Tabla<AvisoDb, 'id' | 'imagen_url' | 'notificar' | 'publicado' | 'autor_id' | 'created_at' | 'publicar_en' | 'carrera_id'>;
       notificaciones: Tabla<NotificacionDb, 'id' | 'tipo' | 'ruta' | 'aviso_id' | 'evento_id' | 'usuario_id' | 'carrera_id' | 'plan_id' | 'programada_para' | 'estado' | 'enviada_en' | 'destinatarios' | 'creada_por' | 'created_at'>;
-      tramites: Tabla<TramiteDb, 'id' | 'descripcion' | 'pasos' | 'costo' | 'donde' | 'formulario_url' | 'orden'>;
+      tramites: Tabla<TramiteDb, 'id' | 'clave' | 'categoria' | 'descripcion' | 'pasos' | 'requisitos' | 'costo' | 'donde' | 'plazo' | 'contacto' | 'modalidad' | 'formulario_url' | 'fuente_url' | 'orden' | 'publicado' | 'updated_at'>;
       sugerencias: Tabla<SugerenciaDb, 'id' | 'usuario_id' | 'categoria' | 'estado' | 'respuesta' | 'created_at'>;
       encuestas: Tabla<EncuestaDb, 'id' | 'abierta' | 'cierra_en' | 'created_at'>;
       opciones_encuesta: Tabla<OpcionEncuestaDb, 'id' | 'orden'>;

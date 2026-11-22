@@ -326,6 +326,26 @@ select public.procesar_notificaciones();
 select pg_temp.debe_ser('se borra el celular dado de baja', (select count(*) from public.dispositivos where token = 'ExponentPushToken[celuDeAna0001]'), 0);
 select pg_temp.debe_ser('los demás celulares siguen', (select count(*) from public.dispositivos), 1);
 
+-- Guía de trámites ---------------------------------------------------
+reset role;
+select pg_temp.debe_ser('la guía inicial se cargó una sola vez', (select count(*) from public.tramites where clave is not null), (select count(distinct clave) from public.tramites));
+select pg_temp.debe_ser('la guía inicial no está vacía', (select (count(*) >= 30)::int from public.tramites), 1);
+select pg_temp.debe_fallar('trámite con enlace inseguro', $$insert into public.tramites (nombre, pasos, formulario_url) values ('Algo', '{a}', 'http://x.com')$$);
+select pg_temp.debe_fallar('trámite con modalidad inventada', $$insert into public.tramites (nombre, pasos, modalidad) values ('Algo', '{a}', 'fax')$$);
+select pg_temp.como(null);
+select pg_temp.debe_fallar('anon no lee trámites', 'select * from public.tramites');
+select pg_temp.como('00000000-0000-0000-0000-0000000000ad');
+select pg_temp.debe_ser('admin oculta un trámite', pg_temp.filas($q$update public.tramites set publicado = false where clave = 'titulo-grado'$q$), 1);
+insert into public.tramites (nombre, categoria, pasos) values ('Trámite del CEQ', 'Otros', '{Ir a la sede}');
+select pg_temp.debe_ser('admin ve los ocultos', (select count(*) from public.tramites where not publicado), 1);
+select pg_temp.como('00000000-0000-0000-0000-00000000000a');
+select pg_temp.debe_ser('Ana no ve los ocultos', (select count(*) from public.tramites where clave = 'titulo-grado'), 0);
+select pg_temp.debe_ser('Ana ve el trámite nuevo', (select count(*) from public.tramites where nombre = 'Trámite del CEQ'), 1);
+select pg_temp.debe_fallar('Ana no crea trámites', $$insert into public.tramites (nombre, pasos) values ('Trucho', '{a}')$$);
+select pg_temp.debe_ser('Ana no edita trámites', pg_temp.filas($q$update public.tramites set costo = 'gratis'$q$), 0);
+select pg_temp.debe_ser('Ana no borra trámites', pg_temp.filas($q$delete from public.tramites$q$), 0);
+reset role;
+
 -- Todas las tablas públicas tienen RLS ------------------------------
 select pg_temp.debe_ser('tablas sin RLS',
   (select count(*) from pg_class c join pg_namespace n on n.oid = c.relnamespace

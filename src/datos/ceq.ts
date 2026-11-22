@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase';
-import type { AvisoDb, EncuestaDb, SocioDb, TramiteDb } from '../lib/tipos-db';
+import type { AvisoDb, EncuestaDb, SocioDb } from '../lib/tipos-db';
 import { db, esperar, idDemo, MODO_DEMO, UID_DEMO } from './demo';
 
 function lanzar(error: { message: string } | null) {
@@ -39,16 +39,6 @@ export async function cargarSocio(uid: string): Promise<SocioDb | null> {
   const { data, error } = await supabase.from('socios').select('*').eq('usuario_id', uid).maybeSingle();
   lanzar(error);
   return data;
-}
-
-export async function cargarTramites(): Promise<TramiteDb[]> {
-  if (MODO_DEMO) {
-    await esperar(150);
-    return db.tramites;
-  }
-  const { data, error } = await supabase.from('tramites').select('*').order('orden');
-  lanzar(error);
-  return data ?? [];
 }
 
 export async function enviarSugerencia(categoria: string, texto: string) {
