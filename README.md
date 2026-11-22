@@ -1,0 +1,87 @@
+# App CEQ
+
+App del Centro de Estudiantes de la FCQ para la vida académica: malla con
+prerrequisitos, calculadora de firma, progreso de carrera, agenda y módulos del
+CEQ. Es un proyecto independiente: no se conecta con los sistemas de reservas
+ni de guardias.
+
+- **App:** Expo (React Native) con TypeScript y Expo Router.
+- **Servidor:** un proyecto propio de Supabase (base de datos, login, archivos y funciones).
+- **Arquitectura completa:** ver el documento "Arquitectura app CEQ".
+
+## Estado
+
+Etapa 1 (base): login con Google o correo, desbloqueo con huella o rostro,
+perfil con carrera y plan, esquema completo de la base con seguridad por fila, y
+el cálculo de firma y de progreso con pruebas. Las pestañas Mi carrera, Firma,
+Agenda y CEQ muestran lo que viene en las próximas etapas.
+
+## Estructura
+
+```
+src/app/          pantallas (Expo Router)
+  (tabs)/         Inicio, Mi carrera, Firma, Agenda, CEQ
+  login.tsx       entrar con Google o correo
+  onboarding.tsx  elegir carrera y plan la primera vez
+  perfil.tsx      datos, cambiar carrera, huella, cerrar sesión
+src/components/   piezas de interfaz y pantalla de bloqueo
+src/context/      sesión, perfil y bloqueo biométrico
+src/lib/          Supabase, login, biometría, cálculo de firma y progreso
+supabase/migrations/  tablas, seguridad por fila y funciones
+```
+
+## Puesta en marcha
+
+### 1. Supabase (proyecto nuevo, separado de reservas)
+
+1. Crear un proyecto en [supabase.com](https://supabase.com) llamado `ceq-app`.
+2. En **SQL Editor**, pegar y ejecutar `supabase/migrations/20261122000000_esquema_inicial.sql`.
+3. Copiar `.env.example` a `.env` y completar la URL y la clave `anon` (Project Settings > API).
+4. Después de entrar por primera vez a la app, nombrarse admin desde el SQL Editor:
+   ```sql
+   update perfiles set rol = 'admin' where id = (select id from auth.users where email = 'tu-correo@gmail.com');
+   ```
+
+### 2. Entrar con Google
+
+1. En [Google Cloud Console](https://console.cloud.google.com), crear un proyecto del CEQ.
+2. Configurar la pantalla de consentimiento (tipo externo, nombre "CEQ").
+3. Crear credenciales **ID de cliente de OAuth** de tipo **Aplicación web**.
+   En "URI de redireccionamiento autorizados" poner la que muestra Supabase en
+   Authentication > Sign In / Providers > Google (termina en `/auth/v1/callback`).
+4. En Supabase, activar el proveedor Google y pegar el ID y el secreto del cliente.
+5. En Supabase, Authentication > URL Configuration > Redirect URLs, agregar:
+   - `ceqapp://auth/callback` (la app instalada)
+   - `exp://**` (para probar con Expo en desarrollo)
+
+### 3. Correr la app
+
+```bash
+npm install
+npm start          # abre Expo; escanear el QR con un build de desarrollo
+npm test           # pruebas del cálculo de firma y progreso
+npm run typecheck  # revisión de tipos
+```
+
+La huella y Google necesitan un build de desarrollo (no Expo Go):
+
+```bash
+npx eas-cli@latest login
+npx eas-cli@latest build --profile development --platform android
+```
+
+### 4. Generar el APK para repartir
+
+```bash
+npx eas-cli@latest build --profile preview --platform android
+```
+
+EAS devuelve un enlace para descargar el APK. Para Play Store se usa
+`--profile production` (genera un .aab).
+
+## Reglas de firma
+
+El cálculo vive en `src/lib/firma.ts` y lee los mínimos de la tabla
+`reglas_firma` (una regla general por plan y excepciones por materia). Los
+valores por defecto (60 % teoría, 75 % asistencia) son provisorios hasta
+tener las reglas reales de la FCQ.
