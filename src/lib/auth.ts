@@ -1,7 +1,9 @@
 import * as Linking from 'expo-linking';
+import { Platform } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 import { supabase } from './supabase';
 import { olvidarEsteCelular } from './notificaciones';
+import { desactivarBiometria } from './biometria';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -9,10 +11,60 @@ WebBrowser.maybeCompleteAuthSession();
 export const urlRetorno = () => Linking.createURL('auth/callback');
 
 /**
- * Iniciar sesión con Google a través de Supabase (flujo PKCE).
- * Devuelve un mensaje de error para mostrar, o null si salió bien.
+ * Cliente "web" de Google (proyecto ceq-app-515510). No es secreto: es el
+ * mismo que usa Supabase. El selector nativo de Android pide un token para
+ * este cliente; el cliente Android (paquete + huella SHA-1) solo autoriza
+ * a la app a pedirlo.
+ */
+const CLIENTE_WEB_GOOGLE = '689206343818-a4p0nn7kg372rlr5jg7a6l8cp0l527ir.apps.googleusercontent.com';
+
+/**
+ * Iniciar sesión con Google. En Android usa el selector de cuentas nativo
+ * (no aparece la dirección de Supabase); si no está disponible, cae al
+ * navegador. Devuelve un mensaje de error para mostrar, o null si salió bien.
  */
 export async function entrarConGoogle(): Promise<string | null> {
+  if (Platform.OS === 'android') {
+    const nativo = await entrarConGoogleNativo();
+    if (nativo !== 'usar-navegador') return nativo;
+  }
+  return entrarConGoogleNavegador();
+}
+
+async function entrarConGoogleNativo(): Promise<string | null | 'usar-navegador'> {
+  let modulo: typeof import('@react-native-google-signin/google-signin');
+  try {
+    modulo = require('@react-native-google-signin/google-signin');
+  } catch {
+    return 'usar-navegador'; // Expo Go u otra compilación sin el módulo nativo
+  }
+  const { GoogleSignin, isErrorWithCode, isSuccessResponse, statusCodes } = modulo;
+  try {
+    GoogleSignin.configure({ webClientId: CLIENTE_WEB_GOOGLE });
+    await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+    // Siempre deja elegir la cuenta, como el prompt=select_account del navegador.
+    await GoogleSignin.signOut().catch(() => {});
+    const respuesta = await GoogleSignin.signIn();
+    if (!isSuccessResponse(respuesta)) return null; // canceló
+    const idToken = respuesta.data.idToken;
+    if (!idToken) return 'usar-navegador';
+    const { error } = await supabase.auth.signInWithIdToken({ provider: 'google', token: idToken });
+    // Si Supabase rechaza el token (configuración incompleta), mejor entrar
+    // por el navegador que dejar a la persona afuera.
+    if (error) console.warn('Login nativo rechazado por Supabase:', error.message);
+    return error ? 'usar-navegador' : null;
+  } catch (e) {
+    if (isErrorWithCode(e)) {
+      if (e.code === statusCodes.SIGN_IN_CANCELLED) return null;
+      if (e.code === statusCodes.IN_PROGRESS) return null;
+    }
+    // DEVELOPER_ERROR (huella SHA-1 sin registrar), sin Play Services, etc.:
+    // se intenta por el navegador para que nadie se quede sin entrar.
+    return 'usar-navegador';
+  }
+}
+
+async function entrarConGoogleNavegador(): Promise<string | null> {
   const redirectTo = urlRetorno();
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
@@ -65,7 +117,34 @@ export async function registrarseConCorreo(correo: string, clave: string, nombre
 export async function salir() {
   // Primero se borra el celular (después ya no hay sesión para hacerlo).
   await olvidarEsteCelular().catch(() => {});
+  await cerrarGoogleNativo();
   await supabase.auth.signOut();
+}
+
+/** Olvida la cuenta elegida en el selector nativo (para poder elegir otra). */
+async function cerrarGoogleNativo() {
+  if (Platform.OS !== 'android') return;
+  try {
+    const { GoogleSignin } = require('@react-native-google-signin/google-signin') as typeof import('@react-native-google-signin/google-signin');
+    await GoogleSignin.signOut();
+  } catch {
+    // sin módulo nativo o sin cuenta: nada que cerrar
+  }
+}
+
+/**
+ * Borra la cuenta y todos los datos del usuario (lo exige Google Play).
+ * Devuelve un mensaje de error, o null si se borró.
+ */
+export async function eliminarCuenta(): Promise<string | null> {
+  await olvidarEsteCelular().catch(() => {});
+  const { error } = await supabase.rpc('eliminar_mi_cuenta');
+  if (error) return 'No se pudo borrar la cuenta. Probá de nuevo o escribí a informatica@ceq-una.com.';
+  await desactivarBiometria().catch(() => {});
+  await cerrarGoogleNativo();
+  // El usuario ya no existe en el servidor: se cierra la sesión solo en este celular.
+  await supabase.auth.signOut({ scope: 'local' });
+  return null;
 }
 
 function traducirError(msg: string): string {

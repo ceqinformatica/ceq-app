@@ -130,6 +130,7 @@ export type Database = {
       registrar_dispositivo: { Args: { p_token: string; p_plataforma?: string | null }; Returns: undefined };
       alcance_notificacion: { Args: { p_carrera?: string | null }; Returns: number };
       resumen_admin: { Args: Record<string, never>; Returns: ResumenAdmin };
+      eliminar_mi_cuenta: { Args: Record<string, never>; Returns: undefined };
     };
     Enums: {
       rol_usuario: RolUsuario;
