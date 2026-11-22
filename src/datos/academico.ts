@@ -7,7 +7,7 @@ import { pesosIguales, type Asistencia, type Evaluacion, type ReglaFirma } from 
 import type { EstadoEstudiante, EstadoMateria, GrupoOptativas, Materia, Prerrequisito, UnidadAvance } from '../lib/progreso';
 import type { IntentoAImportar, PlanImportacion } from '../lib/extracto-ealu';
 import type { IntentoFinal, LlamadoCargado } from '../lib/finales';
-import { aplicarRecuperatorio, esRecuperatorio, REGLA_FCQ } from '../lib/reglamento-fcq';
+import { aplicarRecuperatorio, aplicarRegularizacion, esRecuperatorio, esRegularizacion, REGLA_FCQ } from '../lib/reglamento-fcq';
 import { supabase } from '../lib/supabase';
 import type { AsistenciaDb, ComponenteDb, EvaluacionDb, ExamenFinalDb, GrupoOptativasDb, MateriaDb, Plan, PrerrequisitoDb, ReglaFirmaDb } from '../lib/tipos-db';
 import { db, esperar, idDemo, MODO_DEMO, UID_DEMO } from './demo';
@@ -41,7 +41,7 @@ export async function cargarMalla(planId: string, carreraId?: string | null): Pr
   let grupos: GrupoOptativasDb[];
   let pre: PrerrequisitoDb[];
   let reglas: ReglaFirmaDb[];
-  let finalesDb: Pick<ExamenFinalDb, 'materia_id' | 'nota' | 'llamado' | 'periodo' | 'fecha'>[];
+  let finalesDb: Pick<ExamenFinalDb, 'materia_id' | 'nota' | 'llamado' | 'periodo' | 'fecha' | 'tipo'>[];
   let estadosDb: { materia_id: string; estado: EstadoMateria; nota_final: number | null; promedio_firma?: number | null }[];
 
   if (MODO_DEMO) {
@@ -74,7 +74,7 @@ export async function cargarMalla(planId: string, carreraId?: string | null): Pr
       const [rPre, rEst, rFin] = await Promise.all([
         supabase.from('prerrequisitos').select('*').in('materia_id', ids),
         supabase.from('materias_estudiante').select('materia_id, estado, nota_final, promedio_firma').in('materia_id', ids),
-        supabase.from('examenes_finales').select('materia_id, nota, llamado, periodo, fecha').in('materia_id', ids),
+        supabase.from('examenes_finales').select('materia_id, nota, llamado, periodo, fecha, tipo').in('materia_id', ids),
       ]);
       lanzar(rPre.error); lanzar(rEst.error); lanzar(rFin.error);
       pre = rPre.data ?? [];
@@ -97,7 +97,10 @@ export async function cargarMalla(planId: string, carreraId?: string | null): Pr
     estados: new Map(estadosDb.map((e) => [e.materia_id, { estado: e.estado, notaFinal: e.nota_final, promedioFirma: e.promedio_firma == null ? null : Number(e.promedio_firma) }])),
     reglas,
     unidad: plan?.unidad_avance ?? 'materias',
-    intentos: finalesDb.map((f) => ({ materiaId: f.materia_id, nota: Number(f.nota), llamado: f.llamado, periodo: f.periodo, fecha: f.fecha })),
+    // Los llamados usados para regularizar no tienen nota: no son intentos de final.
+    intentos: finalesDb
+      .filter((f) => (f.tipo ?? 'final') === 'final' && f.nota != null)
+      .map((f) => ({ materiaId: f.materia_id, nota: Number(f.nota), llamado: f.llamado, periodo: f.periodo, fecha: f.fecha })),
   };
 }
 
@@ -256,19 +259,29 @@ export async function cargarFinales(materiaId: string): Promise<ExamenFinalDb[]>
 }
 
 /**
- * Guarda los tres llamados de un periodo: borra los de ese periodo y carga
- * los que tienen nota. La base aprueba la materia con la mejor nota (≥ 2) o
- * la vuelve a firmada si ya no hay ninguna aprobada.
+ * Guarda los tres llamados de un periodo de la cursada actual: borra los de
+ * ese periodo y carga los que tienen nota o se usaron para regularizar. La
+ * base aprueba la materia con la mejor nota de final (≥ 2) o la vuelve a
+ * firmada si ya no hay ninguna aprobada. Los intentos de una cursada
+ * anterior no se tocan.
  */
 export async function guardarFinales(materiaId: string, periodo: string, llamados: LlamadoCargado[]) {
-  const filas = llamados.map((l) => ({ materia_id: materiaId, periodo, llamado: l.llamado, nota: l.nota, porcentaje: l.porcentaje }));
+  const filas = llamados.map((l) => ({
+    materia_id: materiaId,
+    periodo,
+    llamado: l.llamado,
+    tipo: l.tipo ?? ('final' as const),
+    nota: l.tipo === 'regularizacion' ? null : l.nota,
+    porcentaje: l.tipo === 'regularizacion' ? null : l.porcentaje,
+  }));
   if (MODO_DEMO) {
     await esperar(200);
-    db.finales = db.finales.filter((f) => !(f.materia_id === materiaId && f.periodo === periodo));
+    db.finales = db.finales.filter((f) => !(f.materia_id === materiaId && f.periodo === periodo && !f.cursada_anterior));
     const hoy = new Date().toISOString();
-    for (const f of filas) db.finales.push({ id: idDemo(), usuario_id: UID_DEMO, fecha: null, created_at: hoy, ...f });
+    for (const f of filas) db.finales.push({ id: idDemo(), usuario_id: UID_DEMO, fecha: null, created_at: hoy, cursada_anterior: false, ...f });
     // Igual que el trigger de la base.
-    const mejor = Math.max(0, ...db.finales.filter((f) => f.materia_id === materiaId && f.nota >= 2).map((f) => f.nota));
+    const notas = db.finales.filter((f) => f.materia_id === materiaId && (f.tipo ?? 'final') === 'final' && !f.cursada_anterior && f.nota != null).map((f) => f.nota as number);
+    const mejor = Math.max(0, ...notas);
     const e = db.estados.find((x) => x.materia_id === materiaId);
     if (mejor >= 2) {
       if (e) Object.assign(e, { estado: 'aprobada', nota_final: mejor, nota_desde_final: true });
@@ -278,12 +291,44 @@ export async function guardarFinales(materiaId: string, periodo: string, llamado
     }
     return;
   }
-  const borrar = await supabase.from('examenes_finales').delete().eq('materia_id', materiaId).eq('periodo', periodo);
+  const borrar = await supabase.from('examenes_finales').delete().eq('materia_id', materiaId).eq('periodo', periodo).eq('cursada_anterior', false);
   lanzar(borrar.error);
   if (filas.length) {
     const { error } = await supabase.from('examenes_finales').insert(filas);
     lanzar(error);
   }
+}
+
+/**
+ * Volver a cursar una materia (Art. 45): se borran los parciales y la
+ * asistencia de teoría y se conserva el laboratorio. La firma guardada se
+ * borra y los finales rendidos quedan como de una cursada anterior (siguen
+ * contando para el promedio con aplazos). La materia vuelve a "cursando".
+ */
+export async function recursarMateria(materiaId: string) {
+  if (MODO_DEMO) {
+    await esperar(200);
+    db.evaluaciones = db.evaluaciones.filter((e) => !(e.materia_id === materiaId && e.componente === 'teoria'));
+    db.asistencias = db.asistencias.filter((a) => !(a.materia_id === materiaId && a.componente === 'teoria'));
+    for (const f of db.finales) if (f.materia_id === materiaId) f.cursada_anterior = true;
+    const e = db.estados.find((x) => x.materia_id === materiaId);
+    const cambios = { estado: 'cursando' as const, nota_final: null, promedio_firma: null, nota_desde_final: false };
+    if (e) Object.assign(e, cambios);
+    else db.estados.push({ usuario_id: UID_DEMO, materia_id: materiaId, fecha: null, periodo: null, updated_at: new Date().toISOString(), ...cambios });
+    return;
+  }
+  const [ev, as, fi] = await Promise.all([
+    supabase.from('evaluaciones').delete().eq('materia_id', materiaId).eq('componente', 'teoria'),
+    supabase.from('asistencias').delete().eq('materia_id', materiaId).eq('componente', 'teoria'),
+    supabase.from('examenes_finales').update({ cursada_anterior: true }).eq('materia_id', materiaId),
+  ]);
+  lanzar(ev.error);
+  lanzar(as.error);
+  lanzar(fi.error);
+  const { error } = await supabase
+    .from('materias_estudiante')
+    .upsert({ materia_id: materiaId, estado: 'cursando', nota_final: null, promedio_firma: null, nota_desde_final: false }, { onConflict: 'usuario_id,materia_id' });
+  lanzar(error);
 }
 
 /** Regla que aplica a una materia: la propia, o la general del plan. */
@@ -314,6 +359,8 @@ export interface DatosFirma {
   asistenciaLab: AsistenciaDb | null;
   /** Se aplicó el examen de recuperación (Art. 46): alcanza con PG ≥ 50 %. */
   recuperado: boolean;
+  /** Regularización (Art. 40–41): si ocupó el parcial faltado, o por qué no. */
+  regularizacion: { regularizado: boolean; motivo: 'dos-faltas' | 'sin-falta' | 'sin-nota' | null };
 }
 
 export const aEvaluacion = (e: EvaluacionDb): Evaluacion => ({
@@ -345,12 +392,15 @@ export async function cargarFirmas(materiaIds: string[]): Promise<Map<string, Da
   const mapa = new Map<string, DatosFirma>();
   for (const id of materiaIds) {
     const evaluacionesDb = evals.filter((e) => e.materia_id === id);
-    // Recuperatorio (reemplaza el parcial más bajo) y pesos automáticos.
-    const rec = aplicarRecuperatorio(evaluacionesDb.map(aEvaluacion));
+    // Regularización (ocupa el parcial faltado), recuperatorio (reemplaza el
+    // parcial más bajo) y pesos automáticos.
+    const reg = aplicarRegularizacion(evaluacionesDb.map(aEvaluacion));
+    const rec = aplicarRecuperatorio(reg.evaluaciones);
     mapa.set(id, {
       evaluacionesDb,
       evaluaciones: pesosIguales(rec.evaluaciones),
       recuperado: rec.recuperado,
+      regularizacion: { regularizado: reg.regularizado, motivo: reg.motivo },
       asistencia: asis.find((a) => a.materia_id === id && a.componente === 'teoria') ?? null,
       asistenciaLab: asis.find((a) => a.materia_id === id && a.componente === 'laboratorio') ?? null,
     });
@@ -397,7 +447,7 @@ export async function guardarAsistencia(materiaId: string, componente: Component
 /* Tipos de evaluación                                                 */
 /* ------------------------------------------------------------------ */
 
-export type TipoEvaluacion = 'parcial' | 'tp' | 'laboratorio' | 'recuperatorio';
+export type TipoEvaluacion = 'parcial' | 'tp' | 'laboratorio' | 'recuperatorio' | 'regularizacion';
 
 /**
  * Tipo de una evaluación para mostrar. La base guarda solo el componente
@@ -406,6 +456,7 @@ export type TipoEvaluacion = 'parcial' | 'tp' | 'laboratorio' | 'recuperatorio';
 export function tipoEvaluacion(e: { componente: ComponenteDb; nombre: string }): TipoEvaluacion {
   if (e.componente === 'laboratorio') return 'laboratorio';
   if (esRecuperatorio(e)) return 'recuperatorio';
+  if (esRegularizacion(e)) return 'regularizacion';
   return /trabajo|pr[aá]ctic|\btps?\b/i.test(e.nombre) ? 'tp' : 'parcial';
 }
 

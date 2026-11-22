@@ -161,6 +161,44 @@ select pg_temp.debe_fallar('porcentaje del final mayor a 100',
   $$insert into public.examenes_finales (materia_id, periodo, llamado, nota, porcentaje) values ('30000000-0000-0000-0000-000000000002', '2026-2', 2, 4, 120)$$);
 reset role;
 
+-- Regularización y recursada ---------------------------------------
+select pg_temp.como('00000000-0000-0000-0000-00000000000a');
+delete from public.examenes_finales;
+delete from public.materias_estudiante where materia_id = '30000000-0000-0000-0000-000000000001';
+insert into public.materias_estudiante (materia_id, estado) values ('30000000-0000-0000-0000-000000000001', 'firmada');
+insert into public.examenes_finales (materia_id, periodo, llamado, tipo)
+  values ('30000000-0000-0000-0000-000000000001', '2026-1', 1, 'regularizacion');
+select pg_temp.debe_ser('la regularización no aprueba la materia',
+  (select count(*) from public.materias_estudiante where materia_id = '30000000-0000-0000-0000-000000000001' and estado = 'firmada'), 1);
+select pg_temp.debe_fallar('regularización con nota',
+  $$insert into public.examenes_finales (materia_id, periodo, llamado, tipo, nota) values ('30000000-0000-0000-0000-000000000001', '2026-1', 2, 'regularizacion', 5)$$);
+select pg_temp.debe_fallar('final sin nota',
+  $$insert into public.examenes_finales (materia_id, periodo, llamado) values ('30000000-0000-0000-0000-000000000001', '2026-1', 2)$$);
+select pg_temp.debe_fallar('tipo de examen inválido',
+  $$insert into public.examenes_finales (materia_id, periodo, llamado, tipo, nota) values ('30000000-0000-0000-0000-000000000001', '2026-1', 2, 'otro', 3)$$);
+select pg_temp.debe_fallar('el llamado de la regularización ya está usado',
+  $$insert into public.examenes_finales (materia_id, periodo, llamado, nota) values ('30000000-0000-0000-0000-000000000001', '2026-1', 1, 4)$$);
+-- Pasar una regularización a final con nota aprueba la materia.
+update public.examenes_finales set tipo = 'final', nota = 3 where tipo = 'regularizacion';
+select pg_temp.debe_ser('cambiar a final con nota aprueba',
+  (select count(*) from public.materias_estudiante where materia_id = '30000000-0000-0000-0000-000000000001' and estado = 'aprobada' and nota_final = 3), 1);
+update public.examenes_finales set nota = 1;
+-- Recursar: los finales quedan de la cursada anterior.
+update public.examenes_finales set cursada_anterior = true where materia_id = '30000000-0000-0000-0000-000000000001';
+select pg_temp.debe_ser('Ana marca sus finales como de una cursada anterior',
+  (select count(*) from public.examenes_finales where cursada_anterior), 1);
+-- En la nueva cursada puede cargar el mismo periodo y llamado.
+insert into public.examenes_finales (materia_id, periodo, llamado, nota) values ('30000000-0000-0000-0000-000000000001', '2026-1', 1, 2);
+select pg_temp.debe_ser('nueva cursada aprueba con el mismo llamado',
+  (select count(*) from public.materias_estudiante where materia_id = '30000000-0000-0000-0000-000000000001' and estado = 'aprobada' and nota_final = 2), 1);
+delete from public.examenes_finales where not cursada_anterior;
+reset role;
+select pg_temp.como('00000000-0000-0000-0000-00000000000b');
+update public.examenes_finales set cursada_anterior = false;
+reset role;
+select pg_temp.debe_ser('Beto no cambia los finales de Ana',
+  (select count(*) from public.examenes_finales where cursada_anterior), 1);
+
 -- Todas las tablas públicas tienen RLS ------------------------------
 select pg_temp.debe_ser('tablas sin RLS',
   (select count(*) from pg_class c join pg_namespace n on n.oid = c.relnamespace

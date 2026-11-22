@@ -10,7 +10,7 @@ import { cargarAgenda, cuentaRegresiva, diaSemanaHoy, diasHasta, hora, horaDe, p
 import { cargarAvisos, haceCuanto } from '../../datos/ceq';
 import { usarDatos } from '../../datos/usarDatos';
 import { evaluarFirma } from '../../lib/firma';
-import { calcularProgreso } from '../../lib/progreso';
+import { calcularProgreso, esSeminario } from '../../lib/progreso';
 import { colores, coloresSemaforo, espacio, fuentes, radio, sombras } from '../../tema';
 
 const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
@@ -26,7 +26,8 @@ async function cargar(planId: string | null | undefined, carreraId: string | nul
   let firmas: { id: string; nombre: string; semaforo: keyof typeof coloresSemaforo; firma: boolean; teoria: number | null }[] = [];
   if (malla) {
     progreso = calcularProgreso(malla.materias, malla.grupos, malla.estados, malla.unidad);
-    const cursando = malla.materiasDb.filter((m) => malla.estados.get(m.id)?.estado === 'cursando');
+    // Los seminarios no tienen firma.
+    const cursando = malla.materiasDb.filter((m) => malla.estados.get(m.id)?.estado === 'cursando' && !esSeminario(m.nombre));
     const datos = await cargarFirmas(cursando.map((m) => m.id));
     firmas = cursando.map((m) => {
       const d = datos.get(m.id)!;

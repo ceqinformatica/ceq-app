@@ -93,6 +93,35 @@ export function aplicarRecuperatorio<E extends Evaluacion>(evals: E[], minimoTeo
   return { evaluaciones, recuperado: true };
 }
 
+/** Una evaluación es el examen de regularización si su nombre lo dice. */
+export const esRegularizacion = (e: { nombre: string; componente: string }) =>
+  e.componente === 'teoria' && /regulariz/i.test(e.nombre);
+
+/**
+ * Examen de regularización (Art. 40–41). Quien faltó a un solo parcial de
+ * teoría rinde la regularización en un llamado de final y esa nota ocupa el
+ * lugar del parcial faltado. Con dos o más parciales sin rendir no se puede
+ * regularizar. La regularización nunca cuenta como un parcial más.
+ */
+export function aplicarRegularizacion<E extends Evaluacion>(evals: E[]): {
+  evaluaciones: E[];
+  regularizado: boolean;
+  motivo: 'dos-faltas' | 'sin-falta' | 'sin-nota' | null;
+} {
+  const regs = evals.filter(esRegularizacion);
+  const resto = evals.filter((e) => !esRegularizacion(e));
+  if (!regs.length) return { evaluaciones: evals, regularizado: false, motivo: null };
+  const notaReg = Math.max(...regs.map((e) => (e.rendida ? porcentajeEvaluacion(e) ?? -1 : -1)));
+  if (notaReg < 0) return { evaluaciones: resto, regularizado: false, motivo: 'sin-nota' };
+  const faltados = resto.filter((e) => e.componente === 'teoria' && !esRecuperatorio(e) && (!e.rendida || porcentajeEvaluacion(e) == null));
+  if (faltados.length === 0) return { evaluaciones: resto, regularizado: false, motivo: 'sin-falta' };
+  if (faltados.length > 1) return { evaluaciones: resto, regularizado: false, motivo: 'dos-faltas' };
+  const evaluaciones = resto.map((e) =>
+    e === faltados[0] ? { ...e, rendida: true, porcentaje: notaReg, puntajeObtenido: null, puntajeTotal: null } : e,
+  );
+  return { evaluaciones, regularizado: true, motivo: null };
+}
+
 /** Promedio General (Art. 44): (teórico + práctico) / 2; sin prácticos, solo el teórico. */
 export function promedioGeneralFcq(teoria: number | null, practico: number | null): number | null {
   if (teoria == null) return null;

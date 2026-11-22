@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Text, View } from 'react-native';
 import { nombreSemestre, pct, SelectorEstado } from '../../components/academico';
 import { TarjetaFinales } from '../../components/finales';
+import { esSeminario } from '../../lib/finales';
 import { BarraSuperior, Boton, Campo, Cargando, EstadoVacio, Fila, Insignia, Mensaje, Pantalla, s, Seccion, Tarjeta } from '../../components/ui';
 import { useSesion } from '../../context/SesionProvider';
 import { cargarMalla, guardarEstadoMateria } from '../../datos/academico';
@@ -40,7 +41,8 @@ export default function DetalleMateria() {
     return { requisitos, habilita, faltan, nombre };
   }, [malla, id]);
 
-  const notaNum = notaTxt.trim() === '' ? null : Number(notaTxt.replace(',', '.'));
+  const seminario = materia ? esSeminario(materia.nombre) : false;
+  const notaNum = seminario || notaTxt.trim() === '' ? null : Number(notaTxt.replace(',', '.'));
   const notaValida = notaNum == null || (Number.isFinite(notaNum) && notaNum >= 1 && notaNum <= 5);
   const cambio = estado !== (actual?.estado ?? 'pendiente') || (estado === 'aprobada' && notaNum !== (actual?.notaFinal ?? null));
 
@@ -92,11 +94,12 @@ export default function DetalleMateria() {
       </Tarjeta>
 
       <Seccion>¿Cómo vas con esta materia?</Seccion>
-      <SelectorEstado valor={estado} onCambio={setEstado} bloqueada={info.faltan > 0 && (actual?.estado ?? 'pendiente') === 'pendiente'} />
+      <SelectorEstado valor={estado} onCambio={setEstado} sinFirma={seminario} bloqueada={info.faltan > 0 && (actual?.estado ?? 'pendiente') === 'pendiente'} />
+      {seminario && <Mensaje tipo="info" texto="Los seminarios no llevan nota: se aprueban o no. No tienen firma ni final y no cuentan para tu promedio." />}
       {info.faltan > 0 && (actual?.estado ?? 'pendiente') === 'pendiente' && (
         <Mensaje tipo="info" texto={`Te ${info.faltan === 1 ? 'falta 1 requisito' : `faltan ${info.faltan} requisitos`} para cursarla.`} />
       )}
-      {estado === 'aprobada' && (
+      {estado === 'aprobada' && !seminario && (
         <Campo
           etiqueta="Nota final (1 a 5)"
           value={notaTxt}
@@ -115,15 +118,15 @@ export default function DetalleMateria() {
           <Text style={[s.cuerpo, { fontFamily: fuentes.semibold, color: colores.marino }]}>Tu firma: {pct(actual.promedioFirma)}</Text>
         </View>
       )}
-      {(estado === 'cursando' || estado === 'firmada') && (
+      {(estado === 'cursando' || estado === 'firmada') && !seminario && (
         <Boton texto={estado === 'firmada' ? 'Ver mi firma' : 'Calcular mi firma'} variante="secundario" icono="calculator-outline" onPress={() => router.push(`/firma/${materia.id}`)} />
       )}
       {msg && <Mensaje texto={msg.texto} tipo={msg.tipo} />}
 
-      {(actual?.estado === 'firmada' || actual?.estado === 'aprobada') && (
+      {(actual?.estado === 'firmada' || actual?.estado === 'aprobada') && !seminario && (
         <>
           <Seccion estilo={{ marginTop: espacio.xl }}>Finales</Seccion>
-          <TarjetaFinales materiaId={materia.id} firma={actual.promedioFirma ?? null} onGuardado={() => recargar()} />
+          <TarjetaFinales materiaId={materia.id} firma={actual.promedioFirma ?? null} aprobada={actual.estado === 'aprobada'} onGuardado={() => recargar()} />
         </>
       )}
 

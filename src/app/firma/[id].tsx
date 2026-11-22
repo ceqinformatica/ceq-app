@@ -14,24 +14,35 @@ import {
 } from '../../datos/academico';
 import { usarDatos } from '../../datos/usarDatos';
 import { evaluarFirma, porcentajeEvaluacion, promedioFirma, type ResultadoAsistencia, type ResultadoComponente } from '../../lib/firma';
-import { esRecuperatorio, puedeRecuperar, RECUPERACION_DESDE, RECUPERACION_MINIMO } from '../../lib/reglamento-fcq';
+import { esRecuperatorio, esRegularizacion, puedeRecuperar, RECUPERACION_DESDE, RECUPERACION_MINIMO } from '../../lib/reglamento-fcq';
 import type { AsistenciaDb, ComponenteDb, EvaluacionDb } from '../../lib/tipos-db';
 import { colores, coloresSemaforo, espacio, fuentes, radio, texto } from '../../tema';
 
-const ICONO_TIPO: Record<TipoEvaluacion, 'document-text-outline' | 'create-outline' | 'flask-outline' | 'refresh-outline'> = {
+const ICONO_TIPO: Record<TipoEvaluacion, 'document-text-outline' | 'create-outline' | 'flask-outline' | 'refresh-outline' | 'swap-horizontal-outline'> = {
   parcial: 'document-text-outline',
   tp: 'create-outline',
   laboratorio: 'flask-outline',
   recuperatorio: 'refresh-outline',
+  regularizacion: 'swap-horizontal-outline',
 };
 
 // Solo parciales y laboratorio: los trabajos prácticos se sacaron porque cada
 // docente los cuenta distinto.
-const TIPOS: { valor: TipoEvaluacion; texto: string; icono: 'document-text' | 'flask' | 'refresh'; nombre: string }[] = [
+const TIPOS: { valor: TipoEvaluacion; texto: string; icono: 'document-text' | 'flask' | 'refresh' | 'swap-horizontal'; nombre: string }[] = [
   { valor: 'parcial', texto: 'Parcial', icono: 'document-text', nombre: '' },
   { valor: 'laboratorio', texto: 'Laboratorio', icono: 'flask', nombre: 'Laboratorio' },
   { valor: 'recuperatorio', texto: 'Recuperatorio', icono: 'refresh', nombre: 'Recuperatorio' },
+  { valor: 'regularizacion', texto: 'Regularización', icono: 'swap-horizontal', nombre: 'Regularización' },
 ];
+
+/** Parcial teórico común (no recuperatorio ni regularización). */
+const esParcialTeorico = (e: { nombre: string; componente: string }) => e.componente === 'teoria' && !esRecuperatorio(e) && !esRegularizacion(e);
+
+const MOTIVO_REGULARIZACION = {
+  'dos-faltas': 'No cuenta: con dos parciales sin rendir no se puede regularizar (Art. 41)',
+  'sin-falta': 'No cuenta: no tenés ningún parcial sin rendir. Dejá como no rendido el parcial al que faltaste',
+  'sin-nota': 'Cargá cuánto sacaste',
+} as const;
 
 const volver = () => (router.canGoBack() ? router.back() : router.replace('/firma'));
 
@@ -82,9 +93,10 @@ export default function CalculadoraFirma() {
   const tituloEstado = resultado.firma ? '¡Tenés firma!' : c.nombre;
   const conLab = tieneLab(datos.evaluacionesDb);
   const combinado = conLab && regla.modoLaboratorio === 'combinado';
-  const cantTeoria = datos.evaluacionesDb.filter((e) => e.componente === 'teoria' && !esRecuperatorio(e)).length;
+  const cantTeoria = datos.evaluacionesDb.filter(esParcialTeorico).length;
   const tieneRecuperatorio = datos.evaluacionesDb.some(esRecuperatorio);
-  const pendientesTeoria = datos.evaluacionesDb.some((e) => e.componente === 'teoria' && !esRecuperatorio(e) && !e.rendida);
+  const regularizado = datos.regularizacion.regularizado;
+  const pendientesTeoria = !regularizado && datos.evaluacionesDb.some((e) => esParcialTeorico(e) && !e.rendida);
   const cantLab = datos.evaluacionesDb.filter((e) => e.componente === 'laboratorio').length;
   const promedio = combinado ? null : promedioFirma(resultado, { recuperado: datos.recuperado });
   const puedeGuardar = resultado.firma && promedio != null;
@@ -175,15 +187,18 @@ export default function CalculadoraFirma() {
         ) : (
           datos.evaluacionesDb.map((e, i) => {
             const p = porcentajeEvaluacion(aEvaluacion(e));
+            const reemplazado = regularizado && esParcialTeorico(e) && (!e.rendida || p == null);
             const ok = p != null && p >= (esRecuperatorio(e) ? RECUPERACION_MINIMO : e.componente === 'laboratorio' ? regla.minimoLaboratorio ?? regla.minimoTeoria : regla.minimoTeoria);
             return (
               <Fila
                 key={e.id}
                 icono={ICONO_TIPO[tipoEvaluacion(e)]}
                 titulo={e.nombre}
-                detalle={esRecuperatorio(e) ? (datos.recuperado ? 'Reemplazó tu parcial más bajo' : 'No cuenta: hace falta 60 % y un promedio teórico entre 30 y 50 %') : e.componente === 'laboratorio' ? `Pesa ${pct(Math.round(1000 / cantLab) / 10)} del laboratorio` : `Pesa ${pct(Math.round(1000 / cantTeoria) / 10)} del teórico`}
+                detalle={esRegularizacion(e) ? (regularizado ? 'Ocupó el lugar del parcial que faltaste' : MOTIVO_REGULARIZACION[datos.regularizacion.motivo ?? 'sin-nota']) : reemplazado ? 'Lo cubre tu regularización' : esRecuperatorio(e) ? (datos.recuperado ? 'Reemplazó tu parcial más bajo' : 'No cuenta: hace falta 60 % y un promedio teórico entre 30 y 50 %') : e.componente === 'laboratorio' ? `Pesa ${pct(Math.round(1000 / cantLab) / 10)} del laboratorio` : `Pesa ${pct(Math.round(1000 / cantTeoria) / 10)} del teórico`}
                 derecha={
-                  e.rendida && p != null ? (
+                  reemplazado ? (
+                    <Insignia texto="Regularizado" color={colores.marino} fondo={colores.grisFondo} />
+                  ) : e.rendida && p != null ? (
                     <Text style={{ fontFamily: fuentes.bold, fontSize: 16, color: ok ? colores.verde : colores.amarillo }}>{pct(p)}</Text>
                   ) : (
                     <Insignia texto="Pendiente" color={colores.gris} fondo={colores.grisFondo} />
@@ -198,6 +213,12 @@ export default function CalculadoraFirma() {
       </Tarjeta>
       {!combinado && !datos.recuperado && !tieneRecuperatorio && !pendientesTeoria && puedeRecuperar(resultado.teoria) && (
         <Mensaje tipo="info" texto={`Tu promedio teórico está entre ${RECUPERACION_DESDE} y ${regla.minimoTeoria} %: podés rendir el examen de recuperación en el 1.er periodo de finales. Si sacás ${RECUPERACION_MINIMO} % o más, reemplaza tu parcial más bajo. Cargalo como "Recuperatorio".`} />
+      )}
+      {regularizado && (
+        <Mensaje tipo="exito" texto="Regularización aplicada: ocupa el lugar del parcial que faltaste. Recordá que el llamado en que la rendiste queda usado." />
+      )}
+      {!regularizado && !datos.evaluacionesDb.some(esRegularizacion) && datos.evaluacionesDb.filter((e) => esParcialTeorico(e) && !e.rendida).length === 1 && (
+        <Mensaje tipo="info" texto='¿Faltaste a ese parcial? Podés rendir la regularización en el 1.er o 2.º periodo de finales (usa un llamado). Cargala como "Regularización". Con dos faltas no se puede regularizar.' />
       )}
       {datos.recuperado && (
         <Mensaje tipo="exito" texto="Recuperación aplicada: reemplazó tu parcial más bajo. Ahora necesitás un promedio de firma de 50 % o más." />
@@ -357,7 +378,10 @@ function FormEvaluacion({ visible, evaluacion, materiaId, onCerrar, onGuardado }
     setError(null);
     const datos: NuevaEvaluacion = {
       // El recuperatorio se reconoce por el nombre.
-      nombre: tipo === 'recuperatorio' && !esRecuperatorio({ nombre, componente: 'teoria' }) ? 'Recuperatorio' : nombre.trim(),
+      nombre:
+        tipo === 'recuperatorio' && !esRecuperatorio({ nombre, componente: 'teoria' }) ? 'Recuperatorio'
+          : tipo === 'regularizacion' && !esRegularizacion({ nombre, componente: 'teoria' }) ? 'Regularización'
+            : nombre.trim(),
       componente: tipo === 'laboratorio' ? 'laboratorio' : 'teoria',
       // Los pesos se reparten solos (todas iguales); se guarda 1 para cada una.
       ponderacion: 1,
@@ -410,7 +434,7 @@ function FormEvaluacion({ visible, evaluacion, materiaId, onCerrar, onGuardado }
       </View>
       <Campo etiqueta="Nombre" value={nombre} onChangeText={setNombre} placeholder={tipo === 'laboratorio' ? 'Laboratorio' : tipo === 'recuperatorio' ? 'Recuperatorio' : 'Ej. Primer parcial'} />
       <Text style={[s.etiqueta, { marginBottom: espacio.s }]}>¿Ya la rendiste?</Text>
-      <Segmentado opciones={[{ valor: 'si', texto: 'Sí, tengo la nota' }, { valor: 'no', texto: 'Todavía no' }]} valor={rendida} onCambio={setRendida} />
+      <Segmentado opciones={[{ valor: 'si', texto: 'Sí, tengo la nota' }, { valor: 'no', texto: 'Todavía no o falté' }]} valor={rendida} onCambio={setRendida} />
       {rendida === 'si' && (
         <>
           <Segmentado opciones={[{ valor: 'porcentaje', texto: 'Porcentaje' }, { valor: 'puntaje', texto: 'Puntaje' }]} valor={modo} onCambio={setModo} />
