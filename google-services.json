@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "689206343818",
+    "project_id": "ceq-app-515510",
+    "storage_bucket": "ceq-app-515510.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:689206343818:android:554f67da4347485ee55573",
+        "android_client_info": {
+          "package_name": "com.ceqinformatica.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "689206343818-a4p0nn7kg372rlr5jg7a6l8cp0l527ir.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDX6C1DuBlfBSan6WGL70W5ODSAfJTK1sE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "689206343818-a4p0nn7kg372rlr5jg7a6l8cp0l527ir.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
