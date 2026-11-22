@@ -25,6 +25,7 @@ export default function DetalleMateria() {
   const [estado, setEstado] = useState<EstadoMateria>('pendiente');
   const [notaTxt, setNotaTxt] = useState('');
   const [guardando, setGuardando] = useState(false);
+  const [confirmarDeshacer, setConfirmarDeshacer] = useState(false);
   const [msg, setMsg] = useState<{ texto: string; tipo: 'error' | 'exito' } | null>(null);
 
   useEffect(() => {
@@ -125,15 +126,24 @@ export default function DetalleMateria() {
       {actual?.puedeDeshacerRecursada && estado === 'cursando' && (
         <Tarjeta estilo={{ marginTop: espacio.m }}>
           <Text style={s.cuerpo}>Marcaste que volvés a cursar esta materia.</Text>
-          <Text style={[s.filaDetalle, { marginTop: 4 }]}>¿Fue un error? Podés deshacerlo: vuelven tu firma, tus parciales y tus finales como estaban.</Text>
+          <Text style={[s.filaDetalle, { marginTop: 4 }]}>
+            {confirmarDeshacer
+              ? '¿Seguro? La materia vuelve a como estaba antes, con tu firma, tus parciales y tus finales.'
+              : '¿Fue un error? Lo podés deshacer mientras no cargues parciales, asistencia ni finales nuevos.'}
+          </Text>
           <Boton
-            texto="Deshacer"
+            texto={confirmarDeshacer ? 'Sí, deshacer' : 'Deshacer'}
             icono="arrow-undo"
             variante="secundario"
             compacto
             cargando={guardando}
             estilo={{ marginTop: espacio.s, alignSelf: 'flex-start' }}
             onPress={async () => {
+              if (!confirmarDeshacer) {
+                setConfirmarDeshacer(true);
+                return;
+              }
+              setConfirmarDeshacer(false);
               setGuardando(true);
               setMsg(null);
               try {

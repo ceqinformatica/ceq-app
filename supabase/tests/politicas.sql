@@ -362,6 +362,8 @@ insert into public.examenes_finales (materia_id, periodo, llamado, nota) values
 select public.recursar_materia('30000000-0000-0000-0000-000000000002');
 select pg_temp.debe_ser('recursar deja la materia cursando sin firma',
   (select count(*) from public.materias_estudiante where materia_id = '30000000-0000-0000-0000-000000000002' and estado = 'cursando' and promedio_firma is null and respaldo_recursada is not null), 1);
+select pg_temp.debe_fallar('no se recursa dos veces seguidas',
+  $$select public.recursar_materia('30000000-0000-0000-0000-000000000002')$$);
 select pg_temp.debe_ser('recursar borra parciales y conserva el laboratorio',
   (select count(*) from public.evaluaciones where materia_id = '30000000-0000-0000-0000-000000000002'), 1);
 select pg_temp.debe_ser('recursar borra la asistencia de teoría',
@@ -374,6 +376,11 @@ select pg_temp.debe_fallar('Beto no deshace la recursada de Ana',
   $$select public.deshacer_recursada('30000000-0000-0000-0000-000000000002')$$);
 reset role;
 select pg_temp.como('00000000-0000-0000-0000-00000000000a');
+-- Con un parcial nuevo cargado no se deshace (no se borra nada).
+insert into public.evaluaciones (materia_id, nombre, ponderacion, porcentaje) values ('30000000-0000-0000-0000-000000000002', 'Nuevo 1P', 1, 90);
+select pg_temp.debe_fallar('no se deshace con datos nuevos',
+  $$select public.deshacer_recursada('30000000-0000-0000-0000-000000000002')$$);
+delete from public.evaluaciones where nombre = 'Nuevo 1P';
 select public.deshacer_recursada('30000000-0000-0000-0000-000000000002');
 select pg_temp.debe_ser('deshacer vuelve a firmada con su firma',
   (select count(*) from public.materias_estudiante where materia_id = '30000000-0000-0000-0000-000000000002' and estado = 'firmada' and promedio_firma = 65 and respaldo_recursada is null), 1);

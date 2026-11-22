@@ -5,7 +5,10 @@
 -- y qué finales eran de esa cursada). Después borra lo de teoría (Art. 45:
 -- el laboratorio se conserva), marca esos finales como de una cursada
 -- anterior y deja la materia en "cursando". deshacer_recursada lo devuelve
--- todo como estaba. Las dos corren con los permisos de quien las llama
+-- todo como estaba, pero solo mientras no se haya cargado nada nuevo de la
+-- cursada (parciales, asistencia de teoría o finales): así deshacer nunca
+-- borra datos. Cualquier cambio de estado a mano descarta el respaldo
+-- (lo hace la app). Las dos corren con los permisos de quien las llama
 -- (security invoker), así que RLS sigue mandando: cada uno solo toca lo suyo.
 alter table public.materias_estudiante
   add column if not exists respaldo_recursada jsonb;
@@ -22,6 +25,10 @@ begin
   end if;
   select * into me from public.materias_estudiante
    where usuario_id = u and materia_id = p_materia for update;
+  -- Recursar dos veces seguidas pisaría el respaldo de la primera.
+  if me.estado = 'cursando' and me.respaldo_recursada is not null then
+    raise exception 'Ya marcaste que volvés a cursar esta materia';
+  end if;
 
   respaldo := jsonb_build_object(
     'estado', coalesce(me.estado::text, 'pendiente'),
@@ -64,16 +71,19 @@ begin
     raise exception 'No hay nada para deshacer en esta materia';
   end if;
 
-  -- Lo de teoría cargado después de recursar se reemplaza por lo de antes.
-  delete from public.evaluaciones where usuario_id = u and materia_id = p_materia and componente = 'teoria';
-  delete from public.asistencias where usuario_id = u and materia_id = p_materia and componente = 'teoria';
+  -- Deshacer nunca borra: si ya cargó algo de la nueva cursada, no se puede.
+  if exists (select 1 from public.evaluaciones where usuario_id = u and materia_id = p_materia and componente = 'teoria')
+     or exists (select 1 from public.asistencias where usuario_id = u and materia_id = p_materia and componente = 'teoria')
+     or exists (select 1 from public.examenes_finales where usuario_id = u and materia_id = p_materia and not cursada_anterior) then
+    raise exception 'Ya cargaste parciales, asistencia o finales de la nueva cursada: no se puede deshacer';
+  end if;
   insert into public.evaluaciones
     select * from jsonb_populate_recordset(null::public.evaluaciones, r->'evaluaciones') e
-     where e.usuario_id = u and e.materia_id = p_materia;
+     where e.usuario_id = u and e.materia_id = p_materia and e.componente = 'teoria';
   if jsonb_typeof(r->'asistencia') = 'object' then
     insert into public.asistencias
       select * from jsonb_populate_record(null::public.asistencias, r->'asistencia') a
-       where a.usuario_id = u and a.materia_id = p_materia;
+       where a.usuario_id = u and a.materia_id = p_materia and a.componente = 'teoria';
   end if;
   update public.examenes_finales set cursada_anterior = false
    where usuario_id = u and materia_id = p_materia

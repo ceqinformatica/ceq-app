@@ -324,7 +324,7 @@ export function TarjetaFinales({ materiaId, firma: firmaGuardadaEnMateria, aprob
               : 'Pasaron dos periodos sin aprobar y tu firma venció: tenés que volver a cursar la materia.'}
           />
           {confirmarRecursar && (
-            <Text style={[s.filaDetalle, { marginBottom: espacio.s }]}>Se borran tus parciales y tu firma; el laboratorio se conserva y tus finales quedan en el historial. Si te equivocaste, después lo podés deshacer.</Text>
+            <Text style={[s.filaDetalle, { marginBottom: espacio.s }]}>Se borran tus parciales y tu firma; el laboratorio se conserva y tus finales quedan en el historial. Si te equivocás, lo podés deshacer desde la materia mientras no cargues nada nuevo.</Text>
           )}
           <Boton texto={confirmarRecursar ? 'Sí, volver a cursar' : 'Volver a cursar la materia'} icono="refresh" variante={confirmarRecursar ? 'peligro' : 'primario'} onPress={recursar} cargando={guardando} />
           {confirmarRecursar && <Enlace texto="Cancelar" onPress={() => setConfirmarRecursar(false)} />}
