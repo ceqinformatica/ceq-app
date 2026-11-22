@@ -1,0 +1,609 @@
+{
+ "carrera": "QI",
+ "plan": "Plan 2018",
+ "anio": 2018,
+ "fuente": "Res. CSU N.º 0424-00-2024 (modifica el Proyecto Académico 2018), malla con correlatividades (págs. 7-9)",
+ "url": "https://www.qui.una.py/v3/wp-content/uploads/2026/07/2018_Modificacion-del-Proyecto-Academico-2018-Carrera-de-Quimica-Industrial-FCQ-UNA.pdf",
+ "verificacion": "leído visualmente del PDF escaneado; horas semanales por nivel verificadas contra el total del nivel",
+ "columnas": [
+  "nivel",
+  "asignatura",
+  "T+RP",
+  "-",
+  "Lab",
+  "creditos",
+  "prerrequisitos"
+ ],
+ "materias": [
+  [
+   1,
+   "Química General",
+   4,
+   0,
+   3,
+   null,
+   []
+  ],
+  [
+   1,
+   "Física I",
+   6,
+   0,
+   0,
+   null,
+   []
+  ],
+  [
+   1,
+   "Geometría Analítica y Cálculo",
+   6,
+   0,
+   0,
+   null,
+   []
+  ],
+  [
+   1,
+   "Seminario I",
+   1,
+   0,
+   0,
+   null,
+   []
+  ],
+  [
+   2,
+   "Química Inorgánica",
+   3,
+   0,
+   4,
+   null,
+   [
+    "Química General"
+   ]
+  ],
+  [
+   2,
+   "Física II",
+   3,
+   0,
+   2,
+   null,
+   [
+    "Física I"
+   ]
+  ],
+  [
+   2,
+   "Cálculo Diferencial e Integral",
+   6,
+   0,
+   0,
+   null,
+   [
+    "Geometría Analítica y Cálculo"
+   ]
+  ],
+  [
+   2,
+   "Biología General",
+   2,
+   0,
+   3,
+   null,
+   []
+  ],
+  [
+   2,
+   "Seminario II",
+   1,
+   0,
+   0,
+   null,
+   [
+    "Seminario I"
+   ]
+  ],
+  [
+   3,
+   "Química Orgánica I",
+   4,
+   0,
+   4,
+   null,
+   [
+    "Química Inorgánica"
+   ]
+  ],
+  [
+   3,
+   "Química Analítica I",
+   3,
+   0,
+   4,
+   null,
+   [
+    "Química Inorgánica"
+   ]
+  ],
+  [
+   3,
+   "Microbiología General",
+   3,
+   0,
+   3,
+   null,
+   [
+    "Biología General"
+   ]
+  ],
+  [
+   3,
+   "Estadística I",
+   4,
+   0,
+   0,
+   null,
+   []
+  ],
+  [
+   4,
+   "Química Orgánica II",
+   4,
+   0,
+   4,
+   null,
+   [
+    "Química Orgánica I"
+   ]
+  ],
+  [
+   4,
+   "Química Analítica II",
+   3,
+   0,
+   4,
+   null,
+   [
+    "Química Analítica I"
+   ]
+  ],
+  [
+   4,
+   "Estadística II",
+   4,
+   0,
+   0,
+   null,
+   [
+    "Estadística I"
+   ]
+  ],
+  [
+   4,
+   "Recursos Naturales",
+   2,
+   0,
+   0,
+   null,
+   [
+    "Biología General",
+    "Química Inorgánica"
+   ]
+  ],
+  [
+   5,
+   "Química Analítica III",
+   3,
+   0,
+   3,
+   null,
+   [
+    "Química Analítica II",
+    "Física II",
+    "Química Orgánica I"
+   ]
+  ],
+  [
+   5,
+   "Fisicoquímica Aplicada",
+   6,
+   0,
+   4,
+   null,
+   [
+    "Cálculo Diferencial e Integral",
+    "Física II",
+    "Química Analítica II",
+    "Química Orgánica I"
+   ]
+  ],
+  [
+   5,
+   "Análisis Microbiológico Industrial",
+   3,
+   0,
+   3,
+   null,
+   [
+    "Microbiología General",
+    "Química Orgánica I"
+   ]
+  ],
+  [
+   5,
+   "Administración Industrial",
+   3,
+   0,
+   0,
+   null,
+   [
+    "Estadística II"
+   ]
+  ],
+  [
+   5,
+   "Evaluación de la Conformidad",
+   4,
+   0,
+   0,
+   null,
+   [
+    "Estadística II"
+   ]
+  ],
+  [
+   6,
+   "Análisis Industrial Inorgánico",
+   2,
+   0,
+   4,
+   null,
+   [
+    "Química Analítica III",
+    "Estadística II"
+   ]
+  ],
+  [
+   6,
+   "Química de Alimentos",
+   2,
+   0,
+   3,
+   null,
+   [
+    "Química Orgánica II",
+    "Fisicoquímica Aplicada"
+   ]
+  ],
+  [
+   6,
+   "Química Industrial",
+   3,
+   0,
+   3,
+   null,
+   [
+    "Química Orgánica II",
+    "Fisicoquímica Aplicada"
+   ]
+  ],
+  [
+   6,
+   "Química Ambiental",
+   2,
+   0,
+   3,
+   null,
+   [
+    "Química Orgánica II",
+    "Química Analítica III"
+   ]
+  ],
+  [
+   6,
+   "Gestión y Control de Procesos",
+   4,
+   0,
+   0,
+   null,
+   [
+    "Estadística II",
+    "Análisis Microbiológico Industrial"
+   ]
+  ],
+  [
+   7,
+   "Análisis Industrial Orgánico",
+   2,
+   0,
+   3,
+   null,
+   [
+    "Química Analítica III",
+    "Química Orgánica II"
+   ]
+  ],
+  [
+   7,
+   "Análisis de Alimentos",
+   2,
+   0,
+   4,
+   null,
+   [
+    "Química Analítica III",
+    "Química de Alimentos",
+    "Estadística II",
+    "Análisis Microbiológico Industrial"
+   ]
+  ],
+  [
+   7,
+   "Control Ambiental en Procesos",
+   2,
+   0,
+   3,
+   null,
+   [
+    "Química Ambiental",
+    "Química Industrial"
+   ]
+  ],
+  [
+   7,
+   "Seguridad y Salud Ocupacional",
+   3,
+   0,
+   0,
+   null,
+   [
+    "Química Industrial",
+    "Análisis Industrial Inorgánico"
+   ]
+  ],
+  [
+   7,
+   "Legislación Industrial y del Trabajo",
+   2,
+   0,
+   0,
+   null,
+   [
+    "Seminario II"
+   ]
+  ],
+  [
+   7,
+   "Metodología de la Investigación Científica",
+   4,
+   0,
+   0,
+   null,
+   [
+    "Estadística II"
+   ]
+  ],
+  [
+   8,
+   "Química de Suelos y Agroquímicos",
+   2,
+   0,
+   3,
+   null,
+   [
+    "Química Analítica III",
+    "Análisis Industrial Inorgánico"
+   ]
+  ],
+  [
+   8,
+   "Gestión de Calidad",
+   4,
+   0,
+   0,
+   null,
+   [
+    "Estadística II",
+    "Gestión y Control de Procesos"
+   ]
+  ],
+  [
+   8,
+   "Gestión y Manejo de Residuos Industriales",
+   3,
+   0,
+   0,
+   null,
+   [
+    "Química Ambiental"
+   ]
+  ],
+  [
+   8,
+   "Metrología",
+   2,
+   0,
+   2,
+   null,
+   [
+    "Química Analítica III",
+    "Química Industrial"
+   ]
+  ],
+  [
+   8,
+   "Técnicas Analíticas Nucleares",
+   2,
+   0,
+   2,
+   null,
+   [
+    "Análisis Industrial Inorgánico",
+    "Análisis Industrial Orgánico"
+   ]
+  ],
+  [
+   8,
+   "Diseño y Proyecto de Laboratorio",
+   2,
+   0,
+   2,
+   null,
+   [
+    "Metodología de la Investigación Científica",
+    "Química Industrial",
+    "Control Ambiental en Procesos"
+   ]
+  ],
+  [
+   9,
+   "Trabajo de Grado",
+   0,
+   0,
+   0,
+   null,
+   [
+    "*nivel 8"
+   ],
+   "4 h semanales; 260 h semestrales en total (incluye 200 h de elaboración del proyecto)"
+  ],
+  [
+   9,
+   "Pasantía",
+   0,
+   0,
+   0,
+   null,
+   [
+    "*nivel 8"
+   ],
+   "2 h semanales; 430 h semestrales en total (incluye 400 h de pasantía supervisada)"
+  ]
+ ],
+ "optativas": {
+  "grupos": [
+   {
+    "nombre": "Optativa I",
+    "cantidad_exigida": 1,
+    "niveles": [
+     4
+    ],
+    "materias": [
+     "Inglés Técnico",
+     "Herramientas Informáticas",
+     "Guaraní"
+    ]
+   },
+   {
+    "nombre": "Optativa II",
+    "cantidad_exigida": 1,
+    "niveles": [
+     7
+    ],
+    "materias": [
+     "Química Analítica Aplicada al Peritaje",
+     "Herramientas Gerenciales"
+    ]
+   },
+   {
+    "nombre": "Optativa III",
+    "cantidad_exigida": 1,
+    "niveles": [
+     8
+    ],
+    "materias": [
+     "Auditoría Ambiental",
+     "Evaluación de Riesgos"
+    ]
+   }
+  ],
+  "columnas": [
+   "semestre_oferta",
+   "asignatura",
+   "T",
+   "-",
+   "Lab",
+   "creditos",
+   "prerrequisitos"
+  ],
+  "materias": [
+   [
+    2,
+    "Inglés Técnico",
+    2,
+    0,
+    0,
+    null,
+    []
+   ],
+   [
+    2,
+    "Herramientas Informáticas",
+    2,
+    0,
+    0,
+    null,
+    []
+   ],
+   [
+    2,
+    "Guaraní",
+    2,
+    0,
+    0,
+    null,
+    []
+   ],
+   [
+    1,
+    "Química Analítica Aplicada al Peritaje",
+    3,
+    0,
+    0,
+    null,
+    [
+     "Química Industrial",
+     "Evaluación de la Conformidad"
+    ]
+   ],
+   [
+    1,
+    "Herramientas Gerenciales",
+    3,
+    0,
+    0,
+    null,
+    [
+     "Administración Industrial"
+    ]
+   ],
+   [
+    2,
+    "Auditoría Ambiental",
+    3,
+    0,
+    0,
+    null,
+    [
+     "Química Ambiental"
+    ]
+   ],
+   [
+    2,
+    "Evaluación de Riesgos",
+    3,
+    0,
+    0,
+    null,
+    [
+     "Seguridad y Salud Ocupacional"
+    ]
+   ]
+  ]
+ },
+ "dudas": [
+  "El plan 2018 no asigna créditos.",
+  "En Física II la correlatividad dice 'Física General'; se tomó como Física I, que es la única Física previa del plan."
+ ]
+}

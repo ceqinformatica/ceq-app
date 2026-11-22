@@ -8,6 +8,7 @@ FCQ-UNA. Los ids son UUID v5 derivados de nombres (carrera, plan, materia),
 así el seed se puede volver a ejecutar sin duplicar nada (on conflict).
 """
 import json
+import re
 import pathlib
 import uuid
 
@@ -45,6 +46,10 @@ def uid(*partes):
     return str(uuid.uuid5(NS, "|".join(partes)))
 
 
+def num(valor):
+    return "null" if valor is None else str(valor)
+
+
 def q(texto):
     if texto is None:
         return "null"
@@ -52,7 +57,7 @@ def q(texto):
 
 
 def main():
-    planes = sorted(AQUI.glob("*-20*.json"))
+    planes = sorted(p for p in AQUI.glob("*-20*.json") if not p.name.startswith("calendario"))
     out = [
         "-- =============================================================",
         "-- Catálogo académico de la FCQ-UNA (carreras, planes, materias,",
@@ -89,12 +94,11 @@ def main():
             nivel, nombre, t, rp, p, cred, pre = m[:7]
             extra = m[7] if len(m) > 7 else None
             horas = (t + rp + p) * 15
-            if extra and "h semestrales" in extra:
-                # "2 h semanales + 400 h semestrales"
-                try:
-                    horas += int(extra.split("+")[1].strip().split(" ")[0])
-                except (IndexError, ValueError):
-                    pass
+            if extra:
+                # "2 h semanales + 400 h semestrales" o "400 h semestrales"
+                hallado = re.search(r"(\d+) h semestrales", extra)
+                if hallado:
+                    horas += int(hallado.group(1))
             orden += 1
             mid = uid("materia", sigla, plan, nombre)
             ids[nombre] = (mid, nivel, False)
@@ -129,7 +133,7 @@ def main():
         for mid, nombre, nivel, horas, cred, lab, gid, ordn in filas:
             out.append(
                 "insert into public.materias (id, plan_id, nombre, semestre, horas, creditos, tiene_laboratorio, grupo_optativa_id, orden) values "
-                f"({q(mid)}, {q(pid)}, {q(nombre)}, {nivel}, {horas}, {cred}, {str(lab).lower()}, {q(gid)}, {ordn})"
+                f"({q(mid)}, {q(pid)}, {q(nombre)}, {nivel}, {horas}, {num(cred)}, {str(lab).lower()}, {q(gid)}, {ordn})"
                 " on conflict (id) do update set nombre = excluded.nombre, semestre = excluded.semestre, horas = excluded.horas,"
                 " creditos = excluded.creditos, tiene_laboratorio = excluded.tiene_laboratorio, grupo_optativa_id = excluded.grupo_optativa_id, orden = excluded.orden;"
             )
