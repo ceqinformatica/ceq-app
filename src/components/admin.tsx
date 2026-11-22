@@ -8,8 +8,9 @@ import { Image, Text, View } from 'react-native';
 import { alcance } from '../datos/admin';
 import { atajos, describirCuando, leerFechaHora, partesDe, type Resultado } from '../lib/programacion';
 import type { Carrera } from '../lib/tipos-db';
+import { CampoFechaHora, hoy } from './fecha';
 import { colores, espacio, fuentes, radio } from '../tema';
-import { Campo, Chip, logoCeq, s, Segmentado } from './ui';
+import { Chip, logoCeq, s, Segmentado } from './ui';
 
 export interface Cuando {
   modo: 'ahora' | 'programar';
@@ -49,8 +50,8 @@ export function SelectorCuando({ valor, onCambio, textoAhora = 'Ahora' }: { valo
             })}
           </View>
           <View style={{ flexDirection: 'row', gap: espacio.m }}>
-            <Campo etiqueta="Fecha" placeholder="25/11/2026" value={valor.fecha} onChangeText={(fecha) => onCambio({ ...valor, fecha })} keyboardType="numbers-and-punctuation" estilo={{ flex: 3 }} />
-            <Campo etiqueta="Hora" placeholder="18:00" value={valor.hora} onChangeText={(hora) => onCambio({ ...valor, hora })} keyboardType="numbers-and-punctuation" estilo={{ flex: 2 }} />
+            <CampoFechaHora etiqueta="Fecha" modo="date" valor={valor.fecha} onCambio={(fecha) => onCambio({ ...valor, fecha })} minimo={hoy()} estilo={{ flex: 3 }} />
+            <CampoFechaHora etiqueta="Hora" modo="time" valor={valor.hora} onCambio={(hora) => onCambio({ ...valor, hora })} estilo={{ flex: 2 }} />
           </View>
           {r && (
             <Text style={[s.filaDetalle, { color: 'fecha' in r ? colores.verde : colores.rojo, marginTop: -espacio.s }]}>

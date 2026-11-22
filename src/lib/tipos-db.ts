@@ -141,6 +141,7 @@ export type Database = {
       renovar_codigo_carnet: { Args: { p_socio: string }; Returns: string };
       poner_foto_carnet: { Args: { p_socio: string; p_path: string | null }; Returns: undefined };
       buscar_estudiantes: { Args: { p_texto: string }; Returns: EstudianteEncontrado[] };
+      eliminar_mi_cuenta: { Args: Record<string, never>; Returns: undefined };
     };
     Enums: {
       rol_usuario: RolUsuario;

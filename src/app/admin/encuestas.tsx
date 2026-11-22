@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Switch, Text, View } from 'react-native';
+import { CampoFechaHora, hoy } from '../../components/fecha';
 import { BarraProgreso } from '../../components/graficos';
 import { BarraSuperior, Boton, BotonFlotante, BotonIcono, Campo, Cargando, EstadoVacio, Fila, Hoja, Insignia, Mensaje, Pantalla, s, Tarjeta } from '../../components/ui';
 import { borrarEncuesta, cambiarEncuesta, cargarEncuestasAdmin, crearEncuesta, programarNotificacion, type EncuestaAdmin } from '../../datos/admin';
@@ -154,7 +155,7 @@ function Formulario({ visible, onCerrar, onListo }: { visible: boolean; onCerrar
         </View>
       ))}
       {opciones.length < 6 && <Boton texto="Agregar opción" variante="fantasma" compacto icono="add" onPress={() => setOpciones([...opciones, ''])} />}
-      <Campo etiqueta="Cierra el (opcional)" value={cierreFecha} onChangeText={setCierreFecha} placeholder="DD/MM/AAAA" keyboardType="numbers-and-punctuation" ayuda="Se cierra sola a las 23:59 de ese día. Vacío: queda abierta hasta que la cierres." estilo={{ marginTop: espacio.m }} />
+      <CampoFechaHora etiqueta="Cierra el (opcional)" modo="date" valor={cierreFecha} onCambio={setCierreFecha} opcional minimo={hoy()} ayuda="Se cierra sola a las 23:59 de ese día. Vacío: queda abierta hasta que la cierres." estilo={{ marginTop: espacio.m }} />
       <Tarjeta estilo={{ paddingVertical: espacio.xs }}>
         <Fila
           icono="notifications-outline"
