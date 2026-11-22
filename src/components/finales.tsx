@@ -9,7 +9,8 @@
  *
  * Un llamado usado para la regularización (Art. 40–41) no lleva nota y no
  * cuenta para los promedios. Con tres aplazos en la cursada actual hay que
- * volver a cursar (Art. 62): la tarjeta lo avisa y deja recursar, que
+ * volver a cursar (Art. 62): recién ahí la tarjeta ofrece recursar (se
+ * puede deshacer desde la materia), que
  * conserva el laboratorio (Art. 45).
  */
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -78,6 +79,7 @@ export function TarjetaFinales({ materiaId, firma: firmaGuardadaEnMateria, aprob
   const [firmaTxt, setFirmaTxt] = useState('');
   const [guardando, setGuardando] = useState(false);
   const [confirmarRecursar, setConfirmarRecursar] = useState(false);
+  const [eligiendoPeriodo, setEligiendoPeriodo] = useState(false);
   const [msg, setMsg] = useState<{ texto: string; tipo: 'error' | 'exito' } | null>(null);
 
   useEffect(() => {
@@ -91,7 +93,12 @@ export function TarjetaFinales({ materiaId, firma: firmaGuardadaEnMateria, aprob
     const lista = new Set([...recientes, ...(finales ?? []).map((f) => f.periodo).filter((p): p is string => !!p)]);
     return [...lista].sort().reverse();
   }, [finales]);
-  const iPeriodo = periodos.indexOf(periodo);
+  // Resumen de lo cargado en cada periodo, para la lista de periodos.
+  const resumen = (p: string) => {
+    const delPeriodo = (finales ?? []).filter((f) => f.periodo === p && f.llamado != null).sort((a, b) => (a.llamado ?? 0) - (b.llamado ?? 0));
+    if (!delPeriodo.length) return 'Sin finales cargados';
+    return delPeriodo.map((f) => `${f.llamado}.º: ${f.tipo === 'recuperatorio' ? 'Recu' : f.tipo === 'regularizacion' ? 'Regu' : f.nota}`).join(' · ');
+  };
 
   // Carga lo guardado del periodo elegido.
   useEffect(() => {
@@ -218,12 +225,36 @@ export function TarjetaFinales({ materiaId, firma: firmaGuardadaEnMateria, aprob
         </View>
       )}
 
-      {/* Periodo: uno a la vez, con flechas. */}
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: espacio.m }}>
-        <Flecha icono="chevron-back" etiqueta="Periodo anterior" deshabilitada={iPeriodo >= periodos.length - 1} onPress={() => setPeriodo(periodos[iPeriodo + 1])} />
-        <Text style={{ fontFamily: fuentes.semibold, fontSize: 16, color: colores.marino }}>{nombrePeriodo(periodo)}</Text>
-        <Flecha icono="chevron-forward" etiqueta="Periodo siguiente" deshabilitada={iPeriodo <= 0} onPress={() => setPeriodo(periodos[iPeriodo - 1])} />
+      {/* Periodo: el de ahora por defecto; los anteriores se eligen de una lista. */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: espacio.s }}>
+        <View style={{ flex: 1 }}>
+          <Text style={s.filaDetalle}>Finales de</Text>
+          <Text style={{ fontFamily: fuentes.semibold, fontSize: 16, color: colores.marino }}>{nombrePeriodo(periodo)}{periodo === periodoDe() ? ' (este semestre)' : ''}</Text>
+        </View>
+        <Enlace texto={eligiendoPeriodo ? 'Cerrar' : 'Otro semestre'} onPress={() => setEligiendoPeriodo(!eligiendoPeriodo)} />
       </View>
+      {eligiendoPeriodo && (
+        <View style={{ borderWidth: 1, borderColor: colores.linea, borderRadius: 12, marginBottom: espacio.m }}>
+          {periodos.map((p, i) => (
+            <Pressable
+              key={p}
+              accessibilityRole="radio"
+              accessibilityState={{ checked: p === periodo }}
+              onPress={() => {
+                setPeriodo(p);
+                setEligiendoPeriodo(false);
+              }}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: espacio.s, padding: espacio.m, borderTopWidth: i === 0 ? 0 : 1, borderTopColor: colores.linea, backgroundColor: p === periodo ? colores.grisFondo : 'transparent' }}
+            >
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontFamily: p === periodo ? fuentes.semibold : fuentes.regular, fontSize: 15, color: colores.texto }}>{nombrePeriodo(p)}</Text>
+                <Text style={s.filaDetalle}>{resumen(p)}</Text>
+              </View>
+              {p === periodo && <Ionicons name="checkmark" size={20} color={colores.marino} />}
+            </Pressable>
+          ))}
+        </View>
+      )}
 
       {filas.map((f, i) => (
         <View key={f.llamado} style={{ paddingVertical: espacio.m, borderTopWidth: i === 0 ? 0 : 1, borderTopColor: colores.linea }}>
@@ -283,44 +314,23 @@ export function TarjetaFinales({ materiaId, firma: firmaGuardadaEnMateria, aprob
         </Text>
       )}
 
-      {/* Volver a cursar: con 3 aplazos, o si se venció la firma. */}
-      {!aprobada && (cursada.debeRecursar || vencida ? (
+      {/* Volver a cursar: solo cuando ya usó sus oportunidades (3 aplazos) o se venció la firma. */}
+      {!aprobada && (cursada.debeRecursar || vencida) && (
         <View style={{ marginTop: espacio.m }}>
           <Mensaje
             tipo="error"
             texto={cursada.debeRecursar
-              ? `Tenés ${cursada.aplazos} aplazos: tenés que volver a cursar la materia. Tu laboratorio se conserva.`
-              : 'Tu firma vence después de dos periodos sin aprobar: tenés que volver a cursar la materia. Tu laboratorio se conserva.'}
+              ? `Usaste tus ${cursada.aplazos} oportunidades sin aprobar: tenés que volver a cursar la materia.`
+              : 'Pasaron dos periodos sin aprobar y tu firma venció: tenés que volver a cursar la materia.'}
           />
-          <Boton texto={confirmarRecursar ? 'Sí, volver a cursar' : 'Volver a cursar'} icono="refresh" variante={confirmarRecursar ? 'peligro' : 'secundario'} onPress={recursar} cargando={guardando} />
+          {confirmarRecursar && (
+            <Text style={[s.filaDetalle, { marginBottom: espacio.s }]}>Se borran tus parciales y tu firma; el laboratorio se conserva y tus finales quedan en el historial. Si te equivocaste, después lo podés deshacer.</Text>
+          )}
+          <Boton texto={confirmarRecursar ? 'Sí, volver a cursar' : 'Volver a cursar la materia'} icono="refresh" variante={confirmarRecursar ? 'peligro' : 'primario'} onPress={recursar} cargando={guardando} />
           {confirmarRecursar && <Enlace texto="Cancelar" onPress={() => setConfirmarRecursar(false)} />}
         </View>
-      ) : confirmarRecursar ? (
-        <View style={{ marginTop: espacio.m }}>
-          <Mensaje tipo="info" texto="Se borran tus parciales y tu firma; el laboratorio se conserva. Tus finales quedan en el historial." />
-          <Boton texto="Sí, volver a cursar" icono="refresh" variante="peligro" onPress={recursar} cargando={guardando} />
-          <Enlace texto="Cancelar" onPress={() => setConfirmarRecursar(false)} />
-        </View>
-      ) : (
-        <Enlace texto="Tengo que volver a cursarla" onPress={recursar} />
-      ))}
+      )}
     </Tarjeta>
-  );
-}
-
-function Flecha({ icono, etiqueta, deshabilitada, onPress }: { icono: 'chevron-back' | 'chevron-forward'; etiqueta: string; deshabilitada: boolean; onPress: () => void }) {
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={etiqueta}
-      accessibilityState={{ disabled: deshabilitada }}
-      disabled={deshabilitada}
-      onPress={onPress}
-      hitSlop={8}
-      style={{ width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: colores.grisFondo, opacity: deshabilitada ? 0.35 : 1 }}
-    >
-      <Ionicons name={icono} size={20} color={colores.marino} />
-    </Pressable>
   );
 }
 

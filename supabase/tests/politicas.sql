@@ -346,6 +346,49 @@ select pg_temp.debe_ser('Ana no edita trámites', pg_temp.filas($q$update public
 select pg_temp.debe_ser('Ana no borra trámites', pg_temp.filas($q$delete from public.tramites$q$), 0);
 reset role;
 
+-- Volver a cursar y deshacer ----------------------------------------
+select pg_temp.como('00000000-0000-0000-0000-00000000000a');
+delete from public.examenes_finales;
+delete from public.evaluaciones where materia_id = '30000000-0000-0000-0000-000000000002';
+delete from public.asistencias where materia_id = '30000000-0000-0000-0000-000000000002';
+insert into public.materias_estudiante (materia_id, estado, promedio_firma)
+  values ('30000000-0000-0000-0000-000000000002', 'firmada', 65)
+  on conflict (usuario_id, materia_id) do update set estado = 'firmada', promedio_firma = 65, nota_final = null, nota_desde_final = false;
+insert into public.evaluaciones (materia_id, nombre, ponderacion, porcentaje) values ('30000000-0000-0000-0000-000000000002', '1P', 1, 55), ('30000000-0000-0000-0000-000000000002', '2P', 1, 60);
+insert into public.evaluaciones (materia_id, nombre, componente, ponderacion, porcentaje) values ('30000000-0000-0000-0000-000000000002', 'Lab', 'laboratorio', 1, 80);
+insert into public.asistencias (materia_id, componente, clases_dictadas, clases_asistidas) values ('30000000-0000-0000-0000-000000000002', 'teoria', 20, 18);
+insert into public.examenes_finales (materia_id, periodo, llamado, nota) values
+  ('30000000-0000-0000-0000-000000000002', '2026-2', 1, 1), ('30000000-0000-0000-0000-000000000002', '2026-2', 2, 1), ('30000000-0000-0000-0000-000000000002', '2026-2', 3, 1);
+select public.recursar_materia('30000000-0000-0000-0000-000000000002');
+select pg_temp.debe_ser('recursar deja la materia cursando sin firma',
+  (select count(*) from public.materias_estudiante where materia_id = '30000000-0000-0000-0000-000000000002' and estado = 'cursando' and promedio_firma is null and respaldo_recursada is not null), 1);
+select pg_temp.debe_ser('recursar borra parciales y conserva el laboratorio',
+  (select count(*) from public.evaluaciones where materia_id = '30000000-0000-0000-0000-000000000002'), 1);
+select pg_temp.debe_ser('recursar borra la asistencia de teoría',
+  (select count(*) from public.asistencias where materia_id = '30000000-0000-0000-0000-000000000002'), 0);
+select pg_temp.debe_ser('recursar deja los finales en la cursada anterior',
+  (select count(*) from public.examenes_finales where materia_id = '30000000-0000-0000-0000-000000000002' and cursada_anterior), 3);
+reset role;
+select pg_temp.como('00000000-0000-0000-0000-00000000000b');
+select pg_temp.debe_fallar('Beto no deshace la recursada de Ana',
+  $$select public.deshacer_recursada('30000000-0000-0000-0000-000000000002')$$);
+reset role;
+select pg_temp.como('00000000-0000-0000-0000-00000000000a');
+select public.deshacer_recursada('30000000-0000-0000-0000-000000000002');
+select pg_temp.debe_ser('deshacer vuelve a firmada con su firma',
+  (select count(*) from public.materias_estudiante where materia_id = '30000000-0000-0000-0000-000000000002' and estado = 'firmada' and promedio_firma = 65 and respaldo_recursada is null), 1);
+select pg_temp.debe_ser('deshacer devuelve los parciales',
+  (select count(*) from public.evaluaciones where materia_id = '30000000-0000-0000-0000-000000000002'), 3);
+select pg_temp.debe_ser('deshacer devuelve la asistencia',
+  (select count(*) from public.asistencias where materia_id = '30000000-0000-0000-0000-000000000002' and clases_asistidas = 18), 1);
+select pg_temp.debe_ser('deshacer devuelve los finales a la cursada',
+  (select count(*) from public.examenes_finales where materia_id = '30000000-0000-0000-0000-000000000002' and not cursada_anterior), 3);
+select pg_temp.debe_fallar('no se deshace dos veces',
+  $$select public.deshacer_recursada('30000000-0000-0000-0000-000000000002')$$);
+reset role;
+select pg_temp.debe_fallar('sin sesión no se recursa',
+  $$set local role anon; select public.recursar_materia('30000000-0000-0000-0000-000000000002')$$);
+
 -- Todas las tablas públicas tienen RLS ------------------------------
 select pg_temp.debe_ser('tablas sin RLS',
   (select count(*) from pg_class c join pg_namespace n on n.oid = c.relnamespace

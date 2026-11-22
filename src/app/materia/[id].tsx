@@ -7,7 +7,7 @@ import { TarjetaFinales } from '../../components/finales';
 import { esSeminario } from '../../lib/finales';
 import { BarraSuperior, Boton, Campo, Cargando, EstadoVacio, Fila, Insignia, Mensaje, Pantalla, s, Seccion, Tarjeta } from '../../components/ui';
 import { useSesion } from '../../context/SesionProvider';
-import { cargarMalla, guardarEstadoMateria } from '../../datos/academico';
+import { cargarMalla, deshacerRecursada, guardarEstadoMateria } from '../../datos/academico';
 import { usarDatos } from '../../datos/usarDatos';
 import { cumpleRequisito, requisitosFaltantes, seDesbloquean, type EstadoMateria } from '../../lib/progreso';
 import { colores, coloresEstado, espacio, fuentes, texto } from '../../tema';
@@ -122,6 +122,33 @@ export default function DetalleMateria() {
         <Boton texto={estado === 'firmada' ? 'Ver mi firma' : 'Calcular mi firma'} variante="secundario" icono="calculator-outline" onPress={() => router.push(`/firma/${materia.id}`)} />
       )}
       {msg && <Mensaje texto={msg.texto} tipo={msg.tipo} />}
+      {actual?.puedeDeshacerRecursada && estado === 'cursando' && (
+        <Tarjeta estilo={{ marginTop: espacio.m }}>
+          <Text style={s.cuerpo}>Marcaste que volvés a cursar esta materia.</Text>
+          <Text style={[s.filaDetalle, { marginTop: 4 }]}>¿Fue un error? Podés deshacerlo: vuelven tu firma, tus parciales y tus finales como estaban.</Text>
+          <Boton
+            texto="Deshacer"
+            icono="arrow-undo"
+            variante="secundario"
+            compacto
+            cargando={guardando}
+            estilo={{ marginTop: espacio.s, alignSelf: 'flex-start' }}
+            onPress={async () => {
+              setGuardando(true);
+              setMsg(null);
+              try {
+                await deshacerRecursada(materia.id);
+                recargar();
+                setMsg({ tipo: 'exito', texto: 'Listo, la materia volvió a como estaba.' });
+              } catch (e) {
+                setMsg({ tipo: 'error', texto: e instanceof Error ? e.message : 'No se pudo deshacer.' });
+              } finally {
+                setGuardando(false);
+              }
+            }}
+          />
+        </Tarjeta>
+      )}
 
       {(actual?.estado === 'firmada' || actual?.estado === 'aprobada') && !seminario && (
         <>
