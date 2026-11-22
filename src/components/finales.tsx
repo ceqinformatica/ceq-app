@@ -1,7 +1,8 @@
 /**
  * Tarjeta de finales de una materia: los tres llamados de un periodo.
  *
- * Cada llamado se marca como "No rendí", "Final" o "Regularización".
+ * Cada llamado se marca como "No rendí", "Final", "Recu" (recuperatorio,
+ * solo 1.er llamado) o "Regu" (regularización, 1.º o 2.º llamado).
  * Con el promedio de firma guardado, en un final se carga el porcentaje
  * del examen y la nota sale sola (0,4 × firma + 0,6 × final, Art. 57); sin
  * firma, o si lo prefiere, se carga la nota directo.
@@ -98,7 +99,9 @@ export function TarjetaFinales({ materiaId, firma: firmaGuardadaEnMateria, aprob
     for (const f of finales.filter((x) => x.periodo === periodo)) {
       if (f.llamado == null) continue;
       if (f.tipo === 'regularizacion' || f.tipo === 'recuperatorio') {
-        t[f.llamado] = f.tipo === 'recuperatorio' ? 'recu' : 'regu';
+        const tipo: Tipo = f.tipo === 'recuperatorio' ? 'recu' : 'regu';
+        // Si quedó en un llamado donde no se permite, se muestra como "No rendí".
+        if (TIPOS_DEL_LLAMADO[f.llamado as 1 | 2 | 3]?.includes(tipo)) t[f.llamado] = tipo;
         continue;
       }
       t[f.llamado] = 'final';
@@ -169,6 +172,7 @@ export function TarjetaFinales({ materiaId, firma: firmaGuardadaEnMateria, aprob
     setMsg(null);
     try {
       await recursarMateria(materiaId);
+      setFirmaNueva(null);
       onGuardado(null);
     } catch (e) {
       setMsg({ tipo: 'error', texto: e instanceof Error ? e.message : 'No se pudo marcar para volver a cursar.' });

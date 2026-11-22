@@ -10,6 +10,10 @@ alter table public.examenes_finales
 alter table public.examenes_finales
   add constraint examenes_finales_nota_segun_tipo
   check ((tipo = 'final' and nota is not null) or (tipo <> 'final' and nota is null and porcentaje is null));
+-- La versión anterior dejaba marcar la regularización en el 3.er llamado:
+-- esas filas (sin nota) quedan sin llamado en vez de romper la regla.
+update public.examenes_finales set llamado = null
+ where tipo = 'regularizacion' and llamado = 3;
 alter table public.examenes_finales
   drop constraint if exists examenes_finales_llamado_segun_tipo;
 alter table public.examenes_finales
