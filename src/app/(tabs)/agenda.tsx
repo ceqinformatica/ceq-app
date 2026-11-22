@@ -13,7 +13,7 @@ import {
 import { guardarEstadosEnBloque } from '../../datos/academico';
 import { horarioOficialDe, PERIODO_HORARIOS_FCQ } from '../../datos/horario-oficial';
 import { usarDatos } from '../../datos/usarDatos';
-import { acomodarDia, choquesCon, horaParaBase, minutos, OPCIONES_AVISO, rangoSemana, textoAviso, textoMinutos } from '../../lib/horario';
+import { abreviar, acomodarDia, choquesCon, horaParaBase, minutos, OPCIONES_AVISO, rangoSemana, textoAviso, textoMinutos } from '../../lib/horario';
 import type { EstadoMateriaDb, EventoDb, HorarioDb, TipoEvento } from '../../lib/tipos-db';
 import { colores, espacio, fuentes, radio, sombras } from '../../tema';
 
@@ -88,7 +88,7 @@ export default function Agenda() {
             ) : (
             <>
             <View style={{ flexDirection: 'row', gap: 6, paddingBottom: espacio.m }}>
-              {DIAS_CORTOS.slice(0, 6).map((d, i) => {
+              {DIAS_CORTOS.slice(0, datos?.horario.some((h) => h.dia_semana === 7) ? 7 : 6).map((d, i) => {
                 const n = i + 1;
                 const activo = n === dia;
                 const hoy = n === diaSemanaHoy();
@@ -183,7 +183,12 @@ export default function Agenda() {
               ...(claseElegida.aula ? [['location-outline', claseElegida.aula] as [string, string]] : []),
               ['notifications-outline', claseElegida.aviso_minutos != null ? `Te avisamos ${textoAviso(claseElegida.aviso_minutos)}` : 'Sin aviso antes de la clase'],
             ]}
-            accion={{ texto: 'Editar clase', icono: 'create-outline', onPress: () => { setEditando(claseElegida); setClaseElegida(null); } }}
+            accion={{ texto: 'Editar clase', icono: 'create-outline', onPress: () => {
+              const c = claseElegida;
+              setClaseElegida(null);
+              // Abrir la otra hoja cuando esta ya se cerró (en iOS dos Modal juntos fallan).
+              setTimeout(() => setEditando(c), 350);
+            } }}
             onBorrar={async () => { await borrarClase(claseElegida.id); setClaseElegida(null); recargar(); }}
             textoBorrar="Quitar del horario"
           />
@@ -373,7 +378,7 @@ function ElegirCursando({ datos, primeraVez, onListo, onSaltar }: {
 }
 
 /** Controla el paso "¿qué estás cursando?" dentro de un formulario. */
-function usarEleccion(visible: boolean, mias: MateriaAgenda[]) {
+function usarEleccion(visible: boolean, mias: MateriaAgenda[], editando = false) {
   const [eligiendo, setEligiendo] = useState(false);
   const [saltada, setSaltada] = useState(false);
   useEffect(() => {
@@ -381,7 +386,8 @@ function usarEleccion(visible: boolean, mias: MateriaAgenda[]) {
   }, [visible]);
   const primeraVez = mias.length === 0;
   return {
-    mostrar: eligiendo || (primeraVez && !saltada),
+    // Al editar una clase no se pregunta de entrada; solo si tocás "Sumar materia".
+    mostrar: eligiendo || (!editando && primeraVez && !saltada),
     primeraVez,
     abrir: () => setEligiendo(true),
     cerrar: () => { setEligiendo(false); setSaltada(true); },
@@ -421,7 +427,7 @@ function FormClase({ visible, clase, diaInicial, datos, recordatoriosApagados, o
   const mias = clase?.materia_id && !cursando.some((m) => m.id === clase.materia_id)
     ? [...cursando, ...(datos?.materias.filter((m) => m.id === clase.materia_id) ?? [])]
     : cursando;
-  const eleccion = usarEleccion(visible && !clase, mias);
+  const eleccion = usarEleccion(visible, mias, clase != null);
 
   // Al elegir la hora de inicio, se propone que termine 2 horas después.
   const elegirInicio = (v: string) => {
@@ -547,7 +553,7 @@ function GrillaSemana({ clases, nombre, onElegir, onDia }: {
                     backgroundColor: tonoDe(c.materia_id ?? c.titulo ?? ''), opacity: pressed ? 0.8 : 1,
                   }]}
                 >
-                  <Text style={est.bloqueNombre} numberOfLines={c.aula && lineas > 2 ? lineas - 1 : lineas}>{nombre(c)}</Text>
+                  <Text style={est.bloqueNombre} numberOfLines={c.aula && lineas > 2 ? lineas - 1 : lineas}>{abreviar(nombre(c))}</Text>
                   {c.aula && lineas > 2 ? <Text style={est.bloqueAula} numberOfLines={1}>{c.aula}</Text> : null}
                 </Pressable>
               );

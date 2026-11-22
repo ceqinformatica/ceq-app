@@ -1,7 +1,7 @@
 /// <reference types="node" />
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { acomodarDia, chocan, choquesCon, horaParaBase, minutos, rangoSemana, textoAviso, textoMinutos } from '../horario.ts';
+import { abreviar, acomodarDia, chocan, choquesCon, horaParaBase, minutos, rangoSemana, textoAviso, textoMinutos } from '../horario.ts';
 
 const c = (id: string, dia: number, ini: string, fin: string) => ({ id, dia_semana: dia, hora_inicio: ini, hora_fin: fin });
 
@@ -52,4 +52,11 @@ test('textos del aviso', () => {
   assert.equal(textoAviso(15), '15 min antes');
   assert.equal(textoAviso(60), '1 hora antes');
   assert.equal(textoAviso(120), '2 horas antes');
+});
+
+test('abrevia palabras largas para la grilla', () => {
+  assert.equal(abreviar('Fisicoquímica I'), 'Fisico. I');
+  assert.equal(abreviar('Bioquímica'), 'Bioquí.');
+  assert.equal(abreviar('Química Analítica I'), 'Química Analít. I');
+  assert.equal(abreviar('Tutoría de Física'), 'Tutoría de Física');
 });

@@ -95,3 +95,15 @@ export function textoAviso(min: number | null | undefined): string {
   if (min % 60 === 0) return min === 60 ? '1 hora antes' : `${min / 60} horas antes`;
   return `${min} min antes`;
 }
+
+/**
+ * Nombre corto para los bloques angostos de la grilla: las palabras largas
+ * se recortan ("Fisicoquímica I" → "Fisico. I") para no partirlas a la mitad.
+ */
+export function abreviar(nombre: string, largo = 8): string {
+  return nombre
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((p) => (p.length > largo ? `${p.slice(0, largo - 2)}.` : p))
+    .join(' ');
+}

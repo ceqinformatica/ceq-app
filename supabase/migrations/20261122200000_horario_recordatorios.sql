@@ -52,6 +52,7 @@ begin
     update public.horario h set avisado_el = c.dia
     from candidatas c
     where h.id = c.id
+      and h.avisado_el is distinct from c.dia  -- se vuelve a mirar al bloquear la fila
       and p_ahora < c.empieza
       and p_ahora >= c.empieza - make_interval(mins => h.aviso_minutos)
     returning h.usuario_id, h.titulo, h.materia_id, h.hora_inicio, h.aula
@@ -70,7 +71,8 @@ end;
 $$;
 revoke execute on function public.encolar_recordatorios_clases(timestamptz) from public, anon, authenticated;
 
--- Cada minuto, justo antes del cartero (solo donde existe pg_cron).
+-- Cada minuto (solo donde existe pg_cron). Corre en paralelo con el cartero,
+-- así que el aviso puede salir hasta un minuto después de lo programado.
 do $$ begin
   if exists (select 1 from pg_extension where extname = 'pg_cron') then
     perform cron.schedule('ceq-recordatorios-clases', '* * * * *', 'select public.encolar_recordatorios_clases()');
