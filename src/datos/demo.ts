@@ -8,6 +8,7 @@ import type {
   AsistenciaDb, AvisoDb, Carrera, EncuestaDb, EvaluacionDb, EventoDb, ExamenFinalDb, GrupoOptativasDb, HorarioDb, MateriaDb,
   MateriaEstudianteDb, OpcionEncuestaDb, Perfil, Plan, PrerrequisitoDb, ReglaFirmaDb, SocioDb, SugerenciaDb, NotificacionDb, TramiteDb,
 } from '../lib/tipos-db';
+import { GUIA_TRAMITES_FCQ } from './guia-tramites-fcq';
 
 export const MODO_DEMO = process.env.EXPO_PUBLIC_DEMO === '1';
 export const UID_DEMO = '00000000-0000-4000-8000-000000000001';
@@ -119,11 +120,7 @@ export const db = {
     { id: 'a2', titulo: 'Venta de batas y antiparras', cuerpo: 'El CEQ tiene batas y antiparras a precio de socio. Pasá por la sede en el horario de atención.', imagen_url: null, notificar: false, publicado: true, autor_id: null, created_at: enDias(-4) },
     { id: 'a3', titulo: 'Tutorías de Fisicoquímica', cuerpo: 'Arrancan las tutorías entre pares de Fisicoquímica I. Martes y jueves a las 17:00 en el Aula 5.', imagen_url: null, notificar: false, publicado: true, autor_id: null, created_at: enDias(-8) },
   ] as AvisoDb[],
-  tramites: [
-    { id: 't1', nombre: 'Certificado de estudios', descripcion: 'Constancia de materias aprobadas con notas.', pasos: ['Pedir el formulario en Secretaría Académica', 'Pagar el arancel en caja', 'Retirar a los 5 días hábiles'], costo: 'Según arancel vigente', donde: 'Secretaría Académica', formulario_url: null, orden: 0 },
-    { id: 't2', nombre: 'Constancia de alumno regular', descripcion: 'Para becas, pasajes o trabajo.', pasos: ['Pedirla en ventanilla con tu cédula', 'Retirar al día siguiente'], costo: 'Sin costo', donde: 'Ventanilla de alumnos', formulario_url: null, orden: 1 },
-    { id: 't3', nombre: 'Asociarse al CEQ', descripcion: 'Accedé a beneficios y al carnet digital.', pasos: ['Completar la ficha de socio', 'Abonar la cuota anual', 'Tu carnet aparece en la app'], costo: 'Cuota anual', donde: 'Sede del CEQ', formulario_url: null, orden: 2 },
-  ] as TramiteDb[],
+  tramites: GUIA_TRAMITES_FCQ.map((t, i): TramiteDb => ({ ...t, id: `t${i + 1}`, orden: i * 10, publicado: true, updated_at: ahora.toISOString() })),
   sugerencias: [
     { id: 'sg1', usuario_id: 'otro', categoria: 'Infraestructura', texto: 'Faltan enchufes en la biblioteca para cargar la notebook.', estado: 'recibida', respuesta: null, created_at: enDias(-1) },
     { id: 'sg2', usuario_id: 'otro', categoria: 'Académico', texto: '¿Se pueden subir los exámenes viejos de Fisicoquímica?', estado: 'respondida', respuesta: 'Sí, los estamos juntando con los docentes.', created_at: enDias(-6) },

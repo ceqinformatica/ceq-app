@@ -1,27 +1,30 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
-import * as WebBrowser from 'expo-web-browser';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Carnet } from '../../components/Carnet';
 import { BarraProgreso } from '../../components/graficos';
 import { Boton, CabeceraMarca, Campo, Chip, EstadoVacio, Esqueleto, Fila, Hoja, Mensaje, Pantalla, s, Seccion, Tarjeta } from '../../components/ui';
 import { useSesion } from '../../context/SesionProvider';
-import { cargarAvisos, cargarEncuestas, haceCuanto, cargarSocio, cargarTramites, enviarSugerencia, votar, type EncuestaConResultados } from '../../datos/ceq';
+import { cargarAvisos, cargarEncuestas, haceCuanto, cargarSocio, enviarSugerencia, votar, type EncuestaConResultados } from '../../datos/ceq';
+import { cargarTramites } from '../../datos/tramites';
 import { usarDatos } from '../../datos/usarDatos';
-import type { TramiteDb } from '../../lib/tipos-db';
 import { colores, espacio, fuentes, radio, sombras } from '../../tema';
 
+/** Los más consultados: se muestran primero en la pestaña del CEQ. */
+const TRAMITES_DESTACADOS = ['inscripcion-finales', 'certificado-estudios', 'constancia-general', 'matriculacion'];
+
 async function cargar(uid: string) {
-  const [socio, avisos, tramites, encuestas] = await Promise.all([cargarSocio(uid), cargarAvisos(3), cargarTramites(), cargarEncuestas(uid)]);
-  return { socio, avisos, tramites, encuestas };
+  const [socio, avisos, todos, encuestas] = await Promise.all([cargarSocio(uid), cargarAvisos(3), cargarTramites(), cargarEncuestas(uid)]);
+  const destacados = TRAMITES_DESTACADOS.map((c) => todos.find((t) => t.clave === c)).filter((t) => t != null);
+  const tramites = (destacados.length ? destacados : todos).slice(0, 4);
+  return { socio, avisos, tramites, totalTramites: todos.length, encuestas };
 }
 
 export default function Ceq() {
   const { sesion, perfil } = useSesion();
   const uid = sesion?.user.id ?? '';
   const { datos, cargando, error, refrescando, recargar, setDatos } = usarDatos(() => cargar(uid), [uid]);
-  const [tramite, setTramite] = useState<TramiteDb | null>(null);
   const [sugerir, setSugerir] = useState(false);
 
   return (
@@ -63,7 +66,7 @@ export default function Ceq() {
 
       <View style={est.accesos}>
         <Acceso icono="megaphone" texto="Avisos" onPress={() => router.push('/avisos')} />
-        <Acceso icono="document-text" texto="Trámites" onPress={() => setTramite(datos?.tramites[0] ?? null)} deshabilitado={!datos?.tramites.length} />
+        <Acceso icono="document-text" texto="Trámites" onPress={() => router.push('/tramites')} />
         <Acceso icono="chatbubble-ellipses" texto="Sugerir" onPress={() => setSugerir(true)} />
         <Acceso icono="card" texto="Carnet" onPress={() => router.push('/carnet')} deshabilitado={!datos?.socio} />
       </View>
@@ -89,10 +92,10 @@ export default function Ceq() {
 
       {!!datos?.tramites.length && (
         <>
-          <Seccion>Guía de trámites</Seccion>
+          <Seccion accion={{ texto: `Ver los ${datos.totalTramites}`, onPress: () => router.push('/tramites') }}>Guía de trámites</Seccion>
           <Tarjeta estilo={{ paddingVertical: espacio.xs }}>
             {datos.tramites.map((t, i) => (
-              <Fila key={t.id} icono="document-text-outline" titulo={t.nombre} detalle={t.descripcion ?? undefined} onPress={() => setTramite(t)} ultima={i === datos.tramites.length - 1} />
+              <Fila key={t.id} icono="document-text-outline" titulo={t.nombre} detalle={t.descripcion ?? undefined} onPress={() => router.push(`/tramite/${t.id}`)} ultima={i === datos.tramites.length - 1} />
             ))}
           </Tarjeta>
         </>
@@ -109,9 +112,6 @@ export default function Ceq() {
         </View>
       </Tarjeta>
 
-      <Hoja visible={tramite != null} titulo={tramite?.nombre ?? ''} onCerrar={() => setTramite(null)}>
-        {tramite && <DetalleTramite tramite={tramite} otros={datos?.tramites ?? []} onElegir={setTramite} />}
-      </Hoja>
       <FormSugerencia visible={sugerir} onCerrar={() => setSugerir(false)} />
     </Pantalla>
   );
@@ -187,33 +187,6 @@ function Encuesta({ encuesta, onVotado }: { encuesta: EncuestaConResultados; onV
   );
 }
 
-function DetalleTramite({ tramite, otros, onElegir }: { tramite: TramiteDb; otros: TramiteDb[]; onElegir: (t: TramiteDb) => void }) {
-  return (
-    <View>
-      {otros.length > 1 && (
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: espacio.s, marginBottom: espacio.l }}>
-          {otros.map((t) => <Chip key={t.id} texto={t.nombre} elegido={t.id === tramite.id} onPress={() => onElegir(t)} />)}
-        </View>
-      )}
-      {tramite.descripcion ? <Text style={[s.cuerpo, { marginBottom: espacio.l }]}>{tramite.descripcion}</Text> : null}
-      {tramite.pasos.map((p, i) => (
-        <View key={i} style={{ flexDirection: 'row', gap: espacio.m, marginBottom: espacio.m }}>
-          <View style={est.paso}><Text style={est.pasoNumero}>{i + 1}</Text></View>
-          <Text style={[s.cuerpo, { flex: 1, paddingTop: 3 }]}>{p}</Text>
-        </View>
-      ))}
-      <Tarjeta variante="celeste" estilo={{ marginTop: espacio.s }}>
-        {tramite.donde ? <Fila icono="location-outline" fondoIcono={colores.blanco} titulo="Dónde" detalle={tramite.donde} ultima={!tramite.costo} /> : null}
-        {tramite.costo ? <Fila icono="cash-outline" fondoIcono={colores.blanco} titulo="Costo" detalle={tramite.costo} ultima /> : null}
-      </Tarjeta>
-      {tramite.formulario_url ? (
-        <Boton texto="Abrir formulario" icono="open-outline" variante="secundario" onPress={() => WebBrowser.openBrowserAsync(tramite.formulario_url!)} />
-      ) : null}
-      <View style={{ height: espacio.l }} />
-    </View>
-  );
-}
-
 const CATEGORIAS = ['Académico', 'Infraestructura', 'Eventos', 'La app', 'Otro'];
 
 function FormSugerencia({ visible, onCerrar }: { visible: boolean; onCerrar: () => void }) {
@@ -258,6 +231,4 @@ const est = StyleSheet.create({
   accesoTexto: { fontFamily: fuentes.semibold, fontSize: 12, color: colores.marino },
   avisoFecha: { fontFamily: fuentes.semibold, fontSize: 11, color: colores.azul, letterSpacing: 0.4, marginBottom: 4, textTransform: 'uppercase' },
   opcion: { flexDirection: 'row', alignItems: 'center', gap: espacio.m, borderWidth: 1, borderColor: colores.lineaSuave, borderRadius: radio.m, padding: espacio.m, marginBottom: espacio.s },
-  paso: { width: 28, height: 28, borderRadius: 14, backgroundColor: colores.marino, alignItems: 'center', justifyContent: 'center' },
-  pasoNumero: { fontFamily: fuentes.bold, fontSize: 13, color: colores.blanco },
 });
