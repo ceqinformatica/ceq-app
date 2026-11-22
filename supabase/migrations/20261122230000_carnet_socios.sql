@@ -32,7 +32,11 @@ begin
   new.ci := regexp_replace(coalesce(new.ci, ''), '[^0-9A-Za-z]', '', 'g');
   if new.ci = '' then raise exception 'Falta la cédula del socio'; end if;
   if new.numero_socio is null or btrim(new.numero_socio) = '' then
-    new.numero_socio := 'CEQ-' || lpad(nextval('public.numero_socio_seq')::text, 4, '0');
+    -- Saltea números que el admin ya cargó a mano.
+    loop
+      new.numero_socio := 'CEQ-' || lpad(nextval('public.numero_socio_seq')::text, 4, '0');
+      exit when not exists (select 1 from public.socios where upper(numero_socio) = new.numero_socio);
+    end loop;
   end if;
   return new;
 end $$;
@@ -40,6 +44,13 @@ drop trigger if exists socios_completar on public.socios;
 create trigger socios_completar before insert or update of ci, numero_socio on public.socios
   for each row execute function public.socios_completar();
 grant usage on sequence public.numero_socio_seq to authenticated;
+
+-- La tabla ahora guarda el código secreto del QR: solo el dueño y el admin
+-- leen filas. Una cuenta validadora (por ejemplo, un comercio) verifica
+-- únicamente con verificar_carnet(), sin poder bajar la lista entera.
+drop policy if exists "ver socios" on public.socios;
+create policy "ver socios" on public.socios for select to authenticated
+  using (usuario_id = (select auth.uid()) or (select public.es_admin()));
 
 -- ---------------------------------------------------------------
 -- Registro de verificaciones
@@ -73,7 +84,7 @@ begin
   if not public.es_validador() then
     raise exception 'Solo las cuentas del CEQ pueden verificar carnets';
   end if;
-  if t ilike 'CEQ1:%' then t := substr(t, 6); end if;
+  if t ilike 'CEQ1:%' then t := btrim(substr(t, 6)); end if;
   if t = '' then raise exception 'Escaneá el QR o escribí el número de socio'; end if;
 
   select * into s from public.socios where codigo_qr = lower(t);
@@ -169,8 +180,10 @@ do $$
 begin
   if to_regclass('storage.objects') is null then return; end if;
 
-  insert into storage.buckets (id, name, public) values ('carnets', 'carnets', false)
-  on conflict (id) do nothing;
+  insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+  values ('carnets', 'carnets', false, 5242880, array['image/jpeg', 'image/png'])
+  on conflict (id) do update set public = false, file_size_limit = excluded.file_size_limit,
+    allowed_mime_types = excluded.allowed_mime_types;
 
   drop policy if exists "carnets: ver" on storage.objects;
   create policy "carnets: ver" on storage.objects for select to authenticated

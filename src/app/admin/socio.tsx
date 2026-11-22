@@ -45,7 +45,11 @@ export default function EditarSocio() {
   // Búsqueda de la cuenta del estudiante, con una pausa corta al escribir.
   useEffect(() => {
     const t = busqueda.trim();
-    if (t.length < 2) return setResultados(null);
+    if (t.length < 2) {
+      setBuscando(false);
+      setResultados(null);
+      return;
+    }
     let vivo = true;
     setBuscando(true);
     const h = setTimeout(() => {

@@ -122,7 +122,11 @@ export async function subirFoto(socio: SocioDb, uri: string, tipo: string | unde
   const { error } = await supabase.storage.from('carnets').upload(path, cuerpo, { contentType: tipo ?? 'image/jpeg', upsert: false });
   lanzar(error);
   const { error: e2 } = await supabase.rpc('poner_foto_carnet', { p_socio: socio.id, p_path: path });
-  lanzar(e2);
+  if (e2) {
+    // que no quede una foto suelta en el bucket
+    await supabase.storage.from('carnets').remove([path]).catch(() => undefined);
+    lanzar(e2);
+  }
   if (socio.foto_path && socio.foto_path !== path && socio.foto_path.startsWith(`${uid}/`)) {
     await supabase.storage.from('carnets').remove([socio.foto_path]);
   }

@@ -18,10 +18,10 @@ const ESTADO = {
 export function Carnet({ socio, carrera, conQr = false, foto }: { socio: SocioDb; carrera?: string | null; conQr?: boolean; foto?: string | null }) {
   const [ancho, setAncho] = useState(0);
   const estado = estadoCarnet(socio);
-  const e = ESTADO[estado];
+  const marca = ESTADO[estado];
   const vigente = estado === 'vigente';
   return (
-    <View style={[est.carnet, sombras.fuerte]} onLayout={(e) => setAncho(e.nativeEvent.layout.width)} accessibilityLabel={`Carnet de socio de ${socio.nombre}, número ${socio.numero_socio ?? 'sin asignar'}, ${e.texto.toLowerCase()}`}>
+    <View style={[est.carnet, sombras.fuerte]} onLayout={(e) => setAncho(e.nativeEvent.layout.width)} accessibilityLabel={`Carnet de socio de ${socio.nombre}, número ${socio.numero_socio ?? 'sin asignar'}, ${marca.texto.toLowerCase()}`}>
       {ancho > 0 && <TramaHex ancho={ancho} alto={conQr ? 560 : 250} opacidad={0.09} tam={40} />}
       <View style={est.fila}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: espacio.s }}>
@@ -31,9 +31,9 @@ export function Carnet({ socio, carrera, conQr = false, foto }: { socio: SocioDb
             <Text style={est.marcaSub}>Centro de Estudiantes de Química</Text>
           </View>
         </View>
-        <View style={[est.estado, { backgroundColor: e.fondo }]}>
-          <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: e.punto }} />
-          <Text style={[est.estadoTexto, { color: e.color }]}>{e.texto}</Text>
+        <View style={[est.estado, { backgroundColor: marca.fondo }]}>
+          <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: marca.punto }} />
+          <Text style={[est.estadoTexto, { color: marca.color }]}>{marca.texto}</Text>
         </View>
       </View>
 

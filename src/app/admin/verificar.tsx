@@ -25,6 +25,7 @@ export default function VerificarCarnet() {
   const [foto, setFoto] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const ultimoLeido = useRef<string | null>(null);
+  const enCurso = useRef(false);
 
   useEffect(() => {
     let vivo = true;
@@ -36,15 +37,18 @@ export default function VerificarCarnet() {
   }, [resultado?.foto_path]);
 
   async function consultar(valor: string) {
-    if (!valor.trim() || consultando) return;
+    if (!valor.trim() || enCurso.current) return;
+    enCurso.current = true;
     setError(null);
     setConsultando(true);
     try {
       setResultado(await verificarCarnet(valor));
       setEscaneando(false);
     } catch (e) {
+      ultimoLeido.current = null; // permite volver a escanear el mismo QR
       setError(e instanceof Error ? e.message : 'No se pudo verificar.');
     } finally {
+      enCurso.current = false;
       setConsultando(false);
     }
   }
@@ -75,7 +79,7 @@ export default function VerificarCarnet() {
             facing="back"
             barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
             onBarcodeScanned={({ data }) => {
-              if (consultando || data === ultimoLeido.current) return;
+              if (enCurso.current || data === ultimoLeido.current) return;
               ultimoLeido.current = data;
               consultar(data);
             }}
