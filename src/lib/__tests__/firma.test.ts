@@ -76,3 +76,54 @@ test('firma con laboratorio combinado al 30%', () => {
   assert.equal(r.laboratorio, null);
   assert.equal(r.firma, true);
 });
+
+test('datos mal cargados (NaN) no rompen el cálculo', () => {
+  assert.equal(porcentajeEvaluacion({ porcentaje: Number('abc') }), null);
+  assert.equal(porcentajeEvaluacion({ puntajeObtenido: 10, puntajeTotal: Number('') || Number.NaN }), null);
+  const r = evaluarComponente([ev({ ponderacion: Number.NaN, porcentaje: 90 }), ev({ ponderacion: 100, porcentaje: 70 })], 60);
+  assert.equal(r.actual, 70);
+  assert.equal(r.semaforo, 'verde');
+  assert.equal(promedioPonderado([ev({ ponderacion: 50, porcentaje: Number.NaN }), ev({ ponderacion: 50, porcentaje: 80 })]), 80);
+});
+
+test('combinado sin notas de laboratorio: el lab queda pendiente', () => {
+  // Teoría 70 con lab al 30 % sin cargar: no puede estar firmada todavía.
+  const r = evaluarFirma({
+    regla: { ...regla, modoLaboratorio: 'combinado', pesoLaboratorio: 30, minimoAsistenciaLab: null }, tieneLaboratorio: true,
+    evaluaciones: [ev({ ponderacion: 100, porcentaje: 70 })],
+    asistencia: { clasesDictadas: 10, clasesAsistidas: 10 },
+  });
+  assert.equal(r.teoria.actual, 70);
+  // (60·100 − 70·70) / 30 = 36.67 en el laboratorio
+  assert.equal(r.teoria.necesario, 36.67);
+  assert.equal(r.firma, false);
+});
+
+test('combinado: peso de laboratorio fuera de rango se limita a 0–100', () => {
+  const r = evaluarFirma({
+    regla: { ...regla, modoLaboratorio: 'combinado', pesoLaboratorio: 150, minimoAsistenciaLab: null }, tieneLaboratorio: true,
+    evaluaciones: [ev({ ponderacion: 100, porcentaje: 10 }), ev({ componente: 'laboratorio', ponderacion: 100, porcentaje: 80 })],
+    asistencia: { clasesDictadas: 10, clasesAsistidas: 10 },
+  });
+  assert.equal(r.teoria.actual, 80);
+  assert.equal(r.firma, true);
+});
+
+test('asistencia: sin clases dictadas no hay datos; límite exacto cuenta como cumplido', () => {
+  assert.equal(evaluarAsistencia({ clasesDictadas: 0, clasesAsistidas: 0 }, 75).semaforo, 'sin_datos');
+  assert.equal(evaluarAsistencia(null, 75).porcentaje, null);
+  // 75 % justo: 3 de 4
+  const justo = evaluarFirma({ regla: { ...regla, minimoAsistenciaLab: null }, tieneLaboratorio: false, evaluaciones: [ev({ ponderacion: 1, porcentaje: 60 })], asistencia: { clasesDictadas: 4, clasesAsistidas: 3 } });
+  assert.equal(justo.firma, true);
+  // 32 clases al 75 %: con 8 faltas todavía firma, con 9 ya no
+  assert.equal(evaluarAsistencia({ clasesDictadas: 32, clasesAsistidas: 24, clasesTotales: 32 }, 75).faltasDisponibles, 0);
+  assert.equal(evaluarAsistencia({ clasesDictadas: 32, clasesAsistidas: 23, clasesTotales: 32 }, 75).semaforo, 'rojo');
+});
+
+test('nota mínima exacta y todo rendido', () => {
+  const r = evaluarComponente([ev({ ponderacion: 40, porcentaje: 60 }), ev({ ponderacion: 60, porcentaje: 60 })], 60);
+  assert.equal(r.asegurado, true);
+  assert.equal(r.necesario, null);
+  const bajo = evaluarComponente([ev({ ponderacion: 40, porcentaje: 59.99 }), ev({ ponderacion: 60, porcentaje: 60 })], 60);
+  assert.equal(bajo.semaforo, 'rojo');
+});
