@@ -48,6 +48,19 @@ export default function Ceq() {
 
       {error && !datos && <Mensaje texto={error} />}
 
+      {perfil?.rol === 'admin' && (
+        <Tarjeta variante="marino" onPress={() => router.push('/admin')} etiqueta="Abrir el panel del CEQ" estilo={{ marginTop: espacio.m }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: espacio.m }}>
+            <Ionicons name="construct" size={22} color={colores.blanco} />
+            <View style={{ flex: 1 }}>
+              <Text style={[s.filaTitulo, { color: colores.blanco }]}>Panel del CEQ</Text>
+              <Text style={[s.filaDetalle, { color: colores.celeste }]}>Publicar avisos y enviar notificaciones</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={colores.blanco} />
+          </View>
+        </Tarjeta>
+      )}
+
       <View style={est.accesos}>
         <Acceso icono="megaphone" texto="Avisos" onPress={() => router.push('/avisos')} />
         <Acceso icono="document-text" texto="Trámites" onPress={() => setTramite(datos?.tramites[0] ?? null)} deshabilitado={!datos?.tramites.length} />
@@ -61,7 +74,7 @@ export default function Ceq() {
       ) : datos?.avisos.length ? (
         datos.avisos.map((a) => (
           <Tarjeta key={a.id} onPress={() => router.push(`/aviso/${a.id}`)} etiqueta={a.titulo}>
-            <Text style={est.avisoFecha}>{haceCuanto(a.created_at)}</Text>
+            <Text style={est.avisoFecha}>{haceCuanto(a.publicar_en ?? a.created_at)}</Text>
             <Text style={[s.filaTitulo, { fontSize: 16, color: colores.marino }]}>{a.titulo}</Text>
             <Text style={[s.filaDetalle, { marginTop: 4 }]} numberOfLines={2}>{a.cuerpo}</Text>
           </Tarjeta>

@@ -1,11 +1,12 @@
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Switch, Text, View } from 'react-native';
+import { Linking, Platform, Switch, Text, View } from 'react-native';
 import { Hexagono } from '../components/graficos';
 import { BarraSuperior, Boton, Fila, Mensaje, Pantalla, s, Seccion, Tarjeta } from '../components/ui';
 import { useSesion } from '../context/SesionProvider';
 import { db, MODO_DEMO } from '../datos/demo';
 import { salir } from '../lib/auth';
+import { registrarEsteCelular, type EstadoRegistro } from '../lib/notificaciones';
 import { activarBiometria, biometriaActiva, biometriaDisponible, desactivarBiometria } from '../lib/biometria';
 import { supabase } from '../lib/supabase';
 import { colores, espacio, fuentes, texto } from '../tema';
@@ -18,6 +19,17 @@ export default function Perfil() {
   const [plan, setPlan] = useState<string | null>(null);
   const [bio, setBio] = useState<{ disponible: boolean; nombre: string; activa: boolean } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [push, setPush] = useState<EstadoRegistro | null>(null);
+
+  // Sin pedir permiso: solo saber si este celular ya recibe notificaciones.
+  useEffect(() => {
+    registrarEsteCelular({ pedirPermiso: false }).then(setPush).catch(() => setPush('error'));
+  }, []);
+
+  const cambiarPreferencia = async (campo: 'notif_avisos' | 'notif_recordatorios', valor: boolean) => {
+    setError(await actualizarPerfil({ [campo]: valor }));
+    if (valor && push !== 'activo') setPush(await registrarEsteCelular());
+  };
 
   useEffect(() => {
     (async () => {
@@ -75,6 +87,39 @@ export default function Perfil() {
         onPress={async () => setError(await actualizarPerfil({ carrera_id: null, plan_id: null }))}
       />
 
+      {perfil?.rol === 'admin' && (
+        <>
+          <Seccion estilo={{ marginTop: espacio.xl }}>Administración</Seccion>
+          <Tarjeta estilo={{ paddingVertical: espacio.xs }}>
+            <Fila icono="construct-outline" titulo="Panel del CEQ" detalle="Avisos, notificaciones, encuestas y sugerencias" onPress={() => router.push('/admin')} ultima />
+          </Tarjeta>
+        </>
+      )}
+
+      <Seccion estilo={{ marginTop: espacio.xl }}>Notificaciones</Seccion>
+      <Tarjeta estilo={{ paddingVertical: espacio.xs }}>
+        <Fila
+          icono="megaphone-outline"
+          titulo="Avisos del CEQ"
+          detalle="Comunicados, fechas importantes y novedades."
+          derecha={<Interruptor valor={perfil?.notif_avisos ?? true} onCambio={(v) => cambiarPreferencia('notif_avisos', v)} etiqueta="Avisos del CEQ" />}
+        />
+        <Fila
+          icono="alarm-outline"
+          titulo="Recordatorios de mi agenda"
+          detalle="Un aviso antes de cada parcial, final o entrega que cargues."
+          derecha={<Interruptor valor={perfil?.notif_recordatorios ?? true} onCambio={(v) => cambiarPreferencia('notif_recordatorios', v)} etiqueta="Recordatorios de mi agenda" />}
+          ultima
+        />
+      </Tarjeta>
+      {push === 'sin_permiso' && (
+        <Mensaje tipo="info" texto="Este celular tiene las notificaciones de la app apagadas. Activalas en los ajustes del teléfono." />
+      )}
+      {push === 'sin_permiso' && Platform.OS !== 'web' && (
+        <Boton texto="Abrir ajustes" variante="fantasma" compacto icono="settings-outline" onPress={() => Linking.openSettings()} />
+      )}
+      {push === 'error' && <Mensaje tipo="info" texto="No pudimos activar las notificaciones en este celular. Probá de nuevo más tarde." />}
+
       <Seccion estilo={{ marginTop: espacio.xl }}>Seguridad</Seccion>
       <Tarjeta estilo={{ paddingVertical: espacio.xs }}>
         {bio && !bio.disponible ? (
@@ -105,5 +150,17 @@ export default function Perfil() {
         App del CEQ · Centro de Estudiantes de Química
       </Text>
     </Pantalla>
+  );
+}
+
+function Interruptor({ valor, onCambio, etiqueta }: { valor: boolean; onCambio: (v: boolean) => void; etiqueta: string }) {
+  return (
+    <Switch
+      value={valor}
+      onValueChange={onCambio}
+      accessibilityLabel={etiqueta}
+      trackColor={{ true: colores.marino, false: colores.linea }}
+      thumbColor={colores.blanco}
+    />
   );
 }

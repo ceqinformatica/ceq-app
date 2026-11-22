@@ -9,9 +9,17 @@ function lanzar(error: { message: string } | null) {
 export async function cargarAvisos(limite = 30): Promise<AvisoDb[]> {
   if (MODO_DEMO) {
     await esperar();
-    return db.avisos.slice(0, limite);
+    const ahora = new Date().toISOString();
+    return db.avisos.filter((a) => a.publicado && (a.publicar_en ?? a.created_at) <= ahora).slice(0, limite);
   }
-  const { data, error } = await supabase.from('avisos').select('*').eq('publicado', true).order('created_at', { ascending: false }).limit(limite);
+  // Los programados todavía no se muestran (el admin los ve en su panel).
+  const { data, error } = await supabase
+    .from('avisos')
+    .select('*')
+    .eq('publicado', true)
+    .lte('publicar_en', new Date().toISOString())
+    .order('publicar_en', { ascending: false })
+    .limit(limite);
   lanzar(error);
   return data ?? [];
 }

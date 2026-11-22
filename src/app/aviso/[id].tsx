@@ -19,7 +19,7 @@ export default function Aviso() {
         <EstadoVacio icono="megaphone-outline" titulo="Este aviso ya no está disponible" texto={error ?? undefined} />
       ) : (
         <View>
-          <Text style={{ fontFamily: fuentes.semibold, fontSize: 12, color: colores.azul, letterSpacing: 0.6, textTransform: 'uppercase' }}>{haceCuanto(aviso.created_at)}</Text>
+          <Text style={{ fontFamily: fuentes.semibold, fontSize: 12, color: colores.azul, letterSpacing: 0.6, textTransform: 'uppercase' }}>{haceCuanto(aviso.publicar_en ?? aviso.created_at)}</Text>
           <Text style={[texto.titulo, { color: colores.marino, marginTop: espacio.xs, marginBottom: espacio.l }]} accessibilityRole="header">{aviso.titulo}</Text>
           {aviso.imagen_url ? (
             <Image source={{ uri: aviso.imagen_url }} style={{ width: '100%', aspectRatio: 16 / 9, borderRadius: radio.l, marginBottom: espacio.l, backgroundColor: colores.tarjeta }} resizeMode="cover" accessibilityIgnoresInvertColors />
