@@ -215,3 +215,21 @@ export async function guardarAsistencia(materiaId: string, componente: Component
   const { error } = await supabase.from('asistencias').upsert({ materia_id: materiaId, componente, ...a }, { onConflict: 'usuario_id,materia_id,componente' });
   lanzar(error);
 }
+
+/* ------------------------------------------------------------------ */
+/* Tipos de evaluación                                                 */
+/* ------------------------------------------------------------------ */
+
+export type TipoEvaluacion = 'parcial' | 'tp' | 'laboratorio';
+
+/**
+ * Tipo de una evaluación para mostrar. La base guarda solo el componente
+ * (teoría o laboratorio): un trabajo práctico es teoría con nombre de TP.
+ */
+export function tipoEvaluacion(e: { componente: ComponenteDb; nombre: string }): TipoEvaluacion {
+  if (e.componente === 'laboratorio') return 'laboratorio';
+  return /trabajo|pr[aá]ctic|\btps?\b/i.test(e.nombre) ? 'tp' : 'parcial';
+}
+
+/** La materia tiene laboratorio si el estudiante cargó al menos una nota de laboratorio. */
+export const tieneLab = (evals: { componente: ComponenteDb }[]) => evals.some((e) => e.componente === 'laboratorio');

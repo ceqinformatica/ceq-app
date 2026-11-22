@@ -84,7 +84,7 @@ export const db = {
   ] as MateriaEstudianteDb[],
   evaluaciones: [
     ev('e1', 'qa1', 'Primer parcial', 'teoria', 30, 72), ev('e2', 'qa1', 'Segundo parcial', 'teoria', 30, null, false, enDias(6)),
-    ev('e3', 'qa1', 'Trabajos prácticos', 'teoria', 40, 85), ev('e4', 'qa1', 'Informes de laboratorio', 'laboratorio', 100, 78),
+    ev('e3', 'qa1', 'Trabajo práctico', 'teoria', 40, 85), ev('e4', 'qa1', 'Laboratorio', 'laboratorio', 100, 78),
     ev('e5', 'fq1', 'Primer parcial', 'teoria', 50, 41), ev('e6', 'fq1', 'Segundo parcial', 'teoria', 50, null, false, enDias(3)),
     ev('e7', 'bq', 'Primer parcial', 'teoria', 40, 88), ev('e8', 'bq', 'Seminarios', 'teoria', 20, 90), ev('e9', 'bq', 'Segundo parcial', 'teoria', 40, null, false, enDias(13)),
     ev('e10', 'bq', 'Laboratorio', 'laboratorio', 100, 92),

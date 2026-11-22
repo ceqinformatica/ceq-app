@@ -5,7 +5,7 @@ import { InsigniaSemaforo, pct, resumenFirma, semaforoVisible } from '../../comp
 import { BarraProgreso } from '../../components/graficos';
 import { CabeceraMarca, Cargando, EstadoVacio, Pantalla, s, Seccion, Tarjeta } from '../../components/ui';
 import { useSesion } from '../../context/SesionProvider';
-import { aAsistencia, cargarFirmas, cargarMalla, REGLA_POR_DEFECTO, reglaDe } from '../../datos/academico';
+import { aAsistencia, cargarFirmas, cargarMalla, REGLA_POR_DEFECTO, reglaDe, tieneLab } from '../../datos/academico';
 import { usarDatos } from '../../datos/usarDatos';
 import { evaluarFirma } from '../../lib/firma';
 import { colores, coloresSemaforo, espacio, fuentes } from '../../tema';
@@ -19,7 +19,7 @@ async function cargar(planId: string, carreraId?: string | null) {
     const regla = reglaDe(malla.reglas, m.id);
     const resultado = evaluarFirma({
       regla: regla ?? REGLA_POR_DEFECTO,
-      tieneLaboratorio: m.tiene_laboratorio,
+      tieneLaboratorio: tieneLab(f.evaluacionesDb),
       evaluaciones: f.evaluaciones,
       asistencia: aAsistencia(f.asistencia),
       asistenciaLab: aAsistencia(f.asistenciaLab),

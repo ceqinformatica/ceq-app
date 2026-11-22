@@ -5,17 +5,29 @@ import { Text, View } from 'react-native';
 import { pct, resumenFirma, semaforoVisible } from '../../components/academico';
 import { BarraProgreso, TramaHex } from '../../components/graficos';
 import {
-  BarraSuperior, Boton, Campo, Cargando, Contador, EstadoVacio, Fila, Hoja, Insignia, Mensaje, Pantalla, s, Seccion, Segmentado, Tarjeta,
+  BarraSuperior, Boton, Campo, Cargando, Chip, Contador, EstadoVacio, Fila, Hoja, Insignia, Mensaje, Pantalla, s, Seccion, Segmentado, Tarjeta,
 } from '../../components/ui';
 import { useSesion } from '../../context/SesionProvider';
 import {
   aAsistencia, aEvaluacion, borrarEvaluacion, cargarFirmas, cargarMalla, guardarAsistencia, guardarEvaluacion, REGLA_POR_DEFECTO, reglaDe,
-  type NuevaEvaluacion,
+  tieneLab, tipoEvaluacion, type NuevaEvaluacion, type TipoEvaluacion,
 } from '../../datos/academico';
 import { usarDatos } from '../../datos/usarDatos';
 import { evaluarFirma, porcentajeEvaluacion, type ResultadoAsistencia, type ResultadoComponente } from '../../lib/firma';
 import type { AsistenciaDb, ComponenteDb, EvaluacionDb } from '../../lib/tipos-db';
 import { colores, coloresSemaforo, espacio, fuentes, radio, texto } from '../../tema';
+
+const ICONO_TIPO: Record<TipoEvaluacion, 'document-text-outline' | 'create-outline' | 'flask-outline'> = {
+  parcial: 'document-text-outline',
+  tp: 'create-outline',
+  laboratorio: 'flask-outline',
+};
+
+const TIPOS: { valor: TipoEvaluacion; texto: string; icono: 'document-text' | 'create' | 'flask'; nombre: string }[] = [
+  { valor: 'parcial', texto: 'Parcial', icono: 'document-text', nombre: '' },
+  { valor: 'tp', texto: 'Trabajo práctico', icono: 'create', nombre: 'Trabajo práctico' },
+  { valor: 'laboratorio', texto: 'Laboratorio', icono: 'flask', nombre: 'Laboratorio' },
+];
 
 const volver = () => (router.canGoBack() ? router.back() : router.replace('/firma'));
 
@@ -37,7 +49,7 @@ export default function CalculadoraFirma() {
     if (!datos?.materia) return null;
     return evaluarFirma({
       regla: datos.regla,
-      tieneLaboratorio: datos.materia.tiene_laboratorio,
+      tieneLaboratorio: tieneLab(datos.evaluacionesDb),
       evaluaciones: datos.evaluacionesDb.map(aEvaluacion),
       asistencia: aAsistencia(datos.asistencia),
       asistenciaLab: aAsistencia(datos.asistenciaLab),
@@ -58,7 +70,9 @@ export default function CalculadoraFirma() {
   const sem = semaforoVisible(resultado);
   const c = coloresSemaforo[sem];
   const tituloEstado = resultado.firma ? '¡Tenés firma!' : c.nombre;
-  const conLab = materia.tiene_laboratorio;
+  const conLab = tieneLab(datos.evaluacionesDb);
+  const sumaTeoria = datos.evaluacionesDb.filter((e) => e.componente === 'teoria').reduce((a, e) => a + Number(e.ponderacion), 0);
+  const sumaLab = datos.evaluacionesDb.filter((e) => e.componente === 'laboratorio').reduce((a, e) => a + Number(e.ponderacion), 0);
   const combinado = conLab && regla.modoLaboratorio === 'combinado';
 
   const actualizarAsistencia = (componente: ComponenteDb, a: AsistenciaDb) => {
@@ -94,7 +108,12 @@ export default function CalculadoraFirma() {
       <Seccion accion={{ texto: '+ Agregar', onPress: () => setEditando('nueva') }}>Evaluaciones</Seccion>
       <Tarjeta estilo={{ paddingVertical: espacio.xs }}>
         {datos.evaluacionesDb.length === 0 ? (
-          <EstadoVacio icono="document-text-outline" titulo="Sin evaluaciones" texto="Agregá tus parciales, trabajos y laboratorios con su ponderación." accion={{ texto: 'Agregar evaluación', onPress: () => setEditando('nueva') }} />
+          <EstadoVacio
+            icono="document-text-outline"
+            titulo="Sin evaluaciones"
+            texto={`Agregá tus parciales, trabajos prácticos${materia.tiene_laboratorio ? ' y el laboratorio' : ' y, si tiene, el laboratorio'}, cada uno con su ponderación.`}
+            accion={{ texto: 'Agregar evaluación', onPress: () => setEditando('nueva') }}
+          />
         ) : (
           datos.evaluacionesDb.map((e, i) => {
             const p = porcentajeEvaluacion(aEvaluacion(e));
@@ -102,9 +121,9 @@ export default function CalculadoraFirma() {
             return (
               <Fila
                 key={e.id}
-                icono={e.componente === 'laboratorio' ? 'flask-outline' : 'document-text-outline'}
+                icono={ICONO_TIPO[tipoEvaluacion(e)]}
                 titulo={e.nombre}
-                detalle={`Vale ${Number(e.ponderacion)} %${conLab ? ` · ${e.componente === 'laboratorio' ? 'Laboratorio' : 'Teoría'}` : ''}`}
+                detalle={e.componente === 'laboratorio' ? `Pesa ${Number(e.ponderacion)} % del laboratorio` : `Pesa ${Number(e.ponderacion)} % del teórico`}
                 derecha={
                   e.rendida && p != null ? (
                     <Text style={{ fontFamily: fuentes.bold, fontSize: 16, color: ok ? colores.verde : colores.amarillo }}>{pct(p)}</Text>
@@ -119,6 +138,12 @@ export default function CalculadoraFirma() {
           })
         )}
       </Tarjeta>
+      {sumaTeoria > 0 && Math.round(sumaTeoria) !== 100 && (
+        <Mensaje tipo="info" texto={`Las ponderaciones del teórico suman ${Math.round(sumaTeoria * 10) / 10} %. Cuando sepas cómo se reparte el resto, completalas hasta 100 %.`} />
+      )}
+      {sumaLab > 0 && Math.round(sumaLab) !== 100 && (
+        <Mensaje tipo="info" texto={`Las ponderaciones del laboratorio suman ${Math.round(sumaLab * 10) / 10} %.`} />
+      )}
 
       <Seccion>Asistencia</Seccion>
       <TarjetaAsistencia
@@ -136,7 +161,6 @@ export default function CalculadoraFirma() {
       <FormEvaluacion
         visible={editando != null}
         evaluacion={editando === 'nueva' ? null : editando}
-        conLab={conLab}
         onCerrar={() => setEditando(null)}
         onGuardado={() => {
           setEditando(null);
@@ -236,11 +260,11 @@ function FilaContador({ texto: t, ayuda, valor, onCambio, max }: { texto: string
   );
 }
 
-function FormEvaluacion({ visible, evaluacion, conLab, materiaId, onCerrar, onGuardado }: {
-  visible: boolean; evaluacion: EvaluacionDb | null; conLab: boolean; materiaId: string; onCerrar: () => void; onGuardado: () => void;
+function FormEvaluacion({ visible, evaluacion, materiaId, onCerrar, onGuardado }: {
+  visible: boolean; evaluacion: EvaluacionDb | null; materiaId: string; onCerrar: () => void; onGuardado: () => void;
 }) {
   const [nombre, setNombre] = useState('');
-  const [componente, setComponente] = useState<ComponenteDb>('teoria');
+  const [tipo, setTipo] = useState<TipoEvaluacion>('parcial');
   const [ponderacion, setPonderacion] = useState('');
   const [modo, setModo] = useState<'porcentaje' | 'puntaje'>('porcentaje');
   const [porcentaje, setPorcentaje] = useState('');
@@ -254,7 +278,7 @@ function FormEvaluacion({ visible, evaluacion, conLab, materiaId, onCerrar, onGu
     if (!visible) return;
     const e = evaluacion;
     setNombre(e?.nombre ?? '');
-    setComponente(e?.componente ?? 'teoria');
+    setTipo(e ? tipoEvaluacion(e) : 'parcial');
     setPonderacion(e ? String(Number(e.ponderacion)) : '');
     setModo(e && e.porcentaje == null && e.puntaje_total != null ? 'puntaje' : 'porcentaje');
     setPorcentaje(e?.porcentaje != null ? String(Number(e.porcentaje)) : '');
@@ -278,7 +302,7 @@ function FormEvaluacion({ visible, evaluacion, conLab, materiaId, onCerrar, onGu
     setError(null);
     const datos: NuevaEvaluacion = {
       nombre: nombre.trim(),
-      componente: conLab ? componente : 'teoria',
+      componente: tipo === 'laboratorio' ? 'laboratorio' : 'teoria',
       ponderacion: pond!,
       porcentaje: rendida === 'si' && modo === 'porcentaje' ? num(porcentaje) : null,
       puntaje_obtenido: rendida === 'si' && modo === 'puntaje' ? num(obtenido) : null,
@@ -311,11 +335,38 @@ function FormEvaluacion({ visible, evaluacion, conLab, materiaId, onCerrar, onGu
 
   return (
     <Hoja visible={visible} titulo={evaluacion ? 'Editar evaluación' : 'Nueva evaluación'} onCerrar={onCerrar}>
-      <Campo etiqueta="Nombre" value={nombre} onChangeText={setNombre} placeholder="Ej. Primer parcial" />
-      {conLab && (
-        <Segmentado opciones={[{ valor: 'teoria', texto: 'Teoría' }, { valor: 'laboratorio', texto: 'Laboratorio' }]} valor={componente} onCambio={setComponente} />
-      )}
-      <Campo etiqueta="¿Cuánto vale? (%)" value={ponderacion} onChangeText={setPonderacion} keyboardType="decimal-pad" placeholder="Ej. 30" ayuda="Su peso dentro de la nota de teoría o de laboratorio." />
+      <Text style={[s.etiqueta, { marginBottom: espacio.s }]}>Tipo</Text>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: espacio.s, marginBottom: espacio.m }}>
+        {TIPOS.map((t) => (
+          <Chip
+            key={t.valor}
+            texto={t.texto}
+            icono={t.icono}
+            elegido={tipo === t.valor}
+            onPress={() => {
+              // Sugiere el nombre si el actual es uno de los sugeridos o está vacío.
+              if (!nombre.trim() || TIPOS.some((x) => x.nombre && x.nombre === nombre.trim())) setNombre(t.nombre);
+              if (t.valor === 'laboratorio' && !ponderacion) setPonderacion('100');
+              setTipo(t.valor);
+            }}
+          />
+        ))}
+      </View>
+      <Campo etiqueta="Nombre" value={nombre} onChangeText={setNombre} placeholder={tipo === 'parcial' ? 'Ej. Primer parcial' : tipo === 'tp' ? 'Ej. Trabajo práctico 1' : 'Laboratorio'} />
+      <Campo
+        etiqueta={tipo === 'laboratorio' ? '¿Cuánto pesa en la nota de laboratorio? (%)' : '¿Cuánto pesa en el promedio teórico? (%)'}
+        value={ponderacion}
+        onChangeText={setPonderacion}
+        keyboardType="decimal-pad"
+        placeholder={tipo === 'laboratorio' ? '100' : 'Ej. 30'}
+        ayuda={
+          tipo === 'tp'
+            ? 'Depende de la materia: si el TP cuenta como un 3er parcial, poné lo mismo que un parcial (ej. 33 %); si es parte de un parcial, poné solo esa parte (ej. 10 %).'
+            : tipo === 'laboratorio'
+              ? 'Si tenés una sola nota de laboratorio, dejá 100 %.'
+              : 'Ej. con dos parciales iguales, cada uno pesa 50 %.'
+        }
+      />
       <Text style={[s.etiqueta, { marginBottom: espacio.s }]}>¿Ya la rendiste?</Text>
       <Segmentado opciones={[{ valor: 'si', texto: 'Sí, tengo la nota' }, { valor: 'no', texto: 'Todavía no' }]} valor={rendida} onCambio={setRendida} />
       {rendida === 'si' && (
