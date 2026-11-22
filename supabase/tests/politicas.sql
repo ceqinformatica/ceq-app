@@ -210,6 +210,15 @@ select pg_temp.debe_ser('Beto no cambia los finales de Ana',
   (select count(*) from public.examenes_finales where cursada_anterior), 1);
 
 -- Notificaciones y panel de admin ----------------------------------
+-- Un aviso de antes de la migración cuenta como ya notificado: editarlo
+-- no le manda un push a todos.
+alter table public.avisos disable trigger avisos_notificar;
+insert into public.avisos (id, titulo, cuerpo) values ('60000000-0000-0000-0000-0000000000ff', 'Aviso viejo', 'De antes.');
+alter table public.avisos enable trigger avisos_notificar;
+\ir ../migrations/20261122180000_notificaciones.sql
+update public.avisos set titulo = 'Aviso viejo (corregido)' where id = '60000000-0000-0000-0000-0000000000ff';
+select pg_temp.debe_ser('editar un aviso viejo no lo notifica',
+  (select count(*) from public.notificaciones where aviso_id = '60000000-0000-0000-0000-0000000000ff' and estado = 'pendiente'), 0);
 update public.perfiles set carrera_id = '10000000-0000-0000-0000-000000000001' where id = '00000000-0000-0000-0000-00000000000a';
 select pg_temp.como('00000000-0000-0000-0000-00000000000a');
 select pg_temp.debe_fallar('token inválido', $$select public.registrar_dispositivo('cualquiera', 'android')$$);
@@ -242,7 +251,7 @@ insert into public.avisos (id, titulo, cuerpo, carrera_id) values ('60000000-000
 insert into public.avisos (id, titulo, cuerpo, notificar) values ('60000000-0000-0000-0000-000000000004', 'Sin aviso', 'Silencioso.', false);
 insert into public.notificaciones (titulo, cuerpo, programada_para) values ('Inscripción a finales', 'Cierra hoy.', now() - interval '1 minute');
 insert into public.notificaciones (titulo, cuerpo, programada_para) values ('Para cancelar', 'x', now() + interval '1 hour');
-select pg_temp.debe_ser('el admin ve las notificaciones generales', (select count(*) from public.notificaciones), 5);
+select pg_temp.debe_ser('el admin ve las notificaciones generales', (select count(*) from public.notificaciones), 6);
 select pg_temp.debe_ser('el admin cancela una programada',
   pg_temp.filas($q$update public.notificaciones set estado = 'cancelada' where titulo = 'Para cancelar'$q$), 1);
 select pg_temp.debe_fallar('el admin no marca como enviada',
@@ -297,6 +306,15 @@ select pg_temp.debe_ser('a Ana no le llega el mensaje',
   (select count(*) from net.pedidos where body::text like '%Solo para quien quiere avisos%' and body::text like '%celuDeAna0001%'), 0);
 select pg_temp.debe_ser('a Ana le llega su recordatorio',
   (select count(*) from net.pedidos where body::text like '%Final de Química%' and body::text like '%celuDeAna0001%'), 1);
+
+-- Un evento sin título no traba el envío para nadie.
+select pg_temp.como('00000000-0000-0000-0000-00000000000b');
+insert into public.eventos (titulo, fecha, aviso_minutos) values ('', now() + interval '30 minutes', 60);
+reset role;
+insert into public.notificaciones (titulo, cuerpo, creada_por) values ('Sale igual', 'x', null);
+select pg_temp.debe_ser('un evento sin título no rompe el cartero', public.procesar_notificaciones(), 2);
+select pg_temp.debe_ser('el recordatorio sin título usa uno genérico',
+  (select count(*) from net.pedidos where body -> 0 ->> 'title' = 'Recordatorio'), 1);
 
 -- Expo avisa que el celular de Ana se desinstaló: se borra.
 insert into net._http_response (id, status_code, content)

@@ -86,7 +86,7 @@ export type ExamenFinalDb = {
   tipo?: TipoExamen; cursada_anterior?: boolean;
 }
 export type TipoNotificacion = 'aviso' | 'mensaje' | 'recordatorio';
-export type EstadoNotificacion = 'pendiente' | 'enviada' | 'cancelada' | 'sin_destinatarios';
+export type EstadoNotificacion = 'pendiente' | 'enviada' | 'cancelada' | 'sin_destinatarios' | 'error';
 export type NotificacionDb = {
   id: string; tipo: TipoNotificacion; titulo: string; cuerpo: string; ruta: string | null; aviso_id: string | null;
   evento_id: string | null; usuario_id: string | null; carrera_id: string | null; plan_id: string | null;

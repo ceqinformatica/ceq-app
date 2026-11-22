@@ -68,6 +68,7 @@ test('valida título y texto', () => {
   assert.equal(validarMensaje('Hola', '', { cuerpoObligatorio: false }), null);
   assert.match(validarMensaje('x'.repeat(121), 'y') ?? '', /120/);
   assert.match(validarMensaje('x', 'y'.repeat(501)) ?? '', /500/);
+  assert.equal(validarMensaje('x', 'y'.repeat(2000), { limiteCuerpo: 5000 }), null);
 });
 
 test('solo abre rutas internas', () => {

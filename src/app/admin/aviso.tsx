@@ -4,7 +4,7 @@ import { Switch, Text, View } from 'react-native';
 import { cuandoAhora, cuandoDesde, estadoNotificacion, resolverCuando, SelectorCarrera, SelectorCuando, VistaPrevia, type Cuando } from '../../components/admin';
 import { BarraSuperior, Boton, Campo, Cargando, Fila, Insignia, Mensaje, Pantalla, Seccion, Tarjeta } from '../../components/ui';
 import { borrarAviso, cargarAvisosAdmin, cargarCarreras, guardarAviso, notificacionDeAviso } from '../../datos/admin';
-import { LIMITE_TITULO, TITULO_RECOMENDADO, validarMensaje } from '../../lib/programacion';
+import { LIMITE_AVISO, LIMITE_TITULO, TITULO_RECOMENDADO, validarMensaje } from '../../lib/programacion';
 import type { AvisoDb, Carrera, NotificacionDb } from '../../lib/tipos-db';
 import { colores, espacio } from '../../tema';
 
@@ -58,7 +58,7 @@ export default function EditarAviso() {
 
   const guardar = async () => {
     setError(null);
-    const e = validarMensaje(titulo, cuerpo);
+    const e = validarMensaje(titulo, cuerpo, { limiteCuerpo: LIMITE_AVISO });
     if (e) return setError(e);
     const img = imagen.trim();
     if (img && !/^https:\/\/\S+$/i.test(img)) return setError('La imagen tiene que ser un enlace que empiece con https://');

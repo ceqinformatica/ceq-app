@@ -23,6 +23,8 @@ configurarNotificaciones();
 function useNotificaciones(uid: string | null, lista: boolean) {
   const registrado = useRef<string | null>(null);
   useEffect(() => {
+    // Al cerrar sesión se borra el celular: al volver a entrar hay que registrarlo de nuevo.
+    if (!uid) registrado.current = null;
     if (!uid || !lista || registrado.current === uid) return;
     registrado.current = uid;
     registrarEsteCelular().catch(() => {});

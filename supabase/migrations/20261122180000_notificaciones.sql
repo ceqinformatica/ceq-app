@@ -59,7 +59,7 @@ create table if not exists public.notificaciones (
   plan_id          uuid references public.planes(id) on delete cascade,   -- nulo = todos
   programada_para  timestamptz not null default now(),
   estado           text not null default 'pendiente'
-                   check (estado in ('pendiente', 'enviada', 'cancelada', 'sin_destinatarios')),
+                   check (estado in ('pendiente', 'enviada', 'cancelada', 'sin_destinatarios', 'error')),
   enviada_en       timestamptz,
   destinatarios    integer,
   creada_por       uuid references auth.users(id) on delete set null default auth.uid(),
@@ -100,7 +100,7 @@ begin
     insert into public.notificaciones (tipo, titulo, cuerpo, ruta, aviso_id, carrera_id, programada_para, creada_por)
     values (
       'aviso',
-      left(new.titulo, 120),
+      coalesce(nullif(btrim(left(new.titulo, 120)), ''), 'Aviso del CEQ'),
       coalesce(nullif(btrim(left(new.cuerpo, 180)), ''), 'Nuevo aviso del CEQ'),
       '/aviso/' || new.id,
       new.id, new.carrera_id, new.publicar_en, auth.uid()
@@ -115,6 +115,16 @@ begin
   return new;
 end;
 $$;
+-- Los avisos que ya existían antes de esta migración cuentan como
+-- notificados: editarlos después no debe mandar un push a todos.
+insert into public.notificaciones (tipo, titulo, cuerpo, aviso_id, carrera_id, programada_para, estado, enviada_en, destinatarios, creada_por)
+select 'aviso', coalesce(nullif(btrim(left(a.titulo, 120)), ''), 'Aviso del CEQ'),
+       coalesce(nullif(btrim(left(a.cuerpo, 180)), ''), 'Nuevo aviso del CEQ'),
+       a.id, a.carrera_id, a.created_at, 'enviada', a.created_at, 0, null
+from public.avisos a
+where not exists (select 1 from public.notificaciones n where n.aviso_id = a.id)
+on conflict (aviso_id) where aviso_id is not null do nothing;
+
 drop trigger if exists avisos_notificar on public.avisos;
 create trigger avisos_notificar after insert or update of titulo, cuerpo, notificar, publicado, publicar_en, carrera_id
   on public.avisos for each row execute function public.notificar_aviso();
@@ -222,7 +232,7 @@ begin
     returning e.id, e.usuario_id, e.plan_id, e.titulo, e.fecha
   )
   insert into public.notificaciones (tipo, titulo, cuerpo, ruta, evento_id, usuario_id, plan_id, programada_para, creada_por)
-  select 'recordatorio', left(v.titulo, 120),
+  select 'recordatorio', coalesce(nullif(btrim(left(v.titulo, 120)), ''), 'Recordatorio'),
          'Es el ' || to_char(v.fecha at time zone 'America/Asuncion', 'DD/MM') || ' a las '
                   || to_char(v.fecha at time zone 'America/Asuncion', 'HH24:MI') || '.',
          '/agenda', v.id, v.usuario_id, v.plan_id, now(), null
@@ -232,10 +242,12 @@ begin
   for n in
     select * from public.notificaciones
     where estado = 'pendiente' and programada_para <= now()
-    order by programada_para
+    -- Primero las generales: muchos recordatorios personales no las atrasan.
+    order by (usuario_id is not null), programada_para
     limit 50
     for update skip locked
   loop
+    begin
     select array_agg(distinct d.token) into tokens
     from public.dispositivos d
     join public.perfiles p on p.id = d.usuario_id
@@ -270,6 +282,10 @@ begin
       set estado = 'enviada', enviada_en = now(), destinatarios = array_length(tokens, 1)
       where id = n.id;
     enviadas := enviadas + 1;
+    exception when others then
+      -- Una notificación con problemas no frena a las demás.
+      update public.notificaciones set estado = 'error', enviada_en = now() where id = n.id;
+    end;
   end loop;
 
   -- c) Borrar los celulares que Expo informa como dados de baja.

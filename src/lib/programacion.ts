@@ -5,6 +5,8 @@
 
 export const LIMITE_TITULO = 120;
 export const LIMITE_CUERPO = 500;
+/** Un aviso puede ser largo: en la notificación se recorta solo. */
+export const LIMITE_AVISO = 5000;
 /** Más largo que esto se corta en la pantalla bloqueada de muchos celulares. */
 export const TITULO_RECOMENDADO = 65;
 
@@ -80,13 +82,13 @@ export function partesDe(fecha: Date): { fecha: string; hora: string } {
 }
 
 /** Errores de título y texto antes de guardar (null si está bien). */
-export function validarMensaje(titulo: string, cuerpo: string, { cuerpoObligatorio = true } = {}): string | null {
+export function validarMensaje(titulo: string, cuerpo: string, { cuerpoObligatorio = true, limiteCuerpo = LIMITE_CUERPO } = {}): string | null {
   const t = titulo.trim();
   const c = cuerpo.trim();
   if (!t) return 'Falta el título.';
   if (t.length > LIMITE_TITULO) return `El título puede tener hasta ${LIMITE_TITULO} letras.`;
   if (cuerpoObligatorio && !c) return 'Falta el texto.';
-  if (c.length > LIMITE_CUERPO && cuerpoObligatorio) return `El texto de la notificación puede tener hasta ${LIMITE_CUERPO} letras.`;
+  if (c.length > limiteCuerpo) return `El texto puede tener hasta ${limiteCuerpo} letras.`;
   return null;
 }
 

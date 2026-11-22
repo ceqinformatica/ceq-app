@@ -121,6 +121,8 @@ export function estadoNotificacion(estado: string, destinatarios: number | null,
       return { texto: `Programada · ${describirCuando(cuando)}`, color: colores.amarillo, fondo: colores.amarilloFondo };
     case 'enviada':
       return { texto: `Enviada a ${destinatarios ?? 0} · ${describirCuando(cuando)}`, color: colores.verde, fondo: colores.verdeFondo };
+    case 'error':
+      return { texto: 'No se pudo enviar', color: colores.rojo, fondo: colores.rojoFondo };
     case 'sin_destinatarios':
       return { texto: 'Nadie la recibió (sin celulares)', color: colores.gris, fondo: colores.grisFondo };
     default:
