@@ -168,7 +168,7 @@ export default function Perfil() {
 
       <Mensaje texto={error} />
       <Boton texto="Cerrar sesión" variante="peligro" icono="log-out-outline" onPress={salir} estilo={{ marginTop: espacio.xl }} />
-      <Boton texto="Eliminar mi cuenta" variante="fantasma" icono="trash-outline" onPress={pedirBorrarCuenta} cargando={borrando} estilo={{ marginTop: espacio.m }} />
+      {!MODO_DEMO && <Boton texto="Eliminar mi cuenta" variante="fantasma" icono="trash-outline" onPress={pedirBorrarCuenta} cargando={borrando} estilo={{ marginTop: espacio.m }} />}
       <Text style={{ fontFamily: fuentes.regular, fontSize: 11.5, color: colores.textoTenue, textAlign: 'center', marginTop: espacio.l }}>
         App del CEQ · Centro de Estudiantes de Química
       </Text>

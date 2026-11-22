@@ -137,7 +137,7 @@ async function cerrarGoogleNativo() {
  * Devuelve un mensaje de error, o null si se borró.
  */
 export async function eliminarCuenta(): Promise<string | null> {
-  await olvidarEsteCelular().catch(() => {});
+  // Los celulares registrados se borran en cascada con la cuenta.
   const { error } = await supabase.rpc('eliminar_mi_cuenta');
   if (error) return 'No se pudo borrar la cuenta. Probá de nuevo o escribí a informatica@ceq-una.com.';
   await desactivarBiometria().catch(() => {});
