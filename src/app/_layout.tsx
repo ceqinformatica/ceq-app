@@ -3,16 +3,17 @@ import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { ActivityIndicator, View } from 'react-native';
+import { ActivityIndicator, Text, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Bloqueo } from '../components/Bloqueo';
+import { Boton, Mensaje } from '../components/ui';
 import { SesionProvider, useSesion } from '../context/SesionProvider';
 import { colores } from '../tema';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
 function Navegacion() {
-  const { cargando, sesion, perfil, bloqueado } = useSesion();
+  const { cargando, sesion, perfil, errorPerfil, bloqueado, recargarPerfil } = useSesion();
 
   if (cargando) {
     return (
@@ -22,6 +23,19 @@ function Navegacion() {
     );
   }
   if (sesion && bloqueado) return <Bloqueo />;
+
+  // Sin perfil por un error de red: reintentar en vez de mandar al onboarding.
+  if (sesion && !perfil && errorPerfil) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', padding: 24, backgroundColor: colores.fondo }}>
+        <Text accessibilityRole="header" style={{ fontSize: 20, color: colores.marino, textAlign: 'center', marginBottom: 8 }}>
+          Sin conexión
+        </Text>
+        <Mensaje texto={errorPerfil} />
+        <Boton texto="Reintentar" onPress={recargarPerfil} />
+      </View>
+    );
+  }
 
   const conCarrera = Boolean(perfil?.plan_id);
   return (

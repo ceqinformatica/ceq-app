@@ -42,3 +42,6 @@ yarn-error.*
 
 # variables de entorno
 .env
+
+# paquetes de Python sueltos (no son parte de la app)
+*.whl

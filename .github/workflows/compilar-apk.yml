@@ -15,6 +15,9 @@ on:
         type: choice
         options: [preview, production]
 
+permissions:
+  contents: read
+
 concurrency:
   group: compilar-apk
   cancel-in-progress: true
@@ -36,6 +39,8 @@ jobs:
           token: ${{ secrets.EXPO_TOKEN }}
 
       - run: npm ci
+
+      - run: npm run typecheck
 
       - run: npm test
 

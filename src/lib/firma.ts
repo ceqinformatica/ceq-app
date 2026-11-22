@@ -76,12 +76,20 @@ const redondear = (n: number, dec = 2) => Math.round(n * 10 ** dec) / 10 ** dec;
 
 /** Porcentaje de una evaluación: directo, o puntaje obtenido / total × 100. */
 export function porcentajeEvaluacion(e: Pick<Evaluacion, 'porcentaje' | 'puntajeObtenido' | 'puntajeTotal'>): number | null {
-  if (e.porcentaje != null) return clamp(e.porcentaje);
-  if (e.puntajeObtenido != null && e.puntajeTotal != null && e.puntajeTotal > 0) {
+  if (esNumero(e.porcentaje)) return clamp(e.porcentaje);
+  if (esNumero(e.puntajeObtenido) && esNumero(e.puntajeTotal) && e.puntajeTotal > 0) {
     return clamp((e.puntajeObtenido / e.puntajeTotal) * 100);
   }
   return null;
 }
+
+/** Descarta null, undefined, NaN e Infinity (ej. un campo mal tipeado convertido con Number()). */
+function esNumero(n: number | null | undefined): n is number {
+  return typeof n === 'number' && Number.isFinite(n);
+}
+
+/** Peso válido: número finito y mayor que cero. */
+const pesoValido = (w: number) => esNumero(w) && w > 0;
 
 function clamp(n: number) {
   return Math.min(100, Math.max(0, n));
@@ -93,7 +101,7 @@ export function promedioPonderado(evals: Evaluacion[]): number | null {
   let pesos = 0;
   for (const e of evals) {
     const p = porcentajeEvaluacion(e);
-    if (!e.rendida || p == null || e.ponderacion <= 0) continue;
+    if (!e.rendida || p == null || !pesoValido(e.ponderacion)) continue;
     suma += p * e.ponderacion;
     pesos += e.ponderacion;
   }
@@ -110,7 +118,7 @@ export function evaluarComponente(evals: Evaluacion[], minimo: number): Resultad
   let pesoRendido = 0;
   let pesoPendiente = 0;
   for (const e of evals) {
-    if (e.ponderacion <= 0) continue;
+    if (!pesoValido(e.ponderacion)) continue;
     const p = porcentajeEvaluacion(e);
     if (e.rendida && p != null) {
       sumaRendida += p * e.ponderacion;
@@ -187,12 +195,17 @@ export function evaluarFirma(params: {
 
   if (tieneLaboratorio && regla.modoLaboratorio === 'combinado') {
     // Una sola nota: el laboratorio pesa pesoLaboratorio % del total.
-    const pesoLab = regla.pesoLaboratorio ?? 0;
-    const escalar = (evs: Evaluacion[], peso: number) => {
-      const total = evs.reduce((s, e) => s + Math.max(0, e.ponderacion), 0);
-      return total > 0 ? evs.map((e) => ({ ...e, ponderacion: (e.ponderacion / total) * peso })) : [];
+    const pesoLab = clamp(regla.pesoLaboratorio ?? 0);
+    const escalar = (evs: Evaluacion[], peso: number, nombre: string): Evaluacion[] => {
+      if (peso <= 0) return [];
+      const validas = evs.filter((e) => pesoValido(e.ponderacion));
+      const total = validas.reduce((s, e) => s + e.ponderacion, 0);
+      // Sin evaluaciones cargadas, el componente sigue pesando: cuenta como pendiente
+      // para que no se dé por firmada la materia solo con la otra parte.
+      if (total <= 0) return [{ nombre, componente: 'teoria', ponderacion: peso, rendida: false }];
+      return validas.map((e) => ({ ...e, ponderacion: (e.ponderacion / total) * peso }));
     };
-    const combinadas = [...escalar(teoriaEvals, 100 - pesoLab), ...escalar(labEvals, pesoLab)];
+    const combinadas = [...escalar(teoriaEvals, 100 - pesoLab, 'Teoría'), ...escalar(labEvals, pesoLab, 'Laboratorio')];
     teoria = evaluarComponente(combinadas, regla.minimoTeoria);
   } else {
     teoria = evaluarComponente(teoriaEvals, regla.minimoTeoria);
