@@ -1,6 +1,7 @@
 import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
 import { supabase } from './supabase';
+import { olvidarEsteCelular } from './notificaciones';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -62,6 +63,8 @@ export async function registrarseConCorreo(correo: string, clave: string, nombre
 }
 
 export async function salir() {
+  // Primero se borra el celular (después ya no hay sesión para hacerlo).
+  await olvidarEsteCelular().catch(() => {});
   await supabase.auth.signOut();
 }
 

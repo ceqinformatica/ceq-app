@@ -209,6 +209,123 @@ reset role;
 select pg_temp.debe_ser('Beto no cambia los finales de Ana',
   (select count(*) from public.examenes_finales where cursada_anterior), 1);
 
+-- Notificaciones y panel de admin ----------------------------------
+-- Un aviso de antes de la migración cuenta como ya notificado: editarlo
+-- no le manda un push a todos.
+alter table public.avisos disable trigger avisos_notificar;
+insert into public.avisos (id, titulo, cuerpo) values ('60000000-0000-0000-0000-0000000000ff', 'Aviso viejo', 'De antes.');
+alter table public.avisos enable trigger avisos_notificar;
+\ir ../migrations/20261122180000_notificaciones.sql
+update public.avisos set titulo = 'Aviso viejo (corregido)' where id = '60000000-0000-0000-0000-0000000000ff';
+select pg_temp.debe_ser('editar un aviso viejo no lo notifica',
+  (select count(*) from public.notificaciones where aviso_id = '60000000-0000-0000-0000-0000000000ff' and estado = 'pendiente'), 0);
+update public.perfiles set carrera_id = '10000000-0000-0000-0000-000000000001' where id = '00000000-0000-0000-0000-00000000000a';
+select pg_temp.como('00000000-0000-0000-0000-00000000000a');
+select pg_temp.debe_fallar('token inválido', $$select public.registrar_dispositivo('cualquiera', 'android')$$);
+select public.registrar_dispositivo('ExponentPushToken[celuDeAna0001]', 'android');
+select public.registrar_dispositivo('ExponentPushToken[celuCompartido01]', 'android');
+select pg_temp.debe_ser('Ana ve sus celulares', (select count(*) from public.dispositivos), 2);
+select pg_temp.debe_ser('Ana no lee la cola de notificaciones', (select count(*) from public.notificaciones), 0);
+select pg_temp.debe_fallar('Ana no programa notificaciones',
+  $$insert into public.notificaciones (titulo, cuerpo) values ('Spam', 'spam')$$);
+select pg_temp.debe_fallar('Ana no ejecuta el cartero', 'select public.procesar_notificaciones()');
+select pg_temp.debe_fallar('Ana no ve el resumen del admin', 'select public.resumen_admin()');
+select pg_temp.debe_fallar('Ana no lee los envíos', 'select * from public.envios_push');
+select pg_temp.debe_fallar('Ana no publica avisos', $$insert into public.avisos (titulo, cuerpo) values ('x', 'y')$$);
+reset role;
+select pg_temp.como('00000000-0000-0000-0000-00000000000b');
+-- Beto inicia sesión en el celular que antes usaba Ana: pasa a ser suyo.
+select public.registrar_dispositivo('ExponentPushToken[celuCompartido01]', 'android');
+select pg_temp.debe_ser('Beto se queda con el celular compartido', (select count(*) from public.dispositivos), 1);
+insert into public.eventos (titulo, fecha, aviso_minutos) values ('Parcial de Beto', now() + interval '2 hours', 1440);
+reset role;
+select pg_temp.como('00000000-0000-0000-0000-00000000000a');
+select pg_temp.debe_ser('Ana ya no tiene el celular compartido', (select count(*) from public.dispositivos), 1);
+insert into public.eventos (titulo, fecha, aviso_minutos) values ('Final de Química General', now() + interval '3 days', 1440);
+reset role;
+
+select pg_temp.como('00000000-0000-0000-0000-0000000000ad');
+insert into public.avisos (id, titulo, cuerpo) values ('60000000-0000-0000-0000-000000000001', 'Asamblea', 'El jueves a las 18 h.');
+insert into public.avisos (id, titulo, cuerpo, publicar_en) values ('60000000-0000-0000-0000-000000000002', 'Programado', 'Sale mañana.', now() + interval '1 day');
+insert into public.avisos (id, titulo, cuerpo, carrera_id) values ('60000000-0000-0000-0000-000000000003', 'Solo Química', 'Para Química.', '10000000-0000-0000-0000-000000000001');
+insert into public.avisos (id, titulo, cuerpo, notificar) values ('60000000-0000-0000-0000-000000000004', 'Sin aviso', 'Silencioso.', false);
+insert into public.notificaciones (titulo, cuerpo, programada_para) values ('Inscripción a finales', 'Cierra hoy.', now() - interval '1 minute');
+insert into public.notificaciones (titulo, cuerpo, programada_para) values ('Para cancelar', 'x', now() + interval '1 hour');
+select pg_temp.debe_ser('el admin ve las notificaciones generales', (select count(*) from public.notificaciones), 6);
+select pg_temp.debe_ser('el admin cancela una programada',
+  pg_temp.filas($q$update public.notificaciones set estado = 'cancelada' where titulo = 'Para cancelar'$q$), 1);
+select pg_temp.debe_fallar('el admin no marca como enviada',
+  $$update public.notificaciones set estado = 'enviada' where titulo = 'Inscripción a finales'$$);
+select pg_temp.debe_fallar('el admin no escribe recordatorios personales',
+  $$insert into public.notificaciones (titulo, cuerpo, usuario_id) values ('x', 'y', '00000000-0000-0000-0000-00000000000a')$$);
+select pg_temp.debe_ser('el admin ve el aviso programado', (select count(*) from public.avisos where id = '60000000-0000-0000-0000-000000000002'), 1);
+select pg_temp.debe_ser('alcance para todos', public.alcance_notificacion(null), 2);
+select pg_temp.debe_ser('alcance para Química', public.alcance_notificacion('10000000-0000-0000-0000-000000000001'), 1);
+reset role;
+
+select pg_temp.como('00000000-0000-0000-0000-00000000000a');
+select pg_temp.debe_ser('Ana no ve el aviso programado', (select count(*) from public.avisos where id = '60000000-0000-0000-0000-000000000002'), 0);
+select pg_temp.debe_ser('Ana ve el aviso de su carrera', (select count(*) from public.avisos where id = '60000000-0000-0000-0000-000000000003'), 1);
+reset role;
+select pg_temp.como('00000000-0000-0000-0000-00000000000b');
+select pg_temp.debe_ser('Beto no ve el aviso de otra carrera', (select count(*) from public.avisos where id = '60000000-0000-0000-0000-000000000003'), 0);
+reset role;
+
+-- El cartero (como lo corre pg_cron).
+select pg_temp.debe_ser('salen aviso general, aviso de carrera, mensaje y recordatorio de Beto', public.procesar_notificaciones(), 4);
+select pg_temp.debe_ser('el aviso programado sigue pendiente',
+  (select count(*) from public.notificaciones where aviso_id = '60000000-0000-0000-0000-000000000002' and estado = 'pendiente'), 1);
+select pg_temp.debe_ser('el aviso sin notificar no se encola',
+  (select count(*) from public.notificaciones where aviso_id = '60000000-0000-0000-0000-000000000004'), 0);
+select pg_temp.debe_ser('la cancelada no sale', (select count(*) from net.pedidos where body::text like '%Para cancelar%'), 0);
+select pg_temp.debe_ser('el aviso general llega a los dos celulares',
+  (select jsonb_array_length(body) from net.pedidos where body::text like '%Asamblea%'), 2);
+select pg_temp.debe_ser('el aviso de Química llega solo a Ana',
+  (select count(*) from net.pedidos where body::text like '%Solo Química%' and body::text like '%celuDeAna0001%' and jsonb_array_length(body) = 1), 1);
+select pg_temp.debe_ser('el recordatorio de Beto llega solo a Beto',
+  (select count(*) from net.pedidos where body::text like '%Parcial de Beto%' and body::text like '%celuCompartido01%' and jsonb_array_length(body) = 1), 1);
+select pg_temp.debe_ser('el final de Ana (en 3 días) todavía no se avisa', (select count(*) from net.pedidos where body::text like '%Final de Química%'), 0);
+select pg_temp.debe_ser('el tocar abre el aviso',
+  (select count(*) from net.pedidos where body -> 0 -> 'data' ->> 'ruta' = '/aviso/60000000-0000-0000-0000-000000000001'), 1);
+select pg_temp.debe_ser('una segunda pasada no repite nada', public.procesar_notificaciones(), 0);
+
+-- Editar un aviso ya enviado no lo vuelve a mandar.
+update public.avisos set titulo = 'Asamblea (cambió el horario)' where id = '60000000-0000-0000-0000-000000000001';
+select pg_temp.debe_ser('editar un aviso enviado no lo reenvía', public.procesar_notificaciones(), 0);
+-- Despublicar el programado lo cancela.
+update public.avisos set publicado = false where id = '60000000-0000-0000-0000-000000000002';
+select pg_temp.debe_ser('despublicar cancela la notificación',
+  (select count(*) from public.notificaciones where aviso_id = '60000000-0000-0000-0000-000000000002' and estado = 'cancelada'), 1);
+
+-- Ana apaga los avisos: no le llegan, pero sí sus recordatorios.
+update public.perfiles set notif_avisos = false where id = '00000000-0000-0000-0000-00000000000a';
+update public.eventos set fecha = now() + interval '1 hour' where titulo = 'Final de Química General';
+insert into public.notificaciones (titulo, cuerpo, creada_por) values ('Solo para quien quiere avisos', 'x', null);
+select pg_temp.debe_ser('sale el mensaje y el recordatorio de Ana', public.procesar_notificaciones(), 2);
+select pg_temp.debe_ser('a Ana no le llega el mensaje',
+  (select count(*) from net.pedidos where body::text like '%Solo para quien quiere avisos%' and body::text like '%celuDeAna0001%'), 0);
+select pg_temp.debe_ser('a Ana le llega su recordatorio',
+  (select count(*) from net.pedidos where body::text like '%Final de Química%' and body::text like '%celuDeAna0001%'), 1);
+
+-- Un evento sin título no traba el envío para nadie.
+select pg_temp.como('00000000-0000-0000-0000-00000000000b');
+insert into public.eventos (titulo, fecha, aviso_minutos) values ('', now() + interval '30 minutes', 60);
+reset role;
+insert into public.notificaciones (titulo, cuerpo, creada_por) values ('Sale igual', 'x', null);
+select pg_temp.debe_ser('un evento sin título no rompe el cartero', public.procesar_notificaciones(), 2);
+select pg_temp.debe_ser('el recordatorio sin título usa uno genérico',
+  (select count(*) from net.pedidos where body -> 0 ->> 'title' = 'Recordatorio'), 1);
+
+-- Expo avisa que el celular de Ana se desinstaló: se borra.
+insert into net._http_response (id, status_code, content)
+select id, 200, '{"data":[{"status":"error","details":{"error":"DeviceNotRegistered"}}]}'
+from net.pedidos where body::text like '%Final de Química%';
+insert into net._http_response (id, status_code, content)
+select id, 500, 'no es json' from net.pedidos where body::text like '%Asamblea%';
+select public.procesar_notificaciones();
+select pg_temp.debe_ser('se borra el celular dado de baja', (select count(*) from public.dispositivos where token = 'ExponentPushToken[celuDeAna0001]'), 0);
+select pg_temp.debe_ser('los demás celulares siguen', (select count(*) from public.dispositivos), 1);
+
 -- Todas las tablas públicas tienen RLS ------------------------------
 select pg_temp.debe_ser('tablas sin RLS',
   (select count(*) from pg_class c join pg_namespace n on n.oid = c.relnamespace

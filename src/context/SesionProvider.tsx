@@ -19,7 +19,7 @@ interface SesionCtx {
   bloqueado: boolean;
   desbloquear: () => Promise<boolean>;
   recargarPerfil: () => Promise<void>;
-  actualizarPerfil: (cambios: Partial<Pick<Perfil, 'nombre' | 'ci' | 'carrera_id' | 'plan_id' | 'anio_ingreso'>>) => Promise<string | null>;
+  actualizarPerfil: (cambios: Partial<Pick<Perfil, 'nombre' | 'ci' | 'carrera_id' | 'plan_id' | 'anio_ingreso' | 'notif_avisos' | 'notif_recordatorios'>>) => Promise<string | null>;
 }
 
 const Ctx = createContext<SesionCtx | null>(null);

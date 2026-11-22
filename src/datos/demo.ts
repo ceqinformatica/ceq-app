@@ -6,7 +6,7 @@
  */
 import type {
   AsistenciaDb, AvisoDb, Carrera, EncuestaDb, EvaluacionDb, EventoDb, ExamenFinalDb, GrupoOptativasDb, HorarioDb, MateriaDb,
-  MateriaEstudianteDb, OpcionEncuestaDb, Perfil, Plan, PrerrequisitoDb, ReglaFirmaDb, SocioDb, SugerenciaDb, TramiteDb,
+  MateriaEstudianteDb, OpcionEncuestaDb, Perfil, Plan, PrerrequisitoDb, ReglaFirmaDb, SocioDb, SugerenciaDb, NotificacionDb, TramiteDb,
 } from '../lib/tipos-db';
 
 export const MODO_DEMO = process.env.EXPO_PUBLIC_DEMO === '1';
@@ -66,7 +66,8 @@ const hor = (id: string, materia_id: string, dia: number, ini: string, fin: stri
 
 export const db = {
   perfil: {
-    id: UID_DEMO, nombre: 'Ana Giménez', ci: '5123456', carrera_id: 'car-1', plan_id: 'plan-1', anio_ingreso: 2023, rol: 'estudiante',
+    id: UID_DEMO, nombre: 'Ana Giménez', ci: '5123456', carrera_id: 'car-1', plan_id: 'plan-1', anio_ingreso: 2023, rol: process.env.EXPO_PUBLIC_DEMO_ADMIN === '1' ? 'admin' : 'estudiante',
+    notif_avisos: true, notif_recordatorios: true,
     avatar_url: null, created_at: ahora.toISOString(), updated_at: ahora.toISOString(),
   } as Perfil,
   correo: 'estudiante@ejemplo.com',
@@ -123,7 +124,14 @@ export const db = {
     { id: 't2', nombre: 'Constancia de alumno regular', descripcion: 'Para becas, pasajes o trabajo.', pasos: ['Pedirla en ventanilla con tu cédula', 'Retirar al día siguiente'], costo: 'Sin costo', donde: 'Ventanilla de alumnos', formulario_url: null, orden: 1 },
     { id: 't3', nombre: 'Asociarse al CEQ', descripcion: 'Accedé a beneficios y al carnet digital.', pasos: ['Completar la ficha de socio', 'Abonar la cuota anual', 'Tu carnet aparece en la app'], costo: 'Cuota anual', donde: 'Sede del CEQ', formulario_url: null, orden: 2 },
   ] as TramiteDb[],
-  sugerencias: [] as SugerenciaDb[],
+  sugerencias: [
+    { id: 'sg1', usuario_id: 'otro', categoria: 'Infraestructura', texto: 'Faltan enchufes en la biblioteca para cargar la notebook.', estado: 'recibida', respuesta: null, created_at: enDias(-1) },
+    { id: 'sg2', usuario_id: 'otro', categoria: 'Académico', texto: '¿Se pueden subir los exámenes viejos de Fisicoquímica?', estado: 'respondida', respuesta: 'Sí, los estamos juntando con los docentes.', created_at: enDias(-6) },
+  ] as SugerenciaDb[],
+  notificaciones: [
+    { id: 'n1', tipo: 'mensaje', titulo: 'Cierra la inscripción a finales', cuerpo: 'Hoy a las 23:59 cierra la inscripción del 1.er periodo.', ruta: null, aviso_id: null, evento_id: null, usuario_id: null, carrera_id: null, plan_id: null, programada_para: enDias(1, 8), estado: 'pendiente', enviada_en: null, destinatarios: null, creada_por: null, created_at: enDias(-1) },
+    { id: 'n2', tipo: 'aviso', titulo: 'Inscripciones a exámenes finales', cuerpo: 'Recordá que la inscripción a los finales del primer periodo cierra el viernes.', ruta: '/aviso/a1', aviso_id: 'a1', evento_id: null, usuario_id: null, carrera_id: null, plan_id: null, programada_para: enDias(-1), estado: 'enviada', enviada_en: enDias(-1), destinatarios: 214, creada_por: null, created_at: enDias(-1) },
+  ] as NotificacionDb[],
   encuestas: [
     { id: 'enc1', pregunta: '¿Qué horario preferís para las tutorías?', abierta: true, cierra_en: enDias(5), created_at: enDias(-2) },
   ] as EncuestaDb[],

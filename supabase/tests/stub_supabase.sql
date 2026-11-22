@@ -15,3 +15,14 @@ grant usage on schema public to anon, authenticated;
 alter default privileges in schema public grant all on tables to anon, authenticated;
 alter default privileges in schema public grant all on functions to anon, authenticated;
 alter default privileges in schema public grant all on sequences to anon, authenticated;
+
+-- Imitación de pg_net: en vez de llamar a Expo, guarda cada pedido para
+-- que las pruebas vean qué se habría enviado.
+create schema net;
+create table net._http_response (id bigint primary key, status_code integer, content text);
+create table net.pedidos (id bigserial primary key, url text, body jsonb, headers jsonb);
+create function net.http_post(url text, body jsonb default '{}', params jsonb default '{}',
+                              headers jsonb default '{}', timeout_milliseconds integer default 5000)
+returns bigint language sql as $$
+  insert into net.pedidos (url, body, headers) values (url, body, headers) returning id;
+$$;

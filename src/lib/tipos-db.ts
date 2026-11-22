@@ -34,6 +34,7 @@ export type ReglaFirmaDb = {
 export type Perfil = {
   id: string; nombre: string | null; ci: string | null; carrera_id: string | null; plan_id: string | null;
   anio_ingreso: number | null; rol: RolUsuario; avatar_url: string | null; created_at: string; updated_at: string;
+  notif_avisos?: boolean; notif_recordatorios?: boolean;
 }
 export type MateriaEstudianteDb = {
   usuario_id: string; materia_id: string; estado: EstadoMateriaDb; nota_final: number | null; fecha: string | null;
@@ -63,6 +64,8 @@ export type SocioDb = {
 export type AvisoDb = {
   id: string; titulo: string; cuerpo: string; imagen_url: string | null; notificar: boolean; publicado: boolean;
   autor_id: string | null; created_at: string;
+  /** Cuándo aparece para los estudiantes (avisos programados). */
+  publicar_en?: string; carrera_id?: string | null;
 }
 export type TramiteDb = {
   id: string; nombre: string; descripcion: string | null; pasos: string[]; costo: string | null; donde: string | null;
@@ -82,6 +85,15 @@ export type ExamenFinalDb = {
   nota: number | null; created_at: string; porcentaje?: number | null;
   tipo?: TipoExamen; cursada_anterior?: boolean;
 }
+export type TipoNotificacion = 'aviso' | 'mensaje' | 'recordatorio';
+export type EstadoNotificacion = 'pendiente' | 'enviada' | 'cancelada' | 'sin_destinatarios' | 'error';
+export type NotificacionDb = {
+  id: string; tipo: TipoNotificacion; titulo: string; cuerpo: string; ruta: string | null; aviso_id: string | null;
+  evento_id: string | null; usuario_id: string | null; carrera_id: string | null; plan_id: string | null;
+  programada_para: string; estado: EstadoNotificacion; enviada_en: string | null; destinatarios: number | null;
+  creada_por: string | null; created_at: string;
+}
+export type ResumenAdmin = { usuarios: number; celulares: number; sugerencias_nuevas: number; programadas: number };
 export type DispositivoDb = { token: string; usuario_id: string; plataforma: string | null; updated_at: string }
 
 export type Database = {
@@ -100,7 +112,8 @@ export type Database = {
       horario: Tabla<HorarioDb, 'id' | 'usuario_id' | 'materia_id' | 'titulo' | 'aula'>;
       eventos: Tabla<EventoDb, 'id' | 'usuario_id' | 'materia_id' | 'plan_id' | 'tipo' | 'aviso_minutos' | 'notificado' | 'created_at'>;
       socios: Tabla<SocioDb, 'id' | 'usuario_id' | 'numero_socio' | 'vigente_hasta' | 'foto_path' | 'updated_at'>;
-      avisos: Tabla<AvisoDb, 'id' | 'imagen_url' | 'notificar' | 'publicado' | 'autor_id' | 'created_at'>;
+      avisos: Tabla<AvisoDb, 'id' | 'imagen_url' | 'notificar' | 'publicado' | 'autor_id' | 'created_at' | 'publicar_en' | 'carrera_id'>;
+      notificaciones: Tabla<NotificacionDb, 'id' | 'tipo' | 'ruta' | 'aviso_id' | 'evento_id' | 'usuario_id' | 'carrera_id' | 'plan_id' | 'programada_para' | 'estado' | 'enviada_en' | 'destinatarios' | 'creada_por' | 'created_at'>;
       tramites: Tabla<TramiteDb, 'id' | 'descripcion' | 'pasos' | 'costo' | 'donde' | 'formulario_url' | 'orden'>;
       sugerencias: Tabla<SugerenciaDb, 'id' | 'usuario_id' | 'categoria' | 'estado' | 'respuesta' | 'created_at'>;
       encuestas: Tabla<EncuestaDb, 'id' | 'abierta' | 'cierra_en' | 'created_at'>;
@@ -115,6 +128,9 @@ export type Database = {
     Functions: {
       votar: { Args: { p_encuesta: string; p_opcion: string }; Returns: undefined };
       es_admin: { Args: Record<string, never>; Returns: boolean };
+      registrar_dispositivo: { Args: { p_token: string; p_plataforma?: string | null }; Returns: undefined };
+      alcance_notificacion: { Args: { p_carrera?: string | null }; Returns: number };
+      resumen_admin: { Args: Record<string, never>; Returns: ResumenAdmin };
     };
     Enums: {
       rol_usuario: RolUsuario;

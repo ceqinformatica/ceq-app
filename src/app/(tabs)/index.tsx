@@ -191,7 +191,7 @@ export default function Inicio() {
               <View style={{ flex: 1 }}>
                 <Text style={s.filaTitulo} numberOfLines={2}>{a.titulo}</Text>
                 <Text style={[s.filaDetalle, { marginTop: 2 }]} numberOfLines={2}>{a.cuerpo}</Text>
-                <Text style={[s.filaDetalle, { marginTop: 6, color: colores.azul, fontFamily: fuentes.medium }]}>{haceCuanto(a.created_at)}</Text>
+                <Text style={[s.filaDetalle, { marginTop: 6, color: colores.azul, fontFamily: fuentes.medium }]}>{haceCuanto(a.publicar_en ?? a.created_at)}</Text>
               </View>
             </View>
           </Tarjeta>

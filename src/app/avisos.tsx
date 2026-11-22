@@ -19,7 +19,7 @@ export default function Avisos() {
       ) : (
         datos.map((a) => (
           <Tarjeta key={a.id} onPress={() => router.push(`/aviso/${a.id}`)} etiqueta={a.titulo}>
-            <Text style={{ fontFamily: fuentes.semibold, fontSize: 11, color: colores.azul, letterSpacing: 0.4, marginBottom: 4, textTransform: 'uppercase' }}>{haceCuanto(a.created_at)}</Text>
+            <Text style={{ fontFamily: fuentes.semibold, fontSize: 11, color: colores.azul, letterSpacing: 0.4, marginBottom: 4, textTransform: 'uppercase' }}>{haceCuanto(a.publicar_en ?? a.created_at)}</Text>
             <Text style={[s.filaTitulo, { fontSize: 16, color: colores.marino }]}>{a.titulo}</Text>
             <Text style={[s.filaDetalle, { marginTop: 4 }]} numberOfLines={3}>{a.cuerpo}</Text>
           </Tarjeta>

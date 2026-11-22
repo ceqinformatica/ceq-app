@@ -52,7 +52,10 @@ jobs:
       - name: Aplicar migraciones dos veces y correr las pruebas
         run: |
           psql -v ON_ERROR_STOP=1 -q -f supabase/tests/stub_supabase.sql
-          for f in supabase/migrations/*.sql; do psql -v ON_ERROR_STOP=1 -q -f "$f"; done
-          # La segunda pasada de los ajustes comprueba que se pueden re-ejecutar.
-          for f in supabase/migrations/*ajustes*.sql; do psql -v ON_ERROR_STOP=1 -q -f "$f"; done
+          # Cada migración se aplica dos veces seguidas: comprueba que se
+          # puede re-ejecutar sin pisar lo que dejan las siguientes.
+          for f in supabase/migrations/*.sql; do
+            psql -v ON_ERROR_STOP=1 -q -f "$f"
+            case "$f" in *ajustes*|*notificaciones*) psql -v ON_ERROR_STOP=1 -q -f "$f";; esac
+          done
           psql -v ON_ERROR_STOP=1 -q -f supabase/tests/politicas.sql

@@ -24,7 +24,8 @@
       "package": "com.ceqinformatica.app",
       "permissions": [
         "android.permission.USE_BIOMETRIC",
-        "android.permission.USE_FINGERPRINT"
+        "android.permission.USE_FINGERPRINT",
+        "android.permission.POST_NOTIFICATIONS"
       ]
     },
     "web": {
@@ -47,6 +48,14 @@
           "image": "./assets/splash-icon.png",
           "imageWidth": 180,
           "backgroundColor": "#FFFFFF"
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notificacion.png",
+          "color": "#173874",
+          "defaultChannel": "avisos"
         }
       ]
     ],
