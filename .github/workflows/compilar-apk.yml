@@ -1,0 +1,43 @@
+# Compila el APK de la app en los servidores de Expo (EAS Build).
+# Se ejecuta cada vez que se aprueba un cambio en main, o a mano desde
+# la pestaña Actions ("Run workflow").
+# Necesita el secreto EXPO_TOKEN en Settings > Secrets and variables > Actions.
+name: Compilar APK
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      perfil:
+        description: "Perfil de eas.json (preview = APK para instalar, production = AAB para Play Store)"
+        default: preview
+        type: choice
+        options: [preview, production]
+
+concurrency:
+  group: compilar-apk
+  cancel-in-progress: true
+
+jobs:
+  compilar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - run: npm ci
+
+      - run: npm test
+
+      - name: Mandar a compilar a Expo
+        run: eas build --platform android --profile ${{ inputs.perfil || 'preview' }} --non-interactive --no-wait
