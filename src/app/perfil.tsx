@@ -87,11 +87,20 @@ export default function Perfil() {
         onPress={async () => setError(await actualizarPerfil({ carrera_id: null, plan_id: null }))}
       />
 
+      {perfil?.rol === 'validador' && (
+        <>
+          <Seccion estilo={{ marginTop: espacio.xl }}>CEQ</Seccion>
+          <Tarjeta estilo={{ paddingVertical: espacio.xs }}>
+            <Fila icono="qr-code-outline" titulo="Verificar carnet" detalle="Escanear el QR de un socio" onPress={() => router.push('/admin/verificar')} ultima />
+          </Tarjeta>
+        </>
+      )}
+
       {perfil?.rol === 'admin' && (
         <>
           <Seccion estilo={{ marginTop: espacio.xl }}>Administración</Seccion>
           <Tarjeta estilo={{ paddingVertical: espacio.xs }}>
-            <Fila icono="construct-outline" titulo="Panel del CEQ" detalle="Avisos, notificaciones, encuestas y sugerencias" onPress={() => router.push('/admin')} ultima />
+            <Fila icono="construct-outline" titulo="Panel del CEQ" detalle="Socios, avisos, notificaciones, encuestas y sugerencias" onPress={() => router.push('/admin')} ultima />
           </Tarjeta>
         </>
       )}

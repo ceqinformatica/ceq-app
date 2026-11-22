@@ -95,16 +95,6 @@ export async function votar(encuestaId: string, opcionId: string) {
   lanzar(error);
 }
 
-/** Contenido del QR del carnet: verificable por el CEQ, sin datos sensibles de más. */
-export function contenidoQr(socio: SocioDb) {
-  return `CEQ:SOCIO:${socio.numero_socio ?? socio.id}`;
-}
-
-export function carnetVigente(socio: SocioDb) {
-  if (!socio.vigente_hasta) return true;
-  return new Date(`${socio.vigente_hasta}T23:59:59`) >= new Date();
-}
-
 /** "Hoy", "Ayer", "Hace 3 días" o la fecha. */
 export const haceCuanto = (iso: string) => {
   const dias = Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);

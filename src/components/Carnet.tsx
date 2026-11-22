@@ -2,24 +2,27 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useState } from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
-import { carnetVigente, contenidoQr } from '../datos/ceq';
+import { contenidoQr, estadoCarnet, fechaCorta, formatearCi } from '../lib/carnet';
 import type { SocioDb } from '../lib/tipos-db';
 import { colores, espacio, fuentes, radio, sombras } from '../tema';
 import { TramaHex } from './graficos';
 import { logoCeq } from './ui';
 
-const fechaLarga = (iso: string) => {
-  const [a, m, d] = iso.split('-');
-  return `${d}/${m}/${a}`;
+const ESTADO = {
+  vigente: { texto: 'VIGENTE', fondo: 'rgba(95, 211, 141, 0.2)', punto: '#5FD38D', color: '#B8F0CD' },
+  vencido: { texto: 'VENCIDO', fondo: 'rgba(255, 122, 110, 0.22)', punto: '#FF7A6E', color: '#FFC2BC' },
+  inactivo: { texto: 'DE BAJA', fondo: 'rgba(255, 122, 110, 0.22)', punto: '#FF7A6E', color: '#FFC2BC' },
 };
 
 /** Carnet de socio del CEQ: marino con la trama de hexágonos, como credencial. */
-export function Carnet({ socio, carrera, conQr = false }: { socio: SocioDb; carrera?: string | null; conQr?: boolean }) {
+export function Carnet({ socio, carrera, conQr = false, foto }: { socio: SocioDb; carrera?: string | null; conQr?: boolean; foto?: string | null }) {
   const [ancho, setAncho] = useState(0);
-  const vigente = carnetVigente(socio);
+  const estado = estadoCarnet(socio);
+  const e = ESTADO[estado];
+  const vigente = estado === 'vigente';
   return (
-    <View style={[est.carnet, sombras.fuerte]} onLayout={(e) => setAncho(e.nativeEvent.layout.width)} accessibilityLabel={`Carnet de socio de ${socio.nombre}, número ${socio.numero_socio ?? 'sin asignar'}, ${vigente ? 'vigente' : 'vencido'}`}>
-      {ancho > 0 && <TramaHex ancho={ancho} alto={conQr ? 520 : 230} opacidad={0.09} tam={40} />}
+    <View style={[est.carnet, sombras.fuerte]} onLayout={(e) => setAncho(e.nativeEvent.layout.width)} accessibilityLabel={`Carnet de socio de ${socio.nombre}, número ${socio.numero_socio ?? 'sin asignar'}, ${e.texto.toLowerCase()}`}>
+      {ancho > 0 && <TramaHex ancho={ancho} alto={conQr ? 560 : 250} opacidad={0.09} tam={40} />}
       <View style={est.fila}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: espacio.s }}>
           <View style={est.logo}><Image source={logoCeq} style={{ width: 30, height: 30 }} /></View>
@@ -28,27 +31,30 @@ export function Carnet({ socio, carrera, conQr = false }: { socio: SocioDb; carr
             <Text style={est.marcaSub}>Centro de Estudiantes de Química</Text>
           </View>
         </View>
-        <View style={[est.estado, { backgroundColor: vigente ? 'rgba(95, 211, 141, 0.2)' : 'rgba(255, 122, 110, 0.22)' }]}>
-          <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: vigente ? '#5FD38D' : '#FF7A6E' }} />
-          <Text style={[est.estadoTexto, { color: vigente ? '#B8F0CD' : '#FFC2BC' }]}>{vigente ? 'VIGENTE' : 'VENCIDO'}</Text>
+        <View style={[est.estado, { backgroundColor: e.fondo }]}>
+          <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: e.punto }} />
+          <Text style={[est.estadoTexto, { color: e.color }]}>{e.texto}</Text>
         </View>
       </View>
 
       {conQr && (
-        <View style={est.qr}>
-          <QRCode value={contenidoQr(socio)} size={190} color={colores.marinoProfundo} backgroundColor={colores.blanco} />
+        <View style={[est.qr, !vigente && { opacity: 0.35 }]}>
+          <QRCode value={contenidoQr(socio.codigo_qr)} size={190} color={colores.marinoProfundo} backgroundColor={colores.blanco} />
         </View>
       )}
 
-      <View style={{ marginTop: conQr ? espacio.l : espacio.xl }}>
-        <Text style={est.etiqueta}>SOCIO</Text>
-        <Text style={est.nombre} numberOfLines={2}>{socio.nombre}</Text>
-        {carrera ? <Text style={est.carrera} numberOfLines={1}>{carrera}</Text> : null}
+      <View style={{ marginTop: conQr ? espacio.l : espacio.xl, flexDirection: 'row', alignItems: 'center', gap: espacio.m }}>
+        {foto ? <Image source={{ uri: foto }} style={est.foto} accessibilityLabel={`Foto de ${socio.nombre}`} /> : null}
+        <View style={{ flex: 1 }}>
+          <Text style={est.etiqueta}>SOCIO</Text>
+          <Text style={est.nombre} numberOfLines={2}>{socio.nombre}</Text>
+          {carrera ? <Text style={est.carrera} numberOfLines={1}>{carrera}</Text> : null}
+        </View>
       </View>
       <View style={[est.fila, { marginTop: espacio.m }]}>
         <Dato etiqueta="N.º DE SOCIO" valor={socio.numero_socio ?? '—'} />
-        <Dato etiqueta="C.I." valor={socio.ci} />
-        <Dato etiqueta="VENCE" valor={socio.vigente_hasta ? fechaLarga(socio.vigente_hasta) : '—'} />
+        <Dato etiqueta="C.I." valor={formatearCi(socio.ci)} />
+        <Dato etiqueta="VENCE" valor={socio.vigente_hasta ? fechaCorta(socio.vigente_hasta) : 'Sin venc.'} />
         {!conQr && <Ionicons name="qr-code" size={30} color={colores.blanco} style={{ opacity: 0.9 }} />}
       </View>
     </View>
@@ -75,6 +81,7 @@ const est = StyleSheet.create({
   qr: { alignSelf: 'center', backgroundColor: colores.blanco, padding: espacio.m, borderRadius: radio.l, marginTop: espacio.xl },
   etiqueta: { fontFamily: fuentes.semibold, fontSize: 9.5, letterSpacing: 1.2, color: colores.celesteVivo },
   nombre: { fontFamily: fuentes.bold, fontSize: 21, color: colores.blanco, marginTop: 2, textTransform: 'uppercase', letterSpacing: 0.4 },
+  foto: { width: 64, height: 80, borderRadius: radio.m, borderWidth: 2, borderColor: colores.blanco, backgroundColor: colores.marino },
   carrera: { fontFamily: fuentes.regular, fontSize: 13, color: colores.cielo, marginTop: 2 },
   valor: { fontFamily: fuentes.semibold, fontSize: 13.5, color: colores.blanco, marginTop: 2 },
 });

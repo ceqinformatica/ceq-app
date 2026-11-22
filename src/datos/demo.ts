@@ -114,7 +114,12 @@ export const db = {
   socio: {
     id: 'soc-1', usuario_id: UID_DEMO, numero_socio: 'CEQ-0427', ci: '5123456', nombre: 'Ana Giménez',
     vigente_hasta: `${ahora.getFullYear()}-12-31`, foto_path: null, updated_at: ahora.toISOString(),
+    codigo_qr: '3f9c2a7e41b84d0c9e15a6b2d8f07c11', activo: true, pagado_en: `${ahora.getFullYear()}-03-10`, observacion: null, created_at: ahora.toISOString(),
   } as SocioDb | null,
+  otrosSocios: [
+    { id: 'soc-2', usuario_id: null, numero_socio: 'CEQ-0428', ci: '4987001', nombre: 'Bruno Benítez', vigente_hasta: `${ahora.getFullYear()}-12-31`, foto_path: null, updated_at: ahora.toISOString(), codigo_qr: '9a1b', activo: true, pagado_en: null, observacion: 'Solo carnet físico', created_at: ahora.toISOString() },
+    { id: 'soc-3', usuario_id: null, numero_socio: 'CEQ-0311', ci: '5300222', nombre: 'Carla Duarte', vigente_hasta: `${ahora.getFullYear() - 1}-12-31`, foto_path: null, updated_at: ahora.toISOString(), codigo_qr: '7c2d', activo: true, pagado_en: null, observacion: null, created_at: ahora.toISOString() },
+  ] as SocioDb[],
   avisos: [
     { id: 'a1', titulo: 'Inscripciones a exámenes finales', cuerpo: 'Recordá que la inscripción a los finales del primer periodo cierra el viernes. Hacela desde el sistema de la facultad y guardá el comprobante.', imagen_url: null, notificar: true, publicado: true, autor_id: null, created_at: enDias(-1) },
     { id: 'a2', titulo: 'Venta de batas y antiparras', cuerpo: 'El CEQ tiene batas y antiparras a precio de socio. Pasá por la sede en el horario de atención.', imagen_url: null, notificar: false, publicado: true, autor_id: null, created_at: enDias(-4) },

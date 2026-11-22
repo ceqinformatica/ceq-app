@@ -346,6 +346,50 @@ select pg_temp.debe_ser('Ana no edita trámites', pg_temp.filas($q$update public
 select pg_temp.debe_ser('Ana no borra trámites', pg_temp.filas($q$delete from public.tramites$q$), 0);
 reset role;
 
+-- Carnet de socio con QR (solo quien pagó, verificable) -------------
+insert into auth.users (id, email, raw_user_meta_data) values
+  ('00000000-0000-0000-0000-0000000000c1', 'vale@ejemplo.com', '{"full_name":"Vale"}'),
+  ('00000000-0000-0000-0000-0000000000c2', 'ceci@ejemplo.com', '{"full_name":"Ceci"}');
+update public.perfiles set rol = 'validador' where id = '00000000-0000-0000-0000-0000000000c1';
+select pg_temp.como('00000000-0000-0000-0000-0000000000c2');
+select pg_temp.debe_fallar('Ceci no se da de alta como socia', $$insert into public.socios (ci, nombre, usuario_id) values ('111', 'Ana', '00000000-0000-0000-0000-00000000000a')$$);
+select pg_temp.debe_fallar('Ceci no verifica carnets', $$select public.verificar_carnet('CEQ-0001')$$);
+select pg_temp.debe_fallar('Ceci no busca estudiantes', $$select * from public.buscar_estudiantes('ana')$$);
+select pg_temp.como('00000000-0000-0000-0000-0000000000ad');
+select pg_temp.debe_ser('admin encuentra a Ana por correo', (select count(*) from public.buscar_estudiantes('ana@')), 1);
+insert into public.socios (ci, nombre, usuario_id, vigente_hasta)
+  values ('4.555.666', 'Ana', '00000000-0000-0000-0000-00000000000a', '2099-12-31');
+insert into public.socios (ci, nombre, vigente_hasta) values ('777', 'Vencida', '2020-12-31');
+select pg_temp.debe_ser('número de socio automático', (select count(*) from public.socios where numero_socio like 'CEQ-0%'), 2);
+select pg_temp.debe_ser('C.I. sin puntos', (select count(*) from public.socios where ci = '4555666'), 1);
+select pg_temp.como('00000000-0000-0000-0000-00000000000a');
+select pg_temp.debe_ser('Ana ve solo su carnet', (select count(*) from public.socios), 1);
+select pg_temp.debe_ser('Ana no edita su vigencia', pg_temp.filas($q$update public.socios set vigente_hasta = '2199-01-01'$q$), 0);
+select pg_temp.debe_fallar('Ana no ve verificaciones', $$select public.verificar_carnet('x')$$);
+select pg_temp.debe_fallar('Ana no pone foto fuera de su carpeta', $$select public.poner_foto_carnet((select id from public.socios), '00000000-0000-0000-0000-00000000000b/f.jpg')$$);
+select public.poner_foto_carnet((select id from public.socios), '00000000-0000-0000-0000-00000000000a/f.jpg');
+create temp table if not exists codigos (socio uuid, viejo text, nuevo text);
+grant all on codigos to authenticated;
+insert into codigos (socio, viejo) select id, codigo_qr from public.socios;
+update codigos set nuevo = public.renovar_codigo_carnet((select id from public.socios));
+select pg_temp.como('00000000-0000-0000-0000-0000000000c2');
+select pg_temp.debe_fallar('Ceci no renueva el QR de Ana', $$select public.renovar_codigo_carnet((select socio from codigos))$$);
+select pg_temp.como('00000000-0000-0000-0000-0000000000c1');
+select pg_temp.debe_ser('validador ve todos los carnets', (select count(*) from public.socios), 2);
+select pg_temp.debe_ser('QR vigente', (select (public.verificar_carnet('CEQ1:' || nuevo)->>'resultado' = 'vigente')::int from codigos), 1);
+select pg_temp.debe_ser('QR viejo ya no sirve', (select (public.verificar_carnet('CEQ1:' || viejo)->>'resultado' = 'no_encontrado')::int from codigos), 1);
+select pg_temp.debe_ser('por C.I. con puntos', (public.verificar_carnet('4.555.666')->>'nombre' = 'Ana')::int, 1);
+select pg_temp.debe_ser('carnet vencido', (public.verificar_carnet('777')->>'resultado' = 'vencido')::int, 1);
+select pg_temp.debe_ser('validador no edita socios', pg_temp.filas($q$update public.socios set activo = false$q$), 0);
+select pg_temp.como('00000000-0000-0000-0000-0000000000ad');
+update public.socios set activo = false where ci = '4555666';
+select pg_temp.debe_ser('admin ve el registro de verificaciones', (select count(*) from public.verificaciones_carnet), 4);
+select pg_temp.debe_ser('carnet dado de baja', (select (public.verificar_carnet('4555666')->>'resultado' = 'inactivo')::int), 1);
+select pg_temp.como('00000000-0000-0000-0000-00000000000a');
+select pg_temp.debe_ser('Ana no ve el registro', (select count(*) from public.verificaciones_carnet), 0);
+select pg_temp.debe_fallar('nadie escribe el registro a mano', $$insert into public.verificaciones_carnet (resultado) values ('vigente')$$);
+reset role;
+
 -- Todas las tablas públicas tienen RLS ------------------------------
 select pg_temp.debe_ser('tablas sin RLS',
   (select count(*) from pg_class c join pg_namespace n on n.oid = c.relnamespace

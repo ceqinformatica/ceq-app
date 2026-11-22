@@ -58,6 +58,14 @@
           "color": "#173874",
           "defaultChannel": "avisos"
         }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Usamos la cámara para leer el QR de los carnets de socio del CEQ.",
+          "microphonePermission": false,
+          "recordAudioAndroid": false
+        }
       ]
     ],
     "scheme": "ceqapp",
