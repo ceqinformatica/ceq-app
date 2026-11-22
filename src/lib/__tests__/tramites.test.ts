@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { GUIA_TRAMITES_FCQ } from '../../datos/guia-tramites-fcq.ts';
-import { aFormulario, agruparPorCategoria, CATEGORIAS_TRAMITE, filtrarTramites, lineas, normalizar, sqlSemilla, validarTramite } from '../tramites.ts';
+import { aFormulario, agruparPorCategoria, esHttps, CATEGORIAS_TRAMITE, filtrarTramites, lineas, normalizar, sqlSemilla, validarTramite } from '../tramites.ts';
 
 const migracion = readFileSync(new URL('../../../supabase/migrations/20261122190000_guia_tramites.sql', import.meta.url), 'utf8');
 
@@ -68,4 +68,10 @@ test('el SQL escapa comillas', () => {
   assert.ok(sql.includes("array['it''s']::text[]"));
   assert.ok(sql.includes("'{}'::text[]"));
   assert.ok(sql.trim().endsWith('on conflict (clave) do nothing;'));
+});
+
+test('solo abre enlaces https completos', () => {
+  assert.ok(esHttps('https://www.qui.una.py/x.pdf'));
+  assert.ok(esHttps(' HTTPS://tramites.una.py/ '));
+  for (const u of ['http://x.com', 'javascript:alert(1)', 'https://', 'https://a b', '', null, undefined]) assert.equal(esHttps(u), false, String(u));
 });

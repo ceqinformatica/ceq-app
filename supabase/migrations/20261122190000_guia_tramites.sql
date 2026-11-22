@@ -6,11 +6,25 @@
 --  * carga la guía inicial sacada de qui.una.py (22/11/2026)
 -- Se ejecuta una vez en el SQL Editor del proyecto ceq-app. Se puede
 -- volver a ejecutar: no duplica ni pisa trámites editados en el panel.
+-- (Los de la guía inicial no se borran desde el panel, se ocultan: así
+-- una nueva ejecución no los vuelve a publicar.)
 -- ARCHIVO GENERADO por scripts/seed-tramites.ts: editá los datos en
 -- src/datos/guia-tramites-fcq.ts y volvé a correr el script.
 -- =============================================================
 
--- 1. Columnas nuevas.
+-- 1. Trámites cargados antes de esta guía (sin clave): se ocultan para
+--    que no aparezcan repetidos junto a la guía. El admin los revisa en
+--    el panel y los vuelve a publicar o los borra. Solo pasa la primera
+--    vez (cuando la columna "clave" todavía no existe).
+do $$ begin
+  if not exists (select 1 from information_schema.columns
+                 where table_schema = 'public' and table_name = 'tramites' and column_name = 'clave') then
+    alter table public.tramites add column publicado boolean not null default true;
+    update public.tramites set publicado = false;
+  end if;
+end $$;
+
+-- 2. Columnas nuevas.
 alter table public.tramites add column if not exists clave text;
 alter table public.tramites add column if not exists categoria text not null default 'Otros';
 alter table public.tramites add column if not exists requisitos text[] not null default '{}';
@@ -25,17 +39,21 @@ alter table public.tramites add column if not exists updated_at timestamptz not 
 -- el admin no la tienen). Es lo que evita duplicarlos al re-ejecutar.
 create unique index if not exists tramites_clave_key on public.tramites (clave);
 
--- 2. Reglas de los datos. NOT VALID: no revisa filas viejas, sí las nuevas.
+-- 3. Reglas de los datos. Antes se limpian los enlaces que no son https
+--    de filas viejas, para que no se puedan abrir desde la app.
+update public.tramites set formulario_url = null where formulario_url !~* '^https://[^[:space:]]+$';
+update public.tramites set fuente_url = null where fuente_url !~* '^https://[^[:space:]]+$';
+-- NOT VALID: no revisa filas viejas (por ejemplo, un nombre corto), sí las nuevas.
 do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'tramites_modalidad_check') then
+  if not exists (select 1 from pg_constraint where conname = 'tramites_modalidad_check' and conrelid = 'public.tramites'::regclass) then
     alter table public.tramites add constraint tramites_modalidad_check
       check (modalidad is null or modalidad in ('presencial', 'etramite', 'mixto')) not valid;
   end if;
-  if not exists (select 1 from pg_constraint where conname = 'tramites_enlaces_https') then
+  if not exists (select 1 from pg_constraint where conname = 'tramites_enlaces_https' and conrelid = 'public.tramites'::regclass) then
     alter table public.tramites add constraint tramites_enlaces_https
-      check ((formulario_url is null or formulario_url ~* '^https://') and (fuente_url is null or fuente_url ~* '^https://')) not valid;
+      check ((formulario_url is null or formulario_url ~* '^https://[^[:space:]]+$') and (fuente_url is null or fuente_url ~* '^https://[^[:space:]]+$')) not valid;
   end if;
-  if not exists (select 1 from pg_constraint where conname = 'tramites_nombre_largo') then
+  if not exists (select 1 from pg_constraint where conname = 'tramites_nombre_largo' and conrelid = 'public.tramites'::regclass) then
     alter table public.tramites add constraint tramites_nombre_largo
       check (length(btrim(nombre)) between 3 and 120 and length(categoria) between 1 and 60) not valid;
   end if;
@@ -45,13 +63,13 @@ drop trigger if exists tramites_updated on public.tramites;
 create trigger tramites_updated before update on public.tramites
   for each row execute function public.set_updated_at();
 
--- 3. Lectura: los estudiantes ven solo los publicados; el admin, todos.
+-- 4. Lectura: los estudiantes ven solo los publicados; el admin, todos.
 --    (Crear, modificar y borrar ya son solo del admin.)
 drop policy if exists "leer tramites" on public.tramites;
 create policy "leer tramites" on public.tramites for select to authenticated
   using (publicado or (select public.es_admin()));
 
--- 4. Guía inicial.
+-- 5. Guía inicial.
 insert into public.tramites (clave, categoria, nombre, descripcion, pasos, requisitos, costo, donde, plazo, contacto, modalidad, formulario_url, fuente_url, orden) values
   ('matriculacion', 'Inscripciones y matrícula', 'Matriculación e inscripción a materias', 'Cada semestre te matriculás e inscribís en las materias que vas a cursar. Hay periodo ordinario, extraordinario y extemporáneo (con recargo).', array['Revisá que tengas aprobados los prerrequisitos de cada materia: sin eso no te podés inscribir (Art. 7 a 9 del régimen académico).', 'Elegí hasta 7 materias por semestre (no cuentan optativas, seminarios, pasantías, semestre opuesto ni materias que ya firmaste).', 'Matriculate e inscribite dentro del periodo ordinario para evitar el recargo.', 'Pagá los aranceles en las cuotas del semestre (ver "Pago de aranceles por cuotas").']::text[], array['Prerrequisitos aprobados', 'Estar al día con las obligaciones administrativas y financieras']::text[], 'Matrícula y cuotas según la resolución de aranceles vigente. El periodo extemporáneo tiene recargo.', 'Dirección Académica de la FCQ.', '1.er semestre 2026: ordinaria del 16/02 al 16/03; extraordinaria del 17/03 al 06/04; extemporánea con recargo del 07/04 al 25/05.
 2.º semestre 2026: ordinaria del 29/07 al 24/08; extraordinaria del 25/08 al 22/09; extemporánea con recargo del 23/09 al 02/11.', 'documentos.acad@qui.una.py (solicitudes) · acade@qui.una.py', null, null, 'https://www.qui.una.py/academico/calendario-academico-fcq/', 0),

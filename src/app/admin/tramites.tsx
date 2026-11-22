@@ -31,6 +31,8 @@ export default function TramitesAdmin() {
             texto={error ?? 'Cargá el primero con el botón +.'}
             accion={{ texto: 'Nuevo trámite', onPress: () => router.push('/admin/tramite') }}
           />
+        ) : !grupos.length ? (
+          <EstadoVacio icono="search-outline" titulo="No encontramos ese trámite" texto="Probá con otra palabra." />
         ) : (
           grupos.map((g) => (
             <View key={g.categoria}>

@@ -42,6 +42,11 @@ export const TEXTO_MODALIDAD: Record<Modalidad, string> = {
 export const LIMITE_NOMBRE_TRAMITE = 120;
 export const LIMITE_TEXTO_TRAMITE = 4000;
 
+/** Solo se abren enlaces https completos (sin espacios). */
+export function esHttps(url: string | null | undefined): url is string {
+  return typeof url === 'string' && /^https:\/\/\S+$/i.test(url.trim());
+}
+
 /** Minúsculas y sin tildes, para buscar "inscripcion" y encontrar "Inscripción". */
 export function normalizar(texto: string): string {
   return texto.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
@@ -114,7 +119,7 @@ export function validarTramite(f: FormularioTramite, clave: string | null = null
   if (largos.some((t) => t.length > LIMITE_TEXTO_TRAMITE)) return { error: `Cada campo puede tener hasta ${LIMITE_TEXTO_TRAMITE} caracteres.` };
   for (const [etiqueta, url] of [['formulario', f.formulario_url], ['fuente', f.fuente_url]] as const) {
     const u = url.trim();
-    if (u && !/^https:\/\/\S+$/i.test(u)) return { error: `El enlace del ${etiqueta} tiene que empezar con https://` };
+    if (u && !esHttps(u)) return { error: `El enlace del ${etiqueta} tiene que empezar con https://` };
   }
   return {
     tramite: {
