@@ -22,7 +22,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: compilar-apk-${{ github.ref }}
+  group: compilar-apk-${{ github.ref }}-${{ inputs.perfil || 'preview' }}
   cancel-in-progress: true
 
 jobs:
@@ -54,8 +54,10 @@ jobs:
           java-version: 17
 
       - name: Compilar en GitHub
+        env:
+          PERFIL: ${{ inputs.perfil || 'preview' }}
         run: |
-          perfil=${{ inputs.perfil || 'preview' }}
+          perfil="$PERFIL"
           ext=apk; [ "$perfil" = production ] && ext=aab
           eas build --platform android --profile "$perfil" --local --non-interactive --output "ceq-$perfil.$ext"
 
@@ -64,3 +66,4 @@ jobs:
           name: ceq-${{ inputs.perfil || 'preview' }}-${{ github.sha }}
           path: ceq-*.*
           retention-days: 30
+          if-no-files-found: error
