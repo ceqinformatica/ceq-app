@@ -142,7 +142,14 @@ export async function importarExtracto(plan: PlanImportacion) {
       db.estados = db.estados.filter((e) => e.materia_id !== materia_id);
       db.estados.push({ usuario_id: UID_DEMO, materia_id, estado: 'aprobada', nota_final: nota, fecha, periodo: null, updated_at: hoy });
     };
-    plan.intentos.forEach((i) => aprobar(i.materia_id, i.nota, i.fecha));
+    // Como el trigger de la base: aprueba con la mejor nota aprobada (≥ 2).
+    const mejor = new Map<string, IntentoAImportar>();
+    for (const i of plan.intentos) {
+      if (i.nota < 2) continue;
+      const m = mejor.get(i.materia_id);
+      if (!m || i.nota > m.nota) mejor.set(i.materia_id, i);
+    }
+    mejor.forEach((i) => aprobar(i.materia_id, i.nota, i.fecha));
     plan.aprobadasSinNota.forEach((m) => aprobar(m, null, null));
     return;
   }
@@ -157,6 +164,41 @@ export async function importarExtracto(plan: PlanImportacion) {
         plan.aprobadasSinNota.map((materia_id) => ({ materia_id, estado: 'aprobada' as const, nota_final: null, nota_desde_final: false })),
         { onConflict: 'usuario_id,materia_id' },
       );
+    lanzar(error);
+  }
+}
+
+export interface CambioEstado {
+  materiaId: string;
+  estado: EstadoMateria;
+  notaFinal: number | null;
+}
+
+/**
+ * Guarda muchos estados de una sola vez (marcar varias aprobadas, deshacer).
+ * No exige prerrequisitos: quien carga en bloque su historial ya los cumplió.
+ */
+export async function guardarEstadosEnBloque(cambios: CambioEstado[]) {
+  if (!cambios.length) return;
+  const borrar = cambios.filter((c) => c.estado === 'pendiente').map((c) => c.materiaId);
+  const guardar = cambios
+    .filter((c) => c.estado !== 'pendiente')
+    .map((c) => ({ materia_id: c.materiaId, estado: c.estado, nota_final: c.estado === 'aprobada' ? c.notaFinal : null, nota_desde_final: false }));
+  if (MODO_DEMO) {
+    await esperar(250);
+    const tocadas = new Set(cambios.map((c) => c.materiaId));
+    db.estados = db.estados.filter((e) => !tocadas.has(e.materia_id));
+    for (const g of guardar) {
+      db.estados.push({ usuario_id: UID_DEMO, ...g, fecha: null, periodo: null, updated_at: new Date().toISOString() });
+    }
+    return;
+  }
+  if (guardar.length) {
+    const { error } = await supabase.from('materias_estudiante').upsert(guardar, { onConflict: 'usuario_id,materia_id' });
+    lanzar(error);
+  }
+  if (borrar.length) {
+    const { error } = await supabase.from('materias_estudiante').delete().in('materia_id', borrar);
     lanzar(error);
   }
 }

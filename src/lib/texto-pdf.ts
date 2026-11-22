@@ -17,7 +17,7 @@ interface Trozo {
 /** Bytes del PDF como texto latin1 (WinAnsi coincide en tildes y eñes). */
 function latin1(bytes: Uint8Array): string {
   let s = '';
-  const paso = 0x8000;
+  const paso = 0x2000; // bloques chicos: seguro en Hermes
   for (let i = 0; i < bytes.length; i += paso) {
     s += String.fromCharCode.apply(null, Array.from(bytes.subarray(i, i + paso)));
   }
@@ -46,7 +46,7 @@ function cadenaPdf(cruda: string): string {
 function trozosDeFlujo(flujo: string): Trozo[] {
   const trozos: Trozo[] = [];
   // Números, cadenas (con paréntesis escapados) y operadores.
-  const token = /\((?:\\[\s\S]|[^\\)])*\)|\[(?:\((?:\\[\s\S]|[^\\)])*\)|[^\]])*\]|-?\d*\.?\d+|[A-Za-z'"*]+|\/[^\s/[\]()<>]+/g;
+  const token = /\((?:\\[\s\S]|[^\\)])*\)|\[(?:\((?:\\[\s\S]|[^\\)])*\)|[^\](])*\]|-?\d*\.?\d+|[A-Za-z'"*]+|\/[^\s/[\]()<>]+/g;
   let pila: string[] = [];
   let x = 0;
   let y = 0;

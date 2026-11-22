@@ -22,7 +22,7 @@ test('arma las filas del extracto con columnas y tildes', () => {
     [56.69, 760, 'CARRERA: INGENIERIA QUIMICA - PLAN 2018'],
     [198.43, 720, 'PRIMER NIVEL \\(COMPLETO\\)'],
     // columnas fuera de orden a propósito
-    [425.2, 702.99, '48616'],
+    [425.2, 702.99, '59727'],
     [56.69, 702.99, '10\\)'],
     [76.54, 702.99, 'Qu\\355mica Inorg\\341nica'],
     [368.5, 702.99, '07/12/2024'],
@@ -31,7 +31,7 @@ test('arma las filas del extracto con columnas y tildes', () => {
     [56.69, 688.82, '2\\)'],
     [76.54, 688.82, 'Seminario I'],
     [368.5, 688.82, '25/06/2024'],
-    [425.2, 688.82, '47448'],
+    [425.2, 688.82, '58559'],
     [510.24, 688.82, 'APR\\(APROBADO\\)'],
     [56.69, 600, 'PROMEDIO: 4.28'],
   ]);
@@ -41,8 +41,8 @@ test('arma las filas del extracto con columnas y tildes', () => {
   assert.deepEqual(
     e.filas.map((f) => [f.numero, f.nombre, f.fecha, f.acta, f.nota, f.bloque]),
     [
-      [10, 'Química Inorgánica', '2024-12-07', '48616', 4, 'PRIMER NIVEL'],
-      [2, 'Seminario I', '2024-06-25', '47448', null, 'PRIMER NIVEL'],
+      [10, 'Química Inorgánica', '2024-12-07', '59727', 4, 'PRIMER NIVEL'],
+      [2, 'Seminario I', '2024-06-25', '58559', null, 'PRIMER NIVEL'],
     ],
   );
 });

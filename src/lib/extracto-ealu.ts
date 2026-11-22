@@ -4,9 +4,9 @@
  * materias aprobadas con su fecha, acta y nota. Funciones puras.
  *
  * Formato de cada fila, por ejemplo:
- *   10) Quimica Inorganica   07/12/2024   48616   4   (CUATRO)
- *   22) Fisicoquimica        16/06/2026   50931   65   3   (TRES)
- *   2)  Seminario I          25/06/2024   47448   APR(APROBADO)
+ *   10) Quimica Inorganica   07/12/2024   59727   4   (CUATRO)
+ *   22) Fisicoquimica        16/06/2026   62042   65   3   (TRES)
+ *   2)  Seminario I          25/06/2024   58559   APR(APROBADO)
  */
 
 export interface FilaExtracto {
