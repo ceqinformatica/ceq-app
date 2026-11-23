@@ -335,11 +335,12 @@ export default function Carrera() {
                 </Seccion>
                 {filas.map((fila, i) => (
                   <View key={i} style={{ flexDirection: 'row', gap: espacio.s, marginBottom: espacio.s }}>
-                    {fila.map((m) => {
+                    {fila.map((m, j) => {
                       const { estado, faltan } = vista.estadoDe(m.id);
                       return (
                         <FichaMateria
                           key={m.id}
+                          retraso={Math.min(i * porFila + j, 8) * 45}
                           nombre={m.nombre}
                           codigo={m.grupo_optativa_id ? `${m.semestre}º NIVEL` : m.codigo}
                           estado={estado}

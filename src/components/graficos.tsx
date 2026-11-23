@@ -1,6 +1,9 @@
-import { Text, View, type ViewStyle } from 'react-native';
+import { Animated, Text, View, type ViewStyle } from 'react-native';
 import Svg, { Circle, Polygon } from 'react-native-svg';
 import { colores, fondos, fuentes, radio } from '../tema';
+import { NumeroAnimado, useLlenado } from './movimiento';
+
+const CirculoAnimado = Animated.createAnimatedComponent(Circle);
 
 /** Puntos de un hexágono "de punta" (como el logo del CEQ) centrado en (cx, cy). */
 function puntosHex(cx: number, cy: number, r: number) {
@@ -32,20 +35,19 @@ export function AnilloProgreso({ porcentaje, tamano = 120, grosor = 11, color = 
   const r = (tamano - grosor) / 2;
   const circ = 2 * Math.PI * r;
   const p = Math.max(0, Math.min(100, porcentaje));
-  const entero = Number.isInteger(p) ? String(p) : p.toFixed(1).replace('.', ',');
+  const llenado = useLlenado(p, 1100, 150);
   return (
     <View style={{ width: tamano, height: tamano, alignItems: 'center', justifyContent: 'center' }} accessibilityRole="progressbar" accessibilityValue={{ min: 0, max: 100, now: p }}>
       <Svg width={tamano} height={tamano} style={{ position: 'absolute', transform: [{ rotate: '-90deg' }] }}>
         <Circle cx={tamano / 2} cy={tamano / 2} r={r} stroke={fondo} strokeWidth={grosor} fill="none" />
-        <Circle
+        <CirculoAnimado
           cx={tamano / 2} cy={tamano / 2} r={r} stroke={color} strokeWidth={grosor} fill="none"
-          strokeDasharray={`${circ} ${circ}`} strokeDashoffset={circ * (1 - p / 100)} strokeLinecap="round"
+          strokeDasharray={`${circ} ${circ}`} strokeDashoffset={llenado.interpolate({ inputRange: [0, 100], outputRange: [circ, 0] })} strokeLinecap="round"
         />
       </Svg>
-      <Text style={{ fontFamily: fuentes.bold, fontSize: tamano * 0.22, color: colorTexto, letterSpacing: -0.5 }}>
-        {entero}
+      <NumeroAnimado valor={p} decimales={Number.isInteger(p) ? 0 : 1} estilo={{ fontFamily: fuentes.bold, fontSize: tamano * 0.22, color: colorTexto, letterSpacing: -0.5 }}>
         <Text style={{ fontSize: tamano * 0.12 }}>%</Text>
-      </Text>
+      </NumeroAnimado>
       {etiqueta ? <Text style={{ fontFamily: fuentes.medium, fontSize: Math.max(10, tamano * 0.085), color: colorTexto, opacity: 0.75, marginTop: -2 }}>{etiqueta}</Text> : null}
     </View>
   );
@@ -56,10 +58,11 @@ export function BarraProgreso({ valor, marca, color = colores.marino, fondo = fo
   valor: number | null; marca?: number | null; color?: string; fondo?: string; alto?: number;
 }) {
   const v = Math.max(0, Math.min(100, valor ?? 0));
+  const llenado = useLlenado(v, 800, 200);
   return (
     <View style={{ height: alto + 6, justifyContent: 'center' }}>
       <View style={{ height: alto, borderRadius: radio.pill, backgroundColor: fondo, overflow: 'hidden' }}>
-        <View style={{ width: `${v}%`, height: '100%', borderRadius: radio.pill, backgroundColor: color }} />
+        <Animated.View style={{ width: llenado.interpolate({ inputRange: [0, 100], outputRange: ['0%', '100%'] }), height: '100%', borderRadius: radio.pill, backgroundColor: color }} />
       </View>
       {marca != null && (
         <View style={{ position: 'absolute', left: `${Math.max(0, Math.min(100, marca))}%`, top: 0, bottom: 0, width: 2, marginLeft: -1, backgroundColor: colores.marinoProfundo, borderRadius: 1 }} />

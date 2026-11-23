@@ -11,6 +11,7 @@ import { cargarMalla, deshacerRecursada, guardarEstadoMateria } from '../../dato
 import { usarDatos } from '../../datos/usarDatos';
 import { cumpleRequisito, requisitosFaltantes, seDesbloquean, type EstadoMateria } from '../../lib/progreso';
 import { colores, coloresEstado, espacio, fondos, fuentes, texto } from '../../tema';
+import { vibrar } from '../../components/movimiento';
 import { useTema } from '../../context/TemaProvider';
 import { textoError } from '../../lib/errores';
 
@@ -61,6 +62,7 @@ export default function DetalleMateria() {
       if (estado === 'pendiente') estados.delete(id);
       else estados.set(id, { estado, notaFinal: estado === 'aprobada' ? notaNum : null, promedioFirma: actual?.promedioFirma ?? null });
       setDatos({ ...malla, estados });
+      vibrar('exito');
       setMsg({ tipo: 'exito', texto: nuevos.length ? `Guardado. Ahora podés cursar: ${nuevos.join(', ')}.` : 'Guardado.' });
     } catch (e) {
       setMsg({ tipo: 'error', texto: textoError(e, 'No se pudo guardar.') });

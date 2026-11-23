@@ -17,6 +17,7 @@ import { evaluarFirma, porcentajeEvaluacion, promedioFirma, type ResultadoAsiste
 import { esRecuperatorio, esRegularizacion, puedeRecuperar, RECUPERACION_DESDE, RECUPERACION_MINIMO } from '../../lib/reglamento-fcq';
 import type { AsistenciaDb, ComponenteDb, EvaluacionDb } from '../../lib/tipos-db';
 import { colores, coloresSemaforo, espacio, fondos, fuentes, radio, texto } from '../../tema';
+import { vibrar } from '../../components/movimiento';
 import { useTema } from '../../context/TemaProvider';
 import { textoError } from '../../lib/errores';
 
@@ -115,6 +116,7 @@ export default function CalculadoraFirma() {
     try {
       await guardarFirma(materia.id, promedio);
       setDatos({ ...datos, firmaGuardada: promedio });
+      vibrar('exito');
       setMsgFirma({ tipo: 'exito', texto: `Listo. Tu firma en ${materia.nombre} es ${pct(promedio)}.` });
     } catch (e) {
       setMsgFirma({ tipo: 'error', texto: textoError(e, 'No se pudo guardar la firma.') });
