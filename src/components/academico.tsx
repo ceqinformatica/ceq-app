@@ -4,6 +4,7 @@ import type { ResultadoFirma, Semaforo } from '../lib/firma';
 import type { EstadoMateria } from '../lib/progreso';
 import { colores, coloresEstado, coloresSemaforo, crearEstilos, espacio, fondos, fuentes, radio, sombras } from '../tema';
 import { Insignia, type NombreIcono } from './ui';
+import { PressableAnimado, useAparecer, usePresion, vibrar } from './movimiento';
 
 export type EstadoVisual = EstadoMateria | 'bloqueada';
 
@@ -14,25 +15,31 @@ export const pct = (n: number | null | undefined) => (n == null ? '—' : `${Num
 export const nota = (n: number | null | undefined) => (n == null ? '—' : Number.isInteger(n) ? String(n) : n.toFixed(2).replace('.', ','));
 
 /** Ficha de una materia en la malla. */
-export function FichaMateria({ nombre, codigo, estado, notaFinal, faltan, onPress, seleccionada }: {
+export function FichaMateria({ nombre, codigo, estado, notaFinal, faltan, onPress, seleccionada, retraso = 0 }: {
   nombre: string; codigo?: string | null; estado: EstadoVisual; notaFinal?: number | null; faltan?: number; onPress: () => void;
   /** En modo "Marcar varias": undefined = modo normal; true/false = casilla marcada o no. */
   seleccionada?: boolean;
+  /** ms antes de aparecer (las fichas entran escalonadas). */
+  retraso?: number;
 }) {
   const c = coloresEstado[estado];
   const modoSeleccion = seleccionada !== undefined;
+  const { opacity, translateY } = useAparecer(retraso, 10);
+  const { escala, onPressIn, onPressOut } = usePresion(0.95);
   return (
-    <Pressable
-      onPress={onPress}
+    <PressableAnimado
+      onPress={() => { vibrar(); onPress(); }}
+      onPressIn={onPressIn}
+      onPressOut={onPressOut}
       accessibilityRole={modoSeleccion ? 'checkbox' : 'button'}
       accessibilityState={modoSeleccion ? { checked: seleccionada } : undefined}
       accessibilityLabel={`${nombre}, ${c.nombre}${notaFinal != null ? `, nota ${notaFinal}` : ''}`}
-      style={({ pressed }) => [
+      style={[
         est.ficha,
         { backgroundColor: c.fondo, borderColor: c.borde },
         estado === 'pendiente' && sombras.suave,
         seleccionada && { borderColor: colores.marino, borderWidth: 2.5, backgroundColor: fondos.cielo },
-        pressed && { opacity: 0.85 },
+        { opacity, transform: [{ translateY }, { scale: escala }] },
       ]}
     >
       {modoSeleccion && (
@@ -55,7 +62,7 @@ export function FichaMateria({ nombre, codigo, estado, notaFinal, faltan, onPres
           </View>
         )}
       </View>
-    </Pressable>
+    </PressableAnimado>
   );
 }
 
