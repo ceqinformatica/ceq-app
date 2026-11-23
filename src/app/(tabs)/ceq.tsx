@@ -12,6 +12,7 @@ import { cargarTramites } from '../../datos/tramites';
 import { usarDatos } from '../../datos/usarDatos';
 import { colores, crearEstilos, espacio, fondos, fuentes, radio, sombras } from '../../tema';
 import { useTema } from '../../context/TemaProvider';
+import { textoError } from '../../lib/errores';
 
 /** Los más consultados: se muestran primero en la pestaña del CEQ. */
 const TRAMITES_DESTACADOS = ['inscripcion-finales', 'certificado-estudios', 'constancia-general', 'matriculacion'];
@@ -143,7 +144,7 @@ function Encuesta({ encuesta, onVotado }: { encuesta: EncuestaConResultados; onV
       await votar(encuesta.id, elegida);
       onVotado({ ...encuesta, yaVote: true, total: encuesta.total + 1, opciones: encuesta.opciones.map((o) => (o.id === elegida ? { ...o, votos: o.votos + 1 } : o)) });
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'No se pudo votar.');
+      setError(textoError(e, 'No se pudo votar.'));
     } finally {
       setEnviando(false);
     }
@@ -206,7 +207,7 @@ function FormSugerencia({ visible, onCerrar }: { visible: boolean; onCerrar: () 
       setTexto('');
       setEstado({ tipo: 'exito', texto: '¡Gracias! El CEQ recibió tu sugerencia.' });
     } catch (e) {
-      setEstado({ tipo: 'error', texto: e instanceof Error ? e.message : 'No se pudo enviar.' });
+      setEstado({ tipo: 'error', texto: textoError(e, 'No se pudo enviar.') });
     } finally {
       setEnviando(false);
     }

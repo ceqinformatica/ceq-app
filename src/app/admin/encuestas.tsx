@@ -9,6 +9,7 @@ import { usarDatos } from '../../datos/usarDatos';
 import { describirCuando, leerFechaHora } from '../../lib/programacion';
 import { colores, espacio, fondos, fuentes } from '../../tema';
 import { useTema } from '../../context/TemaProvider';
+import { textoError } from '../../lib/errores';
 
 const volver = () => (router.canGoBack() ? router.back() : router.replace('/admin'));
 
@@ -58,7 +59,7 @@ function Encuesta({ e, onCambio }: { e: EncuestaAdmin; onCambio: () => void }) {
       await f();
       onCambio();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo.');
+      setError(textoError(err, 'No se pudo.'));
     } finally {
       setOcupado(false);
     }
@@ -137,7 +138,7 @@ function Formulario({ visible, onCerrar, onListo }: { visible: boolean; onCerrar
       setCierreFecha('');
       onListo(notificar ? 'Encuesta publicada y notificada.' : 'Encuesta publicada.');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo crear.');
+      setError(textoError(err, 'No se pudo crear.'));
     } finally {
       setGuardando(false);
     }

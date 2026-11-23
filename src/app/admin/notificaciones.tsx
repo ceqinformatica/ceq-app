@@ -9,6 +9,7 @@ import { LIMITE_CUERPO, LIMITE_TITULO, TITULO_RECOMENDADO, validarMensaje } from
 import type { Carrera, NotificacionDb } from '../../lib/tipos-db';
 import { espacio } from '../../tema';
 import { useTema } from '../../context/TemaProvider';
+import { textoError } from '../../lib/errores';
 
 const volver = () => (router.canGoBack() ? router.back() : router.replace('/admin'));
 
@@ -45,7 +46,7 @@ export default function NotificacionesAdmin() {
       await cancelarNotificacion(n.id);
       await recargar();
     } catch (e) {
-      setAviso(e instanceof Error ? e.message : 'No se pudo cancelar.');
+      setAviso(textoError(e, 'No se pudo cancelar.'));
     } finally {
       setCancelando(null);
     }
@@ -146,7 +147,7 @@ function Formulario({ visible, carreras, onCerrar, onListo }: { visible: boolean
       limpiar();
       onListo(cuando.modo === 'ahora' ? 'Listo: sale en menos de un minuto.' : 'Listo: quedó programada.');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo enviar.');
+      setError(textoError(err, 'No se pudo enviar.'));
     } finally {
       setEnviando(false);
     }

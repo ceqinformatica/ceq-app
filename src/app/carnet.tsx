@@ -14,6 +14,7 @@ import { AVISO_CARNET_PAGO, estadoCarnet } from '../lib/carnet';
 import { supabase } from '../lib/supabase';
 import { colores, espacio, fondos } from '../tema';
 import { useTema } from '../context/TemaProvider';
+import { textoError } from '../lib/errores';
 
 const volver = () => (router.canGoBack() ? router.back() : router.replace('/ceq'));
 
@@ -69,7 +70,7 @@ export default function PantallaCarnet() {
       setDatos({ ...socio, foto_path: path });
       setMensaje({ texto: 'Listo, tu foto ya está en el carnet.', tipo: 'exito' });
     } catch (e) {
-      setMensaje({ texto: e instanceof Error ? e.message : 'No pudimos subir la foto.', tipo: 'error' });
+      setMensaje({ texto: textoError(e, 'No pudimos subir la foto.'), tipo: 'error' });
     } finally {
       setOcupado(null);
     }
@@ -84,7 +85,7 @@ export default function PantallaCarnet() {
       setDatos({ ...socio, codigo_qr: codigo });
       setMensaje({ texto: 'Tu QR es nuevo. El anterior y cualquier captura ya no sirven.', tipo: 'exito' });
     } catch (e) {
-      setMensaje({ texto: e instanceof Error ? e.message : 'No pudimos cambiar el código.', tipo: 'error' });
+      setMensaje({ texto: textoError(e, 'No pudimos cambiar el código.'), tipo: 'error' });
     } finally {
       setOcupado(null);
     }

@@ -1,10 +1,7 @@
 import { supabase } from '../lib/supabase';
 import type { AvisoDb, EncuestaDb, SocioDb } from '../lib/tipos-db';
 import { db, esperar, idDemo, MODO_DEMO, UID_DEMO } from './demo';
-
-function lanzar(error: { message: string } | null) {
-  if (error) throw new Error(error.message);
-}
+import { lanzar } from '../lib/errores';
 
 export async function cargarAvisos(limite = 30): Promise<AvisoDb[]> {
   if (MODO_DEMO) {

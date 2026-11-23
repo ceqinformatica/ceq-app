@@ -13,6 +13,7 @@ import { textoDePdf } from '../lib/texto-pdf';
 import type { MateriaDb } from '../lib/tipos-db';
 import { colores, crearEstilos, espacio, fondos, fuentes, radio } from '../tema';
 import { useTema } from '../context/TemaProvider';
+import { textoError } from '../lib/errores';
 
 const SIN_MATERIAS: MateriaDb[] = [];
 
@@ -121,7 +122,7 @@ export default function ImportarExtracto() {
       await importarExtracto(plan);
       setPaso({ tipo: 'listo', finales: plan.intentos.length, aprobadas: plan.aprobadasSinNota.length, repetidas: plan.repetidas });
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'No se pudo importar.');
+      setError(textoError(e, 'No se pudo importar.'));
     } finally {
       enCurso.current = false;
       setImportando(false);

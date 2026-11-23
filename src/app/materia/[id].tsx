@@ -12,6 +12,7 @@ import { usarDatos } from '../../datos/usarDatos';
 import { cumpleRequisito, requisitosFaltantes, seDesbloquean, type EstadoMateria } from '../../lib/progreso';
 import { colores, coloresEstado, espacio, fondos, fuentes, texto } from '../../tema';
 import { useTema } from '../../context/TemaProvider';
+import { textoError } from '../../lib/errores';
 
 const volver = () => (router.canGoBack() ? router.back() : router.replace('/carrera'));
 
@@ -62,7 +63,7 @@ export default function DetalleMateria() {
       setDatos({ ...malla, estados });
       setMsg({ tipo: 'exito', texto: nuevos.length ? `Guardado. Ahora podés cursar: ${nuevos.join(', ')}.` : 'Guardado.' });
     } catch (e) {
-      setMsg({ tipo: 'error', texto: e instanceof Error ? e.message : 'No se pudo guardar.' });
+      setMsg({ tipo: 'error', texto: textoError(e, 'No se pudo guardar.') });
     } finally {
       setGuardando(false);
     }
@@ -78,7 +79,9 @@ export default function DetalleMateria() {
     );
   }
 
-  const c = coloresEstado[estado === 'pendiente' && info.faltan ? 'bloqueada' : estado];
+    // La insignia muestra lo guardado, no lo que se está eligiendo abajo.
+  const guardado = actual?.estado ?? 'pendiente';
+  const c = coloresEstado[guardado === 'pendiente' && info.faltan ? 'bloqueada' : guardado];
 
   return (
     <Pantalla>
@@ -153,7 +156,7 @@ export default function DetalleMateria() {
                 recargar();
                 setMsg({ tipo: 'exito', texto: 'Listo, la materia volvió a como estaba.' });
               } catch (e) {
-                setMsg({ tipo: 'error', texto: e instanceof Error ? e.message : 'No se pudo deshacer.' });
+                setMsg({ tipo: 'error', texto: textoError(e, 'No se pudo deshacer.') });
               } finally {
                 setGuardando(false);
               }

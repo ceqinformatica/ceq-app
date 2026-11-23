@@ -11,7 +11,7 @@ import { cargarAgenda, cuentaRegresiva, diaSemanaHoy, diasHasta, hora, horaDe, p
 import { cargarAvisos, haceCuanto } from '../../datos/ceq';
 import { usarDatos } from '../../datos/usarDatos';
 import { evaluarFirma } from '../../lib/firma';
-import { calcularProgreso, esSeminario } from '../../lib/progreso';
+import { calcularProgreso, esSeminario, materiasContadas } from '../../lib/progreso';
 import { colores, coloresSemaforo, crearEstilos, espacio, fondos, fuentes, radio, sombras } from '../../tema';
 import { useTema } from '../../context/TemaProvider';
 
@@ -44,7 +44,7 @@ async function cargar(planId: string | null | undefined, carreraId: string | nul
 export default function Inicio() {
   useTema();
   const { perfil } = useSesion();
-  const { datos, cargando, refrescando, recargar } = usarDatos(() => cargar(perfil?.plan_id, perfil?.carrera_id), [perfil?.plan_id]);
+  const { datos, cargando, error, refrescando, recargar } = usarDatos(() => cargar(perfil?.plan_id, perfil?.carrera_id), [perfil?.plan_id, perfil?.carrera_id]);
   const primerNombre = perfil?.nombre?.split(' ')[0];
   const f = new Date();
   const fecha = `${DIAS[f.getDay()]} ${f.getDate()} de ${MESES[f.getMonth()]}`;
@@ -81,8 +81,10 @@ export default function Inicio() {
               <Text style={est.etiquetaCaja}>PROGRESO DE CARRERA</Text>
               <Text style={[s.filaTitulo, { fontSize: 16, color: colores.marino, marginTop: 2 }]}>
                 {datos?.progreso?.obligatoriasTotales
-                  ? `${datos.progreso.obligatoriasAprobadas} de ${datos.progreso.obligatoriasTotales} materias aprobadas`
-                  : 'Tu malla está en preparación'}
+                  ? (({ aprobadas, total }) => `${aprobadas} de ${total} materias aprobadas`)(materiasContadas(datos.progreso))
+                  : error && !datos
+                    ? 'No pudimos cargar tu avance'
+                    : 'Tu malla está en preparación'}
               </Text>
               <Text style={[s.filaDetalle, { marginTop: 2 }]}>Tocá para ver tu malla</Text>
             </View>
@@ -91,8 +93,6 @@ export default function Inicio() {
         )}
       </Tarjeta>
 
-      <Columnas
-        izquierda={<>
       {/* Accesos rápidos */}
       <View style={est.accesos}>
         <Acceso icono="git-network" texto="Malla" onPress={() => router.navigate('/carrera')} />
@@ -100,6 +100,14 @@ export default function Inicio() {
         <Acceso icono="calendar" texto="Agenda" onPress={() => router.navigate('/agenda')} />
         <Acceso icono="card" texto="Carnet" onPress={() => router.push('/carnet')} />
       </View>
+
+      {error && !datos ? (
+        <Tarjeta estilo={{ marginTop: espacio.m }}>
+          <EstadoVacio icono="cloud-offline-outline" titulo="No pudimos cargar tu inicio" texto={error} accion={{ texto: 'Reintentar', onPress: recargar }} />
+        </Tarjeta>
+      ) : (
+      <Columnas
+        izquierda={<>
 
       {/* Clases de hoy */}
       <Seccion accion={{ texto: 'Horario', onPress: () => router.navigate('/agenda') }}>Hoy</Seccion>
@@ -208,6 +216,7 @@ export default function Inicio() {
       )}
         </>}
       />
+      )}
     </Pantalla>
   );
 }

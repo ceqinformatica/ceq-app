@@ -6,10 +6,7 @@ import { supabase } from '../lib/supabase';
 import type { TramiteDb } from '../lib/tipos-db';
 import type { TramiteNuevo } from '../lib/tramites';
 import { db, esperar, idDemo, MODO_DEMO } from './demo';
-
-function lanzar(error: { message: string } | null) {
-  if (error) throw new Error(error.message);
-}
+import { lanzar } from '../lib/errores';
 
 const porOrden = (a: TramiteDb, b: TramiteDb) => a.orden - b.orden || a.nombre.localeCompare(b.nombre, 'es');
 

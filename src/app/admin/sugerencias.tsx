@@ -8,6 +8,7 @@ import { usarDatos } from '../../datos/usarDatos';
 import type { SugerenciaDb } from '../../lib/tipos-db';
 import { colores, espacio, fondos } from '../../tema';
 import { useTema } from '../../context/TemaProvider';
+import { textoError } from '../../lib/errores';
 
 const volver = () => (router.canGoBack() ? router.back() : router.replace('/admin'));
 type Filtro = SugerenciaDb['estado'];
@@ -74,7 +75,7 @@ function Detalle({ sugerencia, onCerrar, onListo }: { sugerencia: SugerenciaDb; 
       await responderSugerencia(sugerencia.id, estado, respuesta.trim() || null);
       onListo();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo guardar.');
+      setError(textoError(err, 'No se pudo guardar.'));
     } finally {
       setGuardando(false);
     }

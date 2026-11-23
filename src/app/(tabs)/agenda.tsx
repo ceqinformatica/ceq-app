@@ -17,6 +17,7 @@ import { abreviar, acomodarDia, choquesCon, horaParaBase, minutos, OPCIONES_AVIS
 import type { EstadoMateriaDb, EventoDb, HorarioDb, TipoEvento } from '../../lib/tipos-db';
 import { colores, crearEstilos, espacio, fondos, fuentes, radio, sombras } from '../../tema';
 import { useTema } from '../../context/TemaProvider';
+import { textoError } from '../../lib/errores';
 
 /** Paleta suave para distinguir materias en el horario (siempre dentro de la familia azul del CEQ + acentos). */
 const TONOS = ['#173874', '#3873CE', '#1D7A47', '#A86A00', '#7A3E9D', '#0F7C8C', '#5A6B85'];
@@ -340,7 +341,7 @@ function ElegirCursando({ datos, primeraVez, onListo, onSaltar }: {
       await guardarEstadosEnBloque(ids.map((materiaId) => ({ materiaId, estado: 'cursando', notaFinal: null })), { soloNuevas: true });
       onListo(ids);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'No se pudo guardar.');
+      setError(textoError(e, 'No se pudo guardar.'));
     } finally {
       setGuardando(false);
     }
@@ -466,7 +467,7 @@ function FormClase({ visible, clase, diaInicial, datos, recordatoriosApagados, o
       else await crearClases(dias.map((d) => ({ ...base, dia_semana: d })));
       onListo();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'No se pudo guardar.');
+      setError(textoError(e, 'No se pudo guardar.'));
     } finally {
       setGuardando(false);
     }
@@ -624,7 +625,7 @@ function FormEvento({ visible, uid, datos, onCursando, onCerrar, onListo }: Prop
       await crearEvento(uid, { titulo: titulo.trim(), tipo, fecha: fechaIso!, materia_id: materia });
       onListo();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'No se pudo guardar.');
+      setError(textoError(e, 'No se pudo guardar.'));
     } finally {
       setGuardando(false);
     }
