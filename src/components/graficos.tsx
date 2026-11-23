@@ -45,7 +45,7 @@ export function AnilloProgreso({ porcentaje, tamano = 120, grosor = 11, color = 
           strokeDasharray={`${circ} ${circ}`} strokeDashoffset={llenado.interpolate({ inputRange: [0, 100], outputRange: [circ, 0] })} strokeLinecap="round"
         />
       </Svg>
-      <NumeroAnimado valor={p} decimales={Number.isInteger(p) ? 0 : 1} estilo={{ fontFamily: fuentes.bold, fontSize: tamano * 0.22, color: colorTexto, letterSpacing: -0.5 }}>
+      <NumeroAnimado valor={p} decimales={Number.isInteger(p) ? 0 : 1} sufijo=" %" estilo={{ fontFamily: fuentes.bold, fontSize: tamano * 0.22, color: colorTexto, letterSpacing: -0.5 }}>
         <Text style={{ fontSize: tamano * 0.12 }}>%</Text>
       </NumeroAnimado>
       {etiqueta ? <Text style={{ fontFamily: fuentes.medium, fontSize: Math.max(10, tamano * 0.085), color: colorTexto, opacity: 0.75, marginTop: -2 }}>{etiqueta}</Text> : null}

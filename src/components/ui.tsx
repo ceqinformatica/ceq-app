@@ -465,12 +465,12 @@ export function Mensaje({ texto: t, tipo = 'error' }: { texto: string | null; ti
     exito: { color: colores.verde, fondo: fondos.verdeFondo, icono: 'checkmark-circle' as NombreIcono },
   }[tipo];
   return (
-    <Aparecer key={t} distancia={6} estilo={[s.mensaje, { backgroundColor: estilos.fondo }]}>
-      <View style={{ flexDirection: 'row', gap: espacio.s, flex: 1 }} accessibilityRole={tipo === 'error' ? 'alert' : 'text'} accessibilityLiveRegion="polite">
+    <View style={[s.mensaje, { backgroundColor: estilos.fondo }]} accessibilityRole={tipo === 'error' ? 'alert' : 'text'} accessibilityLiveRegion="polite">
+      <Aparecer key={t} distancia={6} estilo={{ flex: 1, flexDirection: 'row', alignItems: 'flex-start', gap: espacio.s }}>
         <Ionicons name={estilos.icono} size={18} color={estilos.color} />
         <Text style={[s.mensajeTexto, { color: estilos.color }]}>{t}</Text>
-      </View>
-    </Aparecer>
+      </Aparecer>
+    </View>
   );
 }
 
@@ -556,7 +556,7 @@ export function Hoja({ visible, titulo, onCerrar, children }: { visible: boolean
 export function Dato({ valor, etiqueta, color = colores.marino, estilo }: { valor: string; etiqueta: string; color?: string; estilo?: TextStyle }) {
   return (
     <View style={{ flex: 1 }}>
-      {/^\d+$/.test(valor) ? (
+      {/^(0|[1-9]\d*)$/.test(valor) ? (
         <NumeroAnimado valor={Number(valor)} estilo={[texto.numero, { color, fontSize: 24, lineHeight: 28 }, estilo]} />
       ) : (
         <Text style={[texto.numero, { color, fontSize: 24, lineHeight: 28 }, estilo]}>{valor}</Text>

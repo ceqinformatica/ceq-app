@@ -14,8 +14,26 @@ AccessibilityInfo.isReduceMotionEnabled?.()
   .catch(() => {});
 AccessibilityInfo.addEventListener?.('reduceMotionChanged', (r) => { reducido = r; });
 
-/** true si el teléfono pide reducir el movimiento. */
+/** true si el teléfono pide reducir el movimiento (último valor conocido). */
 export const movimientoReducido = () => reducido;
+
+/**
+ * Lo mismo como estado de React: la primera lectura del sistema es
+ * asíncrona, así que una pantalla que ya empezó a animar se detiene y
+ * queda en su lugar en cuanto se sabe que hay que reducir el movimiento.
+ */
+function useReducido() {
+  const [r, setR] = useState(reducido);
+  useEffect(() => {
+    let vivo = true;
+    AccessibilityInfo.isReduceMotionEnabled?.()
+      .then((x) => { reducido = x; if (vivo) setR(x); })
+      .catch(() => {});
+    const sub = AccessibilityInfo.addEventListener?.('reduceMotionChanged', (x) => { reducido = x; setR(x); });
+    return () => { vivo = false; sub?.remove(); };
+  }, []);
+  return r;
+}
 
 /** Vibración corta al tocar algo importante (no hace nada en la web). */
 export function vibrar(tipo: 'toque' | 'exito' = 'toque') {
@@ -26,13 +44,18 @@ export function vibrar(tipo: 'toque' | 'exito' = 'toque') {
 
 /** Estilo animado de entrada (opacidad y desplazamiento), para combinar con otros. */
 export function useAparecer(retraso = 0, distancia = 14) {
+  const r = useReducido();
   const v = useRef(new Animated.Value(reducido ? 1 : 0)).current;
   useEffect(() => {
-    if (reducido) return;
+    if (r) {
+      v.stopAnimation();
+      v.setValue(1);
+      return;
+    }
     const a = Animated.timing(v, { toValue: 1, duration: 380, delay: retraso, easing: Easing.out(Easing.cubic), useNativeDriver: Platform.OS !== 'web' });
     a.start();
     return () => a.stop();
-  }, [v, retraso]);
+  }, [v, retraso, r]);
   return { opacity: v, translateY: v.interpolate({ inputRange: [0, 1], outputRange: [distancia, 0] }) };
 }
 
@@ -58,6 +81,7 @@ export function usePresion(hasta = 0.96) {
       Animated.spring(escala, { toValue: hasta, speed: 40, bounciness: 0, useNativeDriver: nativo }).start();
     },
     onPressOut: () => {
+      if (reducido) return;
       Animated.spring(escala, { toValue: 1, speed: 14, bounciness: 10, useNativeDriver: nativo }).start();
     },
   };
@@ -65,22 +89,26 @@ export function usePresion(hasta = 0.96) {
 
 /** Valor de 0 al número pedido, para animar rellenos (anillo, barras). */
 export function useLlenado(destino: number, duracion = 900, retraso = 120) {
+  const r = useReducido();
   const v = useRef(new Animated.Value(reducido ? destino : 0)).current;
   useEffect(() => {
-    if (reducido) {
+    if (r) {
+      v.stopAnimation();
       v.setValue(destino);
       return;
     }
     const a = Animated.timing(v, { toValue: destino, duration: duracion, delay: retraso, easing: Easing.out(Easing.cubic), useNativeDriver: false });
     a.start();
     return () => a.stop();
-  }, [v, destino, duracion, retraso]);
+  }, [v, destino, duracion, retraso, r]);
   return v;
 }
 
 /** Número que cuenta desde 0 hasta `valor` (coma decimal, como en la app). */
-export function NumeroAnimado({ valor, decimales = 0, estilo, children }: {
-  valor: number; decimales?: number; estilo?: StyleProp<TextStyle>; children?: ReactNode;
+export function NumeroAnimado({ valor, decimales = 0, estilo, sufijo = '', children }: {
+  valor: number; decimales?: number; estilo?: StyleProp<TextStyle>;
+  /** Lo que se lee después del número (ej. "%"), para el lector de pantalla. */
+  sufijo?: string; children?: ReactNode;
 }) {
   const v = useLlenado(valor, 900);
   const [mostrado, setMostrado] = useState(reducido ? valor : 0);
@@ -88,11 +116,11 @@ export function NumeroAnimado({ valor, decimales = 0, estilo, children }: {
     const id = v.addListener(({ value }) => setMostrado(value));
     return () => v.removeListener(id);
   }, [v]);
+  const formato = (x: number) => (decimales ? x.toFixed(decimales).replace('.', ',') : String(Math.round(x)));
   const n = Math.abs(mostrado - valor) < 1e-6 ? valor : mostrado;
-  const texto = decimales ? n.toFixed(decimales).replace('.', ',') : String(Math.round(n));
   return (
-    <Text style={estilo} accessibilityLabel={String(valor).replace('.', ',')}>
-      {texto}
+    <Text style={estilo} accessibilityLabel={`${formato(valor)}${sufijo}`}>
+      {formato(n)}
       {children}
     </Text>
   );
