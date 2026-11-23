@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase';
 import type { EstadoMateriaDb, EventoDb, HorarioDb, TipoEvento } from '../lib/tipos-db';
+import { periodoDe } from '../lib/finales';
 import { db, esperar, idDemo, MODO_DEMO, UID_DEMO } from './demo';
 
 function lanzar(error: { message: string } | null) {
@@ -15,6 +16,8 @@ export interface Agenda {
   materias: MateriaAgenda[];
   /** Tu estado en cada materia que no está pendiente. */
   estados: Map<string, EstadoMateriaDb>;
+  /** Materias que firmaste (o aprobaste) en este semestre: siguen en la agenda. */
+  terminadasEsteSemestre: Set<string>;
 }
 
 export interface MateriaAgenda {
@@ -35,7 +38,7 @@ export async function cargarAgenda(planId: string | null | undefined): Promise<A
   let eventos: EventoDb[];
   type Fila = { id: string; nombre: string; semestre: number; grupo_optativa_id: string | null; orden: number };
   let filas: Fila[];
-  let estados: { materia_id: string; estado: EstadoMateriaDb }[];
+  let estados: { materia_id: string; estado: EstadoMateriaDb; updated_at?: string | null }[];
   if (MODO_DEMO) {
     await esperar();
     horario = [...db.horario];
@@ -49,7 +52,7 @@ export async function cargarAgenda(planId: string | null | undefined): Promise<A
       planId
         ? supabase.from('materias').select('id, nombre, semestre, grupo_optativa_id, orden').eq('plan_id', planId)
         : Promise.resolve({ data: [], error: null }),
-      supabase.from('materias_estudiante').select('materia_id, estado'),
+      supabase.from('materias_estudiante').select('materia_id, estado, updated_at'),
     ]);
     lanzar(rH.error); lanzar(rE.error); lanzar(rM.error); lanzar(rS.error);
     horario = rH.data ?? [];
@@ -68,6 +71,9 @@ export async function cargarAgenda(planId: string | null | undefined): Promise<A
     nombres: new Map(materias.map((m) => [m.id, m.nombre])),
     materias,
     estados: new Map(estados.filter((e) => e.estado !== 'pendiente').map((e) => [e.materia_id, e.estado])),
+    terminadasEsteSemestre: new Set(estados
+      .filter((e) => (e.estado === 'firmada' || e.estado === 'aprobada') && e.updated_at && periodoDe(new Date(e.updated_at)) === periodoDe())
+      .map((e) => e.materia_id)),
   };
 }
 
