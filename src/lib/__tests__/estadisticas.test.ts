@@ -107,3 +107,10 @@ test('aprobar más optativas de las exigidas no da "faltan" negativo', () => {
   assert.equal(e.faltan, 0);
   assert.deepEqual(e.nivelesPendientes, []);
 });
+
+test('una nota de aprobación fuera de 2 a 5 no entra en ningún promedio', () => {
+  const raro = est({ a: { estado: 'aprobada', notaFinal: 1.5 }, b: { estado: 'aprobada', notaFinal: 4 } });
+  const e = calcularEstadisticas(materias, grupos, raro, []);
+  assert.equal(e.promedio, 4);
+  assert.equal(e.distribucion.reduce((s, d) => s + d.cantidad, 0), 1);
+});

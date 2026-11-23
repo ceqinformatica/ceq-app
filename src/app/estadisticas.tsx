@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
-import { useMemo } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import { nombreSemestre, nota } from '../components/academico';
+import { useMemo, useRef } from 'react';
+import { ScrollView, StyleSheet, Text, View, type ScrollViewInstance } from 'react-native';
+import { nombreSemestre } from '../components/academico';
 import { AnilloProgreso, BarraProgreso } from '../components/graficos';
 import { BarraSuperior, Boton, Cargando, Dato, EstadoVacio, Pantalla, s, Seccion, Tarjeta } from '../components/ui';
 import { useSesion } from '../context/SesionProvider';
@@ -28,6 +28,7 @@ export default function Estadisticas() {
   const planId = perfil?.plan_id ?? '';
   const { datos: malla, cargando, error, refrescando, recargar } = usarDatos(() => cargarMalla(planId, perfil?.carrera_id), [planId, perfil?.carrera_id]);
 
+  const columnas = useRef<ScrollViewInstance>(null);
   const e = useMemo(
     () => (malla ? calcularEstadisticas(malla.materias, malla.grupos, malla.estados, malla.intentos, malla.unidad) : null),
     [malla],
@@ -62,7 +63,7 @@ export default function Estadisticas() {
     <Pantalla refrescando={refrescando} onRefrescar={recargar}>
       <BarraSuperior titulo="Estadísticas" onVolver={volver} />
 
-      {/* Resumen: avance y promedio. En tablet o de costado se ponen lado a lado. */}
+      {/* Resumen: avance y promedio. En pantallas anchas (tablet) se ponen lado a lado. */}
       <View style={est.grilla}>
         <Tarjeta estilo={est.celda}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: espacio.l }}>
@@ -149,17 +150,25 @@ export default function Estadisticas() {
               </Text>
             ) : (
               <>
-                <View style={est.columnas} accessibilityRole="summary">
+                {/* Con muchos semestres se desliza de costado; arranca mostrando los más recientes. */}
+                <ScrollView
+                  ref={columnas}
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  onContentSizeChange={() => columnas.current?.scrollToEnd({ animated: false })}
+                  contentContainerStyle={est.columnas}
+                  accessibilityRole="summary"
+                >
                   {e.porPeriodo.map((p) => (
                     <View key={p.periodo} style={est.columna} accessibilityLabel={`${p.etiqueta}: promedio ${prom2(p.promedio)}, ${p.aprobados} aprobados, ${p.aplazos} aplazos`}>
-                      <Text style={[est.cantidad, { color: colorNota(p.promedio) }]}>{prom2(p.promedio)}</Text>
+                      <Text style={[est.cantidad, { color: colorNota(p.promedio) }]} numberOfLines={1}>{prom2(p.promedio)}</Text>
                       <View style={est.columnaFondo}>
                         <View style={[est.columnaRelleno, { height: `${((p.promedio ?? 0) / 5) * 100}%`, backgroundColor: colorNota(p.promedio) }]} />
                       </View>
                       <Text style={est.columnaEtiqueta} numberOfLines={2}>{p.etiqueta}</Text>
                     </View>
                   ))}
-                </View>
+                </ScrollView>
                 {e.porPeriodo.map((p, i) => (
                   <View key={p.periodo} style={[est.filaPeriodo, i === 0 && { borderTopWidth: 0 }]}>
                     <Text style={[s.filaTitulo, { flex: 1 }]}>{p.etiqueta}</Text>
@@ -193,7 +202,8 @@ export default function Estadisticas() {
 
       <Text style={[s.filaDetalle, { marginTop: espacio.s, marginBottom: espacio.l }]}>
         El promedio usa la nota con la que aprobaste cada materia (escala 1 a 5); los seminarios no llevan nota y no entran.
-        &quot;Con aplazos&quot; suma también los finales reprobados.
+        &quot;Con aplazos&quot; suma también los finales reprobados. La evolución por semestre solo cuenta los finales cargados con su
+        semestre, así que el acumulado puede no coincidir con el promedio general.
       </Text>
       <Boton texto="Ver mi malla" variante="fantasma" icono="grid-outline" onPress={volver} />
     </Pantalla>
@@ -201,7 +211,7 @@ export default function Estadisticas() {
 }
 
 const est = StyleSheet.create({
-  // Dos columnas cuando hay lugar (tablet u horizontal); una sola en el teléfono.
+  // Dos columnas cuando hay lugar (tablet); una sola en el teléfono.
   grilla: { flexDirection: 'row', flexWrap: 'wrap', columnGap: espacio.l },
   celda: { flexGrow: 1, flexBasis: 320, minWidth: 0 },
   promedio: { fontFamily: fuentes.bold, fontSize: 52, lineHeight: 60, color: colores.blanco, letterSpacing: -1 },
@@ -212,8 +222,8 @@ const est = StyleSheet.create({
   notaChip: { width: 28, height: 28, borderRadius: radio.s, alignItems: 'center', justifyContent: 'center' },
   notaChipTexto: { fontFamily: fuentes.bold, fontSize: 14, color: colores.blanco },
   cantidad: { fontFamily: fuentes.semibold, fontSize: 14, color: colores.marino, minWidth: 24, textAlign: 'center' },
-  columnas: { flexDirection: 'row', alignItems: 'flex-end', gap: espacio.s, marginBottom: espacio.m },
-  columna: { flex: 1, alignItems: 'center', gap: espacio.xs, maxWidth: 72 },
+  columnas: { flexGrow: 1, flexDirection: 'row', alignItems: 'flex-end', gap: espacio.s, marginBottom: espacio.m },
+  columna: { width: 56, alignItems: 'center', gap: espacio.xs },
   columnaFondo: { width: '70%', height: 110, borderRadius: radio.s, backgroundColor: colores.cielo, justifyContent: 'flex-end', overflow: 'hidden' },
   columnaRelleno: { width: '100%', borderRadius: radio.s },
   columnaEtiqueta: { fontFamily: fuentes.medium, fontSize: 11, lineHeight: 14, color: colores.textoSuave, textAlign: 'center' },
