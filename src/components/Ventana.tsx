@@ -9,6 +9,7 @@ import * as WebBrowser from 'expo-web-browser';
 import { useEffect, useRef, useState } from 'react';
 import { Image, Modal, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useRecorrido } from '../context/RecorridoProvider';
 import { useSesion } from '../context/SesionProvider';
 import { cargarVentanasParaMi, guardarVistas, leerVistas } from '../datos/ventanas';
 import type { VentanaDb } from '../lib/tipos-db';
@@ -76,6 +77,8 @@ export function abrirDestino(destino: string | null) {
 /** Muestra (sobre todas las pestañas) la ventana que toque, una a la vez. */
 export function VentanasDelCeq() {
   const { sesion, perfil } = useSesion();
+  // Mientras corre el recorrido de bienvenida no se tapa con otra ventana.
+  const { activo: recorrido } = useRecorrido();
   const uid = sesion?.user.id ?? null;
   const ruta = usePathname();
   const enInicio = ruta === '/' || ruta === '/index';
@@ -100,11 +103,12 @@ export function VentanasDelCeq() {
   }, [uid]);
 
   useEffect(() => {
-    if (actual || !vistas || !lista.length) return;
-    // Un momento después de llegar a la pantalla, para no tapar la animación.
-    const t = setTimeout(() => setActual(elegirVentana(lista, vistas, new Date(), enEstaSesion.current, enInicio, perfil?.carrera_id)), 700);
+    if (actual || recorrido || !vistas || !lista.length) return;
+    // Un momento después de llegar a la pantalla (y después de que el
+    // recorrido de bienvenida decida si se abre), para no tapar nada.
+    const t = setTimeout(() => setActual(elegirVentana(lista, vistas, new Date(), enEstaSesion.current, enInicio, perfil?.carrera_id)), 1500);
     return () => clearTimeout(t);
-  }, [lista, vistas, enInicio, actual, perfil?.carrera_id]);
+  }, [lista, vistas, enInicio, actual, recorrido, perfil?.carrera_id]);
 
   const cerrar = (luego?: () => void) => {
     if (!actual || !uid || !vistas) return;
@@ -116,7 +120,7 @@ export function VentanasDelCeq() {
     luego?.();
   };
 
-  if (!actual) return null;
+  if (!actual || recorrido) return null;
   const v = actual;
   const pantalla = v.forma === 'pantalla';
   return (

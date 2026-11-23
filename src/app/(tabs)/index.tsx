@@ -3,6 +3,7 @@ import { router } from 'expo-router';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { pct, semaforoVisible } from '../../components/academico';
 import { Columnas } from '../../components/disposicion';
+import { Aparecer, PressableAnimado, useAparecer, usePresion, vibrar } from '../../components/movimiento';
 import { AnilloProgreso } from '../../components/graficos';
 import { CabeceraMarca, EstadoVacio, Esqueleto, Pantalla, s, Seccion, Tarjeta, type NombreIcono } from '../../components/ui';
 import { useSesion } from '../../context/SesionProvider';
@@ -101,10 +102,10 @@ export default function Inicio() {
 
       {/* Accesos rápidos */}
       <View style={est.accesos}>
-        <Acceso icono="git-network" texto="Malla" onPress={() => router.navigate('/carrera')} />
-        <Acceso icono="calculator" texto="Firma" onPress={() => router.navigate('/firma')} />
-        <Acceso icono="calendar" texto="Agenda" onPress={() => router.navigate('/agenda')} />
-        <Acceso icono="card" texto="Carnet" onPress={() => router.push('/carnet')} />
+        <Acceso icono="git-network" texto="Malla" retraso={120} onPress={() => router.navigate('/carrera')} />
+        <Acceso icono="calculator" texto="Firma" retraso={180} onPress={() => router.navigate('/firma')} />
+        <Acceso icono="calendar" texto="Agenda" retraso={240} onPress={() => router.navigate('/agenda')} />
+        <Acceso icono="card" texto="Carnet" retraso={300} onPress={() => router.push('/carnet')} />
       </View>
 
       {error && !datos ? (
@@ -121,8 +122,8 @@ export default function Inicio() {
         <Esqueleto alto={84} estilo={{ borderRadius: radio.l }} />
       ) : datos?.clasesHoy.length ? (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: espacio.s, paddingBottom: espacio.s, paddingRight: espacio.l }} style={{ marginHorizontal: -espacio.l, paddingLeft: espacio.l }}>
-          {datos.clasesHoy.map((h) => (
-            <View key={h.id} style={est.clase}>
+          {datos.clasesHoy.map((h, i) => (
+            <Aparecer key={h.id} retraso={250 + i * 90} distancia={10} estilo={est.clase}>
               <Text style={est.claseHora}>{hora(h.hora_inicio)} – {hora(h.hora_fin)}</Text>
               <Text style={est.claseNombre} numberOfLines={2}>{h.titulo || (h.materia_id && datos.nombres.get(h.materia_id)) || 'Clase'}</Text>
               {h.aula ? (
@@ -131,7 +132,7 @@ export default function Inicio() {
                   <Text style={est.claseAula}>{h.aula}</Text>
                 </View>
               ) : null}
-            </View>
+            </Aparecer>
           ))}
         </ScrollView>
       ) : (
@@ -237,12 +238,21 @@ export default function Inicio() {
   );
 }
 
-function Acceso({ icono, texto, onPress }: { icono: NombreIcono; texto: string; onPress: () => void }) {
+function Acceso({ icono, texto, onPress, retraso }: { icono: NombreIcono; texto: string; onPress: () => void; retraso: number }) {
+  const { opacity, translateY } = useAparecer(retraso);
+  const { escala, onPressIn, onPressOut } = usePresion(0.92);
   return (
-    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={texto} style={({ pressed }) => [est.acceso, pressed && { opacity: 0.8 }]}>
+    <PressableAnimado
+      onPress={() => { vibrar(); onPress(); }}
+      onPressIn={onPressIn}
+      onPressOut={onPressOut}
+      accessibilityRole="button"
+      accessibilityLabel={texto}
+      style={[est.acceso, { opacity, transform: [{ translateY }, { scale: escala }] }]}
+    >
       <View style={est.accesoIcono}><Ionicons name={icono} size={22} color={colores.marino} /></View>
       <Text style={est.accesoTexto}>{texto}</Text>
-    </Pressable>
+    </PressableAnimado>
   );
 }
 

@@ -4,6 +4,7 @@ import * as WebBrowser from 'expo-web-browser';
 import { supabase } from './supabase';
 import { olvidarEsteCelular } from './notificaciones';
 import { desactivarBiometria } from './biometria';
+import { borrarPin } from './pinGuardado';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -118,6 +119,9 @@ export async function salir() {
   // Primero se borra el celular (después ya no hay sesión para hacerlo).
   await olvidarEsteCelular().catch(() => {});
   await cerrarGoogleNativo();
+  // El PIN es de esta cuenta en este dispositivo: así, si alguien lo olvidó,
+  // cierra sesión, vuelve a entrar con Google y puede crear otro.
+  await borrarPin().catch(() => {});
   await supabase.auth.signOut();
 }
 
@@ -141,6 +145,7 @@ export async function eliminarCuenta(): Promise<string | null> {
   const { error } = await supabase.rpc('eliminar_mi_cuenta');
   if (error) return 'No se pudo borrar la cuenta. Probá de nuevo o escribí a informatica@ceq-una.com.';
   await desactivarBiometria().catch(() => {});
+  await borrarPin().catch(() => {});
   await cerrarGoogleNativo();
   // El usuario ya no existe en el servidor: se cierra la sesión solo en este celular.
   await supabase.auth.signOut({ scope: 'local' });
