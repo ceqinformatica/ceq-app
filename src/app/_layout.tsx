@@ -89,6 +89,8 @@ function Navegacion() {
         <Stack.Screen name="firma/[id]" />
         <Stack.Screen name="extracto" />
         <Stack.Screen name="carnet" />
+        <Stack.Screen name="carnet-validar" />
+        <Stack.Screen name="verificar" />
         <Stack.Screen name="avisos" />
         <Stack.Screen name="aviso/[id]" />
         <Stack.Screen name="tramites" />

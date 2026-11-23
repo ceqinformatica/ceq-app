@@ -496,6 +496,40 @@ select pg_temp.debe_ser('se borran sus notas', (select count(*) from public.eval
 select pg_temp.debe_ser('los demás usuarios siguen', (select count(*) from auth.users where id in ('00000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-00000000000b')), 2);
 select pg_temp.debe_ser('las notas de Beto siguen', (select (count(*) > 0)::int from public.evaluaciones where usuario_id = '00000000-0000-0000-0000-00000000000b'), 1);
 
+-- Validar el carnet físico con una foto ------------------------------
+select pg_temp.como('00000000-0000-0000-0000-0000000000ad');
+insert into public.socios (ci, nombre, vigente_hasta) values ('5300222', 'Carla Duarte', '2025-12-31');
+select pg_temp.como('00000000-0000-0000-0000-0000000000c2');
+select pg_temp.debe_fallar('carnet vencido no se valida', $$select public.solicitar_carnet('Carla Vencida', '5300222', null, '2020-12-31', '00000000-0000-0000-0000-0000000000c2/f.jpg')$$);
+select pg_temp.debe_fallar('vencimiento imposible (más de 3 años)', $$select public.solicitar_carnet('Carla', '5300222', null, (current_date + 1200), '00000000-0000-0000-0000-0000000000c2/f.jpg')$$);
+select pg_temp.debe_fallar('la foto tiene que ser suya', $$select public.solicitar_carnet('Carla', '5300222', null, (current_date + 300), '00000000-0000-0000-0000-00000000000a/f.jpg')$$);
+select pg_temp.debe_fallar('no escribe la tabla a mano', $$insert into public.solicitudes_carnet (nombre, ci, vigente_hasta, foto_path) values ('x', '1234', current_date + 10, 'x')$$);
+select public.solicitar_carnet('Carla Duarte', '5.300.222', null, (current_date + 300), '00000000-0000-0000-0000-0000000000c2/f1.jpg');
+select public.solicitar_carnet('Carla Duarte', '5300222', 'CEQ-0777', (current_date + 400), '00000000-0000-0000-0000-0000000000c2/f2.jpg');
+select pg_temp.debe_ser('una sola pendiente (la segunda la reemplaza)', (select count(*) from public.solicitudes_carnet), 1);
+select pg_temp.debe_fallar('no se aprueba a sí misma', $$select public.aprobar_solicitud_carnet((select id from public.solicitudes_carnet))$$);
+select pg_temp.debe_ser('sin aprobar no tiene carnet', (select count(*) from public.socios), 0);
+select pg_temp.como('00000000-0000-0000-0000-00000000000a');
+select pg_temp.debe_ser('Ana no ve solicitudes ajenas', (select count(*) from public.solicitudes_carnet), 0);
+select pg_temp.como('00000000-0000-0000-0000-0000000000c1');
+select pg_temp.debe_fallar('validador no aprueba', $$select public.aprobar_solicitud_carnet((select id from public.solicitudes_carnet limit 1))$$);
+select pg_temp.como('00000000-0000-0000-0000-0000000000ad');
+select pg_temp.debe_ser('admin ve la pendiente', (select count(*) from public.solicitudes_carnet where estado = 'pendiente'), 1);
+select public.aprobar_solicitud_carnet((select id from public.solicitudes_carnet where estado = 'pendiente'));
+select pg_temp.debe_ser('se vincula al socio que el CEQ cargó con esa cédula', (select count(*) from public.socios where ci = '5300222' and usuario_id = '00000000-0000-0000-0000-0000000000c2' and numero_socio = 'CEQ-0777' and vigente_hasta = current_date + 400), 1);
+select pg_temp.debe_fallar('no se aprueba dos veces', $$select public.aprobar_solicitud_carnet((select id from public.solicitudes_carnet limit 1))$$);
+select pg_temp.como('00000000-0000-0000-0000-0000000000c2');
+select pg_temp.debe_ser('Carla ve su carnet', (select count(*) from public.socios), 1);
+select pg_temp.debe_fallar('con carnet vigente no pide otro', $$select public.solicitar_carnet('Carla', '5300222', null, (current_date + 300), '00000000-0000-0000-0000-0000000000c2/f3.jpg')$$);
+select pg_temp.como('00000000-0000-0000-0000-00000000000a');
+select public.solicitar_carnet('Ana', '4555666', null, (current_date + 30), '00000000-0000-0000-0000-00000000000a/f.jpg');
+select pg_temp.como('00000000-0000-0000-0000-0000000000ad');
+select public.rechazar_solicitud_carnet((select id from public.solicitudes_carnet where estado = 'pendiente'), 'La foto no se lee');
+select pg_temp.como('00000000-0000-0000-0000-00000000000a');
+select pg_temp.debe_ser('Ana ve el motivo del rechazo', (select count(*) from public.solicitudes_carnet where estado = 'rechazada' and motivo = 'La foto no se lee'), 1);
+select pg_temp.debe_ser('rechazada no habilita', (select count(*) from public.socios where activo), 0);
+reset role;
+
 -- Todas las tablas públicas tienen RLS ------------------------------
 select pg_temp.debe_ser('tablas sin RLS',
   (select count(*) from pg_class c join pg_namespace n on n.oid = c.relnamespace

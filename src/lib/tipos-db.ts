@@ -67,6 +67,11 @@ export type SocioDb = {
   vigente_hasta: string | null; foto_path: string | null; updated_at: string;
   codigo_qr: string; activo: boolean; pagado_en: string | null; observacion: string | null; created_at: string;
 }
+export type EstadoSolicitudCarnet = 'pendiente' | 'aprobada' | 'rechazada';
+export type SolicitudCarnetDb = {
+  id: string; usuario_id: string; nombre: string; ci: string; numero_socio: string | null; vigente_hasta: string;
+  foto_path: string; estado: EstadoSolicitudCarnet; motivo: string | null; revisado_por: string | null; revisado_en: string | null; created_at: string;
+}
 export type ResultadoVerificacion = 'vigente' | 'vencido' | 'inactivo' | 'no_encontrado';
 export type VerificacionCarnet = {
   resultado: ResultadoVerificacion; socio_id?: string; nombre?: string; numero_socio?: string; ci?: string;
@@ -129,6 +134,7 @@ export type Database = {
       opciones_encuesta: Tabla<OpcionEncuestaDb, 'id' | 'orden'>;
       ya_votaron: Tabla<YaVotaronDb>;
       examenes_finales: Tabla<ExamenFinalDb, 'id' | 'usuario_id' | 'periodo' | 'llamado' | 'fecha' | 'created_at' | 'porcentaje' | 'tipo' | 'cursada_anterior'>;
+      solicitudes_carnet: Tabla<SolicitudCarnetDb, 'id' | 'usuario_id' | 'numero_socio' | 'estado' | 'motivo' | 'revisado_por' | 'revisado_en' | 'created_at'>;
       dispositivos: Tabla<DispositivoDb, 'usuario_id' | 'plataforma' | 'updated_at'>;
     };
     Views: {
@@ -146,6 +152,9 @@ export type Database = {
       renovar_codigo_carnet: { Args: { p_socio: string }; Returns: string };
       poner_foto_carnet: { Args: { p_socio: string; p_path: string | null }; Returns: undefined };
       buscar_estudiantes: { Args: { p_texto: string }; Returns: EstudianteEncontrado[] };
+      solicitar_carnet: { Args: { p_nombre: string; p_ci: string; p_numero: string | null; p_vence: string; p_foto: string }; Returns: string };
+      aprobar_solicitud_carnet: { Args: { p_id: string }; Returns: string };
+      rechazar_solicitud_carnet: { Args: { p_id: string; p_motivo: string | null }; Returns: undefined };
       eliminar_mi_cuenta: { Args: Record<string, never>; Returns: undefined };
     };
     Enums: {

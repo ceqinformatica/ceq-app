@@ -26,8 +26,9 @@ export default function PanelAdmin() {
 
       <Seccion>Gestionar</Seccion>
       <Tarjeta estilo={{ paddingVertical: espacio.xs }}>
+        <Fila icono="camera-outline" titulo="Validar carnets" detalle="Revisar las fotos de carnets físicos que mandaron los estudiantes" onPress={() => router.push('/admin/solicitudes-carnet')} />
         <Fila icono="card-outline" titulo="Socios y carnets" detalle="Dar de alta a quien pagó, renovar o dar de baja" onPress={() => router.push('/admin/socios')} />
-        <Fila icono="qr-code-outline" titulo="Verificar carnet" detalle="Escanear el QR de un socio en la puerta o en un comercio" onPress={() => router.push('/admin/verificar')} />
+        <Fila icono="qr-code-outline" titulo="Verificar carnet" detalle="Escanear el QR de un socio en la puerta o en un comercio" onPress={() => router.push('/verificar')} />
         <Fila icono="megaphone-outline" titulo="Avisos" detalle="Publicar, programar y editar comunicados" onPress={() => router.push('/admin/avisos')} />
         <Fila icono="notifications-outline" titulo="Notificaciones" detalle="Recordatorios y mensajes al celular, ahora o programados" onPress={() => router.push('/admin/notificaciones')} />
         <Fila icono="stats-chart-outline" titulo="Encuestas" detalle="Crear encuestas anónimas y ver resultados" onPress={() => router.push('/admin/encuestas')} />

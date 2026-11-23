@@ -113,7 +113,7 @@ export default function Perfil() {
         <>
           <Seccion estilo={{ marginTop: espacio.xl }}>CEQ</Seccion>
           <Tarjeta estilo={{ paddingVertical: espacio.xs }}>
-            <Fila icono="qr-code-outline" titulo="Verificar carnet" detalle="Escanear el QR de un socio" onPress={() => router.push('/admin/verificar')} ultima />
+            <Fila icono="qr-code-outline" titulo="Verificar carnet" detalle="Escanear el QR de un socio" onPress={() => router.push('/verificar')} ultima />
           </Tarjeta>
         </>
       )}

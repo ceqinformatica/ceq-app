@@ -8,7 +8,7 @@ import { BarraSuperior, Boton, Cargando, EstadoVacio, Fila, Hoja, Mensaje, Panta
 import { useSesion } from '../context/SesionProvider';
 import { cargarSocio } from '../datos/ceq';
 import { db, MODO_DEMO } from '../datos/demo';
-import { renovarCodigo, subirFoto, urlFoto } from '../datos/socios';
+import { cargarMiSolicitud, renovarCodigo, subirFoto, urlFoto } from '../datos/socios';
 import { usarDatos } from '../datos/usarDatos';
 import { AVISO_CARNET_PAGO, estadoCarnet } from '../lib/carnet';
 import { supabase } from '../lib/supabase';
@@ -103,7 +103,12 @@ export default function PantallaCarnet() {
             <Text style={[s.filaDetalle, { fontVariant: ['tabular-nums'] }]}>En vivo · {hora}</Text>
           </View>
 
-          {estado === 'vencido' && <Mensaje texto="Tu carnet venció. Renová la cuota de socio en la sede del CEQ y se vuelve a habilitar." />}
+          {estado === 'vencido' && (
+            <>
+              <Mensaje texto="Tu carnet venció. Si ya lo renovaste en la sede, validá el carnet nuevo con una foto." />
+              <Boton texto="Validar mi carnet renovado" icono="camera" variante="secundario" onPress={() => router.push('/carnet-validar')} />
+            </>
+          )}
           {estado === 'inactivo' && <Mensaje texto="El CEQ dio de baja este carnet. Consultá en la sede." />}
           <Mensaje texto={mensaje?.texto ?? null} tipo={mensaje?.tipo} />
 
@@ -139,23 +144,41 @@ export default function PantallaCarnet() {
       ) : error ? (
         <EstadoVacio icono="card-outline" titulo="No pudimos cargar tu carnet" texto={error} accion={{ texto: 'Reintentar', onPress: recargar }} />
       ) : (
-        <SinCarnet />
+        <SinCarnet uid={sesion?.user.id ?? ''} />
       )}
     </Pantalla>
   );
 }
 
-/** Para quien no pagó: el carnet no está habilitado y se explica cómo obtenerlo. */
-export function SinCarnet() {
+/**
+ * Para quien todavía no tiene carnet digital: explica que tiene costo y
+ * deja validar el carnet físico con una foto (o muestra cómo va).
+ */
+export function SinCarnet({ uid }: { uid: string }) {
+  const { datos: sol } = usarDatos(() => cargarMiSolicitud(uid), [uid]);
+
+  if (sol?.estado === 'pendiente') {
+    return (
+      <>
+        <EstadoVacio icono="hourglass-outline" titulo="Tu carnet está en revisión" texto="El CEQ está revisando la foto de tu carnet. Cuando lo aprueben, el carnet digital aparece acá solo." />
+        <Boton texto="Volver a enviar la foto" variante="fantasma" icono="camera-outline" onPress={() => router.push('/carnet-validar')} />
+      </>
+    );
+  }
+
   return (
     <>
-      <EstadoVacio icono="card-outline" titulo="Todavía no tenés carnet" texto={AVISO_CARNET_PAGO} />
-      <Tarjeta>
-        <Text style={s.filaTitulo}>Cómo obtenerlo</Text>
+      <EstadoVacio icono="card-outline" titulo="Todavía no tenés carnet digital" texto={AVISO_CARNET_PAGO} />
+      {sol?.estado === 'rechazada' && (
+        <Mensaje texto={`El CEQ no pudo validar tu carnet${sol.motivo ? `: ${sol.motivo}` : '.'} Podés enviarlo de nuevo.`} />
+      )}
+      <Boton texto="Ya tengo el carnet físico: validarlo" icono="camera" onPress={() => router.push('/carnet-validar')} />
+      <Tarjeta estilo={{ marginTop: espacio.l }}>
+        <Text style={s.filaTitulo}>¿Todavía no lo tenés?</Text>
         {[
           'Pasá por la sede del CEQ en el horario de atención.',
-          'Pagá la cuota de socio y llevá tu cédula.',
-          'El CEQ te da el carnet físico y habilita el virtual en esta app, con tu cuenta.',
+          'Pagá la cuota de socio y llevá tu cédula. El carnet dura 3 años (6 semestres).',
+          'Con el carnet físico en mano, sacale una foto acá y el CEQ te habilita el digital.',
         ].map((t, i) => (
           <View key={t} style={{ flexDirection: 'row', gap: espacio.s, marginTop: espacio.s }}>
             <Text style={[s.filaDetalle, { color: colores.marino, fontWeight: '700' }]}>{i + 1}.</Text>

@@ -3,13 +3,14 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
-import { BarraSuperior, Boton, Campo, Mensaje, Pantalla, s, Tarjeta } from '../../components/ui';
-import { urlFoto, verificarCarnet } from '../../datos/socios';
-import { fechaCorta, formatearCi, RESULTADO_VERIFICACION } from '../../lib/carnet';
-import type { VerificacionCarnet } from '../../lib/tipos-db';
-import { colores, espacio, fuentes, radio } from '../../tema';
+import { BarraSuperior, Boton, Campo, EstadoVacio, Mensaje, Pantalla, s, Tarjeta } from '../components/ui';
+import { useSesion } from '../context/SesionProvider';
+import { urlFoto, verificarCarnet } from '../datos/socios';
+import { fechaCorta, formatearCi, RESULTADO_VERIFICACION } from '../lib/carnet';
+import type { VerificacionCarnet } from '../lib/tipos-db';
+import { colores, espacio, fuentes, radio } from '../tema';
 
-const volver = () => (router.canGoBack() ? router.back() : router.replace('/admin'));
+const volver = () => (router.canGoBack() ? router.back() : router.replace('/'));
 
 /**
  * Verificar el carnet de un socio: se escanea el QR con la cámara o se
@@ -17,6 +18,19 @@ const volver = () => (router.canGoBack() ? router.back() : router.replace('/admi
  * validadoras y las de administración; la base deja registro.
  */
 export default function VerificarCarnet() {
+  const { perfil } = useSesion();
+  if (perfil && perfil.rol !== 'admin' && perfil.rol !== 'validador') {
+    return (
+      <Pantalla>
+        <BarraSuperior titulo="Verificar carnet" onVolver={volver} />
+        <EstadoVacio icono="lock-closed-outline" titulo="Solo para cuentas del CEQ" texto="Verificar carnets lo hacen las cuentas validadoras y de administración." />
+      </Pantalla>
+    );
+  }
+  return <Verificador />;
+}
+
+function Verificador() {
   const [permiso, pedirPermiso] = useCameraPermissions();
   const [escaneando, setEscaneando] = useState(false);
   const [texto, setTexto] = useState('');

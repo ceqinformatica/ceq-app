@@ -6,7 +6,7 @@
  */
 import type {
   AsistenciaDb, AvisoDb, Carrera, EncuestaDb, EvaluacionDb, EventoDb, ExamenFinalDb, GrupoOptativasDb, HorarioDb, MateriaDb,
-  MateriaEstudianteDb, OpcionEncuestaDb, Perfil, Plan, PrerrequisitoDb, ReglaFirmaDb, SocioDb, SugerenciaDb, NotificacionDb, TramiteDb,
+  MateriaEstudianteDb, OpcionEncuestaDb, Perfil, Plan, PrerrequisitoDb, ReglaFirmaDb, SocioDb, SolicitudCarnetDb, SugerenciaDb, NotificacionDb, TramiteDb,
 } from '../lib/tipos-db';
 import { GUIA_TRAMITES_FCQ } from './guia-tramites-fcq';
 
@@ -120,6 +120,9 @@ export const db = {
     { id: 'soc-2', usuario_id: null, numero_socio: 'CEQ-0428', ci: '4987001', nombre: 'Bruno Benítez', vigente_hasta: `${ahora.getFullYear()}-12-31`, foto_path: null, updated_at: ahora.toISOString(), codigo_qr: '9a1b', activo: true, pagado_en: null, observacion: 'Solo carnet físico', created_at: ahora.toISOString() },
     { id: 'soc-3', usuario_id: null, numero_socio: 'CEQ-0311', ci: '5300222', nombre: 'Carla Duarte', vigente_hasta: `${ahora.getFullYear() - 1}-12-31`, foto_path: null, updated_at: ahora.toISOString(), codigo_qr: '7c2d', activo: true, pagado_en: null, observacion: null, created_at: ahora.toISOString() },
   ] as SocioDb[],
+  solicitudesCarnet: [
+    { id: 'sol-1', usuario_id: 'u-demo-2', nombre: 'Diego Ramírez', ci: '5611234', numero_socio: 'CEQ-0390', vigente_hasta: `${ahora.getFullYear() + 2}-03-15`, foto_path: '', estado: 'pendiente', motivo: null, revisado_por: null, revisado_en: null, created_at: ahora.toISOString() },
+  ] as SolicitudCarnetDb[],
   avisos: [
     { id: 'a1', titulo: 'Inscripciones a exámenes finales', cuerpo: 'Recordá que la inscripción a los finales del primer periodo cierra el viernes. Hacela desde el sistema de la facultad y guardá el comprobante.', imagen_url: null, notificar: true, publicado: true, autor_id: null, created_at: enDias(-1) },
     { id: 'a2', titulo: 'Venta de batas y antiparras', cuerpo: 'El CEQ tiene batas y antiparras a precio de socio. Pasá por la sede en el horario de atención.', imagen_url: null, notificar: false, publicado: true, autor_id: null, created_at: enDias(-4) },

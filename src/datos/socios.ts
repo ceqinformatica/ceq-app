@@ -7,7 +7,7 @@
 import { Platform } from 'react-native';
 import { estadoCarnet, leerQr, normalizarCi, type FormularioSocio } from '../lib/carnet';
 import { supabase } from '../lib/supabase';
-import type { EstudianteEncontrado, SocioDb, VerificacionCarnet } from '../lib/tipos-db';
+import type { EstudianteEncontrado, SocioDb, SolicitudCarnetDb, VerificacionCarnet } from '../lib/tipos-db';
 import { db, esperar, idDemo, MODO_DEMO, UID_DEMO } from './demo';
 
 function lanzar(error: { message: string } | null) {
@@ -152,4 +152,93 @@ export async function renovarCodigo(socioId: string): Promise<string> {
   const { data, error } = await supabase.rpc('renovar_codigo_carnet', { p_socio: socioId });
   lanzar(error);
   return data as string;
+}
+
+/* ---------------- Validar el carnet físico con una foto ---------------- */
+
+const BUCKET_SOLICITUDES = 'solicitudes-carnet';
+
+/** La última solicitud del estudiante (pendiente, aprobada o rechazada). */
+export async function cargarMiSolicitud(uid: string): Promise<SolicitudCarnetDb | null> {
+  if (MODO_DEMO) return db.solicitudesCarnet.filter((x) => x.usuario_id === UID_DEMO).at(-1) ?? null;
+  const { data, error } = await supabase.from('solicitudes_carnet').select('*').eq('usuario_id', uid).order('created_at', { ascending: false }).limit(1).maybeSingle();
+  lanzar(error);
+  return data;
+}
+
+export interface DatosSolicitud {
+  nombre: string;
+  ci: string;
+  numero_socio: string;
+  vigente_hasta: string;
+}
+
+/** Sube la foto del carnet físico y envía la solicitud al CEQ. */
+export async function enviarSolicitud(datos: DatosSolicitud, foto: { uri: string; tipo?: string }): Promise<void> {
+  if (MODO_DEMO) {
+    await esperar(400);
+    db.solicitudesCarnet = db.solicitudesCarnet.filter((x) => !(x.usuario_id === UID_DEMO && x.estado === 'pendiente'));
+    db.solicitudesCarnet.push({
+      id: idDemo(), usuario_id: UID_DEMO, nombre: datos.nombre, ci: normalizarCi(datos.ci), numero_socio: datos.numero_socio || null,
+      vigente_hasta: datos.vigente_hasta, foto_path: foto.uri, estado: 'pendiente', motivo: null, revisado_por: null, revisado_en: null, created_at: new Date().toISOString(),
+    });
+    return;
+  }
+  const { data: u } = await supabase.auth.getUser();
+  const uid = u.user?.id;
+  if (!uid) throw new Error('Volvé a iniciar sesión.');
+  const ext = foto.tipo?.includes('png') ? 'png' : 'jpg';
+  const path = `${uid}/carnet-${Date.now()}.${ext}`;
+  const cuerpo = Platform.OS === 'web' ? await (await fetch(foto.uri)).blob() : await bytesDe(foto.uri);
+  const { error } = await supabase.storage.from(BUCKET_SOLICITUDES).upload(path, cuerpo, { contentType: foto.tipo ?? 'image/jpeg', upsert: false });
+  lanzar(error);
+  const { error: e2 } = await supabase.rpc('solicitar_carnet', {
+    p_nombre: datos.nombre.trim(), p_ci: datos.ci, p_numero: datos.numero_socio.trim() || null, p_vence: datos.vigente_hasta, p_foto: path,
+  });
+  if (e2) {
+    await supabase.storage.from(BUCKET_SOLICITUDES).remove([path]).catch(() => undefined);
+    lanzar(e2);
+  }
+}
+
+/** Panel: solicitudes pendientes, la más vieja primero. */
+export async function cargarSolicitudesPendientes(): Promise<SolicitudCarnetDb[]> {
+  if (MODO_DEMO) {
+    await esperar();
+    return db.solicitudesCarnet.filter((x) => x.estado === 'pendiente');
+  }
+  const { data, error } = await supabase.from('solicitudes_carnet').select('*').eq('estado', 'pendiente').order('created_at').limit(200);
+  lanzar(error);
+  return data ?? [];
+}
+
+export async function urlFotoSolicitud(path: string): Promise<string | null> {
+  if (MODO_DEMO) return /^(https?|data|blob|file):/.test(path) ? path : null;
+  const { data } = await supabase.storage.from(BUCKET_SOLICITUDES).createSignedUrl(path, 3600);
+  return data?.signedUrl ?? null;
+}
+
+export async function aprobarSolicitud(id: string): Promise<void> {
+  if (MODO_DEMO) {
+    await esperar(300);
+    const x = db.solicitudesCarnet.find((y) => y.id === id);
+    if (x) {
+      x.estado = 'aprobada';
+      db.otrosSocios.unshift({ id: idDemo(), usuario_id: x.usuario_id, numero_socio: x.numero_socio ?? 'CEQ-0500', ci: x.ci, nombre: x.nombre, vigente_hasta: x.vigente_hasta, foto_path: null, updated_at: new Date().toISOString(), codigo_qr: idDemo(), activo: true, pagado_en: null, observacion: null, created_at: new Date().toISOString() });
+    }
+    return;
+  }
+  const { error } = await supabase.rpc('aprobar_solicitud_carnet', { p_id: id });
+  lanzar(error);
+}
+
+export async function rechazarSolicitud(id: string, motivo: string): Promise<void> {
+  if (MODO_DEMO) {
+    await esperar(300);
+    const x = db.solicitudesCarnet.find((y) => y.id === id);
+    if (x) Object.assign(x, { estado: 'rechazada', motivo });
+    return;
+  }
+  const { error } = await supabase.rpc('rechazar_solicitud_carnet', { p_id: id, p_motivo: motivo });
+  lanzar(error);
 }

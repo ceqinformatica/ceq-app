@@ -40,9 +40,9 @@ export default function SociosAdmin() {
       <Pantalla refrescando={refrescando} onRefrescar={recargar}>
         <BarraSuperior titulo="Socios y carnets" onVolver={volver} />
         <Text style={[s.filaDetalle, { marginBottom: espacio.m }]}>
-          El carnet tiene costo: da de alta solo a quien ya pagó la cuota. Con el alta se le habilita el carnet virtual con QR en la app.
+          El carnet tiene costo y dura 3 años: da de alta solo a quien ya pagó. También se habilita cuando aprobás la foto que manda el estudiante en Validar carnets.
         </Text>
-        <Boton texto="Verificar un carnet" icono="qr-code" variante="secundario" onPress={() => router.push('/admin/verificar')} compacto estilo={{ marginBottom: espacio.m }} />
+        <Boton texto="Verificar un carnet" icono="qr-code" variante="secundario" onPress={() => router.push('/verificar')} compacto estilo={{ marginBottom: espacio.m }} />
         <Campo etiqueta="Buscar" value={busqueda} onChangeText={setBusqueda} placeholder="Nombre, C.I. o número de socio" autoCorrect={false} />
         <Segmentado<Filtro>
           opciones={[
