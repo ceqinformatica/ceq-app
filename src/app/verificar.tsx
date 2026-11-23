@@ -6,7 +6,7 @@ import { Image, StyleSheet, Text, View } from 'react-native';
 import { BarraSuperior, Boton, Campo, EstadoVacio, Mensaje, Pantalla, s, Tarjeta } from '../components/ui';
 import { useSesion } from '../context/SesionProvider';
 import { urlFoto, verificarCarnet } from '../datos/socios';
-import { fechaCorta, formatearCi, RESULTADO_VERIFICACION } from '../lib/carnet';
+import { formatearCi, RESULTADO_VERIFICACION, textoSemestre } from '../lib/carnet';
 import type { VerificacionCarnet } from '../lib/tipos-db';
 import { colores, crearEstilos, espacio, fondos, fuentes, radio } from '../tema';
 import { useTema } from '../context/TemaProvider';
@@ -16,7 +16,7 @@ const volver = () => (router.canGoBack() ? router.back() : router.replace('/'));
 
 /**
  * Verificar el carnet de un socio: se escanea el QR con la cámara o se
- * escribe el número de socio o la cédula. Lo pueden usar las cuentas
+ * escribe la cédula. Lo pueden usar las cuentas
  * validadoras y las de administración; la base deja registro.
  */
 export default function VerificarCarnet() {
@@ -77,7 +77,7 @@ function Verificador() {
     if (!permiso?.granted) {
       const r = await pedirPermiso();
       if (!r.granted) {
-        setError('Sin permiso de cámara no se puede escanear. Podés escribir el número de socio o la cédula.');
+        setError('Sin permiso de cámara no se puede escanear. Podés escribir la cédula.');
         return;
       }
     }
@@ -132,9 +132,9 @@ function Verificador() {
               )}
               <View style={{ flex: 1 }}>
                 <Text style={[s.filaTitulo, { color: colores.marino }]}>{resultado.nombre}</Text>
-                <Text style={s.filaDetalle}>{resultado.numero_socio} · C.I. {formatearCi(resultado.ci ?? '')}</Text>
+                <Text style={s.filaDetalle}>C.I. {formatearCi(resultado.ci ?? '')}</Text>
                 {resultado.carrera ? <Text style={s.filaDetalle}>{resultado.carrera}</Text> : null}
-                <Text style={s.filaDetalle}>{resultado.vigente_hasta ? `Vence el ${fechaCorta(resultado.vigente_hasta)}` : 'Sin vencimiento'}</Text>
+                <Text style={s.filaDetalle}>{resultado.vigente_hasta ? `Vence el ${textoSemestre(resultado.vigente_hasta)}` : 'Sin vencimiento'}</Text>
               </View>
             </View>
           )}
@@ -146,10 +146,10 @@ function Verificador() {
 
       <Text style={[s.etiqueta, { marginTop: espacio.xl, marginBottom: espacio.s }]}>O escribilo</Text>
       <Campo
-        etiqueta="Número de socio o cédula"
+        etiqueta="Cédula"
         value={texto}
         onChangeText={setTexto}
-        placeholder="Ej.: CEQ-0042 o 4.555.666"
+        placeholder="Ej.: 4.555.666"
         autoCapitalize="characters"
         autoCorrect={false}
         returnKeyType="search"

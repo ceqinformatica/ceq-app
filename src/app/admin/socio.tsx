@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { Switch, Text, View } from 'react-native';
 import { BarraSuperior, Boton, Campo, Cargando, Chip, Fila, Mensaje, Pantalla, s, Seccion, Tarjeta } from '../../components/ui';
 import { buscarEstudiantes, cargarSocioPorId, guardarSocio, renovarCodigo } from '../../datos/socios';
-import { fechaCorta, formatearCi, hoyPy, opcionesVigencia, validarSocio, type FormularioSocio } from '../../lib/carnet';
+import { fechaCorta, formatearCi, hoyPy, opcionesVigencia, textoSemestre, validarSocio, type FormularioSocio } from '../../lib/carnet';
 import type { EstudianteEncontrado } from '../../lib/tipos-db';
 import { colores, espacio, fondos } from '../../tema';
 import { useTema } from '../../context/TemaProvider';
@@ -164,19 +164,11 @@ export default function EditarSocio() {
       <Seccion>Datos del carnet</Seccion>
       <Campo etiqueta="Nombre completo" value={f.nombre} onChangeText={cambiar('nombre')} placeholder="Como figura en la cédula" maxLength={80} />
       <Campo etiqueta="Cédula" value={f.ci} onChangeText={cambiar('ci')} placeholder="Ej.: 4.555.666" keyboardType="number-pad" maxLength={14} />
-      <Campo
-        etiqueta="Número de socio (opcional)"
-        value={f.numero_socio}
-        onChangeText={cambiar('numero_socio')}
-        placeholder={editando ? '' : 'Se asigna solo (CEQ-0001…)'}
-        autoCapitalize="characters"
-        maxLength={20}
-      />
 
-      <Text style={[s.etiqueta, { marginBottom: espacio.s }]}>Vigencia</Text>
+      <Text style={[s.etiqueta, { marginBottom: espacio.s }]}>Vence</Text>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: espacio.s, marginBottom: espacio.m }}>
         {vigencias.map((v) => <Chip key={v.texto} texto={v.texto} elegido={f.vigente_hasta === v.valor} onPress={() => cambiar('vigente_hasta')(v.valor)} />)}
-        {vigenciaPropia && <Chip texto={`Hasta ${fechaCorta(f.vigente_hasta!)}`} elegido />}
+        {vigenciaPropia && <Chip texto={`Hasta el ${textoSemestre(f.vigente_hasta!)}`} elegido />}
       </View>
 
       <Text style={[s.etiqueta, { marginBottom: espacio.s }]}>Pago de la cuota</Text>

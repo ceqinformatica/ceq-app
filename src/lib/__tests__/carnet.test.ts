@@ -1,7 +1,7 @@
 /// <reference types="node" />
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { isoDeTexto, problemaVencimiento, sumarAnios, contenidoQr, estadoCarnet, fechaCorta, formatearCi, hoyPy, leerQr, normalizarCi, opcionesVigencia, validarSocio, type FormularioSocio } from '../carnet.ts';
+import { finDeSemestre, opcionesSemestre, semestreDe, sumarSemestres, textoSemestre, isoDeTexto, problemaVencimiento, sumarAnios, contenidoQr, estadoCarnet, fechaCorta, formatearCi, hoyPy, leerQr, normalizarCi, opcionesVigencia, validarSocio, type FormularioSocio } from '../carnet.ts';
 
 test('el QR lleva solo el código, sin datos personales', () => {
   assert.equal(contenidoQr('abc123'), 'CEQ1:abc123');
@@ -33,8 +33,8 @@ test('estado del carnet', () => {
 
 test('vigencias para elegir sin teclear fechas', () => {
   const o = opcionesVigencia(new Date('2026-11-22T15:00:00Z'));
-  assert.deepEqual(o.map((x) => x.valor), ['2029-11-22', null]);
-  assert.equal(o[0].texto, '3 años (hasta 22/11/2029)');
+  assert.deepEqual(o.map((x) => x.valor), ['2029-07-31', null], '6 semestres contando el actual: 2.º 2026 a 1.º 2029');
+  assert.equal(o[0].texto, '6 semestres (hasta el 1.er semestre 2029)');
   assert.equal(sumarAnios('2028-02-29', 3), '2031-02-28');
   assert.equal(fechaCorta('2026-12-31'), '31/12/2026');
 });
@@ -57,4 +57,22 @@ test('vencimiento del carnet físico al validarlo', () => {
   assert.match(problemaVencimiento('2030-01-15', ahora) ?? '', /3 años/);
   assert.equal(isoDeTexto('5/3/2028'), '2028-03-05');
   assert.equal(isoDeTexto('31/02/2028'), null);
+});
+
+test('el carnet vence por semestre', () => {
+  assert.equal(finDeSemestre({ semestre: 1, anio: 2027 }), '2027-07-31');
+  assert.equal(finDeSemestre({ semestre: 2, anio: 2027 }), '2027-12-31');
+  assert.deepEqual(semestreDe('2027-03-15'), { semestre: 1, anio: 2027 });
+  assert.deepEqual(semestreDe('2027-08-01'), { semestre: 2, anio: 2027 });
+  assert.equal(textoSemestre('2027-07-31'), '1.er semestre 2027');
+  assert.equal(textoSemestre('2028-12-31'), '2.º semestre 2028');
+  assert.deepEqual(sumarSemestres({ semestre: 2, anio: 2026 }, 1), { semestre: 1, anio: 2027 });
+  assert.deepEqual(sumarSemestres({ semestre: 2, anio: 2026 }, 5), { semestre: 1, anio: 2029 });
+  const ops = opcionesSemestre(new Date('2026-11-22T15:00:00Z'));
+  assert.equal(ops[0].texto, '2.º semestre 2026');
+  assert.equal(ops.at(-1)!.texto, '1.er semestre 2029', 'el 2.º de 2029 pasa el límite de 3 años y 1 mes de la base');
+  for (const o of ops) assert.equal(problemaVencimiento(o.valor, new Date('2026-11-22T15:00:00Z')), null);
+  const marzo = opcionesSemestre(new Date('2027-03-10T15:00:00Z'));
+  assert.equal(marzo[0].texto, '1.er semestre 2027');
+  assert.equal(marzo.at(-1)!.texto, '2.º semestre 2029');
 });

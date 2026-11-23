@@ -26,12 +26,12 @@ export function configurarNotificaciones() {
     Notifications.setNotificationChannelAsync('avisos', {
       name: 'Avisos del CEQ',
       importance: Notifications.AndroidImportance.HIGH,
-      lightColor: '#173874',
+      lightColor: '#2A8FCC',
     }).catch(() => {});
     Notifications.setNotificationChannelAsync('recordatorios', {
       name: 'Recordatorios de mi agenda',
       importance: Notifications.AndroidImportance.HIGH,
-      lightColor: '#173874',
+      lightColor: '#2A8FCC',
     }).catch(() => {});
   }
 }

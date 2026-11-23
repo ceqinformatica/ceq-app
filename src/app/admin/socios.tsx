@@ -4,7 +4,7 @@ import { Text, View } from 'react-native';
 import { BarraSuperior, Boton, BotonFlotante, Campo, Cargando, EstadoVacio, Insignia, Mensaje, Pantalla, s, Segmentado, Tarjeta } from '../../components/ui';
 import { cargarSocios } from '../../datos/socios';
 import { usarDatos } from '../../datos/usarDatos';
-import { estadoCarnet, fechaCorta, formatearCi, normalizarCi } from '../../lib/carnet';
+import { estadoCarnet, formatearCi, normalizarCi, textoSemestre } from '../../lib/carnet';
 import { colores, espacio, fondos } from '../../tema';
 import { useTema } from '../../context/TemaProvider';
 
@@ -45,7 +45,7 @@ export default function SociosAdmin() {
           El carnet tiene costo y dura 3 años: da de alta solo a quien ya pagó. También se habilita cuando aprobás la foto que manda el estudiante en Validar carnets.
         </Text>
         <Boton texto="Verificar un carnet" icono="qr-code" variante="secundario" onPress={() => router.push('/verificar')} compacto estilo={{ marginBottom: espacio.m }} />
-        <Campo etiqueta="Buscar" value={busqueda} onChangeText={setBusqueda} placeholder="Nombre, C.I. o número de socio" autoCorrect={false} />
+        <Campo etiqueta="Buscar" value={busqueda} onChangeText={setBusqueda} placeholder="Nombre o C.I." autoCorrect={false} />
         <Segmentado<Filtro>
           opciones={[
             { valor: 'todos', texto: `Todos (${datos?.length ?? 0})` },
@@ -78,7 +78,7 @@ export default function SociosAdmin() {
                   <Insignia texto={i.texto} color={i.color} fondo={i.fondo} />
                 </View>
                 <Text style={[s.filaDetalle, { marginTop: 4 }]}>
-                  {x.numero_socio} · C.I. {formatearCi(x.ci)} · {x.vigente_hasta ? `vence ${fechaCorta(x.vigente_hasta)}` : 'sin vencimiento'}
+                  C.I. {formatearCi(x.ci)} · {x.vigente_hasta ? `vence el ${textoSemestre(x.vigente_hasta)}` : 'sin vencimiento'}
                 </Text>
                 {!x.usuario_id && <Text style={[s.filaDetalle, { marginTop: 2, color: colores.amarillo }]}>Sin cuenta en la app: solo carnet físico</Text>}
               </Tarjeta>

@@ -2,7 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useState } from 'react';
 import { Image, Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Hexagono, TramaHex } from '../components/graficos';
+import { Hexagono } from '../components/graficos';
 import { Boton, Campo, EvitaTeclado, logoCeq, Mensaje, s } from '../components/ui';
 import { entrarConCorreo, entrarConGoogle, registrarseConCorreo } from '../lib/auth';
 import { supabaseConfigurado } from '../lib/supabase';
@@ -39,10 +39,9 @@ export default function Login() {
   };
 
   return (
-    <EvitaTeclado estilo={{ backgroundColor: fondos.marino }}>
+    <EvitaTeclado estilo={{ backgroundColor: fondos.celesteMarca }}>
       <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled" bounces={false}>
         <View style={[est.portada, { paddingTop: insets.top + espacio.xxl }]} onLayout={(e) => setTam({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}>
-          {tam.w > 0 && <TramaHex ancho={tam.w} alto={tam.h} opacidad={0.09} tam={44} />}
           <Hexagono tamano={124} relleno={fondos.blanco}>
             <Image source={logoCeq} style={{ width: 84, height: 84 }} accessibilityLabel="Logo del CEQ" />
           </Hexagono>
@@ -128,8 +127,8 @@ export default function Login() {
 const est = crearEstilos(() => ({
   portada: { alignItems: 'center', paddingHorizontal: espacio.xl, paddingBottom: espacio.xxl + espacio.l, overflow: 'hidden' },
   marca: { fontFamily: fuentes.bold, fontSize: 34, color: colores.blanco, letterSpacing: 2, textAlign: 'center', marginTop: espacio.l },
-  nombre: { fontFamily: fuentes.medium, fontSize: 14, color: colores.celeste, textTransform: 'uppercase', letterSpacing: 1.4, textAlign: 'center' },
-  lema: { fontFamily: fuentes.regular, fontSize: 14.5, color: colores.cielo, marginTop: espacio.m, textAlign: 'center', opacity: 0.9 },
+  nombre: { fontFamily: fuentes.medium, fontSize: 14, color: '#EAF6FD', textTransform: 'uppercase', letterSpacing: 1.4, textAlign: 'center' },
+  lema: { fontFamily: fuentes.regular, fontSize: 14.5, color: '#EAF6FD', marginTop: espacio.m, textAlign: 'center', opacity: 0.9 },
   panel: { flexGrow: 1, backgroundColor: fondos.fondo, borderTopLeftRadius: radio.xl + 6, borderTopRightRadius: radio.xl + 6, padding: espacio.xl, marginTop: -espacio.l },
   titulo: { fontFamily: fuentes.bold, fontSize: 24, color: colores.marino, textTransform: 'uppercase', letterSpacing: 0.6 },
   google: {
