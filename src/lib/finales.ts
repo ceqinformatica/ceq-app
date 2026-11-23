@@ -2,7 +2,7 @@
  * Intentos de examen final (1.º, 2.º y 3.er llamado) y promedios
  * con y sin aplazos. Funciones puras.
  */
-import { esSeminario, type EstadoEstudiante, type Materia } from './progreso.ts';
+import { esSeminario, type EstadoEstudiante, type EstadoMateria, type Materia } from './progreso.ts';
 import type { TipoExamen } from './tipos-db.ts';
 
 export interface IntentoFinal {
@@ -147,4 +147,18 @@ export function firmaVencida(
   if (periodos.length < 2) return false;
   // Venció si ya hay un tercer periodo cargado o si el que se mira es posterior a los dos usados.
   return periodos.length > 2 || periodoActual > periodos[1];
+}
+
+/**
+ * Semestre en que la materia quedó firmada o aprobada (la agenda la sigue
+ * mostrando ese semestre). Solo se marca al pasar a firmada o aprobada
+ * desde la materia; si no cambia el estado, se conserva. Las cargas en
+ * bloque del historial no lo marcan.
+ */
+export function periodoAlCambiar(antes: EstadoMateria | null, periodoAntes: string | null, ahora: EstadoMateria, hoy: string = periodoDe()): string | null {
+  if (ahora !== 'firmada' && ahora !== 'aprobada') return null;
+  if (antes === ahora) return periodoAntes;
+  // De firmada a aprobada (o al revés): se conserva el semestre de la firma.
+  if (antes === 'firmada' || antes === 'aprobada') return periodoAntes;
+  return hoy;
 }
