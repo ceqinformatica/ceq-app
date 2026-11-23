@@ -115,7 +115,7 @@ function Resumen({ numero, texto, alerta }: { numero: number; texto: string; ale
   return (
     <View style={{ flex: 1, backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: 12, paddingVertical: 10, paddingHorizontal: 12 }}>
       <Text style={{ fontFamily: fuentes.bold, fontSize: 22, color: alerta ? '#FFC9C4' : colores.blanco }}>{numero}</Text>
-      <Text style={{ fontFamily: fuentes.medium, fontSize: 12, color: '#EAF6FD' }}>{texto}</Text>
+      <Text style={{ fontFamily: fuentes.medium, fontSize: 12, color: '#FFFFFF' }}>{texto}</Text>
     </View>
   );
 }

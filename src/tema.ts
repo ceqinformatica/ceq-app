@@ -59,7 +59,7 @@ const claro = {
   marinoFijo: '#0F5F94',
 
   // Celeste del CEQ: cabeceras y carnet (con texto blanco grande)
-  celesteMarca: '#2A8FCC',
+  celesteMarca: '#1879B4',
 };
 
 type Paleta = { [K in keyof typeof claro]: string };

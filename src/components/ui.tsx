@@ -118,13 +118,11 @@ export function CabeceraMarca({ titulo, sub, derecha, children, compacta, sinCon
   sinConexion?: string | null;
 }) {
   const insets = useSafeAreaInsets();
-  const [tam, setTam] = useState({ w: 0, h: 0 });
   const { anchoMaximo } = useDisposicion();
   useBarraEstado('light');
   return (
     <View
       style={[s.cabecera, { paddingTop: insets.top + espacio.m, paddingBottom: compacta ? espacio.xl : espacio.xxl + espacio.l }]}
-      onLayout={(e) => setTam({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}
     >
       <View style={anchoMaximo ? { width: '100%', maxWidth: anchoMaximo, alignSelf: 'center' } : null}>
       <View style={s.cabeceraFila}>
@@ -557,7 +555,7 @@ export const s = crearEstilos(() => ({
   logoPastilla: { width: 36, height: 36, borderRadius: 10, backgroundColor: fondos.blanco, alignItems: 'center', justifyContent: 'center' },
   cabeceraMarca: { fontFamily: fuentes.bold, fontSize: 19, color: colores.blanco, letterSpacing: 1.5 },
   cabeceraTitulo: { ...texto.titulo, color: colores.blanco, textTransform: 'uppercase', letterSpacing: 0.6 },
-  cabeceraSub: { ...texto.cuerpo, color: '#EAF6FD', marginTop: 2 },
+  cabeceraSub: { ...texto.cuerpo, color: '#FFFFFF', marginTop: 2 },
 
   encabezado: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: espacio.xl },
   marca: { fontFamily: fuentes.bold, fontSize: 22, color: colores.marino, letterSpacing: 1 },

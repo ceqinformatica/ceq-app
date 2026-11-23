@@ -20,7 +20,6 @@ export default function Login() {
   const [cargando, setCargando] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
-  const [tam, setTam] = useState({ w: 0, h: 0 });
 
   const ejecutar = async (clave: string, accion: () => Promise<string | null>, exito?: string) => {
     setCargando(clave);
@@ -41,7 +40,7 @@ export default function Login() {
   return (
     <EvitaTeclado estilo={{ backgroundColor: fondos.celesteMarca }}>
       <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled" bounces={false}>
-        <View style={[est.portada, { paddingTop: insets.top + espacio.xxl }]} onLayout={(e) => setTam({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}>
+        <View style={[est.portada, { paddingTop: insets.top + espacio.xxl }]}>
           <Hexagono tamano={124} relleno={fondos.blanco}>
             <Image source={logoCeq} style={{ width: 84, height: 84 }} accessibilityLabel="Logo del CEQ" />
           </Hexagono>
@@ -127,8 +126,8 @@ export default function Login() {
 const est = crearEstilos(() => ({
   portada: { alignItems: 'center', paddingHorizontal: espacio.xl, paddingBottom: espacio.xxl + espacio.l, overflow: 'hidden' },
   marca: { fontFamily: fuentes.bold, fontSize: 34, color: colores.blanco, letterSpacing: 2, textAlign: 'center', marginTop: espacio.l },
-  nombre: { fontFamily: fuentes.medium, fontSize: 14, color: '#EAF6FD', textTransform: 'uppercase', letterSpacing: 1.4, textAlign: 'center' },
-  lema: { fontFamily: fuentes.regular, fontSize: 14.5, color: '#EAF6FD', marginTop: espacio.m, textAlign: 'center', opacity: 0.9 },
+  nombre: { fontFamily: fuentes.medium, fontSize: 14, color: '#FFFFFF', textTransform: 'uppercase', letterSpacing: 1.4, textAlign: 'center' },
+  lema: { fontFamily: fuentes.regular, fontSize: 14.5, color: '#FFFFFF', marginTop: espacio.m, textAlign: 'center' },
   panel: { flexGrow: 1, backgroundColor: fondos.fondo, borderTopLeftRadius: radio.xl + 6, borderTopRightRadius: radio.xl + 6, padding: espacio.xl, marginTop: -espacio.l },
   titulo: { fontFamily: fuentes.bold, fontSize: 24, color: colores.marino, textTransform: 'uppercase', letterSpacing: 0.6 },
   google: {

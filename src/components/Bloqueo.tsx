@@ -12,7 +12,6 @@ export function Bloqueo() {
   const { desbloquear } = useSesion();
   const insets = useSafeAreaInsets();
   const [error, setError] = useState<string | null>(null);
-  const [tam, setTam] = useState({ w: 0, h: 0 });
 
   const intentar = async () => {
     setError(null);
@@ -28,7 +27,6 @@ export function Bloqueo() {
   return (
     <View
       style={{ flex: 1, backgroundColor: fondos.celesteMarca, paddingTop: insets.top, paddingBottom: insets.bottom + espacio.xl, paddingHorizontal: espacio.xl }}
-      onLayout={(e) => setTam({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}
     >
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
         <Hexagono tamano={112} relleno={fondos.blanco}>
@@ -37,7 +35,7 @@ export function Bloqueo() {
         <Text style={{ fontFamily: fuentes.bold, fontSize: 24, color: colores.blanco, marginTop: espacio.xl, textTransform: 'uppercase', letterSpacing: 1 }} accessibilityRole="header">
           App bloqueada
         </Text>
-        <Text style={{ fontFamily: fuentes.regular, fontSize: 15, color: '#EAF6FD', marginTop: espacio.s, textAlign: 'center' }}>
+        <Text style={{ fontFamily: fuentes.regular, fontSize: 15, color: '#FFFFFF', marginTop: espacio.s, textAlign: 'center' }}>
           Usá tu huella o tu rostro para entrar.
         </Text>
         <Pressable onPress={intentar} accessibilityRole="button" accessibilityLabel="Desbloquear" style={({ pressed }) => ({ marginTop: espacio.xxl, width: 84, height: 84, borderRadius: 42, backgroundColor: pressed ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.14)', alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: 'rgba(203,226,250,0.5)' })}>
