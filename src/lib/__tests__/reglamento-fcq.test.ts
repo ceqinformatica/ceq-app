@@ -93,6 +93,10 @@ test('tras recuperar alcanza con PG ≥ 50', () => {
   const r = evaluarFirma({ regla: REGLA_FCQ, tieneLaboratorio: true, evaluaciones, recuperado, ...asis });
   assert.equal(r.firma, true);
   assert.equal(promedioFirma(r, { recuperado }), 62);
+  // PG 49,5 tras recuperar: no llega a 50 (no se redondea antes de comparar).
+  const comp = (actual: number, minimo: number) => ({ actual, minimo, necesario: null, asegurado: true, imposible: false, semaforo: 'verde' as const });
+  assert.equal(promedioFirma({ teoria: comp(39, 30), laboratorio: comp(60, 60) }, { recuperado: true }), null);
+  assert.equal(promedioFirma({ teoria: comp(40, 30), laboratorio: comp(60, 60) }, { recuperado: true }), 50);
   // Sin laboratorio, 43,3 no llega a 50: no hay firma y el semáforo queda en rojo.
   const sinLab = aplicarRecuperatorio([p('1P', 35), p('2P', 35), p('3P', 35), p('Recuperatorio', 60)]);
   const r2 = evaluarFirma({ regla: REGLA_FCQ, tieneLaboratorio: false, evaluaciones: sinLab.evaluaciones, recuperado: sinLab.recuperado, ...asis });

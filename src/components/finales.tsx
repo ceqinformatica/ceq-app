@@ -209,9 +209,11 @@ export function TarjetaFinales({ materiaId, firma: firmaGuardadaEnMateria, aprob
     if (f == null || !Number.isFinite(f) || f < 0 || f > 100) return;
     setGuardando(true);
     try {
-      await guardarFirma(materiaId, Math.round(f * 100) / 100);
-      setFirmaNueva(Math.round(f * 100) / 100);
-      onGuardado(Math.round(f * 100) / 100);
+      // La firma es un entero: desde 0,5 se redondea para arriba (90,5 → 91).
+      const entera = Math.round(f + 1e-9);
+      await guardarFirma(materiaId, entera);
+      setFirmaNueva(entera);
+      onGuardado(entera);
     } catch (e) {
       setMsg({ tipo: 'error', texto: e instanceof Error ? e.message : 'No se pudo guardar la firma.' });
     } finally {
