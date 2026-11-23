@@ -84,6 +84,10 @@ function Verificador() {
   }
 
   const r = resultado ? RESULTADO_VERIFICACION[resultado.resultado] : null;
+  // Colores del tema (los de RESULTADO_VERIFICACION son los del tema claro).
+  const tono = resultado?.resultado === 'vigente' ? { color: colores.verde, fondo: fondos.verdeFondo }
+    : resultado?.resultado === 'vencido' ? { color: colores.amarillo, fondo: fondos.amarilloFondo }
+    : { color: colores.rojo, fondo: fondos.rojoFondo };
 
   return (
     <Pantalla>
@@ -110,11 +114,11 @@ function Verificador() {
       {escaneando && <Boton texto="Cerrar la cámara" variante="fantasma" icono="close" onPress={() => setEscaneando(false)} />}
 
       {r && resultado && (
-        <Tarjeta estilo={{ backgroundColor: r.fondo, marginTop: espacio.l }}>
+        <Tarjeta estilo={{ backgroundColor: tono.fondo, marginTop: espacio.l }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: espacio.s }} accessibilityLiveRegion="polite">
-            <Ionicons name={r.icono} size={30} color={r.color} />
+            <Ionicons name={r.icono} size={30} color={tono.color} />
             <View style={{ flex: 1 }}>
-              <Text style={[est.resultado, { color: r.color }]}>{r.titulo}</Text>
+              <Text style={[est.resultado, { color: tono.color }]}>{r.titulo}</Text>
               <Text style={s.filaDetalle}>{r.detalle}</Text>
             </View>
           </View>
