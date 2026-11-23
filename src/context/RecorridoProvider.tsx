@@ -48,6 +48,8 @@ export function RecorridoProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!uid) {
       revisado.current = null;
+      setAbiertoPara(null);
+      setPaso(0);
       return;
     }
     if (!listo || revisado.current === uid) return;
@@ -88,12 +90,22 @@ export function RecorridoProvider({ children }: { children: ReactNode }) {
     setPaso(n);
     if (p.ruta) {
       try {
+        // Si hay una pantalla encima de las pestañas (por ejemplo un aviso abierto
+        // desde una notificación), se vuelve a ellas en vez de apilar otras pestañas.
+        if (router.canDismiss()) router.dismissAll();
         router.navigate(p.ruta);
       } catch {
         // La navegación todavía no está lista: el paso se muestra igual.
       }
     }
   }, []);
+
+  // Al volver del bloqueo la app se rearma en Inicio: se reabre la pestaña del paso actual.
+  const estabaVisible = useRef(false);
+  useEffect(() => {
+    if (visible && !estabaVisible.current && paso > 0) irA(paso);
+    estabaVisible.current = visible;
+  }, [visible, paso, irA]);
 
   const terminar = useCallback(() => {
     setAbiertoPara(null);

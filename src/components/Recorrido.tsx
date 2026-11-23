@@ -1,5 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useEffect, useState } from 'react';
+import { useLayoutEffect, useState } from 'react';
 import { AccessibilityInfo, Animated, Easing, Modal, Platform, Pressable, Text, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
@@ -39,7 +39,7 @@ export function Recorrido() {
   const pos = posicionVentana(zona, width, height, { barraLateral, altoVentana, arriba: insets.top });
 
   // Cada paso entra con un fundido y un pequeño desplazamiento (sin movimiento si el celular lo pide).
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!activo) return;
     let cancelado = false;
     aparicion.setValue(0);
@@ -68,7 +68,7 @@ export function Recorrido() {
         {zona && (
           <View
             pointerEvents="none"
-            style={{ position: 'absolute', left: zona.x - 3, top: zona.y - 3, width: zona.ancho + 6, height: zona.alto + 6, borderRadius: 21, borderWidth: 2.5, borderColor: '#8FD0F3' }}
+            style={{ position: 'absolute', left: zona.x - 3, top: zona.y - 3, width: zona.ancho + 6, height: zona.alto + 6, borderRadius: 21, borderWidth: 2.5, borderColor: colores.celesteVivo }}
           />
         )}
 
