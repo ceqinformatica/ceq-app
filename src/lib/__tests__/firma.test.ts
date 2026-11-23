@@ -147,8 +147,11 @@ test('promedio de firma: (teoría + laboratorio) / 2 si los dos habilitan', () =
   assert.equal(promedioFirma(firma([e('teoria', 90), e('laboratorio', 55)])), null);
   // Teoría por debajo de 50.
   assert.equal(promedioFirma(firma([e('teoria', 45), e('laboratorio', 90)])), null);
-  // Sin laboratorio: solo teoría.
-  assert.equal(promedioFirma(firma([e('teoria', 62), e('teoria', 71)], false)), 66.5);
+  // Sin laboratorio: solo teoría. 66,5 se redondea a 67 (desde 0,5 va para arriba).
+  assert.equal(promedioFirma(firma([e('teoria', 62), e('teoria', 71)], false)), 67);
+  // 90,5 → 91; 90,4 → 90.
+  assert.equal(promedioFirma(firma([e('teoria', 90), e('teoria', 91)], false)), 91);
+  assert.equal(promedioFirma(firma([e('teoria', 90), e('teoria', 90.8)], false)), 90);
   // Firma asegurada pero con un parcial pendiente: el promedio todavía no es el final.
   assert.equal(promedioFirma(firma([e('teoria', 100), e('teoria', 100), e('teoria', 0, false)], false)), null);
   // Con un parcial pendiente que todavía puede bajarla, no se da por cerrada.
