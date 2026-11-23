@@ -58,7 +58,7 @@ function Navegacion() {
         <Hexagono tamano={104} relleno={fondos.blanco}>
           <Image source={logoCeq} style={{ width: 70, height: 70 }} accessibilityLabel="Logo del CEQ" />
         </Hexagono>
-        <ActivityIndicator color={colores.sobreCeleste} />
+        <ActivityIndicator color={colores.blanco} />
       </View>
     );
   }
@@ -125,7 +125,7 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <TemaProvider inicial={tema.inicial}>
         <SesionProvider>
-          <StatusBar style="auto" />
+          <StatusBar style="light" />
           <Navegacion />
         </SesionProvider>
       </TemaProvider>

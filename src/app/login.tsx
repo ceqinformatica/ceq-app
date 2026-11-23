@@ -125,9 +125,9 @@ export default function Login() {
 
 const est = crearEstilos(() => ({
   portada: { alignItems: 'center', paddingHorizontal: espacio.xl, paddingBottom: espacio.xxl + espacio.l, overflow: 'hidden' },
-  marca: { fontFamily: fuentes.bold, fontSize: 34, color: colores.sobreCeleste, letterSpacing: 2, textAlign: 'center', marginTop: espacio.l },
-  nombre: { fontFamily: fuentes.medium, fontSize: 14, color: colores.sobreCelesteSuave, textTransform: 'uppercase', letterSpacing: 1.4, textAlign: 'center' },
-  lema: { fontFamily: fuentes.regular, fontSize: 14.5, color: colores.sobreCelesteSuave, marginTop: espacio.m, textAlign: 'center' },
+  marca: { fontFamily: fuentes.bold, fontSize: 34, color: colores.blanco, letterSpacing: 2, textAlign: 'center', marginTop: espacio.l },
+  nombre: { fontFamily: fuentes.medium, fontSize: 14, color: '#FFFFFF', textTransform: 'uppercase', letterSpacing: 1.4, textAlign: 'center' },
+  lema: { fontFamily: fuentes.regular, fontSize: 14.5, color: '#FFFFFF', marginTop: espacio.m, textAlign: 'center' },
   panel: { flexGrow: 1, backgroundColor: fondos.fondo, borderTopLeftRadius: radio.xl + 6, borderTopRightRadius: radio.xl + 6, padding: espacio.xl, marginTop: -espacio.l },
   titulo: { fontFamily: fuentes.bold, fontSize: 24, color: colores.marino, textTransform: 'uppercase', letterSpacing: 0.6 },
   google: {

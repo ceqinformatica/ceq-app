@@ -82,7 +82,7 @@ export function Pantalla({ children, scroll = true, estilo, cabecera, refrescand
   const ancho = anchoMaximo ? { width: '100%' as const, maxWidth: anchoMaximo, alignSelf: 'center' as const } : null;
   const contenido = <View style={[s.contenido, ancho, cabecera ? { paddingTop: 0 } : null, estilo]}>{children}</View>;
   const refresh = onRefrescar ? (
-    <RefreshControl refreshing={Boolean(refrescando)} onRefresh={onRefrescar} tintColor={cabecera ? colores.sobreCeleste : colores.marino} colors={[colores.marino]} />
+    <RefreshControl refreshing={Boolean(refrescando)} onRefresh={onRefrescar} tintColor={cabecera ? colores.blanco : colores.marino} colors={[colores.marino]} />
   ) : undefined;
   return (
     <EvitaTeclado estilo={s.pantalla}>
@@ -119,7 +119,7 @@ export function CabeceraMarca({ titulo, sub, derecha, children, compacta, sinCon
 }) {
   const insets = useSafeAreaInsets();
   const { anchoMaximo } = useDisposicion();
-  useBarraEstado('dark');
+  useBarraEstado('light');
   return (
     <View
       style={[s.cabecera, { paddingTop: insets.top + espacio.m, paddingBottom: compacta ? espacio.xl : espacio.xxl + espacio.l }]}
@@ -139,7 +139,7 @@ export function CabeceraMarca({ titulo, sub, derecha, children, compacta, sinCon
       {children}
       {sinConexion ? (
         <View style={s.pildoraSinConexion} accessibilityRole="alert" accessibilityLiveRegion="polite">
-          <Ionicons name="cloud-offline-outline" size={15} color={colores.sobreCeleste} />
+          <Ionicons name="cloud-offline-outline" size={15} color={colores.blanco} />
           <Text style={s.pildoraSinConexionTexto}>{sinConexion}</Text>
         </View>
       ) : null}
@@ -553,9 +553,9 @@ export const s = crearEstilos(() => ({
   },
   cabeceraFila: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: espacio.l },
   logoPastilla: { width: 36, height: 36, borderRadius: 10, backgroundColor: fondos.blanco, alignItems: 'center', justifyContent: 'center' },
-  cabeceraMarca: { fontFamily: fuentes.bold, fontSize: 19, color: colores.sobreCeleste, letterSpacing: 1.5 },
-  cabeceraTitulo: { ...texto.titulo, color: colores.sobreCeleste, textTransform: 'uppercase', letterSpacing: 0.6 },
-  cabeceraSub: { ...texto.cuerpo, color: colores.sobreCelesteSuave, marginTop: 2 },
+  cabeceraMarca: { fontFamily: fuentes.bold, fontSize: 19, color: colores.blanco, letterSpacing: 1.5 },
+  cabeceraTitulo: { ...texto.titulo, color: colores.blanco, textTransform: 'uppercase', letterSpacing: 0.6 },
+  cabeceraSub: { ...texto.cuerpo, color: '#FFFFFF', marginTop: 2 },
 
   encabezado: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: espacio.xl },
   marca: { fontFamily: fuentes.bold, fontSize: 22, color: colores.marino, letterSpacing: 1 },
@@ -584,8 +584,8 @@ export const s = crearEstilos(() => ({
     position: 'absolute', right: espacio.l, bottom: espacio.l, flexDirection: 'row', alignItems: 'center', gap: espacio.s,
     backgroundColor: fondos.marino, paddingHorizontal: espacio.l, height: 52, borderRadius: radio.pill, ...sombras.fuerte,
   },
-  pildoraSinConexion: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', marginTop: espacio.s, paddingHorizontal: espacio.m, paddingVertical: 6, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.45)' },
-  pildoraSinConexionTexto: { fontFamily: fuentes.medium, fontSize: 12.5, color: colores.sobreCeleste, flexShrink: 1 },
+  pildoraSinConexion: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', marginTop: espacio.s, paddingHorizontal: espacio.m, paddingVertical: 6, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.16)' },
+  pildoraSinConexionTexto: { fontFamily: fuentes.medium, fontSize: 12.5, color: colores.blanco, flexShrink: 1 },
   flotanteTexto: { fontFamily: fuentes.semibold, fontSize: 15, color: colores.blanco },
 
   etiqueta: { fontFamily: fuentes.medium, fontSize: 13.5, color: colores.marinoOscuro, marginBottom: espacio.xs + 2 },

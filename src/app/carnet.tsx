@@ -102,7 +102,7 @@ export default function PantallaCarnet() {
         <>
           <Carnet socio={socio} carrera={carrera} foto={foto} conQr />
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: espacio.m }} accessibilityLabel={`Hora actual ${hora}`}>
-            <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: estado === 'vigente' ? fondos.marino : fondos.rojo }} />
+            <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: estado === 'vigente' ? fondos.celesteMarca : fondos.rojo }} />
             <Text style={[s.filaDetalle, { fontVariant: ['tabular-nums'] }]}>En vivo · {hora}</Text>
           </View>
 
