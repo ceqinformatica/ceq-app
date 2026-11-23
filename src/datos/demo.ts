@@ -62,7 +62,7 @@ const ev = (id: string, materia_id: string, nombre: string, componente: 'teoria'
 });
 
 const hor = (id: string, materia_id: string, dia: number, ini: string, fin: string, aula: string): HorarioDb => ({
-  id, usuario_id: UID_DEMO, materia_id, titulo: null, dia_semana: dia, hora_inicio: ini, hora_fin: fin, aula,
+  id, usuario_id: UID_DEMO, materia_id, titulo: null, dia_semana: dia, hora_inicio: ini, hora_fin: fin, aula, aviso_minutos: dia === 1 ? 15 : null, avisado_el: null,
 });
 
 export const db = {

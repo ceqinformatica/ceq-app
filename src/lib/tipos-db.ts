@@ -41,6 +41,7 @@ export type Perfil = {
 export type MateriaEstudianteDb = {
   usuario_id: string; materia_id: string; estado: EstadoMateriaDb; nota_final: number | null; fecha: string | null;
   periodo: string | null; updated_at: string; nota_desde_final?: boolean; promedio_firma?: number | null;
+  respaldo_recursada?: unknown;
 }
 export type EvaluacionDb = {
   id: string; usuario_id: string; materia_id: string; nombre: string; componente: ComponenteDb; ponderacion: number;
@@ -54,6 +55,8 @@ export type AsistenciaDb = {
 export type HorarioDb = {
   id: string; usuario_id: string; materia_id: string | null; titulo: string | null; dia_semana: number;
   hora_inicio: string; hora_fin: string; aula: string | null;
+  /** Minutos antes de la clase para avisar; null = sin aviso. */
+  aviso_minutos: number | null; avisado_el: string | null;
 }
 export type EventoDb = {
   id: string; usuario_id: string | null; materia_id: string | null; plan_id: string | null; tipo: TipoEvento;
@@ -112,10 +115,10 @@ export type Database = {
       prerrequisitos: Tabla<PrerrequisitoDb, 'tipo'>;
       reglas_firma: Tabla<ReglaFirmaDb, 'id' | 'materia_id' | 'minimo_teoria' | 'minimo_laboratorio' | 'minimo_asistencia' | 'minimo_asistencia_lab' | 'modo_laboratorio' | 'peso_laboratorio' | 'notas'>;
       perfiles: Tabla<Perfil, 'nombre' | 'ci' | 'carrera_id' | 'plan_id' | 'anio_ingreso' | 'rol' | 'avatar_url' | 'created_at' | 'updated_at'>;
-      materias_estudiante: Tabla<MateriaEstudianteDb, 'usuario_id' | 'estado' | 'nota_final' | 'fecha' | 'periodo' | 'updated_at' | 'nota_desde_final' | 'promedio_firma'>;
+      materias_estudiante: Tabla<MateriaEstudianteDb, 'usuario_id' | 'estado' | 'nota_final' | 'fecha' | 'periodo' | 'updated_at' | 'nota_desde_final' | 'promedio_firma' | 'respaldo_recursada'>;
       evaluaciones: Tabla<EvaluacionDb, 'id' | 'usuario_id' | 'componente' | 'porcentaje' | 'puntaje_obtenido' | 'puntaje_total' | 'rendida' | 'fecha' | 'orden' | 'created_at'>;
       asistencias: Tabla<AsistenciaDb, 'usuario_id' | 'componente' | 'clases_dictadas' | 'clases_asistidas' | 'clases_totales'>;
-      horario: Tabla<HorarioDb, 'id' | 'usuario_id' | 'materia_id' | 'titulo' | 'aula'>;
+      horario: Tabla<HorarioDb, 'id' | 'usuario_id' | 'materia_id' | 'titulo' | 'aula' | 'aviso_minutos' | 'avisado_el'>;
       eventos: Tabla<EventoDb, 'id' | 'usuario_id' | 'materia_id' | 'plan_id' | 'tipo' | 'aviso_minutos' | 'notificado' | 'created_at'>;
       socios: Tabla<SocioDb, 'id' | 'usuario_id' | 'numero_socio' | 'vigente_hasta' | 'foto_path' | 'updated_at' | 'codigo_qr' | 'activo' | 'pagado_en' | 'observacion' | 'created_at'>;
       avisos: Tabla<AvisoDb, 'id' | 'imagen_url' | 'notificar' | 'publicado' | 'autor_id' | 'created_at' | 'publicar_en' | 'carrera_id'>;
@@ -133,6 +136,8 @@ export type Database = {
     };
     Functions: {
       votar: { Args: { p_encuesta: string; p_opcion: string }; Returns: undefined };
+      recursar_materia: { Args: { p_materia: string }; Returns: undefined };
+      deshacer_recursada: { Args: { p_materia: string }; Returns: undefined };
       es_admin: { Args: Record<string, never>; Returns: boolean };
       registrar_dispositivo: { Args: { p_token: string; p_plataforma?: string | null }; Returns: undefined };
       alcance_notificacion: { Args: { p_carrera?: string | null }; Returns: number };

@@ -392,6 +392,93 @@ select pg_temp.debe_ser('Ana no ve el registro', (select count(*) from public.ve
 select pg_temp.debe_fallar('nadie escribe el registro a mano', $$insert into public.verificaciones_carnet (resultado) values ('vigente')$$);
 reset role;
 
+
+-- Volver a cursar y deshacer ----------------------------------------
+select pg_temp.como('00000000-0000-0000-0000-00000000000a');
+delete from public.examenes_finales;
+delete from public.evaluaciones where materia_id = '30000000-0000-0000-0000-000000000002';
+delete from public.asistencias where materia_id = '30000000-0000-0000-0000-000000000002';
+insert into public.materias_estudiante (materia_id, estado, promedio_firma)
+  values ('30000000-0000-0000-0000-000000000002', 'firmada', 65)
+  on conflict (usuario_id, materia_id) do update set estado = 'firmada', promedio_firma = 65, nota_final = null, nota_desde_final = false;
+insert into public.evaluaciones (materia_id, nombre, ponderacion, porcentaje) values ('30000000-0000-0000-0000-000000000002', '1P', 1, 55), ('30000000-0000-0000-0000-000000000002', '2P', 1, 60);
+insert into public.evaluaciones (materia_id, nombre, componente, ponderacion, porcentaje) values ('30000000-0000-0000-0000-000000000002', 'Lab', 'laboratorio', 1, 80);
+insert into public.asistencias (materia_id, componente, clases_dictadas, clases_asistidas) values ('30000000-0000-0000-0000-000000000002', 'teoria', 20, 18);
+insert into public.examenes_finales (materia_id, periodo, llamado, nota) values
+  ('30000000-0000-0000-0000-000000000002', '2026-2', 1, 1), ('30000000-0000-0000-0000-000000000002', '2026-2', 2, 1), ('30000000-0000-0000-0000-000000000002', '2026-2', 3, 1);
+select public.recursar_materia('30000000-0000-0000-0000-000000000002');
+select pg_temp.debe_ser('recursar deja la materia cursando sin firma',
+  (select count(*) from public.materias_estudiante where materia_id = '30000000-0000-0000-0000-000000000002' and estado = 'cursando' and promedio_firma is null and respaldo_recursada is not null), 1);
+select pg_temp.debe_fallar('no se recursa dos veces seguidas',
+  $$select public.recursar_materia('30000000-0000-0000-0000-000000000002')$$);
+select pg_temp.debe_ser('recursar borra parciales y conserva el laboratorio',
+  (select count(*) from public.evaluaciones where materia_id = '30000000-0000-0000-0000-000000000002'), 1);
+select pg_temp.debe_ser('recursar borra la asistencia de teoría',
+  (select count(*) from public.asistencias where materia_id = '30000000-0000-0000-0000-000000000002'), 0);
+select pg_temp.debe_ser('recursar deja los finales en la cursada anterior',
+  (select count(*) from public.examenes_finales where materia_id = '30000000-0000-0000-0000-000000000002' and cursada_anterior), 3);
+reset role;
+select pg_temp.como('00000000-0000-0000-0000-00000000000b');
+select pg_temp.debe_fallar('Beto no deshace la recursada de Ana',
+  $$select public.deshacer_recursada('30000000-0000-0000-0000-000000000002')$$);
+reset role;
+select pg_temp.como('00000000-0000-0000-0000-00000000000a');
+-- Con un parcial nuevo cargado no se deshace (no se borra nada).
+insert into public.evaluaciones (materia_id, nombre, ponderacion, porcentaje) values ('30000000-0000-0000-0000-000000000002', 'Nuevo 1P', 1, 90);
+select pg_temp.debe_fallar('no se deshace con datos nuevos',
+  $$select public.deshacer_recursada('30000000-0000-0000-0000-000000000002')$$);
+delete from public.evaluaciones where nombre = 'Nuevo 1P';
+select public.deshacer_recursada('30000000-0000-0000-0000-000000000002');
+select pg_temp.debe_ser('deshacer vuelve a firmada con su firma',
+  (select count(*) from public.materias_estudiante where materia_id = '30000000-0000-0000-0000-000000000002' and estado = 'firmada' and promedio_firma = 65 and respaldo_recursada is null), 1);
+select pg_temp.debe_ser('deshacer devuelve los parciales',
+  (select count(*) from public.evaluaciones where materia_id = '30000000-0000-0000-0000-000000000002'), 3);
+select pg_temp.debe_ser('deshacer devuelve la asistencia',
+  (select count(*) from public.asistencias where materia_id = '30000000-0000-0000-0000-000000000002' and clases_asistidas = 18), 1);
+select pg_temp.debe_ser('deshacer devuelve los finales a la cursada',
+  (select count(*) from public.examenes_finales where materia_id = '30000000-0000-0000-0000-000000000002' and not cursada_anterior), 3);
+select pg_temp.debe_fallar('no se deshace dos veces',
+  $$select public.deshacer_recursada('30000000-0000-0000-0000-000000000002')$$);
+reset role;
+select pg_temp.debe_fallar('sin sesión no se recursa',
+  $$set local role anon; select public.recursar_materia('30000000-0000-0000-0000-000000000002')$$);
+
+-- Recordatorios antes de clase ----------------------------------------
+-- Horas de Paraguay: lunes 23/11/2026.
+create or replace function pg_temp.py(t text) returns timestamptz language sql as $$
+  select t::timestamp at time zone 'America/Asuncion'
+$$;
+grant execute on all functions in schema pg_temp to anon, authenticated;
+select pg_temp.como('00000000-0000-0000-0000-00000000000b');
+insert into public.horario (titulo, dia_semana, hora_inicio, hora_fin, aula, aviso_minutos)
+  values ('Química Orgánica', 1, '07:30', '09:30', 'Aula 12', 30);
+insert into public.horario (titulo, dia_semana, hora_inicio, hora_fin) values ('Sin aviso', 1, '07:15', '08:00');
+insert into public.horario (titulo, dia_semana, hora_inicio, hora_fin, aviso_minutos) values ('Muy temprano', 2, '00:15', '01:00', 60);
+select pg_temp.debe_fallar('aviso de 1 minuto no se acepta',
+  $$insert into public.horario (titulo, dia_semana, hora_inicio, hora_fin, aviso_minutos) values ('x', 3, '08:00', '09:00', 1)$$);
+select pg_temp.debe_fallar('Beto no ejecuta el encolador', 'select public.encolar_recordatorios_clases()');
+reset role;
+select pg_temp.como('00000000-0000-0000-0000-00000000000a');
+select pg_temp.debe_ser('Ana no ve el horario de Beto', (select count(*) from public.horario), 0);
+select pg_temp.debe_ser('Ana no cambia el aviso de Beto', pg_temp.filas('update public.horario set aviso_minutos = 5'), 0);
+reset role;
+
+select pg_temp.debe_ser('a las 06:59 todavía no', public.encolar_recordatorios_clases(pg_temp.py('2026-11-23 06:59')), 0);
+select pg_temp.debe_ser('a las 07:00 avisa la clase de las 07:30', public.encolar_recordatorios_clases(pg_temp.py('2026-11-23 07:00')), 1);
+select pg_temp.debe_ser('no repite el mismo día', public.encolar_recordatorios_clases(pg_temp.py('2026-11-23 07:10')), 0);
+select public.procesar_notificaciones();
+select pg_temp.debe_ser('el aviso de clase llega a Beto con el aula',
+  (select count(*) from net.pedidos where body -> 0 ->> 'title' = 'Química Orgánica'
+     and body -> 0 ->> 'body' = 'Empieza a las 07:30 en Aula 12.' and body::text like '%celuCompartido01%'), 1);
+select pg_temp.debe_ser('la semana siguiente vuelve a avisar', public.encolar_recordatorios_clases(pg_temp.py('2026-11-30 07:05')), 1);
+select pg_temp.debe_ser('ya empezada la clase no avisa', public.encolar_recordatorios_clases(pg_temp.py('2026-12-07 07:31')), 0);
+update public.horario set hora_inicio = '08:00' where titulo = 'Química Orgánica';
+select pg_temp.debe_ser('si cambia la hora vuelve a avisar ese día', public.encolar_recordatorios_clases(pg_temp.py('2026-11-30 07:40')), 1);
+select pg_temp.debe_ser('la clase de las 00:15 del martes se avisa el lunes a la noche',
+  public.encolar_recordatorios_clases(pg_temp.py('2026-11-23 23:20')), 1);
+select pg_temp.debe_ser('la clase sin aviso nunca se encola',
+  (select count(*) from public.notificaciones where titulo = 'Sin aviso'), 0);
+
 -- Borrar mi cuenta ----------------------------------------------------
 reset role;
 insert into auth.users (id, email, raw_user_meta_data) values

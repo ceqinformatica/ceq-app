@@ -71,14 +71,25 @@ export async function cargarAgenda(planId: string | null | undefined): Promise<A
   };
 }
 
-export type NuevaClase = Pick<HorarioDb, 'materia_id' | 'titulo' | 'dia_semana' | 'hora_inicio' | 'hora_fin' | 'aula'>;
+export type NuevaClase = Pick<HorarioDb, 'materia_id' | 'titulo' | 'dia_semana' | 'hora_inicio' | 'hora_fin' | 'aula' | 'aviso_minutos'>;
 
-export async function crearClase(c: NuevaClase) {
+/** Agrega la misma clase en uno o varios días (p. ej. lunes y miércoles). */
+export async function crearClases(clases: NuevaClase[]) {
+  if (clases.length === 0) return;
   if (MODO_DEMO) {
-    db.horario.push({ ...c, id: idDemo(), usuario_id: UID_DEMO });
+    db.horario.push(...clases.map((c) => ({ ...c, id: idDemo(), usuario_id: UID_DEMO, avisado_el: null })));
     return;
   }
-  const { error } = await supabase.from('horario').insert(c);
+  const { error } = await supabase.from('horario').insert(clases);
+  lanzar(error);
+}
+
+export async function actualizarClase(id: string, cambios: NuevaClase) {
+  if (MODO_DEMO) {
+    db.horario = db.horario.map((h) => (h.id === id ? { ...h, ...cambios } : h));
+    return;
+  }
+  const { error } = await supabase.from('horario').update(cambios).eq('id', id);
   lanzar(error);
 }
 
