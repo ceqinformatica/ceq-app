@@ -86,13 +86,16 @@ export function TarjetaFinales({ materiaId, firma: firmaGuardadaEnMateria, aprob
     cargarFinales(materiaId).then(setFinales).catch((e) => setMsg({ tipo: 'error', texto: e instanceof Error ? e.message : 'No se pudieron cargar los finales.' }));
   }, [materiaId]);
 
-  // El actual y los cinco anteriores (dos años y medio), más los ya guardados.
+  // Solo este semestre y los que ya tienen finales cargados. El semestre
+  // pasado aparece solo si el estudiante dice que rindió ahí.
+  // El elegido siempre está en la lista, aunque se le borren los finales.
   const periodos = useMemo(() => {
-    const recientes = [periodoDe()];
-    for (let i = 0; i < 5; i++) recientes.push(anterior(recientes[recientes.length - 1]));
-    const lista = new Set([...recientes, ...(finales ?? []).map((f) => f.periodo).filter((p): p is string => !!p)]);
+    const lista = new Set([periodoDe(), periodo, ...(finales ?? []).map((f) => f.periodo).filter((p): p is string => !!p)]);
     return [...lista].sort().reverse();
-  }, [finales]);
+  }, [finales, periodo]);
+  useEffect(() => {
+    if (periodos.length <= 1) setEligiendoPeriodo(false);
+  }, [periodos.length]);
   // Resumen de lo cargado en cada periodo, para la lista de periodos.
   const resumen = (p: string) => {
     const delPeriodo = (finales ?? []).filter((f) => f.periodo === p && f.llamado != null).sort((a, b) => (a.llamado ?? 0) - (b.llamado ?? 0));
@@ -231,8 +234,14 @@ export function TarjetaFinales({ materiaId, firma: firmaGuardadaEnMateria, aprob
           <Text style={s.filaDetalle}>Finales de</Text>
           <Text style={{ fontFamily: fuentes.semibold, fontSize: 16, color: colores.marino }}>{nombrePeriodo(periodo)}{periodo === periodoDe() ? ' (este semestre)' : ''}</Text>
         </View>
-        <Enlace texto={eligiendoPeriodo ? 'Cerrar' : 'Otro semestre'} onPress={() => setEligiendoPeriodo(!eligiendoPeriodo)} />
+        {periodos.length > 1 && <Enlace texto={eligiendoPeriodo ? 'Cerrar' : 'Ver otro semestre'} onPress={() => setEligiendoPeriodo(!eligiendoPeriodo)} />}
       </View>
+      {periodos.length === 1 && !periodos.includes(anterior(periodoDe())) && (
+        <Enlace
+          texto={`¿Rendiste en el ${nombrePeriodo(anterior(periodoDe()))}?`}
+          onPress={() => setPeriodo(anterior(periodoDe()))}
+        />
+      )}
       {eligiendoPeriodo && (
         <View style={{ borderWidth: 1, borderColor: colores.linea, borderRadius: 12, marginBottom: espacio.m }}>
           {periodos.map((p, i) => (
