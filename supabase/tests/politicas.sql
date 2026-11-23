@@ -184,10 +184,22 @@ select pg_temp.debe_fallar('recuperatorio en el 2.º llamado',
   $$insert into public.examenes_finales (materia_id, periodo, llamado, tipo) values ('30000000-0000-0000-0000-000000000001', '2026-2', 2, 'recuperatorio')$$);
 select pg_temp.debe_fallar('recuperatorio con nota',
   $$insert into public.examenes_finales (materia_id, periodo, llamado, tipo, nota) values ('30000000-0000-0000-0000-000000000001', '2026-2', 1, 'recuperatorio', 4)$$);
-insert into public.examenes_finales (materia_id, periodo, llamado, tipo) values ('30000000-0000-0000-0000-000000000001', '2026-2', 1, 'recuperatorio');
+-- Recu o Regu: uno solo por cursada, aunque sea en otro semestre (la
+-- regularización del 2026-1 sigue cargada).
+select pg_temp.debe_fallar('recu y regu en la misma cursada',
+  $$insert into public.examenes_finales (materia_id, periodo, llamado, tipo) values ('30000000-0000-0000-0000-000000000001', '2026-2', 1, 'recuperatorio')$$);
+select pg_temp.debe_fallar('dos regu en la misma cursada',
+  $$insert into public.examenes_finales (materia_id, periodo, llamado, tipo) values ('30000000-0000-0000-0000-000000000001', '2026-2', 2, 'regularizacion')$$);
+update public.examenes_finales set tipo = 'recuperatorio' where tipo = 'regularizacion';
 select pg_temp.debe_ser('el recuperatorio no aprueba la materia',
   (select count(*) from public.materias_estudiante where materia_id = '30000000-0000-0000-0000-000000000001' and estado = 'firmada'), 1);
-delete from public.examenes_finales where tipo = 'recuperatorio';
+-- Al recursar, la nueva cursada puede usar uno de nuevo.
+update public.examenes_finales set cursada_anterior = true where tipo = 'recuperatorio';
+insert into public.examenes_finales (materia_id, periodo, llamado, tipo) values ('30000000-0000-0000-0000-000000000001', '2026-2', 1, 'regularizacion');
+select pg_temp.debe_ser('al recursar se puede volver a usar uno',
+  (select count(*) from public.examenes_finales where tipo in ('regularizacion', 'recuperatorio')), 2);
+delete from public.examenes_finales where periodo = '2026-2';
+update public.examenes_finales set tipo = 'regularizacion', cursada_anterior = false where tipo = 'recuperatorio';
 -- Pasar una regularización a final con nota aprueba la materia.
 update public.examenes_finales set tipo = 'final', nota = 3 where tipo = 'regularizacion';
 select pg_temp.debe_ser('cambiar a final con nota aprueba',

@@ -2,7 +2,8 @@
  * Tarjeta de finales de una materia: los tres llamados de un periodo.
  *
  * Cada llamado se marca como "No rendí", "Final", "Recu" (recuperatorio,
- * solo 1.er llamado) o "Regu" (regularización, 1.º o 2.º llamado).
+ * solo 1.er llamado) o "Regu" (regularización, 1.º o 2.º llamado). Recu y
+ * Regu: uno solo por cursada (Regu si faltó a un parcial; Recu si no).
  * Con el promedio de firma guardado, en un final se carga el porcentaje
  * del examen y la nota sale sola (0,4 × firma + 0,6 × final, Art. 57); sin
  * firma, o si lo prefiere, se carga la nota directo.
@@ -35,6 +36,7 @@ const TIPOS_DEL_LLAMADO: Record<1 | 2 | 3, Tipo[]> = {
   3: ['no', 'final'],
 };
 const A_DB = { recu: 'recuperatorio', regu: 'regularizacion' } as const;
+const esRecuORegu = (t: Tipo) => t === 'recu' || t === 'regu';
 
 /** Porcentaje con dos decimales: junto al límite de aprobación, uno solo engaña (65,84 se vería 65,8). */
 const pct2 = (n: number) => `${Number.isInteger(n) ? n : n.toFixed(2).replace('.', ',').replace(/0$/, '')} %`;
@@ -114,7 +116,8 @@ export function TarjetaFinales({ materiaId, firma: firmaGuardadaEnMateria, aprob
       if (f.tipo === 'regularizacion' || f.tipo === 'recuperatorio') {
         const tipo: Tipo = f.tipo === 'recuperatorio' ? 'recu' : 'regu';
         // Si quedó en un llamado donde no se permite, se muestra como "No rendí".
-        if (TIPOS_DEL_LLAMADO[f.llamado as 1 | 2 | 3]?.includes(tipo)) t[f.llamado] = tipo;
+        // Y solo uno de los dos por cursada.
+        if (TIPOS_DEL_LLAMADO[f.llamado as 1 | 2 | 3]?.includes(tipo) && !Object.values(t).some(esRecuORegu)) t[f.llamado] = tipo;
         continue;
       }
       t[f.llamado] = 'final';
@@ -151,6 +154,12 @@ export function TarjetaFinales({ materiaId, firma: firmaGuardadaEnMateria, aprob
   const cursada = aplazosDeLaCursada(finales ?? []);
   // Art. 49 y 62: dos periodos sin aprobar vencen la firma.
   const vencida = !cursada.debeRecursar && (firmaVencida(finales ?? [], periodo) || firmaVencida(finales ?? [], periodoDe()));
+
+  // Recu o Regu: uno solo por cursada. Si ya se usó en otro semestre, no se
+  // ofrece ninguno; si se marcó en otro llamado de este, tampoco.
+  const recuReguEnOtroPeriodo = (finales ?? []).find((f) => f.periodo !== periodo && (f.tipo === 'recuperatorio' || f.tipo === 'regularizacion'));
+  const opcionesDe = (ll: 1 | 2 | 3) => TIPOS_DEL_LLAMADO[ll].filter((t) => !esRecuORegu(t)
+    || (!recuReguEnOtroPeriodo && !filas.some((f) => f.llamado !== ll && esRecuORegu(f.tipo))));
 
   const cambiarTipo = (ll: number, t: Tipo) => {
     setTipos({ ...tipos, [ll]: t });
@@ -268,7 +277,7 @@ export function TarjetaFinales({ materiaId, firma: firmaGuardadaEnMateria, aprob
       {filas.map((f, i) => (
         <View key={f.llamado} style={{ paddingVertical: espacio.m, borderTopWidth: i === 0 ? 0 : 1, borderTopColor: colores.linea }}>
           <Text style={{ fontFamily: fuentes.semibold, fontSize: 15, color: colores.texto, marginBottom: espacio.s }}>{NOMBRE_LLAMADO[f.llamado]}</Text>
-          <Segmentado opciones={TIPOS_DEL_LLAMADO[f.llamado].map((valor) => ({ valor, texto: TEXTO_TIPO[valor] }))} valor={f.tipo} onCambio={(t) => cambiarTipo(f.llamado, t)} />
+          <Segmentado opciones={opcionesDe(f.llamado).map((valor) => ({ valor, texto: TEXTO_TIPO[valor] }))} valor={f.tipo} onCambio={(t) => cambiarTipo(f.llamado, t)} />
           {f.tipo === 'final' && (
             <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: espacio.m }}>
               <Campo
@@ -303,6 +312,12 @@ export function TarjetaFinales({ materiaId, firma: firmaGuardadaEnMateria, aprob
                 setValores({ ...valores, [f.llamado]: '' });
               }}
             />
+          )}
+          {f.llamado === 1 && !recuReguEnOtroPeriodo && !filas.some((x) => esRecuORegu(x.tipo)) && (
+            <Text style={[s.filaDetalle, { marginTop: espacio.s }]}>Recu o Regu, uno solo: Regu si faltaste a un parcial (1.º o 2.º llamado); Recu si rendiste todos los parciales y no llegaste a la firma (solo 1.er llamado).</Text>
+          )}
+          {recuReguEnOtroPeriodo && f.llamado === 1 && (
+            <Text style={[s.filaDetalle, { marginTop: espacio.s }]}>Ya usaste {recuReguEnOtroPeriodo.tipo === 'recuperatorio' ? 'el Recu' : 'la Regu'}{recuReguEnOtroPeriodo.periodo ? ` en el ${nombrePeriodo(recuReguEnOtroPeriodo.periodo)}` : ''}. Solo se puede uno por cursada.</Text>
           )}
           {f.tipo === 'regu' && (
             <Text style={[s.filaDetalle, { marginTop: espacio.s }]}>Regularización: rendiste el parcial al que faltaste. Este llamado queda usado y no lleva nota. Cargá la nota en la calculadora de firma.</Text>
