@@ -145,3 +145,9 @@ test('detecta la carrera en el encabezado', async () => {
   assert.equal(textoAIso('7/12/2026'), '2026-12-07');
   assert.equal(textoAIso('31/02/2026'), null);
 });
+
+test('título sugerido', async () => {
+  const { tituloSugerido } = await import('../horario-finales.ts');
+  assert.equal(tituloSugerido(textoDePdfGeneral(fixture('finales-columnas.pdf'))), 'Anteproyecto de finales · diciembre 2026');
+  assert.equal(tituloSugerido('Horario', new Date(2027, 6, 2)), 'Horario de finales · julio 2027');
+});

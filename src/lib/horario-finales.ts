@@ -334,3 +334,13 @@ export function textoAIso(t: string): string | null {
   const [d, mes, a] = [Number(m[1]), Number(m[2]), Number(m[3])];
   return valida(a, mes, d) ? `${a}-${dos(mes)}-${dos(d)}` : null;
 }
+
+const NOMBRE_MES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+
+/** Título para el horario: "Anteproyecto de finales · diciembre 2026". */
+export function tituloSugerido(texto: string, ahora = new Date()): string {
+  const n = normalizar(texto.slice(0, 1500));
+  const m = /\b(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre)\s+(?:de\s+)?(20\d\d)\b/.exec(n);
+  const periodo = m ? `${m[1] === 'setiembre' ? 'septiembre' : m[1]} ${m[2]}` : `${NOMBRE_MES[ahora.getMonth()]} ${ahora.getFullYear()}`;
+  return `${/anteproyecto/.test(n) ? 'Anteproyecto de finales' : 'Horario de finales'} · ${periodo}`;
+}
