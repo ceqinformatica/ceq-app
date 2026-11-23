@@ -44,7 +44,7 @@ async function cargar(planId: string | null | undefined, carreraId: string | nul
 export default function Inicio() {
   useTema();
   const { perfil } = useSesion();
-  const { datos, cargando, error, refrescando, recargar } = usarDatos(() => cargar(perfil?.plan_id, perfil?.carrera_id), [perfil?.plan_id, perfil?.carrera_id]);
+  const { datos, cargando, error, refrescando, recargar, sinConexion } = usarDatos(() => cargar(perfil?.plan_id, perfil?.carrera_id), [perfil?.plan_id, perfil?.carrera_id], { cache: `inicio:${perfil?.plan_id}` });
   const primerNombre = perfil?.nombre?.split(' ')[0];
   const f = new Date();
   const fecha = `${DIAS[f.getDay()]} ${f.getDate()} de ${MESES[f.getMonth()]}`;
@@ -54,6 +54,7 @@ export default function Inicio() {
     <Pantalla
       cabecera={
         <CabeceraMarca
+          sinConexion={sinConexion && datos ? error : null}
           derecha={
             <Pressable onPress={() => router.push('/perfil')} accessibilityRole="button" accessibilityLabel="Abrir mi perfil" hitSlop={8} style={est.avatar}>
               <Text style={est.avatarTexto}>{(primerNombre?.[0] ?? '?').toUpperCase()}</Text>

@@ -5,7 +5,7 @@ import { Text, View } from 'react-native';
 import { pct, resumenFirma, semaforoVisible } from '../../components/academico';
 import { BarraProgreso, TramaHex } from '../../components/graficos';
 import {
-  BarraSuperior, Boton, Campo, Cargando, Chip, Contador, EstadoVacio, Fila, Hoja, Insignia, Mensaje, Pantalla, s, Seccion, Segmentado, Tarjeta,
+  AvisoSinConexion, BarraSuperior, Boton, Campo, Cargando, Chip, Contador, EstadoVacio, Fila, Hoja, Insignia, Mensaje, Pantalla, s, Seccion, Segmentado, Tarjeta,
 } from '../../components/ui';
 import { useSesion } from '../../context/SesionProvider';
 import {
@@ -61,7 +61,7 @@ export default function CalculadoraFirma() {
   useTema();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { perfil } = useSesion();
-  const { datos, cargando, error, recargar, setDatos } = usarDatos(() => cargar(perfil?.plan_id ?? '', id ?? ''), [perfil?.plan_id, id]);
+  const { datos, cargando, error, recargar, setDatos, sinConexion } = usarDatos(() => cargar(perfil?.plan_id ?? '', id ?? ''), [perfil?.plan_id, id], { cache: `firma:${perfil?.plan_id}:${id}` });
   const [editando, setEditando] = useState<EvaluacionDb | 'nueva' | null>(null);
   const [guardandoFirma, setGuardandoFirma] = useState(false);
   const [msgFirma, setMsgFirma] = useState<{ texto: string; tipo: 'error' | 'exito' } | null>(null);
@@ -130,6 +130,7 @@ export default function CalculadoraFirma() {
   return (
     <Pantalla>
       <BarraSuperior titulo="Calculadora de firma" onVolver={volver} />
+      <AvisoSinConexion texto={sinConexion && datos ? error : null} />
 
       <View style={{ backgroundColor: fondos.marino, borderRadius: radio.l + 4, padding: espacio.l, overflow: 'hidden', marginBottom: espacio.m }}>
         <TramaHex ancho={420} alto={240} opacidad={0.07} />

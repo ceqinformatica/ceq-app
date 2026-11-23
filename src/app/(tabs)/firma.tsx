@@ -37,14 +37,14 @@ export default function Firma() {
   useTema();
   const { perfil } = useSesion();
   const planId = perfil?.plan_id ?? '';
-  const { datos, cargando, error, refrescando, recargar } = usarDatos(() => cargar(planId, perfil?.carrera_id), [planId]);
+  const { datos, cargando, error, refrescando, recargar, sinConexion } = usarDatos(() => cargar(planId, perfil?.carrera_id), [planId], { cache: `firmas:${planId}` });
 
   const enRiesgo = datos?.filter((d) => d.semaforo === 'amarillo' || d.semaforo === 'rojo').length ?? 0;
 
   return (
     <Pantalla
       cabecera={
-        <CabeceraMarca titulo="Calculadora de firma" sub="Cuánto te falta para firmar cada materia">
+        <CabeceraMarca titulo="Calculadora de firma" sub="Cuánto te falta para firmar cada materia" sinConexion={sinConexion && datos ? error : null}>
           {datos && datos.length > 0 && (
             <View style={{ flexDirection: 'row', gap: espacio.s, marginTop: espacio.l }}>
               <Resumen numero={datos.length} texto="cursando" />

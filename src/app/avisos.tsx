@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { Text } from 'react-native';
-import { BarraSuperior, Cargando, EstadoVacio, Pantalla, s, Tarjeta } from '../components/ui';
+import { AvisoSinConexion, BarraSuperior, Cargando, EstadoVacio, Pantalla, s, Tarjeta } from '../components/ui';
 import { cargarAvisos, haceCuanto } from '../datos/ceq';
 import { usarDatos } from '../datos/usarDatos';
 import { colores, fuentes } from '../tema';
@@ -10,10 +10,11 @@ const volver = () => (router.canGoBack() ? router.back() : router.replace('/ceq'
 
 export default function Avisos() {
   useTema();
-  const { datos, cargando, error, refrescando, recargar } = usarDatos(() => cargarAvisos(50), []);
+  const { datos, cargando, error, refrescando, recargar, sinConexion } = usarDatos(() => cargarAvisos(50), [], { cache: 'avisos' });
   return (
     <Pantalla refrescando={refrescando} onRefrescar={recargar}>
       <BarraSuperior titulo="Avisos del CEQ" onVolver={volver} />
+      <AvisoSinConexion texto={sinConexion && datos ? error : null} />
       {cargando && !datos ? (
         <Cargando />
       ) : !datos?.length ? (

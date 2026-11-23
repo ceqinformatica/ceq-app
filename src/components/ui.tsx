@@ -113,8 +113,10 @@ export function Pantalla({ children, scroll = true, estilo, cabecera, refrescand
  * Banda marina con la trama de hexágonos: la firma visual de la app.
  * Va arriba de las pestañas principales.
  */
-export function CabeceraMarca({ titulo, sub, derecha, children, compacta }: {
+export function CabeceraMarca({ titulo, sub, derecha, children, compacta, sinConexion }: {
   titulo?: string; sub?: string; derecha?: ReactNode; children?: ReactNode; compacta?: boolean;
+  /** Texto del aviso "Sin conexión" (se muestra lo guardado). */
+  sinConexion?: string | null;
 }) {
   const insets = useSafeAreaInsets();
   const [tam, setTam] = useState({ w: 0, h: 0 });
@@ -139,6 +141,12 @@ export function CabeceraMarca({ titulo, sub, derecha, children, compacta }: {
       {titulo ? <Text style={s.cabeceraTitulo} accessibilityRole="header">{titulo}</Text> : null}
       {sub ? <Text style={s.cabeceraSub}>{sub}</Text> : null}
       {children}
+      {sinConexion ? (
+        <View style={s.pildoraSinConexion} accessibilityRole="alert" accessibilityLiveRegion="polite">
+          <Ionicons name="cloud-offline-outline" size={15} color={colores.blanco} />
+          <Text style={s.pildoraSinConexionTexto}>{sinConexion}</Text>
+        </View>
+      ) : null}
       </View>
     </View>
   );
@@ -447,6 +455,17 @@ export function Mensaje({ texto: t, tipo = 'error' }: { texto: string | null; ti
   );
 }
 
+/** Aviso de que no hay internet y se ve lo último guardado. */
+export function AvisoSinConexion({ texto: t }: { texto: string | null | undefined }) {
+  if (!t) return null;
+  return (
+    <View style={[s.mensaje, { backgroundColor: fondos.tarjeta, marginTop: 0, marginBottom: espacio.m }]} accessibilityRole="alert" accessibilityLiveRegion="polite">
+      <Ionicons name="cloud-offline-outline" size={18} color={colores.marino} />
+      <Text style={[s.mensajeTexto, { color: colores.marino }]}>{t}</Text>
+    </View>
+  );
+}
+
 export function EstadoVacio({ icono, titulo, texto: t, accion }: { icono: NombreIcono; titulo: string; texto?: string; accion?: { texto: string; onPress: () => void } }) {
   return (
     <View style={s.vacio}>
@@ -569,6 +588,8 @@ export const s = crearEstilos(() => ({
     position: 'absolute', right: espacio.l, bottom: espacio.l, flexDirection: 'row', alignItems: 'center', gap: espacio.s,
     backgroundColor: fondos.marino, paddingHorizontal: espacio.l, height: 52, borderRadius: radio.pill, ...sombras.fuerte,
   },
+  pildoraSinConexion: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', marginTop: espacio.s, paddingHorizontal: espacio.m, paddingVertical: 6, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.16)' },
+  pildoraSinConexionTexto: { fontFamily: fuentes.medium, fontSize: 12.5, color: colores.blanco, flexShrink: 1 },
   flotanteTexto: { fontFamily: fuentes.semibold, fontSize: 15, color: colores.blanco },
 
   etiqueta: { fontFamily: fuentes.medium, fontSize: 13.5, color: colores.marinoOscuro, marginBottom: espacio.xs + 2 },

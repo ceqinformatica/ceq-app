@@ -5,7 +5,7 @@ import { Text, View } from 'react-native';
 import { nombreSemestre, pct, SelectorEstado } from '../../components/academico';
 import { TarjetaFinales } from '../../components/finales';
 import { esSeminario } from '../../lib/finales';
-import { BarraSuperior, Boton, Campo, Cargando, EstadoVacio, Fila, Insignia, Mensaje, Pantalla, s, Seccion, Tarjeta } from '../../components/ui';
+import { AvisoSinConexion, BarraSuperior, Boton, Campo, Cargando, EstadoVacio, Fila, Insignia, Mensaje, Pantalla, s, Seccion, Tarjeta } from '../../components/ui';
 import { useSesion } from '../../context/SesionProvider';
 import { cargarMalla, deshacerRecursada, guardarEstadoMateria } from '../../datos/academico';
 import { usarDatos } from '../../datos/usarDatos';
@@ -21,7 +21,7 @@ export default function DetalleMateria() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { perfil } = useSesion();
   const planId = perfil?.plan_id ?? '';
-  const { datos: malla, cargando, error, setDatos, recargar } = usarDatos(() => cargarMalla(planId, perfil?.carrera_id), [planId]);
+  const { datos: malla, cargando, error, setDatos, recargar, sinConexion } = usarDatos(() => cargarMalla(planId, perfil?.carrera_id), [planId], { cache: `malla:${planId}` });
 
   const materia = malla?.materiasDb.find((m) => m.id === id);
   const actual = malla?.estados.get(id ?? '');
@@ -86,6 +86,7 @@ export default function DetalleMateria() {
   return (
     <Pantalla>
       <BarraSuperior titulo={nombreSemestre(materia.semestre)} onVolver={volver} />
+      <AvisoSinConexion texto={sinConexion && malla ? error : null} />
 
       <Tarjeta>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: espacio.s, marginBottom: espacio.s, flexWrap: 'wrap' }}>

@@ -32,7 +32,7 @@ function useHora() {
 export default function PantallaCarnet() {
   useTema();
   const { sesion, perfil } = useSesion();
-  const { datos: socio, cargando, error, recargar, setDatos } = usarDatos(() => cargarSocio(sesion?.user.id ?? ''), [sesion?.user.id]);
+  const { datos: socio, cargando, error, recargar, setDatos } = usarDatos(() => cargarSocio(sesion?.user.id ?? ''), [sesion?.user.id], { cache: 'carnet' });
   const [carrera, setCarrera] = useState<string | null>(null);
   const [foto, setFoto] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState<'foto' | 'qr' | null>(null);

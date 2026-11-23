@@ -34,7 +34,7 @@ export default function Carrera() {
   const porFila = barraLateral ? 4 : dosColumnas ? 3 : 2;
   const { perfil } = useSesion();
   const planId = perfil?.plan_id ?? '';
-  const { datos: malla, cargando, error, refrescando, recargar, setDatos } = usarDatos(() => cargarMalla(planId, perfil?.carrera_id), [planId, perfil?.carrera_id]);
+  const { datos: malla, cargando, error, refrescando, recargar, setDatos, sinConexion } = usarDatos(() => cargarMalla(planId, perfil?.carrera_id), [planId, perfil?.carrera_id], { cache: `malla:${planId}` });
   const [filtro, setFiltro] = useState<Filtro>('todas');
   /** null = modo normal; un Set = modo "Marcar varias" con las materias elegidas. */
   const [seleccion, setSeleccion] = useState<Set<string> | null>(null);
@@ -188,7 +188,7 @@ export default function Carrera() {
 
   return (
     <View style={{ flex: 1, backgroundColor: fondos.fondo }}>
-    <Pantalla cabecera={<CabeceraMarca titulo="Mi carrera" sub={sub} />} refrescando={refrescando} onRefrescar={recargar}>
+    <Pantalla cabecera={<CabeceraMarca titulo="Mi carrera" sub={sub} sinConexion={sinConexion && malla ? error : null} />} refrescando={refrescando} onRefrescar={recargar}>
       {cargando && !malla ? (
         <Tarjeta estilo={{ marginTop: -espacio.xxl }}><Cargando texto="Cargando tu malla…" /></Tarjeta>
       ) : error && !malla ? (
@@ -309,7 +309,7 @@ export default function Carrera() {
             </>
           )}
           <LeyendaMalla />
-          {error && <Mensaje texto={error} />}
+          {error && !sinConexion && <Mensaje texto={error} />}
 
           {vista.semestres.length === 0 && (
             <EstadoVacio icono="filter-outline" titulo="Nada por acá" texto="No hay materias con este filtro." />

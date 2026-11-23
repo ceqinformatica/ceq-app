@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { ScrollView, View } from 'react-native';
-import { BarraSuperior, Campo, Cargando, Chip, EstadoVacio, Fila, Mensaje, Pantalla, Seccion, Tarjeta } from '../components/ui';
+import { AvisoSinConexion, BarraSuperior, Campo, Cargando, Chip, EstadoVacio, Fila, Mensaje, Pantalla, Seccion, Tarjeta } from '../components/ui';
 import { cargarTramites } from '../datos/tramites';
 import { usarDatos } from '../datos/usarDatos';
 import { agruparPorCategoria, filtrarTramites } from '../lib/tramites';
@@ -12,7 +12,7 @@ const volver = () => (router.canGoBack() ? router.back() : router.replace('/ceq'
 
 export default function Tramites() {
   useTema();
-  const { datos, cargando, error, refrescando, recargar } = usarDatos(cargarTramites, []);
+  const { datos, cargando, error, refrescando, recargar, sinConexion } = usarDatos(cargarTramites, [], { cache: 'tramites' });
   const [busqueda, setBusqueda] = useState('');
   const [categoria, setCategoria] = useState<string | null>(null);
 
@@ -22,6 +22,7 @@ export default function Tramites() {
   return (
     <Pantalla refrescando={refrescando} onRefrescar={recargar}>
       <BarraSuperior titulo="Trámites de la FCQ" onVolver={volver} />
+      <AvisoSinConexion texto={sinConexion && datos ? error : null} />
       <Campo
         etiqueta="Buscar"
         value={busqueda}
