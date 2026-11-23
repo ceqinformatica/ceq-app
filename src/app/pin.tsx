@@ -34,6 +34,8 @@ export default function PantallaPin() {
     largoPin().then((l) => {
       setLargoActual(l);
       // Sin PIN guardado no hay "actual" que pedir.
+      // Si ya hay PIN, "crear" lo reemplaza: primero hay que escribir el actual.
+      if (l != null && modo === 'crear') setPaso('actual');
       if (l == null && modo !== 'crear') {
         if (modo === 'quitar') volver();
         else setPaso('nuevo');
@@ -48,8 +50,10 @@ export default function PantallaPin() {
 
   const conActual = async (pin: string) => {
     setOcupado(true);
-    const r = await comprobarPin(pin);
-    setOcupado(false);
+    const r = await comprobarPin(pin)
+      .catch(() => ({ ok: false as const, motivo: 'sin-pin' as const }))
+      .finally(() => setOcupado(false));
+    if (!r.ok && r.motivo === 'sin-pin') return reiniciar('No se pudo leer el PIN guardado. Probá de nuevo.');
     if (r.ok) {
       if (modo === 'quitar') {
         await borrarPin();

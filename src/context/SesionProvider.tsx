@@ -6,7 +6,7 @@ import { db as demo, MODO_DEMO, UID_DEMO } from '../datos/demo';
 import { esErrorDeRed, textoError } from '../lib/errores';
 import { biometriaActiva, verificarIdentidad } from '../lib/biometria';
 import { almacenSeguro } from '../lib/almacenSeguro';
-import { comprobarPin, pinActivo, type ResultadoPin } from '../lib/pinGuardado';
+import { borrarPin, comprobarPin, pinActivo, reiniciarIntentosPin, type ResultadoPin } from '../lib/pinGuardado';
 import { supabase } from '../lib/supabase';
 import type { Perfil } from '../lib/tipos-db';
 
@@ -100,6 +100,8 @@ export function SesionProvider({ children }: { children: ReactNode }) {
       if (evento === 'SIGNED_OUT') {
         sinConexionAlEmpezar.current = false;
         borrarCache();
+        // El PIN es de la cuenta que cerró sesión: la próxima no lo hereda.
+        borrarPin().catch(() => {});
       }
       setSesion(nueva);
       if (!nueva) setBloqueado(false);
@@ -126,7 +128,10 @@ export function SesionProvider({ children }: { children: ReactNode }) {
 
   const desbloquear = useCallback(async () => {
     const ok = await verificarIdentidad();
-    if (ok) setBloqueado(false);
+    if (ok) {
+      await reiniciarIntentosPin().catch(() => {});
+      setBloqueado(false);
+    }
     return ok;
   }, []);
 

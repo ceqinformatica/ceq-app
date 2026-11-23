@@ -90,3 +90,8 @@ export async function comprobarPin(pin: string): Promise<ResultadoPin> {
   if (espera2 > 0) return { ok: false, motivo: 'esperar', segundos: espera2 };
   return { ok: false, motivo: 'incorrecto', quedanAntesDeEsperar: Math.max(0, FALLOS_LIBRES - fallos), quedanAntesDeSalir: FALLOS_MAXIMOS - fallos };
 }
+
+/** Después de entrar con la huella se reinicia la cuenta de fallos del PIN. */
+export async function reiniciarIntentosPin(): Promise<void> {
+  await almacen.borrar(CLAVE_INTENTOS);
+}

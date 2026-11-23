@@ -1,5 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { PIN_MAX, PIN_MIN } from '../lib/pin';
 import { colores, crearEstilos, espacio, fondos, fuentes } from '../tema';
@@ -30,12 +30,19 @@ export function TecladoPin({ largo, onCompleto, sobreMarca, deshabilitado, tecla
   const maximo = largo ?? PIN_MAX;
   const puntos = largo ?? Math.max(PIN_MIN, pin.length);
 
+  // Con el updater no se pierden dígitos al tocar rápido; al completar se envía una sola vez.
   const tocar = (d: string) => {
-    if (deshabilitado || pin.length >= maximo) return;
-    const nuevo = pin + d;
-    setPin(nuevo);
-    if (largo && nuevo.length === largo) onCompleto(nuevo);
+    if (deshabilitado) return;
+    setPin((p) => (p.length >= maximo ? p : p + d));
   };
+  const enviado = useRef<string | null>(null);
+  useEffect(() => {
+    if (largo && pin.length === largo && enviado.current !== pin) {
+      enviado.current = pin;
+      onCompleto(pin);
+    }
+    if (pin.length < (largo ?? 0)) enviado.current = null;
+  }, [pin, largo, onCompleto]);
   const borrar = () => setPin((p) => p.slice(0, -1));
   const confirmar = () => {
     if (!deshabilitado && pin.length >= PIN_MIN) onCompleto(pin);

@@ -56,8 +56,9 @@ export function Bloqueo() {
     setError(null);
     // Deja dibujar el último punto antes de calcular.
     await new Promise((r) => setTimeout(r, 30));
-    const r = await desbloquearConPin(pin);
-    setComprobando(false);
+    const r = await desbloquearConPin(pin)
+      .catch(() => ({ ok: false as const, motivo: 'sin-pin' as const }))
+      .finally(() => setComprobando(false));
     if (r.ok) return;
     setIntento((n) => n + 1);
     if (r.motivo === 'esperar') {
@@ -72,14 +73,14 @@ export function Bloqueo() {
           : `PIN incorrecto. Después de ${r.quedanAntesDeSalir} ${r.quedanAntesDeSalir === 1 ? 'intento más' : 'intentos más'} se cierra la sesión.`,
       );
     } else {
-      setError('No hay PIN guardado. Cerrá sesión y volvé a entrar.');
+      setError('No se pudo comprobar el PIN. Probá de nuevo o cerrá sesión y volvé a entrar.');
     }
   };
 
   const conPinActivo = metodos?.largo != null;
   const iconoBio = metodos?.nombreBio === 'reconocimiento facial' ? 'scan-outline' : 'finger-print';
   const subtitulo = bloqueoTotal
-    ? 'Hubo demasiados intentos con un PIN incorrecto. Cerrá sesión y volvé a entrar con tu cuenta para crear uno nuevo.'
+    ? `Hubo demasiados intentos con un PIN incorrecto. ${metodos?.bio ? `Usá tu ${metodos.nombreBio} o cerrá` : 'Cerrá'} sesión y volvé a entrar con tu cuenta para crear uno nuevo.`
     : conPinActivo
       ? metodos?.bio
         ? `Escribí tu PIN o usá tu ${metodos.nombreBio}.`
@@ -121,7 +122,7 @@ export function Bloqueo() {
             </>
           )}
 
-          {metodos && !conPinActivo && (
+          {metodos && (!conPinActivo || (bloqueoTotal && metodos.bio)) && (
             <Pressable onPress={conBiometria} accessibilityRole="button" accessibilityLabel="Desbloquear" style={({ pressed }) => ({ marginTop: espacio.l, width: 84, height: 84, borderRadius: 42, backgroundColor: pressed ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.14)', alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: 'rgba(203,226,250,0.5)' })}>
               <Ionicons name={iconoBio} size={44} color={colores.blanco} />
             </Pressable>
