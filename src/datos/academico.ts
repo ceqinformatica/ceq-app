@@ -3,6 +3,7 @@
  * pantallas. Usa Supabase, o los datos de ejemplo en modo demostración.
  * El cálculo vive en src/lib/progreso.ts y src/lib/firma.ts.
  */
+import { periodoDe } from '../lib/finales';
 import { pesosIguales, type Asistencia, type Evaluacion, type ReglaFirma } from '../lib/firma';
 import type { EstadoEstudiante, EstadoMateria, GrupoOptativas, Materia, Prerrequisito, UnidadAvance } from '../lib/progreso';
 import type { IntentoAImportar, PlanImportacion } from '../lib/extracto-ealu';
@@ -113,9 +114,11 @@ export async function guardarEstadoMateria(materiaId: string, estado: EstadoMate
   const nota = estado === 'aprobada' ? notaFinal : null;
   if (MODO_DEMO) {
     await esperar(150);
+    const previo = db.estados.find((e) => e.materia_id === materiaId);
     db.estados = db.estados.filter((e) => e.materia_id !== materiaId);
     if (estado !== 'pendiente') {
-      db.estados.push({ usuario_id: UID_DEMO, materia_id: materiaId, estado, nota_final: nota, fecha: null, periodo: null, updated_at: new Date().toISOString() });
+      const periodo = periodoAlCambiar(previo?.estado ?? null, previo?.periodo ?? null, estado);
+      db.estados.push({ usuario_id: UID_DEMO, materia_id: materiaId, estado, nota_final: nota, fecha: null, periodo, updated_at: new Date().toISOString() });
     }
     return;
   }
@@ -124,8 +127,26 @@ export async function guardarEstadoMateria(materiaId: string, estado: EstadoMate
     lanzar(error);
     return;
   }
-  const { error } = await supabase.from('materias_estudiante').upsert({ materia_id: materiaId, estado, nota_final: nota, nota_desde_final: false, respaldo_recursada: null }, { onConflict: 'usuario_id,materia_id' });
+  const previo = await supabase.from('materias_estudiante').select('estado, periodo').eq('materia_id', materiaId).maybeSingle();
+  lanzar(previo.error);
+  const antes = previo.data as { estado: EstadoMateria; periodo: string | null } | null;
+  const periodo = periodoAlCambiar(antes?.estado ?? null, antes?.periodo ?? null, estado);
+  const { error } = await supabase.from('materias_estudiante').upsert({ materia_id: materiaId, estado, nota_final: nota, nota_desde_final: false, respaldo_recursada: null, periodo }, { onConflict: 'usuario_id,materia_id' });
   lanzar(error);
+}
+
+/**
+ * Semestre en que la materia quedó firmada o aprobada (la agenda la sigue
+ * mostrando ese semestre). Solo se marca al pasar a firmada o aprobada
+ * desde la materia; si no cambia el estado, se conserva. Las cargas en
+ * bloque del historial no lo marcan.
+ */
+function periodoAlCambiar(antes: EstadoMateria | null, periodoAntes: string | null, ahora: EstadoMateria): string | null {
+  if (ahora !== 'firmada' && ahora !== 'aprobada') return null;
+  if (antes === ahora) return periodoAntes;
+  // De firmada a aprobada (o al revés): se conserva el semestre de la firma.
+  if (antes === 'firmada' || antes === 'aprobada') return periodoAntes;
+  return periodoDe();
 }
 
 /**
@@ -141,11 +162,12 @@ export async function guardarFirma(materiaId: string, promedio: number) {
       previo.promedio_firma = promedio;
       return;
     }
+    const periodo = previo?.estado === 'firmada' ? previo.periodo : periodoDe();
     db.estados = db.estados.filter((e) => e.materia_id !== materiaId);
-    db.estados.push({ usuario_id: UID_DEMO, materia_id: materiaId, estado: 'firmada', nota_final: null, fecha: null, periodo: null, updated_at: new Date().toISOString(), promedio_firma: promedio });
+    db.estados.push({ usuario_id: UID_DEMO, materia_id: materiaId, estado: 'firmada', nota_final: null, fecha: null, periodo, updated_at: new Date().toISOString(), promedio_firma: promedio });
     return;
   }
-  const { data, error } = await supabase.from('materias_estudiante').select('estado').eq('materia_id', materiaId).maybeSingle();
+  const { data, error } = await supabase.from('materias_estudiante').select('estado, periodo').eq('materia_id', materiaId).maybeSingle();
   lanzar(error);
   if ((data as { estado: EstadoMateria } | null)?.estado === 'aprobada') {
     const r = await supabase.from('materias_estudiante').update({ promedio_firma: promedio, respaldo_recursada: null }).eq('materia_id', materiaId);
@@ -154,7 +176,11 @@ export async function guardarFirma(materiaId: string, promedio: number) {
   }
   const r = await supabase
     .from('materias_estudiante')
-    .upsert({ materia_id: materiaId, estado: 'firmada', nota_final: null, nota_desde_final: false, promedio_firma: promedio, respaldo_recursada: null }, { onConflict: 'usuario_id,materia_id' });
+    .upsert({
+      materia_id: materiaId, estado: 'firmada', nota_final: null, nota_desde_final: false, promedio_firma: promedio, respaldo_recursada: null,
+      // Firmada desde la calculadora: queda como de este semestre (salvo que ya estuviera firmada).
+      periodo: (data as { estado: EstadoMateria; periodo: string | null } | null)?.estado === 'firmada' ? (data as { periodo: string | null }).periodo : periodoDe(),
+    }, { onConflict: 'usuario_id,materia_id' });
   lanzar(r.error);
 }
 

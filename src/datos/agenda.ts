@@ -38,7 +38,7 @@ export async function cargarAgenda(planId: string | null | undefined): Promise<A
   let eventos: EventoDb[];
   type Fila = { id: string; nombre: string; semestre: number; grupo_optativa_id: string | null; orden: number };
   let filas: Fila[];
-  let estados: { materia_id: string; estado: EstadoMateriaDb; updated_at?: string | null }[];
+  let estados: { materia_id: string; estado: EstadoMateriaDb; periodo: string | null }[];
   if (MODO_DEMO) {
     await esperar();
     horario = [...db.horario];
@@ -52,7 +52,7 @@ export async function cargarAgenda(planId: string | null | undefined): Promise<A
       planId
         ? supabase.from('materias').select('id, nombre, semestre, grupo_optativa_id, orden').eq('plan_id', planId)
         : Promise.resolve({ data: [], error: null }),
-      supabase.from('materias_estudiante').select('materia_id, estado, updated_at'),
+      supabase.from('materias_estudiante').select('materia_id, estado, periodo'),
     ]);
     lanzar(rH.error); lanzar(rE.error); lanzar(rM.error); lanzar(rS.error);
     horario = rH.data ?? [];
@@ -72,7 +72,7 @@ export async function cargarAgenda(planId: string | null | undefined): Promise<A
     materias,
     estados: new Map(estados.filter((e) => e.estado !== 'pendiente').map((e) => [e.materia_id, e.estado])),
     terminadasEsteSemestre: new Set(estados
-      .filter((e) => (e.estado === 'firmada' || e.estado === 'aprobada') && e.updated_at && periodoDe(new Date(e.updated_at)) === periodoDe())
+      .filter((e) => (e.estado === 'firmada' || e.estado === 'aprobada') && e.periodo === periodoDe())
       .map((e) => e.materia_id)),
   };
 }
