@@ -135,7 +135,6 @@ export async function guardarEstadoMateria(materiaId: string, estado: EstadoMate
   lanzar(error);
 }
 
-
 /**
  * Guarda el promedio de firma de la materia. Si estaba pendiente o cursando
  * pasa a firmada; si ya estaba aprobada queda aprobada y solo se guarda el
