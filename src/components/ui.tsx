@@ -4,7 +4,7 @@ import { setStatusBarStyle } from 'expo-status-bar';
 import { useCallback, useEffect, useRef, useState, type ComponentProps, type ComponentRef, type ReactNode } from 'react';
 import {
   ActivityIndicator, Image, Keyboard, KeyboardAvoidingView, Modal, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text,
-  TextInput, View, type TextInputProps, type TextStyle, type ViewStyle,
+  TextInput, useWindowDimensions, View, type TextInputProps, type TextStyle, type ViewStyle,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTema } from '../context/TemaProvider';
@@ -507,16 +507,31 @@ export function Proximamente({ titulo, items }: { titulo: string; items: string[
 /** Hoja inferior modal, para formularios cortos. */
 export function Hoja({ visible, titulo, onCerrar, children }: { visible: boolean; titulo: string; onCerrar: () => void; children: ReactNode }) {
   const insets = useSafeAreaInsets();
-  // En tablet la hoja no ocupa todo el ancho: queda centrada.
+  // En tablet (sobre todo en horizontal) la hoja es una ventana centrada:
+  // pegada abajo y de 600 de ancho dejaba los costados sin oscurecer y,
+  // con poca altura, el botón de enviar quedaba fuera de la pantalla.
   const { tablet } = useDisposicion();
-  const hojaAncha = tablet ? { width: '100%' as const, maxWidth: 600, alignSelf: 'center' as const } : null;
+  const { height } = useWindowDimensions();
+  const centrada = tablet;
+  const estiloHoja: ViewStyle = centrada
+    ? { width: '92%', maxWidth: 640, alignSelf: 'center', borderRadius: radio.xl, maxHeight: Math.max(320, height - insets.top - insets.bottom - espacio.xl * 2), paddingBottom: espacio.l }
+    : { paddingBottom: insets.bottom + espacio.l };
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onCerrar} statusBarTranslucent>
-      <EvitaTeclado>
-        <Pressable style={s.velo} onPress={onCerrar} accessibilityLabel="Cerrar" />
-        <View style={[s.hoja, { paddingBottom: insets.bottom + espacio.l }, hojaAncha]}>
-          <View style={s.hojaAsa} />
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: espacio.l }}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType={centrada ? 'fade' : 'slide'}
+      onRequestClose={onCerrar}
+      statusBarTranslucent
+      navigationBarTranslucent
+      supportedOrientations={['portrait', 'portrait-upside-down', 'landscape', 'landscape-left', 'landscape-right']}
+    >
+      <EvitaTeclado estilo={centrada ? { justifyContent: 'center', paddingTop: insets.top, paddingBottom: insets.bottom } : { justifyContent: 'flex-end' }}>
+        {/* El velo cubre toda la pantalla, también los costados de la hoja. */}
+        <Pressable style={[StyleSheet.absoluteFill, s.veloFondo]} onPress={onCerrar} accessibilityLabel="Cerrar" />
+        <View style={[s.hoja, estiloHoja]}>
+          {!centrada && <View style={s.hojaAsa} />}
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: espacio.l, paddingTop: centrada ? espacio.m : 0 }}>
             <Text style={[s.barraTitulo, { textAlign: 'left' }]}>{titulo}</Text>
             <BotonIcono icono="close" etiqueta="Cerrar" onPress={onCerrar} tamano={20} />
           </View>
@@ -634,7 +649,7 @@ export const s = crearEstilos(() => ({
   seccionBarra: { width: 3.5, height: 18, backgroundColor: colores.marino, borderRadius: 2 },
   seccionTexto: { fontFamily: fuentes.bold, fontSize: 16.5, color: colores.marino },
 
-  velo: { flex: 1, backgroundColor: 'rgba(14, 58, 85, 0.45)' },
+  veloFondo: { backgroundColor: 'rgba(14, 58, 85, 0.45)' },
   hoja: {
     backgroundColor: fondos.fondo, borderTopLeftRadius: radio.xl, borderTopRightRadius: radio.xl, paddingHorizontal: espacio.l,
     paddingTop: espacio.s, maxHeight: '88%',
