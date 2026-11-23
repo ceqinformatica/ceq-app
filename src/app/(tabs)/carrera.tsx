@@ -194,7 +194,7 @@ export default function Carrera() {
         </Tarjeta>
       ) : malla && vista ? (
         <>
-          <Tarjeta estilo={{ marginTop: -espacio.xxl }}>
+          <Tarjeta estilo={{ marginTop: -espacio.xxl }} onPress={() => router.push('/estadisticas')} etiqueta="Ver promedio y estadísticas">
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: espacio.l }}>
               <AnilloProgreso porcentaje={vista.progreso.porcentaje} tamano={112} etiqueta="de la carrera" />
               <View style={{ flex: 1, gap: espacio.m }}>
@@ -210,6 +210,11 @@ export default function Carrera() {
                   />
                 </View>
               </View>
+            </View>
+            <View style={est.verEstadisticas}>
+              <Ionicons name="stats-chart" size={15} color={colores.azul} />
+              <Text style={[s.enlace, { flex: 1 }]}>Ver promedio y estadísticas</Text>
+              <Ionicons name="chevron-forward" size={16} color={colores.azul} />
             </View>
           </Tarjeta>
 
@@ -377,4 +382,5 @@ const est = StyleSheet.create({
     backgroundColor: colores.marino, borderRadius: radio.l, padding: espacio.s, paddingLeft: espacio.l, ...sombras.fuerte,
   },
   cancelar: { paddingVertical: espacio.s },
+  verEstadisticas: { flexDirection: 'row', alignItems: 'center', gap: espacio.s, marginTop: espacio.m, paddingTop: espacio.m, borderTopWidth: 1, borderTopColor: colores.lineaSuave },
 });

@@ -84,7 +84,15 @@ export const db = {
     est('qi', 'aprobada', 4), est('qo1', 'firmada'),
     est('qa1', 'cursando'), est('fq1', 'cursando'), est('bq', 'cursando'),
   ] as MateriaEstudianteDb[],
-  finales: [] as ExamenFinalDb[],
+  // Finales de ejemplo (ingresó en 2023), para ver la evolución en Estadísticas.
+  finales: ([
+    ['qg1', '2023-1', 1, 4], ['mat1', '2023-1', 1, 1], ['mat1', '2023-1', 2, 3],
+    ['fis1', '2023-2', 1, 4], ['bio', '2023-2', 1, 5],
+    ['qg2', '2024-1', 1, 4], ['mat2', '2024-1', 1, 3], ['fis2', '2024-1', 1, 1],
+    ['est', '2024-2', 1, 5], ['qi', '2024-2', 2, 4],
+  ] as const).map(([materia_id, periodo, llamado, nota], i): ExamenFinalDb => ({
+    id: `fin-${i + 1}`, usuario_id: UID_DEMO, materia_id, periodo, llamado, fecha: null, nota, created_at: ahora.toISOString(), tipo: 'final', cursada_anterior: false,
+  })),
   evaluaciones: [
     ev('e1', 'qa1', 'Primer parcial', 'teoria', 30, 72), ev('e2', 'qa1', 'Segundo parcial', 'teoria', 30, null, false, enDias(6)),
     ev('e3', 'qa1', 'Tercer parcial', 'teoria', 30, 85), ev('e4', 'qa1', 'Laboratorio', 'laboratorio', 100, 78),
