@@ -132,7 +132,7 @@ export function CabeceraMarca({ titulo, sub, derecha, children, compacta }: {
           <View style={s.logoPastilla}>
             <Image source={logoCeq} style={{ width: 26, height: 26 }} accessibilityLabel="Logo del CEQ" />
           </View>
-          <Text style={s.cabeceraMarca}>CEQ</Text>
+          <Text style={s.cabeceraMarca}>Portal CEQ</Text>
         </View>
         {derecha}
       </View>
@@ -159,13 +159,13 @@ export function useBarraEstado(estilo: 'light' | 'dark') {
   );
 }
 
-/** Barra superior clara: logo hexagonal + "CEQ" en marino. */
+/** Barra superior clara: logo hexagonal + "Portal CEQ" en marino. */
 export function Encabezado({ derecha }: { derecha?: ReactNode }) {
   return (
     <View style={s.encabezado}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: espacio.s }}>
         <Image source={logoCeq} style={{ width: 36, height: 36 }} accessibilityLabel="Logo del CEQ" />
-        <Text style={s.marca}>CEQ</Text>
+        <Text style={s.marca}>Portal CEQ</Text>
       </View>
       {derecha}
     </View>

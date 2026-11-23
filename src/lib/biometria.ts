@@ -26,7 +26,7 @@ export async function biometriaActiva(): Promise<boolean> {
   return (await SecureStore.getItemAsync(CLAVE)) === '1';
 }
 
-export async function verificarIdentidad(motivo = 'Desbloqueá la app del CEQ'): Promise<boolean> {
+export async function verificarIdentidad(motivo = 'Desbloqueá Portal CEQ'): Promise<boolean> {
   const r = await LocalAuthentication.authenticateAsync({
     promptMessage: motivo,
     cancelLabel: 'Cancelar',

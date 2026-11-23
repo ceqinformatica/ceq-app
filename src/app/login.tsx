@@ -46,7 +46,7 @@ export default function Login() {
           <Hexagono tamano={124} relleno={fondos.blanco}>
             <Image source={logoCeq} style={{ width: 84, height: 84 }} accessibilityLabel="Logo del CEQ" />
           </Hexagono>
-          <Text style={est.marca}>CEQ</Text>
+          <Text style={est.marca}>Portal CEQ</Text>
           <Text style={est.nombre}>Centro de Estudiantes de Química</Text>
           <Text style={est.lema}>Tu vida académica en la FCQ, en un solo lugar</Text>
         </View>
@@ -127,7 +127,7 @@ export default function Login() {
 
 const est = crearEstilos(() => ({
   portada: { alignItems: 'center', paddingHorizontal: espacio.xl, paddingBottom: espacio.xxl + espacio.l, overflow: 'hidden' },
-  marca: { fontFamily: fuentes.bold, fontSize: 38, color: colores.blanco, letterSpacing: 4, marginTop: espacio.l },
+  marca: { fontFamily: fuentes.bold, fontSize: 34, color: colores.blanco, letterSpacing: 2, textAlign: 'center', marginTop: espacio.l },
   nombre: { fontFamily: fuentes.medium, fontSize: 14, color: colores.celeste, textTransform: 'uppercase', letterSpacing: 1.4, textAlign: 'center' },
   lema: { fontFamily: fuentes.regular, fontSize: 14.5, color: colores.cielo, marginTop: espacio.m, textAlign: 'center', opacity: 0.9 },
   panel: { flexGrow: 1, backgroundColor: fondos.fondo, borderTopLeftRadius: radio.xl + 6, borderTopRightRadius: radio.xl + 6, padding: espacio.xl, marginTop: -espacio.l },
