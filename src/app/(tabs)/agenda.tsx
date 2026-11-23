@@ -32,7 +32,7 @@ const TIPOS: { valor: TipoEvento; texto: string; icono: 'school' | 'document-tex
 export default function Agenda() {
   useTema();
   const { perfil, sesion } = useSesion();
-  const { datos, setDatos, cargando, error, refrescando, recargar } = usarDatos(() => cargarAgenda(perfil?.plan_id), [perfil?.plan_id]);
+  const { datos, setDatos, cargando, error, refrescando, recargar, sinConexion } = usarDatos(() => cargarAgenda(perfil?.plan_id), [perfil?.plan_id], { cache: `agenda:${perfil?.plan_id}` });
   const [vista, setVista] = useState<'horario' | 'fechas'>('horario');
   const [dia, setDia] = useState(diaSemanaHoy() === 7 ? 1 : diaSemanaHoy());
   const [modoHorario, setModoHorario] = useState<'semana' | 'dia'>('semana');
@@ -62,7 +62,7 @@ export default function Agenda() {
   return (
     <View style={{ flex: 1, backgroundColor: fondos.fondo }}>
       <Pantalla
-        cabecera={<CabeceraMarca titulo="Agenda" sub={vista === 'horario' ? 'Tu semana de clases' : 'Tus exámenes, entregas y recordatorios'} compacta />}
+        cabecera={<CabeceraMarca titulo="Agenda" sub={vista === 'horario' ? 'Tu semana de clases' : 'Tus exámenes, entregas y recordatorios'} compacta sinConexion={sinConexion && datos ? error : null} />}
         refrescando={refrescando}
         onRefrescar={recargar}
       >

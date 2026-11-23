@@ -28,11 +28,11 @@ export default function Ceq() {
   useTema();
   const { sesion, perfil } = useSesion();
   const uid = sesion?.user.id ?? '';
-  const { datos, cargando, error, refrescando, recargar, setDatos } = usarDatos(() => cargar(uid), [uid]);
+  const { datos, cargando, error, refrescando, recargar, setDatos, sinConexion } = usarDatos(() => cargar(uid), [uid], { cache: 'ceq' });
   const [sugerir, setSugerir] = useState(false);
 
   return (
-    <Pantalla cabecera={<CabeceraMarca titulo="Centro de Estudiantes" sub="de Química · FCQ" />} refrescando={refrescando} onRefrescar={recargar}>
+    <Pantalla cabecera={<CabeceraMarca titulo="Centro de Estudiantes" sub="de Química · FCQ" sinConexion={sinConexion && datos ? error : null} />} refrescando={refrescando} onRefrescar={recargar}>
       <View style={{ marginTop: -espacio.xxl }}>
         {cargando && !datos ? (
           <Tarjeta><Esqueleto alto={150} /></Tarjeta>

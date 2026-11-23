@@ -1,8 +1,11 @@
 import type { Session } from '@supabase/supabase-js';
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { AppState } from 'react-native';
+import { borrarCache, fijarUsuarioCache, guardarCache, leerCache } from '../datos/cache';
 import { db as demo, MODO_DEMO, UID_DEMO } from '../datos/demo';
+import { esErrorDeRed, textoError } from '../lib/errores';
 import { biometriaActiva, verificarIdentidad } from '../lib/biometria';
+import { almacenSeguro } from '../lib/almacenSeguro';
 import { supabase } from '../lib/supabase';
 import type { Perfil } from '../lib/tipos-db';
 
@@ -31,8 +34,10 @@ export function SesionProvider({ children }: { children: ReactNode }) {
   const [errorPerfil, setErrorPerfil] = useState<string | null>(null);
   const [bloqueado, setBloqueado] = useState(false);
   const enFondoDesde = useRef<number | null>(null);
+  const sinConexionAlEmpezar = useRef(false);
 
   const cargarPerfil = useCallback(async (uid: string | undefined) => {
+    fijarUsuarioCache(uid ?? null);
     if (!uid) {
       setPerfil(null);
       setErrorPerfil(null);
@@ -41,12 +46,19 @@ export function SesionProvider({ children }: { children: ReactNode }) {
     const { data, error } = await supabase.from('perfiles').select('*').eq('id', uid).maybeSingle();
     if (error) {
       // Sin conexión no hay que confundir "no se pudo leer" con "no tiene carrera":
-      // se conserva el perfil anterior y se avisa.
+      // se usa el perfil guardado en el celular (o el anterior) y se avisa.
+      const guardado = await leerCache<Perfil>('perfil');
+      if (guardado) {
+        setPerfil((p) => p ?? guardado.valor);
+        setErrorPerfil(null);
+        return;
+      }
       setErrorPerfil('No pudimos cargar tu perfil. Revisá tu conexión.');
       return;
     }
     setErrorPerfil(null);
     setPerfil(data ?? null);
+    if (data) guardarCache('perfil', data);
   }, []);
 
   useEffect(() => {
@@ -59,14 +71,27 @@ export function SesionProvider({ children }: { children: ReactNode }) {
     }
     let activo = true;
     (async () => {
-      const { data } = await supabase.auth.getSession().catch(() => ({ data: { session: null } }));
+      const r = await supabase.auth.getSession().catch((error: unknown) => ({ data: { session: null }, error }));
+      let inicial = r.data.session;
+      // Sin internet y con el token vencido, Supabase no puede renovarlo y
+      // devuelve "sin sesión", pero la sesión sigue guardada: se usa esa para
+      // poder ver lo guardado. Al volver la conexión se renueva sola.
+      if (!inicial && 'error' in r && r.error && esErrorDeRed(r.error)) inicial = await sesionGuardada();
+      sinConexionAlEmpezar.current = Boolean(inicial && !r.data.session);
       if (!activo) return;
-      setSesion(data.session);
+      setSesion(inicial);
+      const data = { session: inicial };
       if (data.session && (await biometriaActiva())) setBloqueado(true);
       await cargarPerfil(data.session?.user.id);
       setCargando(false);
     })();
-    const { data: sub } = supabase.auth.onAuthStateChange((_evento, nueva) => {
+    const { data: sub } = supabase.auth.onAuthStateChange((evento, nueva) => {
+      // El primer aviso llega sin sesión cuando no hay internet: no es un cierre de sesión.
+      if (evento === 'INITIAL_SESSION' && !nueva && sinConexionAlEmpezar.current) return;
+      if (evento === 'SIGNED_OUT') {
+        sinConexionAlEmpezar.current = false;
+        borrarCache();
+      }
       setSesion(nueva);
       if (!nueva) setBloqueado(false);
       cargarPerfil(nueva?.user.id);
@@ -107,8 +132,9 @@ export function SesionProvider({ children }: { children: ReactNode }) {
         return null;
       }
       const { data, error } = await supabase.from('perfiles').update(cambios).eq('id', sesion.user.id).select('*').single();
-      if (error) return error.message;
+      if (error) return textoError(error, 'No se pudo guardar.');
       setPerfil(data);
+      guardarCache('perfil', data);
       return null;
     },
     [sesion],
@@ -119,6 +145,19 @@ export function SesionProvider({ children }: { children: ReactNode }) {
       {children}
     </Ctx.Provider>
   );
+}
+
+/** La sesión tal como quedó guardada en el celular (para usar la app sin internet). */
+async function sesionGuardada(): Promise<Session | null> {
+  try {
+    const clave = (supabase.auth as unknown as { storageKey?: string }).storageKey;
+    if (!clave) return null;
+    const texto = await almacenSeguro.getItem(clave);
+    const s = texto ? (JSON.parse(texto) as Session) : null;
+    return s?.user?.id && s.refresh_token ? s : null;
+  } catch {
+    return null;
+  }
 }
 
 export function useSesion() {

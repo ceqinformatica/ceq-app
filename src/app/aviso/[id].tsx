@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { Image, Text, View } from 'react-native';
-import { BarraSuperior, Cargando, EstadoVacio, Pantalla, s } from '../../components/ui';
+import { AvisoSinConexion, BarraSuperior, Cargando, EstadoVacio, Pantalla, s } from '../../components/ui';
 import { cargarAviso, haceCuanto } from '../../datos/ceq';
 import { usarDatos } from '../../datos/usarDatos';
 import { colores, espacio, fondos, fuentes, radio, texto } from '../../tema';
@@ -11,10 +11,11 @@ const volver = () => (router.canGoBack() ? router.back() : router.replace('/avis
 export default function Aviso() {
   useTema();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { datos: aviso, cargando, error } = usarDatos(() => cargarAviso(id ?? ''), [id]);
+  const { datos: aviso, cargando, error, sinConexion } = usarDatos(() => cargarAviso(id ?? ''), [id], { cache: `aviso:${id}` });
   return (
     <Pantalla>
       <BarraSuperior titulo="Aviso" onVolver={volver} />
+      <AvisoSinConexion texto={sinConexion && aviso ? error : null} />
       {cargando && !aviso ? (
         <Cargando />
       ) : !aviso ? (

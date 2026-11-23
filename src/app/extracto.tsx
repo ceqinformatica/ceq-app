@@ -59,7 +59,7 @@ export default function ImportarExtracto() {
   useTema();
   const { perfil } = useSesion();
   const planId = perfil?.plan_id ?? '';
-  const { datos: malla, cargando, error: errorMalla } = usarDatos(() => cargarMalla(planId, perfil?.carrera_id), [planId]);
+  const { datos: malla, cargando, error: errorMalla } = usarDatos(() => cargarMalla(planId, perfil?.carrera_id), [planId], { cache: `malla:${planId}` });
   const [paso, setPaso] = useState<Paso>({ tipo: 'inicio' });
   const [renglones, setRenglones] = useState<Renglon[]>([]);
   const [error, setError] = useState<string | null>(null);

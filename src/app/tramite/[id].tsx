@@ -2,7 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useLocalSearchParams } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import { StyleSheet, Text, View } from 'react-native';
-import { BarraSuperior, Boton, Cargando, EstadoVacio, Fila, Insignia, Pantalla, s, Seccion, Tarjeta } from '../../components/ui';
+import { AvisoSinConexion, BarraSuperior, Boton, Cargando, EstadoVacio, Fila, Insignia, Pantalla, s, Seccion, Tarjeta } from '../../components/ui';
 import { cargarTramite } from '../../datos/tramites';
 import { usarDatos } from '../../datos/usarDatos';
 import { esHttps, TEXTO_MODALIDAD } from '../../lib/tramites';
@@ -14,7 +14,7 @@ const volver = () => (router.canGoBack() ? router.back() : router.replace('/tram
 export default function Tramite() {
   useTema();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { datos: t, cargando, error } = usarDatos(() => cargarTramite(id ?? ''), [id]);
+  const { datos: t, cargando, error, sinConexion } = usarDatos(() => cargarTramite(id ?? ''), [id], { cache: `tramite:${id}` });
 
   if (cargando && !t) {
     return (
@@ -44,6 +44,7 @@ export default function Tramite() {
   return (
     <Pantalla>
       <BarraSuperior titulo="Trámite" onVolver={volver} />
+      <AvisoSinConexion texto={sinConexion && t ? error : null} />
       <Text style={est.categoria}>{t.categoria}</Text>
       <Text style={[texto.titulo, { color: colores.marino, marginTop: espacio.xs, marginBottom: espacio.s }]} accessibilityRole="header">{t.nombre}</Text>
       {t.modalidad && (

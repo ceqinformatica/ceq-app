@@ -3,7 +3,7 @@ import { useMemo, useRef } from 'react';
 import { ScrollView, Text, View, type ScrollViewInstance } from 'react-native';
 import { nombreSemestre } from '../components/academico';
 import { AnilloProgreso, BarraProgreso } from '../components/graficos';
-import { BarraSuperior, Boton, Cargando, Dato, EstadoVacio, Pantalla, s, Seccion, Tarjeta } from '../components/ui';
+import { AvisoSinConexion, BarraSuperior, Boton, Cargando, Dato, EstadoVacio, Pantalla, s, Seccion, Tarjeta } from '../components/ui';
 import { useSesion } from '../context/SesionProvider';
 import { cargarMalla } from '../datos/academico';
 import { usarDatos } from '../datos/usarDatos';
@@ -30,7 +30,7 @@ export default function Estadisticas() {
   useTema();
   const { perfil } = useSesion();
   const planId = perfil?.plan_id ?? '';
-  const { datos: malla, cargando, error, refrescando, recargar } = usarDatos(() => cargarMalla(planId, perfil?.carrera_id), [planId, perfil?.carrera_id]);
+  const { datos: malla, cargando, error, refrescando, recargar, sinConexion } = usarDatos(() => cargarMalla(planId, perfil?.carrera_id), [planId, perfil?.carrera_id], { cache: `malla:${planId}` });
 
   const columnas = useRef<ScrollViewInstance>(null);
   const e = useMemo(
@@ -66,6 +66,7 @@ export default function Estadisticas() {
   return (
     <Pantalla refrescando={refrescando} onRefrescar={recargar}>
       <BarraSuperior titulo="Estadísticas" onVolver={volver} />
+      <AvisoSinConexion texto={sinConexion && malla ? error : null} />
 
       {/* Resumen: avance y promedio. En pantallas anchas (tablet) se ponen lado a lado. */}
       <View style={est.grilla}>
