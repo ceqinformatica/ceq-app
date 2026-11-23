@@ -1,7 +1,8 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { pct, semaforoVisible } from '../../components/academico';
+import { Columnas } from '../../components/disposicion';
 import { AnilloProgreso } from '../../components/graficos';
 import { CabeceraMarca, EstadoVacio, Esqueleto, Pantalla, s, Seccion, Tarjeta, type NombreIcono } from '../../components/ui';
 import { useSesion } from '../../context/SesionProvider';
@@ -11,7 +12,8 @@ import { cargarAvisos, haceCuanto } from '../../datos/ceq';
 import { usarDatos } from '../../datos/usarDatos';
 import { evaluarFirma } from '../../lib/firma';
 import { calcularProgreso, esSeminario } from '../../lib/progreso';
-import { colores, coloresSemaforo, espacio, fuentes, radio, sombras } from '../../tema';
+import { colores, coloresSemaforo, crearEstilos, espacio, fondos, fuentes, radio, sombras } from '../../tema';
+import { useTema } from '../../context/TemaProvider';
 
 const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 const DIAS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
@@ -40,6 +42,7 @@ async function cargar(planId: string | null | undefined, carreraId: string | nul
 }
 
 export default function Inicio() {
+  useTema();
   const { perfil } = useSesion();
   const { datos, cargando, refrescando, recargar } = usarDatos(() => cargar(perfil?.plan_id, perfil?.carrera_id), [perfil?.plan_id]);
   const primerNombre = perfil?.nombre?.split(' ')[0];
@@ -88,6 +91,8 @@ export default function Inicio() {
         )}
       </Tarjeta>
 
+      <Columnas
+        izquierda={<>
       {/* Accesos rápidos */}
       <View style={est.accesos}>
         <Acceso icono="git-network" texto="Malla" onPress={() => router.navigate('/carrera')} />
@@ -135,7 +140,7 @@ export default function Inicio() {
             const urgente = diasHasta(e.fecha) <= 3;
             return (
               <View key={e.id} style={[est.evento, i < datos.eventos.length - 1 && s.filaLinea]}>
-                <View style={[est.fechaCaja, urgente && { backgroundColor: colores.marino }]}>
+                <View style={[est.fechaCaja, urgente && { backgroundColor: fondos.marino }]}>
                   <Text style={[est.fechaDia, urgente && { color: colores.blanco }]}>{dia}</Text>
                   <Text style={[est.fechaMes, urgente && { color: colores.celeste }]}>{mes}</Text>
                 </View>
@@ -159,6 +164,8 @@ export default function Inicio() {
         )}
       </Tarjeta>
 
+        </>}
+        derecha={<>
       {/* Firma en curso */}
       {!!datos?.firmas.length && (
         <>
@@ -199,6 +206,8 @@ export default function Inicio() {
       ) : (
         <Tarjeta><EstadoVacio icono="megaphone-outline" titulo="No hay avisos nuevos" /></Tarjeta>
       )}
+        </>}
+      />
     </Pantalla>
   );
 }
@@ -212,26 +221,26 @@ function Acceso({ icono, texto, onPress }: { icono: NombreIcono; texto: string; 
   );
 }
 
-const est = StyleSheet.create({
-  avatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: colores.blanco, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: colores.celesteVivo },
-  avatarTexto: { fontFamily: fuentes.bold, fontSize: 17, color: colores.marino },
+const est = crearEstilos(() => ({
+  avatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: fondos.blanco, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: colores.celesteVivo },
+  avatarTexto: { fontFamily: fuentes.bold, fontSize: 17, color: colores.marinoFijo },
   fecha: { fontFamily: fuentes.medium, fontSize: 13.5, color: colores.celeste },
   saludo: { fontFamily: fuentes.bold, fontSize: 27, lineHeight: 33, color: colores.blanco, marginTop: 2, letterSpacing: -0.3 },
   etiquetaCaja: { fontFamily: fuentes.semibold, fontSize: 10.5, letterSpacing: 1, color: colores.azul },
   accesos: { flexDirection: 'row', gap: espacio.s, marginTop: espacio.xs, marginBottom: espacio.xs },
-  acceso: { flex: 1, alignItems: 'center', gap: 6, paddingVertical: espacio.m, backgroundColor: colores.superficieBlanca, borderRadius: radio.l, ...sombras.suave },
-  accesoIcono: { width: 44, height: 44, borderRadius: 14, backgroundColor: colores.tarjeta, alignItems: 'center', justifyContent: 'center' },
+  acceso: { flex: 1, alignItems: 'center', gap: 6, paddingVertical: espacio.m, backgroundColor: fondos.superficieBlanca, borderRadius: radio.l, ...sombras.suave },
+  accesoIcono: { width: 44, height: 44, borderRadius: 14, backgroundColor: fondos.tarjeta, alignItems: 'center', justifyContent: 'center' },
   accesoTexto: { fontFamily: fuentes.semibold, fontSize: 12, color: colores.marino },
-  clase: { width: 170, minHeight: 104, backgroundColor: colores.marino, borderRadius: radio.l, padding: espacio.m, gap: 4, ...sombras.suave },
+  clase: { width: 170, minHeight: 104, backgroundColor: fondos.marino, borderRadius: radio.l, padding: espacio.m, gap: 4, ...sombras.suave },
   claseHora: { fontFamily: fuentes.semibold, fontSize: 12, color: colores.celeste },
   claseNombre: { fontFamily: fuentes.semibold, fontSize: 15, lineHeight: 19, color: colores.blanco },
   claseAula: { fontFamily: fuentes.regular, fontSize: 12, color: colores.celeste },
   evento: { flexDirection: 'row', alignItems: 'center', gap: espacio.m, paddingVertical: espacio.s + 2 },
-  fechaCaja: { width: 44, height: 46, borderRadius: 10, backgroundColor: colores.tarjeta, alignItems: 'center', justifyContent: 'center' },
+  fechaCaja: { width: 44, height: 46, borderRadius: 10, backgroundColor: fondos.tarjeta, alignItems: 'center', justifyContent: 'center' },
   fechaDia: { fontFamily: fuentes.bold, fontSize: 17, lineHeight: 20, color: colores.marino },
   fechaMes: { fontFamily: fuentes.semibold, fontSize: 9.5, letterSpacing: 0.6, color: colores.textoSuave },
   cuenta: { fontFamily: fuentes.semibold, fontSize: 12, color: colores.textoSuave },
   firma: { flexDirection: 'row', alignItems: 'center', gap: espacio.m, paddingVertical: espacio.m },
   semaforo: { width: 10, height: 10, borderRadius: 5 },
-  avisoIcono: { width: 38, height: 38, borderRadius: 12, backgroundColor: colores.tarjeta, alignItems: 'center', justifyContent: 'center' },
-});
+  avisoIcono: { width: 38, height: 38, borderRadius: 12, backgroundColor: fondos.tarjeta, alignItems: 'center', justifyContent: 'center' },
+}));

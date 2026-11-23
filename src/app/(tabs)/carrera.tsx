@@ -1,8 +1,9 @@
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { FichaMateria, LeyendaMalla, nombreSemestre, nota, type EstadoVisual } from '../../components/academico';
+import { useDisposicion } from '../../components/disposicion';
 import { AnilloProgreso, BarraProgreso } from '../../components/graficos';
 import { Boton, CabeceraMarca, Cargando, Chip, Dato, EstadoVacio, Mensaje, Pantalla, s, Seccion, Tarjeta } from '../../components/ui';
 import { useSesion } from '../../context/SesionProvider';
@@ -10,7 +11,8 @@ import { cargarMalla, guardarEstadosEnBloque, type CambioEstado } from '../../da
 import { usarDatos } from '../../datos/usarDatos';
 import { promedios } from '../../lib/finales';
 import { calcularProgreso, promedioGeneral, requisitosFaltantes } from '../../lib/progreso';
-import { colores, espacio, fuentes, radio, sombras } from '../../tema';
+import { colores, crearEstilos, espacio, fondos, fuentes, radio, sombras } from '../../tema';
+import { useTema } from '../../context/TemaProvider';
 
 type Filtro = 'todas' | 'disponibles' | 'cursando' | 'aprobadas' | 'optativas';
 const FILTROS: { valor: Filtro; texto: string }[] = [
@@ -25,6 +27,10 @@ const FILTROS: { valor: Filtro; texto: string }[] = [
 const OPTATIVAS = 0;
 
 export default function Carrera() {
+  useTema();
+  // Materias por fila: 2 en el celular, 3 o 4 en tablet.
+  const { dosColumnas, barraLateral } = useDisposicion();
+  const porFila = barraLateral ? 4 : dosColumnas ? 3 : 2;
   const { perfil } = useSesion();
   const planId = perfil?.plan_id ?? '';
   const { datos: malla, cargando, error, refrescando, recargar, setDatos } = usarDatos(() => cargarMalla(planId, perfil?.carrera_id), [planId, perfil?.carrera_id]);
@@ -180,7 +186,7 @@ export default function Carrera() {
   const sub = [malla?.carrera, malla?.plan?.nombre].filter(Boolean).join(' · ') || 'Tu malla y tu avance';
 
   return (
-    <View style={{ flex: 1, backgroundColor: colores.fondo }}>
+    <View style={{ flex: 1, backgroundColor: fondos.fondo }}>
     <Pantalla cabecera={<CabeceraMarca titulo="Mi carrera" sub={sub} />} refrescando={refrescando} onRefrescar={recargar}>
       {cargando && !malla ? (
         <Tarjeta estilo={{ marginTop: -espacio.xxl }}><Cargando texto="Cargando tu malla…" /></Tarjeta>
@@ -226,14 +232,14 @@ export default function Carrera() {
                     <Text style={[s.filaTitulo, { color: colores.marino }]}>{o.grupo.nombre}</Text>
                     <Text style={s.filaDetalle}>{Math.min(o.aprobadas, o.exigidas)} de {o.exigidas}</Text>
                   </View>
-                  <BarraProgreso valor={(Math.min(o.aprobadas, o.exigidas) / Math.max(1, o.exigidas)) * 100} fondo={colores.blanco} />
+                  <BarraProgreso valor={(Math.min(o.aprobadas, o.exigidas) / Math.max(1, o.exigidas)) * 100} fondo={fondos.superficieBlanca} />
                 </View>
               ))}
             </Tarjeta>
           )}
 
           {aviso && (
-            <Tarjeta variante="celeste" estilo={aviso.error ? { backgroundColor: colores.rojoFondo } : undefined}>
+            <Tarjeta variante="celeste" estilo={aviso.error ? { backgroundColor: fondos.rojoFondo } : undefined}>
               <View style={{ flexDirection: 'row', gap: espacio.s, alignItems: 'flex-start' }}>
                 <Ionicons name={aviso.error ? 'alert-circle' : 'checkmark-circle'} size={20} color={aviso.error ? colores.rojo : colores.verde} />
                 <Text style={[s.cuerpo, { flex: 1, fontSize: 14 }]} accessibilityLiveRegion="polite">{aviso.texto}</Text>
@@ -313,7 +319,7 @@ export default function Carrera() {
             const obligSem = materias.filter((m) => !m.grupo_optativa_id && !aprobada(m.id)).map((m) => m.id);
             const semCompleto = obligSem.length > 0 && obligSem.every((id) => seleccion?.has(id));
             const filas: (typeof materias)[] = [];
-            for (let i = 0; i < materias.length; i += 2) filas.push(materias.slice(i, i + 2));
+            for (let i = 0; i < materias.length; i += porFila) filas.push(materias.slice(i, i + porFila));
             return (
               <View key={sem} style={{ marginBottom: espacio.s }}>
                 <Seccion
@@ -343,7 +349,7 @@ export default function Carrera() {
                         />
                       );
                     })}
-                    {fila.length === 1 && <View style={{ flex: 1 }} />}
+                    {Array.from({ length: porFila - fila.length }, (_, j) => <View key={`v${j}`} style={{ flex: 1 }} />)}
                   </View>
                 ))}
               </View>
@@ -375,12 +381,12 @@ export default function Carrera() {
   );
 }
 
-const est = StyleSheet.create({
-  icono: { width: 38, height: 38, borderRadius: 12, backgroundColor: colores.tarjeta, alignItems: 'center', justifyContent: 'center' },
+const est = crearEstilos(() => ({
+  icono: { width: 38, height: 38, borderRadius: 12, backgroundColor: fondos.tarjeta, alignItems: 'center', justifyContent: 'center' },
   barra: {
     position: 'absolute', left: espacio.l, right: espacio.l, bottom: espacio.l, flexDirection: 'row', alignItems: 'center', gap: espacio.m,
-    backgroundColor: colores.marino, borderRadius: radio.l, padding: espacio.s, paddingLeft: espacio.l, ...sombras.fuerte,
+    backgroundColor: fondos.marino, borderRadius: radio.l, padding: espacio.s, paddingLeft: espacio.l, ...sombras.fuerte,
   },
   cancelar: { paddingVertical: espacio.s },
   verEstadisticas: { flexDirection: 'row', alignItems: 'center', gap: espacio.s, marginTop: espacio.m, paddingTop: espacio.m, borderTopWidth: 1, borderTopColor: colores.lineaSuave },
-});
+}));

@@ -6,10 +6,12 @@ import { cargarTramites } from '../datos/tramites';
 import { usarDatos } from '../datos/usarDatos';
 import { agruparPorCategoria, filtrarTramites } from '../lib/tramites';
 import { espacio } from '../tema';
+import { useTema } from '../context/TemaProvider';
 
 const volver = () => (router.canGoBack() ? router.back() : router.replace('/ceq'));
 
 export default function Tramites() {
+  useTema();
   const { datos, cargando, error, refrescando, recargar } = usarDatos(cargarTramites, []);
   const [busqueda, setBusqueda] = useState('');
   const [categoria, setCategoria] = useState<string | null>(null);

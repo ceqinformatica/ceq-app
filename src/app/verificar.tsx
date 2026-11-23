@@ -8,7 +8,8 @@ import { useSesion } from '../context/SesionProvider';
 import { urlFoto, verificarCarnet } from '../datos/socios';
 import { fechaCorta, formatearCi, RESULTADO_VERIFICACION } from '../lib/carnet';
 import type { VerificacionCarnet } from '../lib/tipos-db';
-import { colores, espacio, fuentes, radio } from '../tema';
+import { colores, crearEstilos, espacio, fondos, fuentes, radio } from '../tema';
+import { useTema } from '../context/TemaProvider';
 
 const volver = () => (router.canGoBack() ? router.back() : router.replace('/'));
 
@@ -18,6 +19,7 @@ const volver = () => (router.canGoBack() ? router.back() : router.replace('/'));
  * validadoras y las de administración; la base deja registro.
  */
 export default function VerificarCarnet() {
+  useTema();
   const { perfil } = useSesion();
   if (perfil && perfil.rol !== 'admin' && perfil.rol !== 'validador') {
     return (
@@ -82,6 +84,10 @@ function Verificador() {
   }
 
   const r = resultado ? RESULTADO_VERIFICACION[resultado.resultado] : null;
+  // Colores del tema (los de RESULTADO_VERIFICACION son los del tema claro).
+  const tono = resultado?.resultado === 'vigente' ? { color: colores.verde, fondo: fondos.verdeFondo }
+    : resultado?.resultado === 'vencido' ? { color: colores.amarillo, fondo: fondos.amarilloFondo }
+    : { color: colores.rojo, fondo: fondos.rojoFondo };
 
   return (
     <Pantalla>
@@ -108,11 +114,11 @@ function Verificador() {
       {escaneando && <Boton texto="Cerrar la cámara" variante="fantasma" icono="close" onPress={() => setEscaneando(false)} />}
 
       {r && resultado && (
-        <Tarjeta estilo={{ backgroundColor: r.fondo, marginTop: espacio.l }}>
+        <Tarjeta estilo={{ backgroundColor: tono.fondo, marginTop: espacio.l }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: espacio.s }} accessibilityLiveRegion="polite">
-            <Ionicons name={r.icono} size={30} color={r.color} />
+            <Ionicons name={r.icono} size={30} color={tono.color} />
             <View style={{ flex: 1 }}>
-              <Text style={[est.resultado, { color: r.color }]}>{r.titulo}</Text>
+              <Text style={[est.resultado, { color: tono.color }]}>{r.titulo}</Text>
               <Text style={s.filaDetalle}>{r.detalle}</Text>
             </View>
           </View>
@@ -154,10 +160,10 @@ function Verificador() {
   );
 }
 
-const est = StyleSheet.create({
-  camara: { height: 320, borderRadius: radio.xl, overflow: 'hidden', backgroundColor: colores.marinoProfundo, alignItems: 'center', justifyContent: 'center', marginBottom: espacio.s },
+const est = crearEstilos(() => ({
+  camara: { height: 320, borderRadius: radio.xl, overflow: 'hidden', backgroundColor: fondos.marinoProfundo, alignItems: 'center', justifyContent: 'center', marginBottom: espacio.s },
   marco: { width: 210, height: 210, borderRadius: radio.l, borderWidth: 3, borderColor: colores.blanco },
   ayudaCamara: { position: 'absolute', bottom: espacio.m, color: colores.blanco, fontFamily: fuentes.semibold, fontSize: 14 },
   resultado: { fontFamily: fuentes.bold, fontSize: 20 },
-  foto: { width: 72, height: 90, borderRadius: radio.m, backgroundColor: colores.blanco },
-});
+  foto: { width: 72, height: 90, borderRadius: radio.m, backgroundColor: fondos.blanco },
+}));

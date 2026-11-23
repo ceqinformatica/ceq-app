@@ -1,6 +1,8 @@
 import { Stack } from 'expo-router';
-import { colores } from '../../tema';
+import { colores, fondos } from '../../tema';
+import { useTema } from '../../context/TemaProvider';
 
 export default function AdminLayout() {
-  return <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colores.fondo }, animation: 'slide_from_right' }} />;
+  useTema();
+  return <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: fondos.fondo }, animation: 'slide_from_right' }} />;
 }

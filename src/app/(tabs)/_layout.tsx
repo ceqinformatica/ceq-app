@@ -3,7 +3,9 @@ import { Tabs } from 'expo-router/tabs';
 import type { ComponentProps } from 'react';
 import { Platform, View, type ColorValue } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colores, fuentes, sombras } from '../../tema';
+import { useDisposicion } from '../../components/disposicion';
+import { colores, fondos, fuentes, sombras } from '../../tema';
+import { useTema } from '../../context/TemaProvider';
 
 type Icono = ComponentProps<typeof Ionicons>['name'];
 
@@ -11,29 +13,38 @@ type Icono = ComponentProps<typeof Ionicons>['name'];
 const icono = (base: string) =>
   function IconoPestana({ color, focused }: { color: ColorValue; focused: boolean }) {
     return (
-      <View style={{ width: 52, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center', backgroundColor: focused ? colores.cielo : 'transparent' }}>
+      <View style={{ width: 52, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center', backgroundColor: focused ? fondos.cielo : 'transparent' }}>
         <Ionicons name={(focused ? base : `${base}-outline`) as Icono} color={color as string} size={21} />
       </View>
     );
   };
 
 export default function TabsLayout() {
+  useTema();
   const insets = useSafeAreaInsets();
   const abajo = Math.max(insets.bottom, Platform.OS === 'web' ? 8 : 6);
+  // Tablet en horizontal: las pestañas van en una barra a la izquierda.
+  const { barraLateral } = useDisposicion();
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: colores.marino,
         tabBarInactiveTintColor: colores.textoSuave,
-        tabBarStyle: {
-          backgroundColor: colores.superficieBlanca,
-          borderTopWidth: 0,
-          height: 62 + abajo,
-          paddingTop: 6,
-          paddingBottom: abajo,
-          ...sombras.media,
-        },
+        tabBarPosition: barraLateral ? 'left' : 'bottom',
+        tabBarVariant: barraLateral ? 'material' : 'uikit',
+        tabBarLabelPosition: 'below-icon',
+        tabBarActiveBackgroundColor: 'transparent',
+        tabBarStyle: barraLateral
+          ? { backgroundColor: fondos.superficieBlanca, borderRightWidth: 0, width: 104, paddingTop: insets.top + 12, ...sombras.media }
+          : {
+              backgroundColor: fondos.superficieBlanca,
+              borderTopWidth: 0,
+              height: 62 + abajo,
+              paddingTop: 6,
+              paddingBottom: abajo,
+              ...sombras.media,
+            },
         tabBarLabelStyle: { fontFamily: fuentes.semibold, fontSize: 11, marginTop: 2 },
       }}
     >

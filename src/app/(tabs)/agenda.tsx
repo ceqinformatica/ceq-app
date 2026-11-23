@@ -15,7 +15,8 @@ import { horarioOficialDe, PERIODO_HORARIOS_FCQ } from '../../datos/horario-ofic
 import { usarDatos } from '../../datos/usarDatos';
 import { abreviar, acomodarDia, choquesCon, horaParaBase, minutos, OPCIONES_AVISO, rangoSemana, textoAviso, textoMinutos } from '../../lib/horario';
 import type { EstadoMateriaDb, EventoDb, HorarioDb, TipoEvento } from '../../lib/tipos-db';
-import { colores, espacio, fuentes, radio, sombras } from '../../tema';
+import { colores, crearEstilos, espacio, fondos, fuentes, radio, sombras } from '../../tema';
+import { useTema } from '../../context/TemaProvider';
 
 /** Paleta suave para distinguir materias en el horario (siempre dentro de la familia azul del CEQ + acentos). */
 const TONOS = ['#173874', '#3873CE', '#1D7A47', '#A86A00', '#7A3E9D', '#0F7C8C', '#5A6B85'];
@@ -28,6 +29,7 @@ const TIPOS: { valor: TipoEvento; texto: string; icono: 'school' | 'document-tex
 ];
 
 export default function Agenda() {
+  useTema();
   const { perfil, sesion } = useSesion();
   const { datos, setDatos, cargando, error, refrescando, recargar } = usarDatos(() => cargarAgenda(perfil?.plan_id), [perfil?.plan_id]);
   const [vista, setVista] = useState<'horario' | 'fechas'>('horario');
@@ -57,7 +59,7 @@ export default function Agenda() {
   const nombreClase = (h: HorarioDb) => h.titulo || (h.materia_id && datos?.nombres.get(h.materia_id)) || 'Clase';
 
   return (
-    <View style={{ flex: 1, backgroundColor: colores.fondo }}>
+    <View style={{ flex: 1, backgroundColor: fondos.fondo }}>
       <Pantalla
         cabecera={<CabeceraMarca titulo="Agenda" sub={vista === 'horario' ? 'Tu semana de clases' : 'Tus exámenes, entregas y recordatorios'} compacta />}
         refrescando={refrescando}
@@ -98,7 +100,7 @@ export default function Agenda() {
                     <Text style={[est.diaTexto, activo && { color: colores.blanco }]}>{d}</Text>
                     <View style={{ flexDirection: 'row', gap: 3, height: 6, marginTop: 4 }}>
                       {Array.from({ length: Math.min(cantidad, 4) }).map((_, k) => (
-                        <View key={k} style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: activo ? colores.celeste : colores.marino, opacity: activo ? 1 : 0.5 }} />
+                        <View key={k} style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: activo ? fondos.celeste : fondos.marino, opacity: activo ? 1 : 0.5 }} />
                       ))}
                     </View>
                     {hoy && <Text style={[est.hoy, activo && { color: colores.celeste }]}>HOY</Text>}
@@ -156,7 +158,7 @@ export default function Agenda() {
         onPress={() => (vista === 'horario' ? setNuevaClase(true) : setNuevoEvento(true))}
         accessibilityRole="button"
         accessibilityLabel={vista === 'horario' ? 'Agregar clase' : 'Agregar fecha'}
-        style={({ pressed }) => [s.flotante, pressed && { backgroundColor: colores.marinoProfundo }]}
+        style={({ pressed }) => [s.flotante, pressed && { backgroundColor: fondos.marinoProfundo }]}
       >
         <Ionicons name="add" size={22} color={colores.blanco} />
         <Text style={s.flotanteTexto}>{vista === 'horario' ? 'Clase' : 'Fecha'}</Text>
@@ -228,7 +230,7 @@ function ListaEventos({ datos, onElegir }: { datos: DatosAgenda; onElegir: (e: E
         const urgente = dias <= 3;
         return (
           <Pressable key={e.id} onPress={() => onElegir(e)} accessibilityRole="button" accessibilityLabel={`${e.titulo}, ${cuentaRegresiva(e.fecha)}`} style={({ pressed }) => [est.evento, pressed && { opacity: 0.85 }]}>
-            <View style={[est.fecha, urgente && { backgroundColor: colores.marino }]}>
+            <View style={[est.fecha, urgente && { backgroundColor: fondos.marino }]}>
               <Text style={[est.fechaDia, urgente && { color: colores.blanco }]}>{dia}</Text>
               <Text style={[est.fechaMes, urgente && { color: colores.celeste }]}>{mes}</Text>
             </View>
@@ -239,7 +241,7 @@ function ListaEventos({ datos, onElegir }: { datos: DatosAgenda; onElegir: (e: E
               </Text>
               <View style={{ flexDirection: 'row', gap: 6, marginTop: 2 }}>
                 <Insignia texto={tipo.texto} icono={tipo.icono} />
-                <Insignia texto={cuentaRegresiva(e.fecha)} color={urgente ? colores.amarillo : colores.textoSuave} fondo={urgente ? colores.amarilloFondo : colores.grisFondo} />
+                <Insignia texto={cuentaRegresiva(e.fecha)} color={urgente ? colores.amarillo : colores.textoSuave} fondo={urgente ? fondos.amarilloFondo : fondos.grisFondo} />
               </View>
             </View>
           </Pressable>
@@ -525,7 +527,7 @@ function GrillaSemana({ clases, nombre, onElegir, onDia }: {
         <View style={{ width: 34 }} />
         {dias.map((d) => (
           <Pressable key={d} onPress={() => onDia(d)} accessibilityRole="button" accessibilityLabel={`Ver ${DIAS[d - 1]}`} style={est.grillaCabecera}>
-            <Text style={[est.grillaDia, d === hoy && { color: colores.blanco, backgroundColor: colores.marino }]}>{DIAS_CORTOS[d - 1]}</Text>
+            <Text style={[est.grillaDia, d === hoy && { color: colores.blanco, backgroundColor: fondos.marino }]}>{DIAS_CORTOS[d - 1]}</Text>
           </Pressable>
         ))}
       </View>
@@ -536,7 +538,7 @@ function GrillaSemana({ clases, nombre, onElegir, onDia }: {
           ))}
         </View>
         {dias.map((d) => (
-          <View key={d} style={[est.grillaColumna, d === hoy && { backgroundColor: colores.tarjeta }]}>
+          <View key={d} style={[est.grillaColumna, d === hoy && { backgroundColor: fondos.tarjeta }]}>
             {horas.map((h, i) => <View key={h} style={[est.grillaLinea, { top: i * ALTO_HORA }]} />)}
             {acomodarDia(clases.filter((c) => c.dia_semana === d)).map(({ clase: c, columna, columnas }) => {
               const top = ((minutos(c.hora_inicio) - desde) / 60) * ALTO_HORA;
@@ -651,28 +653,28 @@ function FormEvento({ visible, uid, datos, onCursando, onCerrar, onListo }: Prop
   );
 }
 
-const est = StyleSheet.create({
-  dia: { flex: 1, minHeight: 58, paddingVertical: espacio.s, borderRadius: radio.m, alignItems: 'center', backgroundColor: colores.superficieBlanca, ...sombras.suave },
-  diaActivo: { backgroundColor: colores.marino },
+const est = crearEstilos(() => ({
+  dia: { flex: 1, minHeight: 58, paddingVertical: espacio.s, borderRadius: radio.m, alignItems: 'center', backgroundColor: fondos.superficieBlanca, ...sombras.suave },
+  diaActivo: { backgroundColor: fondos.marino },
   diaTexto: { fontFamily: fuentes.semibold, fontSize: 14, color: colores.marino },
   hoy: { fontFamily: fuentes.bold, fontSize: 9, letterSpacing: 0.8, color: colores.azul, marginTop: 2 },
   clase: { flexDirection: 'row', gap: espacio.m, marginBottom: espacio.s },
   claseHora: { width: 48, paddingTop: espacio.m, alignItems: 'flex-end' },
   horaInicio: { fontFamily: fuentes.semibold, fontSize: 14, color: colores.marino },
   horaFin: { fontFamily: fuentes.regular, fontSize: 12, color: colores.textoSuave, marginTop: 2 },
-  claseCuerpo: { flex: 1, backgroundColor: colores.superficieBlanca, borderRadius: radio.m, padding: espacio.m, borderLeftWidth: 4, ...sombras.suave },
+  claseCuerpo: { flex: 1, backgroundColor: fondos.superficieBlanca, borderRadius: radio.m, padding: espacio.m, borderLeftWidth: 4, ...sombras.suave },
   claseNombre: { fontFamily: fuentes.semibold, fontSize: 15, color: colores.texto },
-  evento: { flexDirection: 'row', gap: espacio.m, alignItems: 'center', backgroundColor: colores.superficieBlanca, borderRadius: radio.l, padding: espacio.m, marginBottom: espacio.s, ...sombras.suave },
-  fecha: { width: 54, height: 58, borderRadius: radio.m, backgroundColor: colores.tarjeta, alignItems: 'center', justifyContent: 'center' },
+  evento: { flexDirection: 'row', gap: espacio.m, alignItems: 'center', backgroundColor: fondos.superficieBlanca, borderRadius: radio.l, padding: espacio.m, marginBottom: espacio.s, ...sombras.suave },
+  fecha: { width: 54, height: 58, borderRadius: radio.m, backgroundColor: fondos.tarjeta, alignItems: 'center', justifyContent: 'center' },
   fechaDia: { fontFamily: fuentes.bold, fontSize: 21, color: colores.marino, lineHeight: 24 },
-  grilla: { backgroundColor: colores.superficieBlanca, borderRadius: radio.l, paddingVertical: espacio.s, paddingRight: espacio.s, ...sombras.suave },
+  grilla: { backgroundColor: fondos.superficieBlanca, borderRadius: radio.l, paddingVertical: espacio.s, paddingRight: espacio.s, ...sombras.suave },
   grillaCabecera: { flex: 1, alignItems: 'center', paddingBottom: espacio.s },
   grillaDia: { fontFamily: fuentes.semibold, fontSize: 12, color: colores.marino, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8, overflow: 'hidden' },
   grillaHora: { position: 'absolute', right: 6, fontFamily: fuentes.regular, fontSize: 10, color: colores.textoSuave },
   grillaColumna: { flex: 1, position: 'relative', borderLeftWidth: StyleSheet.hairlineWidth, borderLeftColor: colores.borde },
-  grillaLinea: { position: 'absolute', left: 0, right: 0, height: StyleSheet.hairlineWidth, backgroundColor: colores.borde },
+  grillaLinea: { position: 'absolute', left: 0, right: 0, height: StyleSheet.hairlineWidth, backgroundColor: fondos.borde },
   bloque: { position: 'absolute', borderRadius: 6, paddingHorizontal: 3, paddingVertical: 3, borderWidth: 1, borderColor: colores.superficieBlanca, overflow: 'hidden' },
   bloqueNombre: { fontFamily: fuentes.semibold, fontSize: 10, lineHeight: 13, color: colores.blanco },
   bloqueAula: { fontFamily: fuentes.regular, fontSize: 9, lineHeight: 12, color: colores.blanco, opacity: 0.9 },
   fechaMes: { fontFamily: fuentes.semibold, fontSize: 11, color: colores.textoSuave, letterSpacing: 0.8 },
-});
+}));

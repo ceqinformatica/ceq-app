@@ -16,7 +16,8 @@ import { usarDatos } from '../../datos/usarDatos';
 import { evaluarFirma, porcentajeEvaluacion, promedioFirma, type ResultadoAsistencia, type ResultadoComponente } from '../../lib/firma';
 import { esRecuperatorio, esRegularizacion, puedeRecuperar, RECUPERACION_DESDE, RECUPERACION_MINIMO } from '../../lib/reglamento-fcq';
 import type { AsistenciaDb, ComponenteDb, EvaluacionDb } from '../../lib/tipos-db';
-import { colores, coloresSemaforo, espacio, fuentes, radio, texto } from '../../tema';
+import { colores, coloresSemaforo, espacio, fondos, fuentes, radio, texto } from '../../tema';
+import { useTema } from '../../context/TemaProvider';
 
 const ICONO_TIPO: Record<TipoEvaluacion, 'document-text-outline' | 'create-outline' | 'flask-outline' | 'refresh-outline' | 'swap-horizontal-outline'> = {
   parcial: 'document-text-outline',
@@ -56,6 +57,7 @@ async function cargar(planId: string, materiaId: string) {
 }
 
 export default function CalculadoraFirma() {
+  useTema();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { perfil } = useSesion();
   const { datos, cargando, error, recargar, setDatos } = usarDatos(() => cargar(perfil?.plan_id ?? '', id ?? ''), [perfil?.plan_id, id]);
@@ -128,11 +130,11 @@ export default function CalculadoraFirma() {
     <Pantalla>
       <BarraSuperior titulo="Calculadora de firma" onVolver={volver} />
 
-      <View style={{ backgroundColor: colores.marino, borderRadius: radio.l + 4, padding: espacio.l, overflow: 'hidden', marginBottom: espacio.m }}>
+      <View style={{ backgroundColor: fondos.marino, borderRadius: radio.l + 4, padding: espacio.l, overflow: 'hidden', marginBottom: espacio.m }}>
         <TramaHex ancho={420} alto={240} opacidad={0.07} />
         <Text style={{ ...texto.etiqueta, color: colores.celeste }}>{materia.nombre}</Text>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: espacio.s, marginTop: espacio.s }}>
-          <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: sem === 'verde' ? '#5FD38D' : sem === 'amarillo' ? '#FFC94D' : sem === 'rojo' ? '#FF7A6E' : colores.celeste }} />
+          <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: sem === 'verde' ? '#5FD38D' : sem === 'amarillo' ? '#FFC94D' : sem === 'rojo' ? '#FF7A6E' : fondos.celeste }} />
           <Text style={{ ...texto.display, color: colores.blanco, fontSize: 28 }}>{tituloEstado}</Text>
         </View>
         <Text style={{ ...texto.cuerpo, color: colores.cielo, marginTop: espacio.xs }}>{resumenFirma(resultado)}</Text>
@@ -146,11 +148,11 @@ export default function CalculadoraFirma() {
 
       <Tarjeta>
         <BloqueComponente titulo={combinado ? 'Nota final (teoría + laboratorio)' : 'Teoría'} r={resultado.teoria} />
-        {resultado.laboratorio && <View style={{ height: 1, backgroundColor: colores.lineaSuave, marginVertical: espacio.m }} />}
+        {resultado.laboratorio && <View style={{ height: 1, backgroundColor: fondos.lineaSuave, marginVertical: espacio.m }} />}
         {resultado.laboratorio && <BloqueComponente titulo="Laboratorio" r={resultado.laboratorio} />}
         {!combinado && (
           <>
-            <View style={{ height: 1, backgroundColor: colores.lineaSuave, marginVertical: espacio.m }} />
+            <View style={{ height: 1, backgroundColor: fondos.lineaSuave, marginVertical: espacio.m }} />
             <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' }}>
               <Text style={s.filaTitulo}>{resultado.laboratorio ? 'Promedio de firma (teoría + lab) ÷ 2' : 'Promedio de firma'}</Text>
               <Text style={{ fontFamily: fuentes.bold, fontSize: 22, color: promedio == null ? colores.textoSuave : colores.marino }}>{pct(promedio)}</Text>
@@ -208,11 +210,11 @@ export default function CalculadoraFirma() {
                 detalle={esRegularizacion(e) ? (regularizado ? 'Ocupó el lugar del parcial que faltaste' : MOTIVO_REGULARIZACION[datos.regularizacion.motivo ?? 'sin-nota']) : reemplazado ? 'Lo cubre tu regularización' : esRecuperatorio(e) ? (datos.recuperado ? 'Reemplazó tu parcial más bajo' : 'No cuenta: hace falta 60 % y un promedio teórico entre 30 y 50 %') : e.componente === 'laboratorio' ? `Pesa ${pct(Math.round(1000 / cantLab) / 10)} del laboratorio` : `Pesa ${pct(Math.round(1000 / cantTeoria) / 10)} del teórico`}
                 derecha={
                   reemplazado ? (
-                    <Insignia texto="Regularizado" color={colores.marino} fondo={colores.grisFondo} />
+                    <Insignia texto="Regularizado" color={colores.marino} fondo={fondos.grisFondo} />
                   ) : e.rendida && p != null ? (
                     <Text style={{ fontFamily: fuentes.bold, fontSize: 16, color: ok ? colores.verde : colores.amarillo }}>{pct(p)}</Text>
                   ) : (
-                    <Insignia texto="Pendiente" color={colores.gris} fondo={colores.grisFondo} />
+                    <Insignia texto="Pendiente" color={colores.gris} fondo={fondos.grisFondo} />
                   )
                 }
                 onPress={() => setEditando(e)}
@@ -271,7 +273,7 @@ function BloqueComponente({ titulo, r }: { titulo: string; r: ResultadoComponent
         <Text style={s.filaTitulo}>{titulo}</Text>
         <Text style={{ fontFamily: fuentes.bold, fontSize: 22, color: r.actual == null ? colores.textoSuave : color }}>{pct(r.actual)}</Text>
       </View>
-      <BarraProgreso valor={r.actual} marca={r.minimo} color={r.actual == null ? colores.linea : color} fondo={colores.lineaSuave} alto={10} />
+      <BarraProgreso valor={r.actual} marca={r.minimo} color={r.actual == null ? colores.linea : color} fondo={fondos.lineaSuave} alto={10} />
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 }}>
         <Text style={s.filaDetalle}>Mínimo {pct(r.minimo)}</Text>
         <Text style={[s.filaDetalle, { fontFamily: fuentes.semibold, color }]}>

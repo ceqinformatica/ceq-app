@@ -12,7 +12,8 @@ import { cargarMiSolicitud, renovarCodigo, subirFoto, urlFoto } from '../datos/s
 import { usarDatos } from '../datos/usarDatos';
 import { AVISO_CARNET_PAGO, estadoCarnet } from '../lib/carnet';
 import { supabase } from '../lib/supabase';
-import { colores, espacio } from '../tema';
+import { colores, espacio, fondos } from '../tema';
+import { useTema } from '../context/TemaProvider';
 
 const volver = () => (router.canGoBack() ? router.back() : router.replace('/ceq'));
 
@@ -28,6 +29,7 @@ function useHora() {
 
 /** Carnet a pantalla completa con el QR, para mostrar en la puerta o en comercios. */
 export default function PantallaCarnet() {
+  useTema();
   const { sesion, perfil } = useSesion();
   const { datos: socio, cargando, error, recargar, setDatos } = usarDatos(() => cargarSocio(sesion?.user.id ?? ''), [sesion?.user.id]);
   const [carrera, setCarrera] = useState<string | null>(null);
@@ -99,7 +101,7 @@ export default function PantallaCarnet() {
         <>
           <Carnet socio={socio} carrera={carrera} foto={foto} conQr />
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: espacio.m }} accessibilityLabel={`Hora actual ${hora}`}>
-            <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: estado === 'vigente' ? colores.verde : colores.rojo }} />
+            <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: estado === 'vigente' ? fondos.verde : fondos.rojo }} />
             <Text style={[s.filaDetalle, { fontVariant: ['tabular-nums'] }]}>En vivo · {hora}</Text>
           </View>
 

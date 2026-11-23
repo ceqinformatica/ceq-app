@@ -8,6 +8,7 @@ import { usarDatos } from '../../datos/usarDatos';
 import { LIMITE_CUERPO, LIMITE_TITULO, TITULO_RECOMENDADO, validarMensaje } from '../../lib/programacion';
 import type { Carrera, NotificacionDb } from '../../lib/tipos-db';
 import { espacio } from '../../tema';
+import { useTema } from '../../context/TemaProvider';
 
 const volver = () => (router.canGoBack() ? router.back() : router.replace('/admin'));
 
@@ -23,6 +24,7 @@ const DESTINOS = [
 const TIPOS: Record<string, string> = { aviso: 'Aviso', mensaje: 'Mensaje', recordatorio: 'Fecha oficial' };
 
 export default function NotificacionesAdmin() {
+  useTema();
   const { nueva } = useLocalSearchParams<{ nueva?: string }>();
   const { datos, cargando, error, refrescando, recargar } = usarDatos(cargarNotificaciones, []);
   const [abierta, setAbierta] = useState(nueva === '1');

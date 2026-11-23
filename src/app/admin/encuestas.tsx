@@ -7,11 +7,13 @@ import { BarraSuperior, Boton, BotonFlotante, BotonIcono, Campo, Cargando, Estad
 import { borrarEncuesta, cambiarEncuesta, cargarEncuestasAdmin, crearEncuesta, programarNotificacion, type EncuestaAdmin } from '../../datos/admin';
 import { usarDatos } from '../../datos/usarDatos';
 import { describirCuando, leerFechaHora } from '../../lib/programacion';
-import { colores, espacio, fuentes } from '../../tema';
+import { colores, espacio, fondos, fuentes } from '../../tema';
+import { useTema } from '../../context/TemaProvider';
 
 const volver = () => (router.canGoBack() ? router.back() : router.replace('/admin'));
 
 export default function EncuestasAdmin() {
+  useTema();
   const { datos, cargando, error, refrescando, recargar } = usarDatos(cargarEncuestasAdmin, []);
   const [nueva, setNueva] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
@@ -67,9 +69,9 @@ function Encuesta({ e, onCambio }: { e: EncuestaAdmin; onCambio: () => void }) {
         <View style={{ flex: 1 }}>
           <View style={{ flexDirection: 'row', gap: espacio.s, marginBottom: espacio.s, flexWrap: 'wrap' }}>
             {e.abierta && !vencida ? (
-              <Insignia texto={e.cierra_en ? `Abierta hasta ${describirCuando(e.cierra_en)}` : 'Abierta'} color={colores.verde} fondo={colores.verdeFondo} />
+              <Insignia texto={e.cierra_en ? `Abierta hasta ${describirCuando(e.cierra_en)}` : 'Abierta'} color={colores.verde} fondo={fondos.verdeFondo} />
             ) : (
-              <Insignia texto="Cerrada" color={colores.gris} fondo={colores.grisFondo} />
+              <Insignia texto="Cerrada" color={colores.gris} fondo={fondos.grisFondo} />
             )}
             <Insignia texto={`${e.total} ${e.total === 1 ? 'voto' : 'votos'}`} />
           </View>
@@ -85,7 +87,7 @@ function Encuesta({ e, onCambio }: { e: EncuestaAdmin; onCambio: () => void }) {
               <Text style={[s.cuerpo, { flex: 1 }]}>{o.texto}</Text>
               <Text style={[s.cuerpo, { fontFamily: fuentes.semibold, color: colores.marino }]}>{o.votos} · {porc} %</Text>
             </View>
-            <BarraProgreso valor={porc} fondo={colores.lineaSuave} />
+            <BarraProgreso valor={porc} fondo={fondos.lineaSuave} />
           </View>
         );
       })}
@@ -160,7 +162,7 @@ function Formulario({ visible, onCerrar, onListo }: { visible: boolean; onCerrar
         <Fila
           icono="notifications-outline"
           titulo="Avisar con una notificación"
-          derecha={<Switch value={notificar} onValueChange={setNotificar} accessibilityLabel="Avisar con una notificación" trackColor={{ true: colores.marino, false: colores.linea }} thumbColor={colores.blanco} />}
+          derecha={<Switch value={notificar} onValueChange={setNotificar} accessibilityLabel="Avisar con una notificación" trackColor={{ true: fondos.marino, false: colores.linea }} thumbColor={colores.blanco} />}
           ultima
         />
       </Tarjeta>

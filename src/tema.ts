@@ -1,11 +1,21 @@
-import { Platform, type ViewStyle } from 'react-native';
+import { Platform, StyleSheet, type ImageStyle, type TextStyle, type ViewStyle } from 'react-native';
 
 /**
  * Identidad visual del CEQ, tomada de la página web (ceq-una.com) y del
  * sistema de reservas: tipografía Inter, azul marino #173874, celestes y el
  * hexágono del logo. Cambiar algo acá lo cambia en toda la app.
+ *
+ * Hay dos temas (claro y oscuro). Cada color tiene dos usos:
+ * - `colores.x` para texto, íconos y bordes (la "tinta").
+ * - `fondos.x` para fondos y rellenos.
+ * En el tema claro son idénticos; en el oscuro, por ejemplo, `colores.marino`
+ * es un celeste legible sobre fondo oscuro y `fondos.marino` sigue siendo un
+ * azul marino para botones y cabeceras con texto blanco.
+ *
+ * Los estilos se crean con `crearEstilos(() => ({ ... }))` (no con
+ * StyleSheet.create) para que se recalculen al cambiar de tema.
  */
-export const colores = {
+const claro = {
   // Marca
   marino: '#173874',        // color principal de la web: títulos, botones, íconos
   marinoOscuro: '#1F3B68',  // texto secundario fuerte
@@ -43,7 +53,117 @@ export const colores = {
   primarioSuave: '#EFF7FE',
   superficie: '#EFF7FE',
   borde: '#C9DBF3',
+
+  // Marino de marca que no cambia con el tema (texto sobre fondos blancos fijos: logo, QR, botón claro)
+  marinoFijo: '#173874',
 };
+
+type Paleta = { [K in keyof typeof claro]: string };
+
+/** Tinta del tema oscuro: textos claros, celestes para la marca. */
+const tintaOscura: Paleta = {
+  marino: '#A9C7F2',
+  marinoOscuro: '#C2D5EF',
+  marinoProfundo: '#D3E2F7',
+  azul: '#7DAEF0',
+  azulHover: '#94BCF3',
+  cielo: '#D6E6FA',
+  celeste: '#CBE2FA',
+  celesteVivo: '#7FB2F0',
+  tarjeta: '#18243A',
+
+  fondo: '#0B1220',
+  fondoSuave: '#0E1627',
+  superficieBlanca: '#131D30',
+  texto: '#E4E9F1',
+  textoSuave: '#A2B0C5',
+  textoTenue: '#7A889E',
+  linea: '#2A3A55',
+  lineaSuave: '#1E2B42',
+  blanco: '#FFFFFF',
+
+  verde: '#63CB8F',
+  verdeFondo: '#12301F',
+  amarillo: '#EDBA55',
+  amarilloFondo: '#33270C',
+  rojo: '#F08A80',
+  rojoFondo: '#3B1B19',
+  gris: '#9AA5B6',
+  grisFondo: '#1C2535',
+
+  primario: '#A9C7F2',
+  primarioSuave: '#18243A',
+  superficie: '#18243A',
+  borde: '#2A3A55',
+  marinoFijo: '#173874',
+};
+
+/** Fondos del tema oscuro: el marino sigue siendo marino (botones, cabeceras). */
+const fondoOscuro: Paleta = {
+  ...tintaOscura,
+  marino: '#21468A',
+  marinoOscuro: '#1B3A70',
+  marinoProfundo: '#132D5E',
+  azul: '#2F64B8',
+  azulHover: '#2A579F',
+  cielo: '#1D3357',
+  celeste: '#22406D',
+  celesteVivo: '#3B6FB3',
+  texto: '#E4E9F1',
+  verde: '#2E8A57',
+  amarillo: '#B07A12',
+  rojo: '#B4453B',
+  gris: '#4A5568',
+  primario: '#21468A',
+};
+
+export type Esquema = 'claro' | 'oscuro';
+let esquema: Esquema = 'claro';
+
+/** Tema con el que se están dibujando las pantallas. Lo fija TemaProvider. */
+export function esquemaActual(): Esquema {
+  return esquema;
+}
+
+/** Solo para TemaProvider (y pruebas): cambia el tema activo. */
+export function fijarEsquema(e: Esquema) {
+  esquema = e;
+}
+
+/** Objeto con un getter por color que devuelve el valor del tema activo. */
+function vista(elegir: () => Paleta): Readonly<Paleta> {
+  const o = {} as Paleta;
+  for (const k of Object.keys(claro) as (keyof Paleta)[]) {
+    Object.defineProperty(o, k, { enumerable: true, get: () => elegir()[k] });
+  }
+  return o;
+}
+
+/** Colores para texto, íconos y bordes. */
+export const colores = vista(() => (esquema === 'oscuro' ? tintaOscura : claro));
+/** Colores para fondos y rellenos. */
+export const fondos = vista(() => (esquema === 'oscuro' ? fondoOscuro : claro));
+
+/**
+ * Como StyleSheet.create, pero los estilos se arman de nuevo (una vez por
+ * tema) cuando cambia el tema. Uso: `const s = crearEstilos(() => ({ ... }))`.
+ */
+type Estilos = { [nombre: string]: ViewStyle | TextStyle | ImageStyle };
+
+export function crearEstilos<T extends Estilos>(fabrica: () => T & Estilos): Readonly<T> {
+  const cache: Partial<Record<Esquema, T>> = {};
+  const actual = (): T => (cache[esquema] ??= StyleSheet.create(fabrica()));
+  return new Proxy({} as T, {
+    get: (_, k) => actual()[k as keyof T],
+    has: (_, k) => k in actual(),
+    ownKeys: () => Reflect.ownKeys(actual()),
+    getOwnPropertyDescriptor: (_, k) => {
+      const d = Reflect.getOwnPropertyDescriptor(actual(), k);
+      return d ? { ...d, configurable: true } : undefined;
+    },
+  });
+}
+
 
 /** Familias de Inter cargadas en _layout.tsx (una por peso). */
 export const fuentes = {
@@ -71,10 +191,10 @@ export const radio = { s: 8, m: 12, l: 16, xl: 22, pill: 9999 };
 /** Sombras suaves teñidas de marino (iOS/web) y elevación (Android). */
 function sombra(altura: number, opacidad: number, desenfoque: number, elevacion: number): ViewStyle {
   return Platform.select<ViewStyle>({
-    android: { elevation: elevacion, shadowColor: colores.marinoProfundo },
+    android: { elevation: elevacion, shadowColor: '#0E2552' },
     web: { boxShadow: `0px ${altura}px ${desenfoque}px rgba(14, 37, 82, ${opacidad})` } as ViewStyle,
     default: {
-      shadowColor: colores.marinoProfundo,
+      shadowColor: '#0E2552',
       shadowOffset: { width: 0, height: altura },
       shadowOpacity: opacidad,
       shadowRadius: desenfoque / 2,
@@ -88,19 +208,21 @@ export const sombras = {
   fuerte: sombra(12, 0.18, 32, 10),
 };
 
-/** Colores por estado de materia en la malla. */
+const oscuro = () => esquema === 'oscuro';
+
+/** Colores por estado de materia en la malla (se leen con el tema activo). */
 export const coloresEstado = {
-  aprobada: { fondo: colores.verdeFondo, borde: '#9FD3B4', texto: colores.verde, nombre: 'Aprobada', icono: 'checkmark-circle' },
-  firmada: { fondo: colores.cielo, borde: '#8DB6EA', texto: colores.azulHover, nombre: 'Firmada', icono: 'create' },
-  cursando: { fondo: colores.amarilloFondo, borde: '#F0CF86', texto: colores.amarillo, nombre: 'Cursando', icono: 'time' },
-  pendiente: { fondo: colores.superficieBlanca, borde: colores.linea, texto: colores.marino, nombre: 'Por cursar', icono: 'ellipse-outline' },
-  bloqueada: { fondo: colores.grisFondo, borde: '#D7DDE6', texto: colores.gris, nombre: 'Bloqueada', icono: 'lock-closed' },
+  aprobada: { get fondo() { return fondos.verdeFondo; }, get borde() { return oscuro() ? '#2F6B4A' : '#9FD3B4'; }, get texto() { return colores.verde; }, nombre: 'Aprobada', icono: 'checkmark-circle' },
+  firmada: { get fondo() { return fondos.cielo; }, get borde() { return oscuro() ? '#3B5F93' : '#8DB6EA'; }, get texto() { return oscuro() ? colores.azulHover : '#2D62B5'; }, nombre: 'Firmada', icono: 'create' },
+  cursando: { get fondo() { return fondos.amarilloFondo; }, get borde() { return oscuro() ? '#6B5418' : '#F0CF86'; }, get texto() { return colores.amarillo; }, nombre: 'Cursando', icono: 'time' },
+  pendiente: { get fondo() { return fondos.superficieBlanca; }, get borde() { return colores.linea; }, get texto() { return colores.marino; }, nombre: 'Por cursar', icono: 'ellipse-outline' },
+  bloqueada: { get fondo() { return fondos.grisFondo; }, get borde() { return oscuro() ? '#2E3848' : '#D7DDE6'; }, get texto() { return colores.gris; }, nombre: 'Bloqueada', icono: 'lock-closed' },
 } as const;
 
-/** Colores del semáforo de firma. */
+/** Colores del semáforo de firma (se leen con el tema activo). */
 export const coloresSemaforo = {
-  verde: { fondo: colores.verdeFondo, texto: colores.verde, nombre: 'Vas bien' },
-  amarillo: { fondo: colores.amarilloFondo, texto: colores.amarillo, nombre: 'En riesgo' },
-  rojo: { fondo: colores.rojoFondo, texto: colores.rojo, nombre: 'No alcanza' },
-  sin_datos: { fondo: colores.grisFondo, texto: colores.gris, nombre: 'Sin datos' },
+  verde: { get fondo() { return fondos.verdeFondo; }, get texto() { return colores.verde; }, nombre: 'Vas bien' },
+  amarillo: { get fondo() { return fondos.amarilloFondo; }, get texto() { return colores.amarillo; }, nombre: 'En riesgo' },
+  rojo: { get fondo() { return fondos.rojoFondo; }, get texto() { return colores.rojo; }, nombre: 'No alcanza' },
+  sin_datos: { get fondo() { return fondos.grisFondo; }, get texto() { return colores.gris; }, nombre: 'Sin datos' },
 } as const;

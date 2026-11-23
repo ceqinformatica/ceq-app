@@ -1,14 +1,16 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useState } from 'react';
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Hexagono, TramaHex } from '../components/graficos';
 import { Boton, Campo, EvitaTeclado, logoCeq, Mensaje, s } from '../components/ui';
 import { entrarConCorreo, entrarConGoogle, registrarseConCorreo } from '../lib/auth';
 import { supabaseConfigurado } from '../lib/supabase';
-import { colores, espacio, fuentes, radio, sombras } from '../tema';
+import { colores, crearEstilos, espacio, fondos, fuentes, radio, sombras } from '../tema';
+import { useTema } from '../context/TemaProvider';
 
 export default function Login() {
+  useTema();
   const insets = useSafeAreaInsets();
   const [modo, setModo] = useState<'inicio' | 'entrar' | 'registro'>('inicio');
   const [nombre, setNombre] = useState('');
@@ -37,11 +39,11 @@ export default function Login() {
   };
 
   return (
-    <EvitaTeclado estilo={{ backgroundColor: colores.marino }}>
+    <EvitaTeclado estilo={{ backgroundColor: fondos.marino }}>
       <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled" bounces={false}>
         <View style={[est.portada, { paddingTop: insets.top + espacio.xxl }]} onLayout={(e) => setTam({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}>
           {tam.w > 0 && <TramaHex ancho={tam.w} alto={tam.h} opacidad={0.09} tam={44} />}
-          <Hexagono tamano={124} relleno={colores.blanco}>
+          <Hexagono tamano={124} relleno={fondos.blanco}>
             <Image source={logoCeq} style={{ width: 84, height: 84 }} accessibilityLabel="Logo del CEQ" />
           </Hexagono>
           <Text style={est.marca}>CEQ</Text>
@@ -61,7 +63,7 @@ export default function Login() {
                 disabled={cargando != null}
                 accessibilityRole="button"
                 accessibilityLabel="Entrar con Google"
-                style={({ pressed }) => [est.google, pressed && { backgroundColor: colores.tarjeta }, cargando != null && { opacity: 0.6 }]}
+                style={({ pressed }) => [est.google, pressed && { backgroundColor: fondos.tarjeta }, cargando != null && { opacity: 0.6 }]}
               >
                 <Ionicons name="logo-google" size={20} color={colores.marino} />
                 <Text style={est.googleTexto}>{cargando === 'google' ? 'Abriendo Google…' : 'Continuar con Google'}</Text>
@@ -123,19 +125,19 @@ export default function Login() {
   );
 }
 
-const est = StyleSheet.create({
+const est = crearEstilos(() => ({
   portada: { alignItems: 'center', paddingHorizontal: espacio.xl, paddingBottom: espacio.xxl + espacio.l, overflow: 'hidden' },
   marca: { fontFamily: fuentes.bold, fontSize: 38, color: colores.blanco, letterSpacing: 4, marginTop: espacio.l },
   nombre: { fontFamily: fuentes.medium, fontSize: 14, color: colores.celeste, textTransform: 'uppercase', letterSpacing: 1.4, textAlign: 'center' },
   lema: { fontFamily: fuentes.regular, fontSize: 14.5, color: colores.cielo, marginTop: espacio.m, textAlign: 'center', opacity: 0.9 },
-  panel: { flexGrow: 1, backgroundColor: colores.fondo, borderTopLeftRadius: radio.xl + 6, borderTopRightRadius: radio.xl + 6, padding: espacio.xl, marginTop: -espacio.l },
+  panel: { flexGrow: 1, backgroundColor: fondos.fondo, borderTopLeftRadius: radio.xl + 6, borderTopRightRadius: radio.xl + 6, padding: espacio.xl, marginTop: -espacio.l },
   titulo: { fontFamily: fuentes.bold, fontSize: 24, color: colores.marino, textTransform: 'uppercase', letterSpacing: 0.6 },
   google: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: espacio.m, minHeight: 54, borderRadius: radio.m,
-    backgroundColor: colores.superficieBlanca, borderWidth: 1, borderColor: colores.linea, ...sombras.suave,
+    backgroundColor: fondos.superficieBlanca, borderWidth: 1, borderColor: colores.linea, ...sombras.suave,
   },
   googleTexto: { fontFamily: fuentes.semibold, fontSize: 15.5, color: colores.marino },
   separador: { flexDirection: 'row', alignItems: 'center', gap: espacio.m, marginVertical: espacio.l },
-  linea: { flex: 1, height: 1, backgroundColor: colores.linea },
+  linea: { flex: 1, height: 1, backgroundColor: fondos.linea },
   ojo: { position: 'absolute', right: 14, top: 38 },
-});
+}));

@@ -9,7 +9,7 @@ import { alcance } from '../datos/admin';
 import { atajos, describirCuando, leerFechaHora, partesDe, type Resultado } from '../lib/programacion';
 import type { Carrera } from '../lib/tipos-db';
 import { CampoFechaHora, hoy } from './fecha';
-import { colores, espacio, fuentes, radio } from '../tema';
+import { colores, espacio, fondos, fuentes, radio } from '../tema';
 import { Chip, logoCeq, s, Segmentado } from './ui';
 
 export interface Cuando {
@@ -102,9 +102,9 @@ export function SelectorCarrera({ carreras, valor, onCambio, mostrarAlcance = tr
 /** Cómo se ve la notificación en la pantalla del celular. */
 export function VistaPrevia({ titulo, cuerpo }: { titulo: string; cuerpo: string }) {
   return (
-    <View style={{ backgroundColor: colores.grisFondo, borderRadius: radio.l, padding: espacio.m, marginBottom: espacio.m }} accessibilityLabel="Vista previa de la notificación">
+    <View style={{ backgroundColor: fondos.grisFondo, borderRadius: radio.l, padding: espacio.m, marginBottom: espacio.m }} accessibilityLabel="Vista previa de la notificación">
       <Text style={[s.etiqueta, { marginBottom: espacio.s }]}>Así se ve en el celular</Text>
-      <View style={{ flexDirection: 'row', gap: espacio.m, backgroundColor: colores.superficieBlanca, borderRadius: radio.m, padding: espacio.m }}>
+      <View style={{ flexDirection: 'row', gap: espacio.m, backgroundColor: fondos.superficieBlanca, borderRadius: radio.m, padding: espacio.m }}>
         <Image source={logoCeq} style={{ width: 28, height: 28 }} />
         <View style={{ flex: 1 }}>
           <Text style={{ fontFamily: fuentes.semibold, fontSize: 14, color: colores.texto }} numberOfLines={1}>{titulo.trim() || 'Título'}</Text>
@@ -119,14 +119,14 @@ export function VistaPrevia({ titulo, cuerpo }: { titulo: string; cuerpo: string
 export function estadoNotificacion(estado: string, destinatarios: number | null, cuando: string): { texto: string; color: string; fondo: string } {
   switch (estado) {
     case 'pendiente':
-      return { texto: `Programada · ${describirCuando(cuando)}`, color: colores.amarillo, fondo: colores.amarilloFondo };
+      return { texto: `Programada · ${describirCuando(cuando)}`, color: colores.amarillo, fondo: fondos.amarilloFondo };
     case 'enviada':
-      return { texto: `Enviada a ${destinatarios ?? 0} · ${describirCuando(cuando)}`, color: colores.verde, fondo: colores.verdeFondo };
+      return { texto: `Enviada a ${destinatarios ?? 0} · ${describirCuando(cuando)}`, color: colores.verde, fondo: fondos.verdeFondo };
     case 'error':
-      return { texto: 'No se pudo enviar', color: colores.rojo, fondo: colores.rojoFondo };
+      return { texto: 'No se pudo enviar', color: colores.rojo, fondo: fondos.rojoFondo };
     case 'sin_destinatarios':
-      return { texto: 'Nadie la recibió (sin celulares)', color: colores.gris, fondo: colores.grisFondo };
+      return { texto: 'Nadie la recibió (sin celulares)', color: colores.gris, fondo: fondos.grisFondo };
     default:
-      return { texto: 'Cancelada', color: colores.gris, fondo: colores.grisFondo };
+      return { texto: 'Cancelada', color: colores.gris, fondo: fondos.grisFondo };
   }
 }

@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useMemo, useRef } from 'react';
-import { ScrollView, StyleSheet, Text, View, type ScrollViewInstance } from 'react-native';
+import { ScrollView, Text, View, type ScrollViewInstance } from 'react-native';
 import { nombreSemestre } from '../components/academico';
 import { AnilloProgreso, BarraProgreso } from '../components/graficos';
 import { BarraSuperior, Boton, Cargando, Dato, EstadoVacio, Pantalla, s, Seccion, Tarjeta } from '../components/ui';
@@ -8,7 +8,8 @@ import { useSesion } from '../context/SesionProvider';
 import { cargarMalla } from '../datos/academico';
 import { usarDatos } from '../datos/usarDatos';
 import { calcularEstadisticas } from '../lib/estadisticas';
-import { colores, espacio, fuentes, radio } from '../tema';
+import { colores, crearEstilos, espacio, fondos, fuentes, radio } from '../tema';
+import { useTema } from '../context/TemaProvider';
 
 const volver = () => (router.canGoBack() ? router.back() : router.replace('/carrera'));
 
@@ -22,8 +23,11 @@ const listaNiveles = (ns: number[]) => {
 };
 /** Color de una nota de 1 a 5. */
 const colorNota = (n: number | null) => (n == null ? colores.textoTenue : n >= 4 ? colores.verde : n >= 3 ? colores.azul : n >= 2 ? colores.amarillo : colores.rojo);
+/** Lo mismo, para fondos con texto blanco encima (en oscuro son más saturados). */
+const fondoNota = (n: number | null) => (n == null ? fondos.gris : n >= 4 ? fondos.verde : n >= 3 ? fondos.azul : n >= 2 ? fondos.amarillo : fondos.rojo);
 
 export default function Estadisticas() {
+  useTema();
   const { perfil } = useSesion();
   const planId = perfil?.plan_id ?? '';
   const { datos: malla, cargando, error, refrescando, recargar } = usarDatos(() => cargarMalla(planId, perfil?.carrera_id), [planId, perfil?.carrera_id]);
@@ -130,7 +134,7 @@ export default function Estadisticas() {
             ) : (
               [...e.distribucion].reverse().map((d) => (
                 <View key={d.nota} style={est.filaBarra} accessibilityLabel={`${d.cantidad} materias con ${d.nota}`}>
-                  <View style={[est.notaChip, { backgroundColor: colorNota(d.nota) }]}><Text style={est.notaChipTexto}>{d.nota}</Text></View>
+                  <View style={[est.notaChip, { backgroundColor: fondoNota(d.nota) }]}><Text style={est.notaChipTexto}>{d.nota}</Text></View>
                   <View style={{ flex: 1 }}>
                     <BarraProgreso valor={(d.cantidad / maxDist) * 100} color={colorNota(d.nota)} alto={10} />
                   </View>
@@ -163,7 +167,7 @@ export default function Estadisticas() {
                     <View key={p.periodo} style={est.columna} accessibilityLabel={`${p.etiqueta}: promedio ${prom2(p.promedio)}, ${p.aprobados} aprobados, ${p.aplazos} aplazos`}>
                       <Text style={[est.cantidad, { color: colorNota(p.promedio) }]} numberOfLines={1}>{prom2(p.promedio)}</Text>
                       <View style={est.columnaFondo}>
-                        <View style={[est.columnaRelleno, { height: `${((p.promedio ?? 0) / 5) * 100}%`, backgroundColor: colorNota(p.promedio) }]} />
+                        <View style={[est.columnaRelleno, { height: `${((p.promedio ?? 0) / 5) * 100}%`, backgroundColor: fondoNota(p.promedio) }]} />
                       </View>
                       <Text style={est.columnaEtiqueta} numberOfLines={2}>{p.etiqueta}</Text>
                     </View>
@@ -210,7 +214,7 @@ export default function Estadisticas() {
   );
 }
 
-const est = StyleSheet.create({
+const est = crearEstilos(() => ({
   // Dos columnas cuando hay lugar (tablet); una sola en el teléfono.
   grilla: { flexDirection: 'row', flexWrap: 'wrap', columnGap: espacio.l },
   celda: { flexGrow: 1, flexBasis: 320, minWidth: 0 },
@@ -224,9 +228,9 @@ const est = StyleSheet.create({
   cantidad: { fontFamily: fuentes.semibold, fontSize: 14, color: colores.marino, minWidth: 24, textAlign: 'center' },
   columnas: { flexGrow: 1, flexDirection: 'row', alignItems: 'flex-end', gap: espacio.s, marginBottom: espacio.m },
   columna: { width: 56, alignItems: 'center', gap: espacio.xs },
-  columnaFondo: { width: '70%', height: 110, borderRadius: radio.s, backgroundColor: colores.cielo, justifyContent: 'flex-end', overflow: 'hidden' },
+  columnaFondo: { width: '70%', height: 110, borderRadius: radio.s, backgroundColor: fondos.cielo, justifyContent: 'flex-end', overflow: 'hidden' },
   columnaRelleno: { width: '100%', borderRadius: radio.s },
   columnaEtiqueta: { fontFamily: fuentes.medium, fontSize: 11, lineHeight: 14, color: colores.textoSuave, textAlign: 'center' },
   filaPeriodo: { flexDirection: 'row', alignItems: 'center', gap: espacio.s, paddingVertical: espacio.s, borderTopWidth: 1, borderTopColor: colores.lineaSuave, flexWrap: 'wrap' },
   filaNivel: { gap: espacio.xs, paddingTop: espacio.m, marginTop: espacio.xs, borderTopWidth: 1, borderTopColor: colores.lineaSuave },
-});
+}));

@@ -10,11 +10,13 @@ import { useSesion } from '../../context/SesionProvider';
 import { cargarMalla, deshacerRecursada, guardarEstadoMateria } from '../../datos/academico';
 import { usarDatos } from '../../datos/usarDatos';
 import { cumpleRequisito, requisitosFaltantes, seDesbloquean, type EstadoMateria } from '../../lib/progreso';
-import { colores, coloresEstado, espacio, fuentes, texto } from '../../tema';
+import { colores, coloresEstado, espacio, fondos, fuentes, texto } from '../../tema';
+import { useTema } from '../../context/TemaProvider';
 
 const volver = () => (router.canGoBack() ? router.back() : router.replace('/carrera'));
 
 export default function DetalleMateria() {
+  useTema();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { perfil } = useSesion();
   const planId = perfil?.plan_id ?? '';
@@ -177,7 +179,7 @@ export default function DetalleMateria() {
               key={r.requiereId}
               icono={r.ok ? 'checkmark' : 'lock-closed'}
               colorIcono={r.ok ? colores.verde : colores.gris}
-              fondoIcono={r.ok ? colores.verdeFondo : colores.grisFondo}
+              fondoIcono={r.ok ? fondos.verdeFondo : fondos.grisFondo}
               titulo={r.nombre}
               detalle={`Tenerla ${r.tipo}`}
               onPress={() => router.push(`/materia/${r.requiereId}`)}

@@ -6,18 +6,20 @@ import { cargarSugerenciasAdmin, responderSugerencia } from '../../datos/admin';
 import { haceCuanto } from '../../datos/ceq';
 import { usarDatos } from '../../datos/usarDatos';
 import type { SugerenciaDb } from '../../lib/tipos-db';
-import { colores, espacio } from '../../tema';
+import { colores, espacio, fondos } from '../../tema';
+import { useTema } from '../../context/TemaProvider';
 
 const volver = () => (router.canGoBack() ? router.back() : router.replace('/admin'));
 type Filtro = SugerenciaDb['estado'];
 
-const ESTADOS: Record<Filtro, { texto: string; color: string; fondo: string }> = {
-  recibida: { texto: 'Nueva', color: colores.azul, fondo: colores.cielo },
-  en_revision: { texto: 'En revisión', color: colores.amarillo, fondo: colores.amarilloFondo },
-  respondida: { texto: 'Respondida', color: colores.verde, fondo: colores.verdeFondo },
-};
+const estados = (): Record<Filtro, { texto: string; color: string; fondo: string }> => ({
+  recibida: { texto: 'Nueva', color: colores.azul, fondo: fondos.cielo },
+  en_revision: { texto: 'En revisión', color: colores.amarillo, fondo: fondos.amarilloFondo },
+  respondida: { texto: 'Respondida', color: colores.verde, fondo: fondos.verdeFondo },
+});
 
 export default function SugerenciasAdmin() {
+  useTema();
   const { datos, cargando, error, refrescando, recargar } = usarDatos(cargarSugerenciasAdmin, []);
   const [filtro, setFiltro] = useState<Filtro>('recibida');
   const [abierta, setAbierta] = useState<SugerenciaDb | null>(null);
@@ -62,7 +64,7 @@ function Detalle({ sugerencia, onCerrar, onListo }: { sugerencia: SugerenciaDb; 
   const [respuesta, setRespuesta] = useState(sugerencia.respuesta ?? '');
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const e = ESTADOS[sugerencia.estado];
+  const e = estados()[sugerencia.estado];
 
   const guardar = async (estado: Filtro) => {
     setError(null);

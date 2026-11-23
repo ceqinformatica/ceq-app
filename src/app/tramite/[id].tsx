@@ -6,11 +6,13 @@ import { BarraSuperior, Boton, Cargando, EstadoVacio, Fila, Insignia, Pantalla, 
 import { cargarTramite } from '../../datos/tramites';
 import { usarDatos } from '../../datos/usarDatos';
 import { esHttps, TEXTO_MODALIDAD } from '../../lib/tramites';
-import { colores, espacio, fuentes, texto } from '../../tema';
+import { colores, crearEstilos, espacio, fondos, fuentes, texto } from '../../tema';
+import { useTema } from '../../context/TemaProvider';
 
 const volver = () => (router.canGoBack() ? router.back() : router.replace('/tramites'));
 
 export default function Tramite() {
+  useTema();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { datos: t, cargando, error } = usarDatos(() => cargarTramite(id ?? ''), [id]);
 
@@ -106,10 +108,10 @@ export default function Tramite() {
   );
 }
 
-const est = StyleSheet.create({
+const est = crearEstilos(() => ({
   categoria: { fontFamily: fuentes.semibold, fontSize: 12, color: colores.azul, letterSpacing: 0.6, textTransform: 'uppercase' },
   dato: { flexDirection: 'row', gap: espacio.m, paddingVertical: espacio.m },
   datoLinea: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colores.linea },
-  paso: { width: 28, height: 28, borderRadius: 14, backgroundColor: colores.marino, alignItems: 'center', justifyContent: 'center' },
+  paso: { width: 28, height: 28, borderRadius: 14, backgroundColor: fondos.marino, alignItems: 'center', justifyContent: 'center' },
   pasoNumero: { fontFamily: fuentes.bold, fontSize: 13, color: colores.blanco },
-});
+}));

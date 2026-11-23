@@ -4,8 +4,10 @@ import { Boton, CabeceraMarca, Dato, Fila, Mensaje, Pantalla, Seccion, Tarjeta }
 import { cargarResumen } from '../../datos/admin';
 import { usarDatos } from '../../datos/usarDatos';
 import { colores, espacio } from '../../tema';
+import { useTema } from '../../context/TemaProvider';
 
 export default function PanelAdmin() {
+  useTema();
   const { datos, error, refrescando, recargar } = usarDatos(cargarResumen, []);
   const n = (v: number | undefined) => (v == null ? '…' : String(v));
   return (

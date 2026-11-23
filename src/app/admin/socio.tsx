@@ -5,7 +5,8 @@ import { BarraSuperior, Boton, Campo, Cargando, Chip, Fila, Mensaje, Pantalla, s
 import { buscarEstudiantes, cargarSocioPorId, guardarSocio, renovarCodigo } from '../../datos/socios';
 import { fechaCorta, formatearCi, hoyPy, opcionesVigencia, validarSocio, type FormularioSocio } from '../../lib/carnet';
 import type { EstudianteEncontrado } from '../../lib/tipos-db';
-import { colores, espacio } from '../../tema';
+import { colores, espacio, fondos } from '../../tema';
+import { useTema } from '../../context/TemaProvider';
 
 const volver = () => (router.canGoBack() ? router.back() : router.replace('/admin/socios'));
 
@@ -15,6 +16,7 @@ const vacio = (): FormularioSocio => ({
 
 /** Alta o edición de un socio que ya pagó la cuota. */
 export default function EditarSocio() {
+  useTema();
   const { id } = useLocalSearchParams<{ id?: string }>();
   const editando = Boolean(id);
   const [cargando, setCargando] = useState(editando);
@@ -191,7 +193,7 @@ export default function EditarSocio() {
             icono="checkmark-circle-outline"
             titulo="Carnet habilitado"
             detalle="Apagalo para dar de baja el carnet sin borrar al socio."
-            derecha={<Switch value={f.activo} onValueChange={cambiar('activo')} accessibilityLabel="Carnet habilitado" trackColor={{ true: colores.marino, false: colores.linea }} thumbColor={colores.blanco} />}
+            derecha={<Switch value={f.activo} onValueChange={cambiar('activo')} accessibilityLabel="Carnet habilitado" trackColor={{ true: fondos.marino, false: colores.linea }} thumbColor={colores.blanco} />}
           />
           <Fila icono="refresh-outline" titulo="Cambiar su código QR" detalle="Si perdió el celular o circula una foto de su QR" onPress={nuevoQr} ultima />
         </Tarjeta>
