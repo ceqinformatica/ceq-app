@@ -3,6 +3,7 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Carnet } from '../../components/Carnet';
+import { AVISO_CARNET_PAGO } from '../../lib/carnet';
 import { BarraProgreso } from '../../components/graficos';
 import { Boton, CabeceraMarca, Campo, Chip, EstadoVacio, Esqueleto, Fila, Hoja, Mensaje, Pantalla, s, Seccion, Tarjeta } from '../../components/ui';
 import { useSesion } from '../../context/SesionProvider';
@@ -37,12 +38,12 @@ export default function Ceq() {
             <Carnet socio={datos.socio} />
           </Pressable>
         ) : (
-          <Tarjeta>
+          <Tarjeta onPress={() => router.push('/carnet')} etiqueta="Cómo obtener el carnet de socio">
             <View style={{ flexDirection: 'row', gap: espacio.m, alignItems: 'center' }}>
               <View style={est.iconoGrande}><Ionicons name="card-outline" size={26} color={colores.marino} /></View>
               <View style={{ flex: 1 }}>
-                <Text style={s.filaTitulo}>Todavía no sos socio</Text>
-                <Text style={s.filaDetalle}>Asociate al CEQ para tener tu carnet digital y los beneficios.</Text>
+                <Text style={s.filaTitulo}>Todavía no tenés carnet</Text>
+                <Text style={s.filaDetalle}>{AVISO_CARNET_PAGO}</Text>
               </View>
             </View>
           </Tarjeta>
@@ -68,7 +69,7 @@ export default function Ceq() {
         <Acceso icono="megaphone" texto="Avisos" onPress={() => router.push('/avisos')} />
         <Acceso icono="document-text" texto="Trámites" onPress={() => router.push('/tramites')} />
         <Acceso icono="chatbubble-ellipses" texto="Sugerir" onPress={() => setSugerir(true)} />
-        <Acceso icono="card" texto="Carnet" onPress={() => router.push('/carnet')} deshabilitado={!datos?.socio} />
+        <Acceso icono="card" texto="Carnet" onPress={() => router.push('/carnet')} />
       </View>
 
       <Seccion accion={{ texto: 'Ver todos', onPress: () => router.push('/avisos') }}>Avisos</Seccion>

@@ -65,7 +65,19 @@ export type EventoDb = {
 export type SocioDb = {
   id: string; usuario_id: string | null; numero_socio: string | null; ci: string; nombre: string;
   vigente_hasta: string | null; foto_path: string | null; updated_at: string;
+  codigo_qr: string; activo: boolean; pagado_en: string | null; observacion: string | null; created_at: string;
 }
+export type EstadoSolicitudCarnet = 'pendiente' | 'aprobada' | 'rechazada';
+export type SolicitudCarnetDb = {
+  id: string; usuario_id: string; nombre: string; ci: string; numero_socio: string | null; vigente_hasta: string;
+  foto_path: string; estado: EstadoSolicitudCarnet; motivo: string | null; revisado_por: string | null; revisado_en: string | null; created_at: string;
+}
+export type ResultadoVerificacion = 'vigente' | 'vencido' | 'inactivo' | 'no_encontrado';
+export type VerificacionCarnet = {
+  resultado: ResultadoVerificacion; socio_id?: string; nombre?: string; numero_socio?: string; ci?: string;
+  carrera?: string | null; vigente_hasta?: string | null; foto_path?: string | null; con_cuenta?: boolean;
+}
+export type EstudianteEncontrado = { id: string; nombre: string | null; ci: string | null; correo: string | null; carrera: string | null };
 export type AvisoDb = {
   id: string; titulo: string; cuerpo: string; imagen_url: string | null; notificar: boolean; publicado: boolean;
   autor_id: string | null; created_at: string;
@@ -113,7 +125,7 @@ export type Database = {
       asistencias: Tabla<AsistenciaDb, 'usuario_id' | 'componente' | 'clases_dictadas' | 'clases_asistidas' | 'clases_totales'>;
       horario: Tabla<HorarioDb, 'id' | 'usuario_id' | 'materia_id' | 'titulo' | 'aula' | 'aviso_minutos' | 'avisado_el'>;
       eventos: Tabla<EventoDb, 'id' | 'usuario_id' | 'materia_id' | 'plan_id' | 'tipo' | 'aviso_minutos' | 'notificado' | 'created_at'>;
-      socios: Tabla<SocioDb, 'id' | 'usuario_id' | 'numero_socio' | 'vigente_hasta' | 'foto_path' | 'updated_at'>;
+      socios: Tabla<SocioDb, 'id' | 'usuario_id' | 'numero_socio' | 'vigente_hasta' | 'foto_path' | 'updated_at' | 'codigo_qr' | 'activo' | 'pagado_en' | 'observacion' | 'created_at'>;
       avisos: Tabla<AvisoDb, 'id' | 'imagen_url' | 'notificar' | 'publicado' | 'autor_id' | 'created_at' | 'publicar_en' | 'carrera_id'>;
       notificaciones: Tabla<NotificacionDb, 'id' | 'tipo' | 'ruta' | 'aviso_id' | 'evento_id' | 'usuario_id' | 'carrera_id' | 'plan_id' | 'programada_para' | 'estado' | 'enviada_en' | 'destinatarios' | 'creada_por' | 'created_at'>;
       tramites: Tabla<TramiteDb, 'id' | 'clave' | 'categoria' | 'descripcion' | 'pasos' | 'requisitos' | 'costo' | 'donde' | 'plazo' | 'contacto' | 'modalidad' | 'formulario_url' | 'fuente_url' | 'orden' | 'publicado' | 'updated_at'>;
@@ -122,6 +134,7 @@ export type Database = {
       opciones_encuesta: Tabla<OpcionEncuestaDb, 'id' | 'orden'>;
       ya_votaron: Tabla<YaVotaronDb>;
       examenes_finales: Tabla<ExamenFinalDb, 'id' | 'usuario_id' | 'periodo' | 'llamado' | 'fecha' | 'created_at' | 'porcentaje' | 'tipo' | 'cursada_anterior'>;
+      solicitudes_carnet: Tabla<SolicitudCarnetDb, 'id' | 'usuario_id' | 'numero_socio' | 'estado' | 'motivo' | 'revisado_por' | 'revisado_en' | 'created_at'>;
       dispositivos: Tabla<DispositivoDb, 'usuario_id' | 'plataforma' | 'updated_at'>;
     };
     Views: {
@@ -135,6 +148,13 @@ export type Database = {
       registrar_dispositivo: { Args: { p_token: string; p_plataforma?: string | null }; Returns: undefined };
       alcance_notificacion: { Args: { p_carrera?: string | null }; Returns: number };
       resumen_admin: { Args: Record<string, never>; Returns: ResumenAdmin };
+      verificar_carnet: { Args: { p_texto: string }; Returns: VerificacionCarnet };
+      renovar_codigo_carnet: { Args: { p_socio: string }; Returns: string };
+      poner_foto_carnet: { Args: { p_socio: string; p_path: string | null }; Returns: undefined };
+      buscar_estudiantes: { Args: { p_texto: string }; Returns: EstudianteEncontrado[] };
+      solicitar_carnet: { Args: { p_nombre: string; p_ci: string; p_numero: string | null; p_vence: string; p_foto: string }; Returns: string };
+      aprobar_solicitud_carnet: { Args: { p_id: string; p_version: string }; Returns: string };
+      rechazar_solicitud_carnet: { Args: { p_id: string; p_motivo: string | null }; Returns: undefined };
       eliminar_mi_cuenta: { Args: Record<string, never>; Returns: undefined };
     };
     Enums: {
