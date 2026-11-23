@@ -1,10 +1,10 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useState } from 'react';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { Image, Text, View } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 import { contenidoQr, estadoCarnet, fechaCorta, formatearCi } from '../lib/carnet';
 import type { SocioDb } from '../lib/tipos-db';
-import { colores, espacio, fuentes, radio, sombras } from '../tema';
+import { colores, crearEstilos, espacio, fondos, fuentes, radio, sombras } from '../tema';
 import { TramaHex } from './graficos';
 import { logoCeq } from './ui';
 
@@ -39,7 +39,7 @@ export function Carnet({ socio, carrera, conQr = false, foto }: { socio: SocioDb
 
       {conQr && (
         <View style={[est.qr, !vigente && { opacity: 0.35 }]}>
-          <QRCode value={contenidoQr(socio.codigo_qr)} size={190} color={colores.marinoProfundo} backgroundColor={colores.blanco} />
+          <QRCode value={contenidoQr(socio.codigo_qr)} size={190} color={colores.marinoFijo} backgroundColor={fondos.blanco} />
         </View>
       )}
 
@@ -70,18 +70,18 @@ function Dato({ etiqueta, valor }: { etiqueta: string; valor: string }) {
   );
 }
 
-const est = StyleSheet.create({
-  carnet: { backgroundColor: colores.marinoProfundo, borderRadius: radio.xl, padding: espacio.l + 2, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(127, 178, 240, 0.25)' },
+const est = crearEstilos(() => ({
+  carnet: { backgroundColor: fondos.marinoProfundo, borderRadius: radio.xl, padding: espacio.l + 2, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(127, 178, 240, 0.25)' },
   fila: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  logo: { width: 40, height: 40, borderRadius: 11, backgroundColor: colores.blanco, alignItems: 'center', justifyContent: 'center' },
+  logo: { width: 40, height: 40, borderRadius: 11, backgroundColor: fondos.blanco, alignItems: 'center', justifyContent: 'center' },
   marca: { fontFamily: fuentes.bold, fontSize: 17, color: colores.blanco, letterSpacing: 1.5 },
   marcaSub: { fontFamily: fuentes.regular, fontSize: 10.5, color: colores.celeste },
   estado: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 8, paddingVertical: 4, borderRadius: radio.pill },
   estadoTexto: { fontFamily: fuentes.bold, fontSize: 10, letterSpacing: 1 },
-  qr: { alignSelf: 'center', backgroundColor: colores.blanco, padding: espacio.m, borderRadius: radio.l, marginTop: espacio.xl },
+  qr: { alignSelf: 'center', backgroundColor: fondos.blanco, padding: espacio.m, borderRadius: radio.l, marginTop: espacio.xl },
   etiqueta: { fontFamily: fuentes.semibold, fontSize: 9.5, letterSpacing: 1.2, color: colores.celesteVivo },
   nombre: { fontFamily: fuentes.bold, fontSize: 21, color: colores.blanco, marginTop: 2, textTransform: 'uppercase', letterSpacing: 0.4 },
-  foto: { width: 64, height: 80, borderRadius: radio.m, borderWidth: 2, borderColor: colores.blanco, backgroundColor: colores.marino },
+  foto: { width: 64, height: 80, borderRadius: radio.m, borderWidth: 2, borderColor: colores.blanco, backgroundColor: fondos.marino },
   carrera: { fontFamily: fuentes.regular, fontSize: 13, color: colores.cielo, marginTop: 2 },
   valor: { fontFamily: fuentes.semibold, fontSize: 13.5, color: colores.blanco, marginTop: 2 },
-});
+}));

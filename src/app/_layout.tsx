@@ -11,7 +11,9 @@ import { Hexagono } from '../components/graficos';
 import { Boton, EstadoVacio, logoCeq, Mensaje } from '../components/ui';
 import { SesionProvider, useSesion } from '../context/SesionProvider';
 import { configurarNotificaciones, registrarEsteCelular, rutaDeNotificacion } from '../lib/notificaciones';
-import { colores } from '../tema';
+import { colores, fondos } from '../tema';
+import { TemaProvider, useCargarPreferenciaTema, useTema } from '../context/TemaProvider';
+import { useOrientacionPorDispositivo } from '../components/disposicion';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 configurarNotificaciones();
@@ -46,13 +48,14 @@ function useNotificaciones(uid: string | null, lista: boolean) {
 }
 
 function Navegacion() {
+  useTema();
   const { cargando, sesion, perfil, errorPerfil, bloqueado, recargarPerfil } = useSesion();
   useNotificaciones(sesion?.user.id ?? null, !cargando && !bloqueado && Boolean(perfil?.plan_id));
 
   if (cargando) {
     return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colores.marino, gap: 28 }}>
-        <Hexagono tamano={104} relleno={colores.blanco}>
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: fondos.marino, gap: 28 }}>
+        <Hexagono tamano={104} relleno={fondos.blanco}>
           <Image source={logoCeq} style={{ width: 70, height: 70 }} accessibilityLabel="Logo del CEQ" />
         </Hexagono>
         <ActivityIndicator color={colores.blanco} />
@@ -64,7 +67,7 @@ function Navegacion() {
   // Sin perfil por un error de red: reintentar en vez de mandar al onboarding.
   if (sesion && !perfil && errorPerfil) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', padding: 24, backgroundColor: colores.fondo }}>
+      <View style={{ flex: 1, justifyContent: 'center', padding: 24, backgroundColor: fondos.fondo }}>
         <EstadoVacio icono="cloud-offline-outline" titulo="Sin conexión" texto="No pudimos cargar tu perfil. Revisá tu internet y probá de nuevo." />
         <Mensaje texto={errorPerfil} />
         <Boton texto="Reintentar" icono="refresh" onPress={recargarPerfil} />
@@ -75,7 +78,7 @@ function Navegacion() {
   const conCarrera = Boolean(perfil?.plan_id);
   const esAdmin = conCarrera && perfil?.rol === 'admin';
   return (
-    <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colores.fondo }, animation: 'slide_from_right' }}>
+    <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: fondos.fondo }, animation: 'slide_from_right' }}>
       <Stack.Protected guard={!sesion}>
         <Stack.Screen name="login" />
       </Stack.Protected>
@@ -105,8 +108,10 @@ function Navegacion() {
 }
 
 export default function RootLayout() {
+  useOrientacionPorDispositivo();
+  const tema = useCargarPreferenciaTema();
   const [fuentesListas, errorFuentes] = useFonts({ Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold });
-  const listo = fuentesListas || Boolean(errorFuentes);
+  const listo = (fuentesListas || Boolean(errorFuentes)) && tema.lista;
 
   useEffect(() => {
     if (listo) SplashScreen.hideAsync().catch(() => {});
@@ -116,10 +121,12 @@ export default function RootLayout() {
 
   return (
     <SafeAreaProvider>
-      <SesionProvider>
-        <StatusBar style="light" />
-        <Navegacion />
-      </SesionProvider>
+      <TemaProvider inicial={tema.inicial}>
+        <SesionProvider>
+          <StatusBar style="light" />
+          <Navegacion />
+        </SesionProvider>
+      </TemaProvider>
     </SafeAreaProvider>
   );
 }

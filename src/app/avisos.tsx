@@ -4,10 +4,12 @@ import { BarraSuperior, Cargando, EstadoVacio, Pantalla, s, Tarjeta } from '../c
 import { cargarAvisos, haceCuanto } from '../datos/ceq';
 import { usarDatos } from '../datos/usarDatos';
 import { colores, fuentes } from '../tema';
+import { useTema } from '../context/TemaProvider';
 
 const volver = () => (router.canGoBack() ? router.back() : router.replace('/ceq'));
 
 export default function Avisos() {
+  useTema();
   const { datos, cargando, error, refrescando, recargar } = usarDatos(() => cargarAvisos(50), []);
   return (
     <Pantalla refrescando={refrescando} onRefrescar={recargar}>

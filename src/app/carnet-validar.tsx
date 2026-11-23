@@ -9,7 +9,8 @@ import { BarraSuperior, Boton, Campo, Mensaje, Pantalla, s, Seccion, Tarjeta } f
 import { useSesion } from '../context/SesionProvider';
 import { enviarSolicitud } from '../datos/socios';
 import { isoDeTexto, problemaVencimiento } from '../lib/carnet';
-import { colores, espacio, radio } from '../tema';
+import { colores, crearEstilos, espacio, fondos, radio } from '../tema';
+import { useTema } from '../context/TemaProvider';
 
 const volver = () => (router.canGoBack() ? router.back() : router.replace('/carnet'));
 
@@ -21,6 +22,7 @@ type Foto = { uri: string; tipo?: string };
  * el CEQ lo revisa y le habilita el carnet digital.
  */
 export default function ValidarCarnet() {
+  useTema();
   const { perfil } = useSesion();
   const [permiso, pedirPermiso] = useCameraPermissions();
   const camara = useRef<CameraView>(null);
@@ -164,9 +166,9 @@ export default function ValidarCarnet() {
   );
 }
 
-const est = StyleSheet.create({
-  camara: { height: 300, borderRadius: radio.xl, overflow: 'hidden', backgroundColor: colores.marinoProfundo, alignItems: 'center', justifyContent: 'center', marginBottom: espacio.m },
+const est = crearEstilos(() => ({
+  camara: { height: 300, borderRadius: radio.xl, overflow: 'hidden', backgroundColor: fondos.marinoProfundo, alignItems: 'center', justifyContent: 'center', marginBottom: espacio.m },
   marco: { width: '86%', aspectRatio: 1.586, borderRadius: radio.l, borderWidth: 3, borderColor: colores.blanco, marginBottom: 40 },
   botonesCamara: { position: 'absolute', bottom: espacio.m, flexDirection: 'row', gap: espacio.s },
-  vista: { width: '100%', height: 200, borderRadius: radio.m, backgroundColor: colores.tarjeta },
-});
+  vista: { width: '100%', height: 200, borderRadius: radio.m, backgroundColor: fondos.tarjeta },
+}));

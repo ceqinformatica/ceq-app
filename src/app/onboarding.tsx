@@ -6,13 +6,15 @@ import { db, MODO_DEMO } from '../datos/demo';
 import { salir } from '../lib/auth';
 import { listarCarreras, listarPlanes } from '../lib/catalogo';
 import type { Carrera, Plan } from '../lib/tipos-db';
-import { colores, espacio, fuentes } from '../tema';
+import { colores, espacio, fondos, fuentes } from '../tema';
+import { useTema } from '../context/TemaProvider';
 
 const carreras$ = () => (MODO_DEMO ? Promise.resolve(db.carreras) : listarCarreras());
 const planes$ = (id: string) => (MODO_DEMO ? Promise.resolve(db.planes.filter((p) => p.carrera_id === id)) : listarPlanes(id));
 
 /** Primera vez: elegir carrera, plan y año de ingreso. */
 export default function Onboarding() {
+  useTema();
   const { perfil, actualizarPerfil } = useSesion();
   const [carreras, setCarreras] = useState<Carrera[] | null>(null);
   const [planes, setPlanes] = useState<Plan[] | null>(null);
@@ -55,7 +57,7 @@ export default function Onboarding() {
     <Pantalla cabecera={<CabeceraMarca titulo="Contanos qué estudiás" sub="Con esto armamos tu malla y tu progreso" compacta />}>
       <View style={{ flexDirection: 'row', gap: 6, marginTop: espacio.l, marginBottom: espacio.s }} accessibilityLabel={`Paso ${paso} de 3`}>
         {[1, 2, 3].map((n) => (
-          <View key={n} style={{ flex: 1, height: 4, borderRadius: 2, backgroundColor: n <= paso ? colores.marino : colores.linea }} />
+          <View key={n} style={{ flex: 1, height: 4, borderRadius: 2, backgroundColor: n <= paso ? fondos.marino : fondos.linea }} />
         ))}
       </View>
 

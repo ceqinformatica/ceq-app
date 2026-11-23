@@ -21,7 +21,7 @@ import { cargarFinales, guardarFinales, guardarFirma, recursarMateria } from '..
 import { aplazosDeLaCursada, firmaVencida, notaDelLlamado, periodoDe, type LlamadoCargado } from '../lib/finales';
 import { calificacionFinal, CONCEPTO, finalNecesario, type Nota } from '../lib/reglamento-fcq';
 import type { ExamenFinalDb } from '../lib/tipos-db';
-import { colores, espacio, fuentes } from '../tema';
+import { colores, espacio, fondos, fuentes } from '../tema';
 import { pct } from './academico';
 import { Boton, Campo, Mensaje, s, Segmentado, Tarjeta } from './ui';
 
@@ -262,7 +262,7 @@ export function TarjetaFinales({ materiaId, firma: firmaGuardadaEnMateria, aprob
                 setPeriodo(p);
                 setEligiendoPeriodo(false);
               }}
-              style={{ flexDirection: 'row', alignItems: 'center', gap: espacio.s, padding: espacio.m, borderTopWidth: i === 0 ? 0 : 1, borderTopColor: colores.linea, backgroundColor: p === periodo ? colores.grisFondo : 'transparent' }}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: espacio.s, padding: espacio.m, borderTopWidth: i === 0 ? 0 : 1, borderTopColor: colores.linea, backgroundColor: p === periodo ? fondos.grisFondo : 'transparent' }}
             >
               <View style={{ flex: 1 }}>
                 <Text style={{ fontFamily: p === periodo ? fuentes.semibold : fuentes.regular, fontSize: 15, color: colores.texto }}>{nombrePeriodo(p)}</Text>

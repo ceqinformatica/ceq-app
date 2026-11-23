@@ -9,7 +9,9 @@ import { aAsistencia, cargarFirmas, cargarMalla, REGLA_POR_DEFECTO, reglaDe, tie
 import { usarDatos } from '../../datos/usarDatos';
 import { evaluarFirma } from '../../lib/firma';
 import { esSeminario } from '../../lib/progreso';
-import { colores, coloresSemaforo, espacio, fuentes } from '../../tema';
+import { colores, coloresSemaforo, espacio, fondos, fuentes } from '../../tema';
+import { useTema } from '../../context/TemaProvider';
+import { Grilla } from '../../components/disposicion';
 
 async function cargar(planId: string, carreraId?: string | null) {
   const malla = await cargarMalla(planId, carreraId);
@@ -32,6 +34,7 @@ async function cargar(planId: string, carreraId?: string | null) {
 }
 
 export default function Firma() {
+  useTema();
   const { perfil } = useSesion();
   const planId = perfil?.plan_id ?? '';
   const { datos, cargando, error, refrescando, recargar } = usarDatos(() => cargar(planId, perfil?.carrera_id), [planId]);
@@ -69,7 +72,7 @@ export default function Firma() {
             />
           </Tarjeta>
         ) : (
-          datos?.map(({ materia, resultado, semaforo, cargadas }) => {
+          <Grilla>{(datos ?? []).map(({ materia, resultado, semaforo, cargadas }) => {
             const c = coloresSemaforo[semaforo];
             return (
               <Tarjeta key={materia.id} onPress={() => router.push(`/firma/${materia.id}`)} etiqueta={`${materia.nombre}: ${c.nombre}`} estilo={{ borderLeftWidth: 4, borderLeftColor: c.texto }}>
@@ -87,7 +90,7 @@ export default function Firma() {
                 </View>
               </Tarjeta>
             );
-          })
+          })}</Grilla>
         )}
       </View>
 
@@ -125,7 +128,7 @@ function Medidor({ titulo, valor, minimo }: { titulo: string; valor: number | nu
         <Text style={{ fontFamily: fuentes.medium, fontSize: 11.5, color: colores.textoSuave }}>{titulo}</Text>
         <Text style={{ fontFamily: fuentes.semibold, fontSize: 11.5, color: valor == null ? colores.textoSuave : ok ? colores.verde : colores.amarillo }}>{pct(valor)}</Text>
       </View>
-      <BarraProgreso valor={valor} marca={minimo} color={valor == null ? colores.linea : ok ? colores.verde : colores.amarillo} fondo={colores.lineaSuave} alto={6} />
+      <BarraProgreso valor={valor} marca={minimo} color={valor == null ? colores.linea : ok ? colores.verde : colores.amarillo} fondo={fondos.lineaSuave} alto={6} />
     </View>
   );
 }

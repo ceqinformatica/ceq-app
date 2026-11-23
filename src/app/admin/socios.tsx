@@ -5,20 +5,22 @@ import { BarraSuperior, Boton, BotonFlotante, Campo, Cargando, EstadoVacio, Insi
 import { cargarSocios } from '../../datos/socios';
 import { usarDatos } from '../../datos/usarDatos';
 import { estadoCarnet, fechaCorta, formatearCi, normalizarCi } from '../../lib/carnet';
-import { colores, espacio } from '../../tema';
+import { colores, espacio, fondos } from '../../tema';
+import { useTema } from '../../context/TemaProvider';
 
 const volver = () => (router.canGoBack() ? router.back() : router.replace('/admin'));
 
 type Filtro = 'todos' | 'vigente' | 'vencido';
 
-const INSIGNIA = {
-  vigente: { texto: 'Vigente', color: colores.verde, fondo: colores.verdeFondo },
-  vencido: { texto: 'Vencido', color: colores.amarillo, fondo: colores.amarilloFondo },
-  inactivo: { texto: 'De baja', color: colores.rojo, fondo: colores.rojoFondo },
-};
+const insignias = () => ({
+  vigente: { texto: 'Vigente', color: colores.verde, fondo: fondos.verdeFondo },
+  vencido: { texto: 'Vencido', color: colores.amarillo, fondo: fondos.amarilloFondo },
+  inactivo: { texto: 'De baja', color: colores.rojo, fondo: fondos.rojoFondo },
+});
 
 /** Socios con carnet: solo los que pagaron y el CEQ dio de alta. */
 export default function SociosAdmin() {
+  useTema();
   const { datos, cargando, error, refrescando, recargar } = usarDatos(cargarSocios, []);
   const [busqueda, setBusqueda] = useState('');
   const [filtro, setFiltro] = useState<Filtro>('todos');
@@ -68,7 +70,7 @@ export default function SociosAdmin() {
           <EstadoVacio icono="search-outline" titulo="No encontramos a nadie" texto="Probá con otro nombre o cédula." />
         ) : (
           lista.map((x) => {
-            const i = INSIGNIA[estadoCarnet(x)];
+            const i = insignias()[estadoCarnet(x)];
             return (
               <Tarjeta key={x.id} onPress={() => router.push(`/admin/socio?id=${x.id}`)} etiqueta={`Editar a ${x.nombre}`}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: espacio.s }}>

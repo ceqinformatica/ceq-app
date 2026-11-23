@@ -1,8 +1,8 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import type { ResultadoFirma, Semaforo } from '../lib/firma';
 import type { EstadoMateria } from '../lib/progreso';
-import { colores, coloresEstado, coloresSemaforo, espacio, fuentes, radio, sombras } from '../tema';
+import { colores, coloresEstado, coloresSemaforo, crearEstilos, espacio, fondos, fuentes, radio, sombras } from '../tema';
 import { Insignia, type NombreIcono } from './ui';
 
 export type EstadoVisual = EstadoMateria | 'bloqueada';
@@ -31,12 +31,12 @@ export function FichaMateria({ nombre, codigo, estado, notaFinal, faltan, onPres
         est.ficha,
         { backgroundColor: c.fondo, borderColor: c.borde },
         estado === 'pendiente' && sombras.suave,
-        seleccionada && { borderColor: colores.marino, borderWidth: 2.5, backgroundColor: colores.cielo },
+        seleccionada && { borderColor: colores.marino, borderWidth: 2.5, backgroundColor: fondos.cielo },
         pressed && { opacity: 0.85 },
       ]}
     >
       {modoSeleccion && (
-        <View style={[est.casilla, seleccionada && { backgroundColor: colores.marino, borderColor: colores.marino }]}>
+        <View style={[est.casilla, seleccionada && { backgroundColor: fondos.marino, borderColor: colores.marino }]}>
           {seleccionada && <Ionicons name="checkmark" size={15} color={colores.blanco} />}
         </View>
       )}
@@ -60,7 +60,7 @@ export function FichaMateria({ nombre, codigo, estado, notaFinal, faltan, onPres
 }
 
 export function InsigniaSemaforo({ semaforo, firma }: { semaforo: Semaforo; firma?: boolean }) {
-  if (firma) return <Insignia texto="Tenés firma" color={colores.verde} fondo={colores.verdeFondo} icono="checkmark-circle" />;
+  if (firma) return <Insignia texto="Tenés firma" color={colores.verde} fondo={fondos.verdeFondo} icono="checkmark-circle" />;
   const c = coloresSemaforo[semaforo];
   const icono: Record<Semaforo, NombreIcono> = { verde: 'trending-up', amarillo: 'warning', rojo: 'close-circle', sin_datos: 'remove-circle-outline' };
   return <Insignia texto={c.nombre} color={c.texto} fondo={c.fondo} icono={icono[semaforo]} />;
@@ -143,17 +143,17 @@ export function SelectorEstado({ valor, onCambio, bloqueada, sinFirma }: {
   );
 }
 
-const est = StyleSheet.create({
+const est = crearEstilos(() => ({
   ficha: { flex: 1, minHeight: 118, borderRadius: radio.m, borderWidth: 1, padding: espacio.m, gap: 6 },
   casilla: {
     position: 'absolute', top: 8, right: 8, width: 22, height: 22, borderRadius: 7, borderWidth: 2, borderColor: colores.linea,
-    backgroundColor: colores.superficieBlanca, alignItems: 'center', justifyContent: 'center', zIndex: 1,
+    backgroundColor: fondos.superficieBlanca, alignItems: 'center', justifyContent: 'center', zIndex: 1,
   },
   fichaArriba: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   codigo: { fontFamily: fuentes.semibold, fontSize: 10.5, letterSpacing: 0.8, opacity: 0.9 },
   fichaNombre: { fontFamily: fuentes.semibold, fontSize: 14, lineHeight: 18, color: colores.marino },
   fichaEstado: { fontFamily: fuentes.medium, fontSize: 11.5 },
-  nota: { minWidth: 26, height: 26, paddingHorizontal: 6, borderRadius: 8, backgroundColor: colores.verde, alignItems: 'center', justifyContent: 'center' },
+  nota: { minWidth: 26, height: 26, paddingHorizontal: 6, borderRadius: 8, backgroundColor: fondos.verde, alignItems: 'center', justifyContent: 'center' },
   notaTexto: { fontFamily: fuentes.bold, fontSize: 13, color: colores.blanco },
   leyenda: { flexDirection: 'row', flexWrap: 'wrap', gap: espacio.m, marginBottom: espacio.m },
   leyendaPunto: { width: 12, height: 12, borderRadius: 4, borderWidth: 1 },
@@ -161,7 +161,7 @@ const est = StyleSheet.create({
   selector: { flexDirection: 'row', gap: espacio.s },
   selectorOpcion: {
     flex: 1, alignItems: 'center', gap: 4, paddingVertical: espacio.m, borderRadius: radio.m, borderWidth: 1.5,
-    borderColor: colores.lineaSuave, backgroundColor: colores.superficieBlanca,
+    borderColor: colores.lineaSuave, backgroundColor: fondos.superficieBlanca,
   },
   selectorTexto: { fontFamily: fuentes.medium, fontSize: 11.5, color: colores.textoSuave, textAlign: 'center' },
-});
+}));

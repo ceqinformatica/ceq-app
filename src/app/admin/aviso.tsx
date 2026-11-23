@@ -6,11 +6,13 @@ import { BarraSuperior, Boton, Campo, Cargando, Fila, Insignia, Mensaje, Pantall
 import { borrarAviso, cargarAvisosAdmin, cargarCarreras, guardarAviso, notificacionDeAviso } from '../../datos/admin';
 import { LIMITE_AVISO, LIMITE_TITULO, TITULO_RECOMENDADO, validarMensaje } from '../../lib/programacion';
 import type { AvisoDb, Carrera, NotificacionDb } from '../../lib/tipos-db';
-import { colores, espacio } from '../../tema';
+import { colores, espacio, fondos } from '../../tema';
+import { useTema } from '../../context/TemaProvider';
 
 const volver = () => (router.canGoBack() ? router.back() : router.replace('/admin/avisos'));
 
 export default function EditarAviso() {
+  useTema();
   const { id } = useLocalSearchParams<{ id?: string }>();
   const editando = Boolean(id);
   const [cargando, setCargando] = useState(editando);
@@ -136,7 +138,7 @@ export default function EditarAviso() {
           icono="notifications-outline"
           titulo="Enviar notificación"
           detalle={yaEnviada ? 'Ya se envió: editar el aviso no la vuelve a mandar.' : 'Les llega al celular cuando se publica.'}
-          derecha={<Switch value={notificar} onValueChange={setNotificar} disabled={yaEnviada} accessibilityLabel="Enviar notificación" trackColor={{ true: colores.marino, false: colores.linea }} thumbColor={colores.blanco} />}
+          derecha={<Switch value={notificar} onValueChange={setNotificar} disabled={yaEnviada} accessibilityLabel="Enviar notificación" trackColor={{ true: fondos.marino, false: colores.linea }} thumbColor={colores.blanco} />}
           ultima={!editando}
         />
         {editando && (
@@ -144,7 +146,7 @@ export default function EditarAviso() {
             icono="eye-outline"
             titulo="Visible en la app"
             detalle="Apagalo para ocultar el aviso sin borrarlo."
-            derecha={<Switch value={visible} onValueChange={setVisible} accessibilityLabel="Visible en la app" trackColor={{ true: colores.marino, false: colores.linea }} thumbColor={colores.blanco} />}
+            derecha={<Switch value={visible} onValueChange={setVisible} accessibilityLabel="Visible en la app" trackColor={{ true: fondos.marino, false: colores.linea }} thumbColor={colores.blanco} />}
             ultima
           />
         )}

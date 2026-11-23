@@ -3,9 +3,9 @@
     "name": "CEQ",
     "slug": "ceq-app",
     "version": "0.1.0",
-    "orientation": "portrait",
+    "orientation": "default",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.ceqinformatica.app",
@@ -67,7 +67,8 @@
           "recordAudioAndroid": false
         }
       ],
-      "@react-native-google-signin/google-signin"
+      "@react-native-google-signin/google-signin",
+      "expo-screen-orientation"
     ],
     "scheme": "ceqapp",
     "experiments": {

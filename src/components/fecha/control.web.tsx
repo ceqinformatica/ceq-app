@@ -1,5 +1,5 @@
 import { createElement, useState } from 'react';
-import { colores, fuentes, radio, espacio } from '../../tema';
+import { colores, espacio, fondos, fuentes, radio } from '../../tema';
 import { leerTextoFecha, textoFecha, type PropsControl } from './formato';
 
 /** En la web se usa el selector propio del navegador (<input type="date|time">). */
@@ -23,7 +23,7 @@ export function ControlFechaHora({ modo, valor, onCambio, etiqueta, minimo }: Pr
     },
     style: {
       boxSizing: 'border-box', width: '100%', minHeight: 50, padding: `0 ${espacio.m + 2}px`, fontSize: 16, fontFamily: fuentes.regular,
-      color: colores.texto, backgroundColor: colores.superficieBlanca, borderRadius: radio.m,
+      color: colores.texto, backgroundColor: fondos.superficieBlanca, borderRadius: radio.m,
       border: foco ? `1.5px solid ${colores.marino}` : `1px solid ${colores.linea}`, outline: 'none',
     },
   });

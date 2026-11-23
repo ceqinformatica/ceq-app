@@ -7,7 +7,9 @@ import {
   TextInput, View, type TextInputProps, type TextStyle, type ViewStyle,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colores, espacio, fuentes, radio, sombras, texto } from '../tema';
+import { useTema } from '../context/TemaProvider';
+import { useDisposicion } from './disposicion';
+import { colores, crearEstilos, espacio, fondos, fuentes, radio, sombras, texto } from '../tema';
 import { TramaHex } from './graficos';
 
 /**
@@ -77,7 +79,9 @@ export function Pantalla({ children, scroll = true, estilo, cabecera, refrescand
   children: ReactNode; scroll?: boolean; estilo?: ViewStyle; cabecera?: ReactNode;
   refrescando?: boolean; onRefrescar?: () => void;
 }) {
-  const contenido = <View style={[s.contenido, cabecera ? { paddingTop: 0 } : null, estilo]}>{children}</View>;
+  const { anchoMaximo } = useDisposicion();
+  const ancho = anchoMaximo ? { width: '100%' as const, maxWidth: anchoMaximo, alignSelf: 'center' as const } : null;
+  const contenido = <View style={[s.contenido, ancho, cabecera ? { paddingTop: 0 } : null, estilo]}>{children}</View>;
   const refresh = onRefrescar ? (
     <RefreshControl refreshing={Boolean(refrescando)} onRefresh={onRefrescar} tintColor={cabecera ? colores.blanco : colores.marino} colors={[colores.marino]} />
   ) : undefined;
@@ -114,6 +118,7 @@ export function CabeceraMarca({ titulo, sub, derecha, children, compacta }: {
 }) {
   const insets = useSafeAreaInsets();
   const [tam, setTam] = useState({ w: 0, h: 0 });
+  const { anchoMaximo } = useDisposicion();
   useBarraEstado('light');
   return (
     <View
@@ -121,6 +126,7 @@ export function CabeceraMarca({ titulo, sub, derecha, children, compacta }: {
       onLayout={(e) => setTam({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}
     >
       {tam.w > 0 && <TramaHex ancho={tam.w} alto={tam.h} />}
+      <View style={anchoMaximo ? { width: '100%', maxWidth: anchoMaximo, alignSelf: 'center' } : null}>
       <View style={s.cabeceraFila}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: espacio.s }}>
           <View style={s.logoPastilla}>
@@ -133,16 +139,23 @@ export function CabeceraMarca({ titulo, sub, derecha, children, compacta }: {
       {titulo ? <Text style={s.cabeceraTitulo} accessibilityRole="header">{titulo}</Text> : null}
       {sub ? <Text style={s.cabeceraSub}>{sub}</Text> : null}
       {children}
+      </View>
     </View>
   );
 }
 
-/** Íconos de la barra de estado claros u oscuros según la pantalla enfocada. */
+/**
+ * Íconos de la barra de estado claros u oscuros según la pantalla enfocada.
+ * 'dark' significa "sobre fondo claro": en el modo oscuro el fondo es oscuro
+ * y los íconos van claros.
+ */
 export function useBarraEstado(estilo: 'light' | 'dark') {
+  const { oscuro } = useTema();
+  const efectivo = oscuro ? 'light' : estilo;
   useFocusEffect(
     useCallback(() => {
-      setStatusBarStyle(estilo, true);
-    }, [estilo]),
+      setStatusBarStyle(efectivo, true);
+    }, [efectivo]),
   );
 }
 
@@ -204,7 +217,7 @@ export function Tarjeta({ children, estilo, variante = 'blanca', onPress, etique
   children: ReactNode; estilo?: ViewStyle | ViewStyle[]; variante?: 'blanca' | 'celeste' | 'marino' | 'borde';
   onPress?: () => void; etiqueta?: string;
 }) {
-  const base = [s.tarjeta, variantesTarjeta[variante], estilo];
+  const base = [s.tarjeta, variantesTarjeta()[variante], estilo];
   if (!onPress) return <View style={base}>{children}</View>;
   return (
     <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={etiqueta} style={({ pressed }) => [...base, pressed && { opacity: 0.92, transform: [{ scale: 0.99 }] }]}>
@@ -213,15 +226,15 @@ export function Tarjeta({ children, estilo, variante = 'blanca', onPress, etique
   );
 }
 
-const variantesTarjeta: Record<string, ViewStyle> = {
-  blanca: { backgroundColor: colores.superficieBlanca, ...sombras.suave },
-  celeste: { backgroundColor: colores.tarjeta },
-  marino: { backgroundColor: colores.marino, ...sombras.media },
-  borde: { backgroundColor: colores.superficieBlanca, borderWidth: 1, borderColor: colores.lineaSuave },
-};
+const variantesTarjeta = (): Record<string, ViewStyle> => ({
+  blanca: { backgroundColor: fondos.superficieBlanca, ...sombras.suave },
+  celeste: { backgroundColor: fondos.tarjeta },
+  marino: { backgroundColor: fondos.marino, ...sombras.media },
+  borde: { backgroundColor: fondos.superficieBlanca, borderWidth: 1, borderColor: colores.lineaSuave },
+});
 
 /** Fila de lista: ícono en hexágono suave, textos y algo a la derecha. */
-export function Fila({ icono, colorIcono = colores.marino, fondoIcono = colores.tarjeta, titulo, detalle, derecha, onPress, ultima }: {
+export function Fila({ icono, colorIcono = colores.marino, fondoIcono = fondos.tarjeta, titulo, detalle, derecha, onPress, ultima }: {
   icono?: NombreIcono; colorIcono?: string; fondoIcono?: string; titulo: string; detalle?: string;
   derecha?: ReactNode; onPress?: () => void; ultima?: boolean;
 }) {
@@ -259,7 +272,7 @@ export function Boton({
   cargando?: boolean; deshabilitado?: boolean; icono?: NombreIcono; compacto?: boolean; estilo?: ViewStyle;
 }) {
   const inactivo = deshabilitado || cargando;
-  const v = variantesBoton[variante];
+  const v = variantesBoton()[variante];
   return (
     <Pressable
       accessibilityRole="button"
@@ -288,13 +301,13 @@ export function Boton({
   );
 }
 
-const variantesBoton: Record<string, { caja: ViewStyle; presionado: ViewStyle; color: string }> = {
-  primario: { caja: { backgroundColor: colores.marino, ...sombras.suave }, presionado: { backgroundColor: colores.marinoProfundo }, color: colores.blanco },
-  secundario: { caja: { backgroundColor: colores.superficieBlanca, borderWidth: 1.5, borderColor: colores.marino }, presionado: { backgroundColor: colores.tarjeta }, color: colores.marino },
-  peligro: { caja: { backgroundColor: colores.rojoFondo }, presionado: { opacity: 0.8 }, color: colores.rojo },
-  fantasma: { caja: { backgroundColor: 'transparent' }, presionado: { backgroundColor: colores.tarjeta }, color: colores.marino },
-  claro: { caja: { backgroundColor: colores.blanco }, presionado: { backgroundColor: colores.cielo }, color: colores.marino },
-};
+const variantesBoton = (): Record<string, { caja: ViewStyle; presionado: ViewStyle; color: string }> => ({
+  primario: { caja: { backgroundColor: fondos.marino, ...sombras.suave }, presionado: { backgroundColor: fondos.marinoProfundo }, color: colores.blanco },
+  secundario: { caja: { backgroundColor: fondos.superficieBlanca, borderWidth: 1.5, borderColor: colores.marino }, presionado: { backgroundColor: fondos.tarjeta }, color: colores.marino },
+  peligro: { caja: { backgroundColor: fondos.rojoFondo }, presionado: { opacity: 0.8 }, color: colores.rojo },
+  fantasma: { caja: { backgroundColor: 'transparent' }, presionado: { backgroundColor: fondos.tarjeta }, color: colores.marino },
+  claro: { caja: { backgroundColor: fondos.blanco }, presionado: { backgroundColor: colores.cielo }, color: colores.marinoFijo },
+});
 
 export function BotonIcono({ icono, etiqueta, onPress, claro, tamano = 22 }: { icono: NombreIcono; etiqueta: string; onPress: () => void; claro?: boolean; tamano?: number }) {
   return (
@@ -303,7 +316,7 @@ export function BotonIcono({ icono, etiqueta, onPress, claro, tamano = 22 }: { i
       accessibilityRole="button"
       accessibilityLabel={etiqueta}
       hitSlop={6}
-      style={({ pressed }) => [s.botonIcono, claro ? { backgroundColor: 'rgba(255,255,255,0.14)' } : { backgroundColor: colores.superficieBlanca, ...sombras.suave }, pressed && { opacity: 0.7 }]}
+      style={({ pressed }) => [s.botonIcono, claro ? { backgroundColor: 'rgba(255,255,255,0.14)' } : { backgroundColor: fondos.superficieBlanca, ...sombras.suave }, pressed && { opacity: 0.7 }]}
     >
       <Ionicons name={icono} size={tamano} color={claro ? colores.blanco : colores.marino} />
     </Pressable>
@@ -313,7 +326,7 @@ export function BotonIcono({ icono, etiqueta, onPress, claro, tamano = 22 }: { i
 /** Botón flotante para agregar. */
 export function BotonFlotante({ icono = 'add', etiqueta, onPress }: { icono?: NombreIcono; etiqueta: string; onPress: () => void }) {
   return (
-    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={etiqueta} style={({ pressed }) => [s.flotante, pressed && { backgroundColor: colores.marinoProfundo }]}>
+    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={etiqueta} style={({ pressed }) => [s.flotante, pressed && { backgroundColor: fondos.marinoProfundo }]}>
       <Ionicons name={icono} size={22} color={colores.blanco} />
       <Text style={s.flotanteTexto}>{etiqueta}</Text>
     </Pressable>
@@ -366,7 +379,7 @@ export function Chip({ texto: t, elegido, onPress, icono }: { texto: string; ele
       disabled={!onPress}
       accessibilityRole={onPress ? 'button' : undefined}
       accessibilityState={{ selected: elegido }}
-      style={[s.chip, elegido && { backgroundColor: colores.marino, borderColor: colores.marino }]}
+      style={[s.chip, elegido && { backgroundColor: fondos.marino, borderColor: colores.marino }]}
     >
       {icono && <Ionicons name={icono} size={14} color={elegido ? colores.blanco : colores.marino} />}
       <Text style={[s.chipTexto, elegido && { color: colores.blanco }]}>{t}</Text>
@@ -375,7 +388,7 @@ export function Chip({ texto: t, elegido, onPress, icono }: { texto: string; ele
 }
 
 /** Etiqueta de estado, no interactiva. */
-export function Insignia({ texto: t, color = colores.marino, fondo = colores.tarjeta, icono }: { texto: string; color?: string; fondo?: string; icono?: NombreIcono }) {
+export function Insignia({ texto: t, color = colores.marino, fondo = fondos.tarjeta, icono }: { texto: string; color?: string; fondo?: string; icono?: NombreIcono }) {
   return (
     <View style={[s.insignia, { backgroundColor: fondo }]}>
       {icono && <Ionicons name={icono} size={12} color={color} />}
@@ -422,9 +435,9 @@ export function Contador({ valor, onCambio, min = 0, max = 999, etiqueta }: { va
 export function Mensaje({ texto: t, tipo = 'error' }: { texto: string | null; tipo?: 'error' | 'info' | 'exito' }) {
   if (!t) return null;
   const estilos = {
-    error: { color: colores.rojo, fondo: colores.rojoFondo, icono: 'alert-circle' as NombreIcono },
-    info: { color: colores.marino, fondo: colores.tarjeta, icono: 'information-circle' as NombreIcono },
-    exito: { color: colores.verde, fondo: colores.verdeFondo, icono: 'checkmark-circle' as NombreIcono },
+    error: { color: colores.rojo, fondo: fondos.rojoFondo, icono: 'alert-circle' as NombreIcono },
+    info: { color: colores.marino, fondo: fondos.tarjeta, icono: 'information-circle' as NombreIcono },
+    exito: { color: colores.verde, fondo: fondos.verdeFondo, icono: 'checkmark-circle' as NombreIcono },
   }[tipo];
   return (
     <View style={[s.mensaje, { backgroundColor: estilos.fondo }]} accessibilityRole={tipo === 'error' ? 'alert' : 'text'} accessibilityLiveRegion="polite">
@@ -458,7 +471,7 @@ export function Cargando({ texto: t }: { texto?: string }) {
 
 /** Bloque gris animable mientras cargan los datos. */
 export function Esqueleto({ alto = 16, ancho = '100%', estilo }: { alto?: number; ancho?: number | `${number}%`; estilo?: ViewStyle }) {
-  return <View style={[{ height: alto, width: ancho, borderRadius: radio.s, backgroundColor: colores.lineaSuave }, estilo]} />;
+  return <View style={[{ height: alto, width: ancho, borderRadius: radio.s, backgroundColor: fondos.lineaSuave }, estilo]} />;
 }
 
 export function Proximamente({ titulo, items }: { titulo: string; items: string[] }) {
@@ -479,11 +492,14 @@ export function Proximamente({ titulo, items }: { titulo: string; items: string[
 /** Hoja inferior modal, para formularios cortos. */
 export function Hoja({ visible, titulo, onCerrar, children }: { visible: boolean; titulo: string; onCerrar: () => void; children: ReactNode }) {
   const insets = useSafeAreaInsets();
+  // En tablet la hoja no ocupa todo el ancho: queda centrada.
+  const { tablet } = useDisposicion();
+  const hojaAncha = tablet ? { width: '100%' as const, maxWidth: 600, alignSelf: 'center' as const } : null;
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onCerrar} statusBarTranslucent>
       <EvitaTeclado>
         <Pressable style={s.velo} onPress={onCerrar} accessibilityLabel="Cerrar" />
-        <View style={[s.hoja, { paddingBottom: insets.bottom + espacio.l }]}>
+        <View style={[s.hoja, { paddingBottom: insets.bottom + espacio.l }, hojaAncha]}>
           <View style={s.hojaAsa} />
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: espacio.l }}>
             <Text style={[s.barraTitulo, { textAlign: 'left' }]}>{titulo}</Text>
@@ -512,16 +528,16 @@ export function Dato({ valor, etiqueta, color = colores.marino, estilo }: { valo
 /* Estilos compartidos                                                 */
 /* ------------------------------------------------------------------ */
 
-export const s = StyleSheet.create({
-  pantalla: { flex: 1, backgroundColor: colores.fondo },
+export const s = crearEstilos(() => ({
+  pantalla: { flex: 1, backgroundColor: fondos.fondo },
   contenido: { padding: espacio.l, paddingBottom: espacio.xxxl + espacio.xl },
 
   cabecera: {
-    backgroundColor: colores.marino, paddingHorizontal: espacio.l, borderBottomLeftRadius: radio.xl + 6, borderBottomRightRadius: radio.xl + 6,
+    backgroundColor: fondos.marino, paddingHorizontal: espacio.l, borderBottomLeftRadius: radio.xl + 6, borderBottomRightRadius: radio.xl + 6,
     overflow: 'hidden', marginBottom: espacio.xs,
   },
   cabeceraFila: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: espacio.l },
-  logoPastilla: { width: 36, height: 36, borderRadius: 10, backgroundColor: colores.blanco, alignItems: 'center', justifyContent: 'center' },
+  logoPastilla: { width: 36, height: 36, borderRadius: 10, backgroundColor: fondos.blanco, alignItems: 'center', justifyContent: 'center' },
   cabeceraMarca: { fontFamily: fuentes.bold, fontSize: 19, color: colores.blanco, letterSpacing: 1.5 },
   cabeceraTitulo: { ...texto.titulo, color: colores.blanco, textTransform: 'uppercase', letterSpacing: 0.6 },
   cabeceraSub: { ...texto.cuerpo, color: colores.celeste, marginTop: 2 },
@@ -551,46 +567,46 @@ export const s = StyleSheet.create({
   botonIcono: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   flotante: {
     position: 'absolute', right: espacio.l, bottom: espacio.l, flexDirection: 'row', alignItems: 'center', gap: espacio.s,
-    backgroundColor: colores.marino, paddingHorizontal: espacio.l, height: 52, borderRadius: radio.pill, ...sombras.fuerte,
+    backgroundColor: fondos.marino, paddingHorizontal: espacio.l, height: 52, borderRadius: radio.pill, ...sombras.fuerte,
   },
   flotanteTexto: { fontFamily: fuentes.semibold, fontSize: 15, color: colores.blanco },
 
   etiqueta: { fontFamily: fuentes.medium, fontSize: 13.5, color: colores.marinoOscuro, marginBottom: espacio.xs + 2 },
   campo: {
-    backgroundColor: colores.superficieBlanca, borderWidth: 1, borderColor: colores.linea, borderRadius: radio.m,
+    backgroundColor: fondos.superficieBlanca, borderWidth: 1, borderColor: colores.linea, borderRadius: radio.m,
     paddingHorizontal: espacio.m + 2, minHeight: 50, fontSize: 16, fontFamily: fuentes.regular, color: colores.texto,
   },
   opcion: {
     flexDirection: 'row', alignItems: 'center', gap: espacio.m, borderWidth: 1, borderColor: colores.lineaSuave, borderRadius: radio.l,
-    padding: espacio.m + 2, marginBottom: espacio.s, backgroundColor: colores.superficieBlanca,
+    padding: espacio.m + 2, marginBottom: espacio.s, backgroundColor: fondos.superficieBlanca,
   },
-  opcionElegida: { borderColor: colores.marino, borderWidth: 1.5, backgroundColor: colores.tarjeta },
+  opcionElegida: { borderColor: colores.marino, borderWidth: 1.5, backgroundColor: fondos.tarjeta },
   opcionTexto: { fontFamily: fuentes.semibold, fontSize: 15.5, color: colores.marino },
   radio: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: colores.linea, alignItems: 'center', justifyContent: 'center' },
   radioPunto: { width: 10, height: 10, borderRadius: 5, backgroundColor: colores.marino },
 
   chip: {
     flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: espacio.m, height: 34, borderRadius: radio.pill,
-    borderWidth: 1, borderColor: colores.linea, backgroundColor: colores.superficieBlanca,
+    borderWidth: 1, borderColor: colores.linea, backgroundColor: fondos.superficieBlanca,
   },
   chipTexto: { fontFamily: fuentes.medium, fontSize: 13.5, color: colores.marino },
   insignia: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 3, borderRadius: radio.pill, alignSelf: 'flex-start' },
   insigniaTexto: { fontFamily: fuentes.semibold, fontSize: 11.5, letterSpacing: 0.2 },
 
-  segmentado: { flexDirection: 'row', backgroundColor: colores.lineaSuave, borderRadius: radio.m, padding: 3, marginBottom: espacio.l },
+  segmentado: { flexDirection: 'row', backgroundColor: fondos.lineaSuave, borderRadius: radio.m, padding: 3, marginBottom: espacio.l },
   segmento: { flex: 1, height: 36, alignItems: 'center', justifyContent: 'center', borderRadius: radio.m - 3 },
-  segmentoActivo: { backgroundColor: colores.superficieBlanca, ...sombras.suave },
+  segmentoActivo: { backgroundColor: fondos.superficieBlanca, ...sombras.suave },
   segmentoTexto: { fontFamily: fuentes.medium, fontSize: 14, color: colores.textoSuave },
 
-  contador: { flexDirection: 'row', alignItems: 'center', backgroundColor: colores.tarjeta, borderRadius: radio.m, padding: 3 },
-  contadorBoton: { width: 34, height: 34, borderRadius: 9, backgroundColor: colores.superficieBlanca, alignItems: 'center', justifyContent: 'center' },
+  contador: { flexDirection: 'row', alignItems: 'center', backgroundColor: fondos.tarjeta, borderRadius: radio.m, padding: 3 },
+  contadorBoton: { width: 34, height: 34, borderRadius: 9, backgroundColor: fondos.superficieBlanca, alignItems: 'center', justifyContent: 'center' },
   contadorValor: { minWidth: 40, textAlign: 'center', fontFamily: fuentes.bold, fontSize: 16, color: colores.marino },
 
   mensaje: { flexDirection: 'row', alignItems: 'flex-start', gap: espacio.s, padding: espacio.m, borderRadius: radio.m, marginVertical: espacio.s },
   mensajeTexto: { flex: 1, fontFamily: fuentes.regular, fontSize: 14, lineHeight: 20 },
 
   vacio: { alignItems: 'center', paddingVertical: espacio.l, paddingHorizontal: espacio.m },
-  vacioIcono: { width: 58, height: 58, borderRadius: 18, backgroundColor: colores.tarjeta, alignItems: 'center', justifyContent: 'center', marginBottom: espacio.m },
+  vacioIcono: { width: 58, height: 58, borderRadius: 18, backgroundColor: fondos.tarjeta, alignItems: 'center', justifyContent: 'center', marginBottom: espacio.m },
   vacioTitulo: { fontFamily: fuentes.semibold, fontSize: 16, color: colores.marino, textAlign: 'center' },
   vacioTexto: { ...texto.chico, color: colores.textoSuave, textAlign: 'center', marginTop: espacio.xs, maxWidth: 300 },
 
@@ -603,8 +619,8 @@ export const s = StyleSheet.create({
 
   velo: { flex: 1, backgroundColor: 'rgba(14, 37, 82, 0.45)' },
   hoja: {
-    backgroundColor: colores.fondo, borderTopLeftRadius: radio.xl, borderTopRightRadius: radio.xl, paddingHorizontal: espacio.l,
+    backgroundColor: fondos.fondo, borderTopLeftRadius: radio.xl, borderTopRightRadius: radio.xl, paddingHorizontal: espacio.l,
     paddingTop: espacio.s, maxHeight: '88%',
   },
-  hojaAsa: { alignSelf: 'center', width: 40, height: 5, borderRadius: 3, backgroundColor: colores.linea, marginBottom: espacio.m },
-});
+  hojaAsa: { alignSelf: 'center', width: 40, height: 5, borderRadius: 3, backgroundColor: fondos.linea, marginBottom: espacio.m },
+}));

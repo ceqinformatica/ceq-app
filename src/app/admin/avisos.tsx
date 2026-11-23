@@ -5,18 +5,20 @@ import { cargarAvisosAdmin } from '../../datos/admin';
 import { usarDatos } from '../../datos/usarDatos';
 import { describirCuando } from '../../lib/programacion';
 import type { AvisoDb } from '../../lib/tipos-db';
-import { colores, espacio } from '../../tema';
+import { colores, espacio, fondos } from '../../tema';
+import { useTema } from '../../context/TemaProvider';
 
 const volver = () => (router.canGoBack() ? router.back() : router.replace('/admin'));
 
 function estadoAviso(a: AvisoDb) {
-  if (!a.publicado) return { texto: 'Oculto', color: colores.gris, fondo: colores.grisFondo };
+  if (!a.publicado) return { texto: 'Oculto', color: colores.gris, fondo: fondos.grisFondo };
   const cuando = a.publicar_en ?? a.created_at;
-  if (new Date(cuando) > new Date()) return { texto: `Programado · ${describirCuando(cuando)}`, color: colores.amarillo, fondo: colores.amarilloFondo };
-  return { texto: `Publicado · ${describirCuando(cuando)}`, color: colores.verde, fondo: colores.verdeFondo };
+  if (new Date(cuando) > new Date()) return { texto: `Programado · ${describirCuando(cuando)}`, color: colores.amarillo, fondo: fondos.amarilloFondo };
+  return { texto: `Publicado · ${describirCuando(cuando)}`, color: colores.verde, fondo: fondos.verdeFondo };
 }
 
 export default function AvisosAdmin() {
+  useTema();
   const { datos, cargando, error, refrescando, recargar } = usarDatos(cargarAvisosAdmin, []);
   return (
     <View style={{ flex: 1 }}>

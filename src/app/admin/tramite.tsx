@@ -4,7 +4,8 @@ import { Switch, Text, View } from 'react-native';
 import { BarraSuperior, Boton, Campo, Cargando, Chip, Fila, Mensaje, Pantalla, s, Seccion, Tarjeta } from '../../components/ui';
 import { borrarTramite, cargarTramite, guardarTramite } from '../../datos/tramites';
 import { aFormulario, CATEGORIAS_TRAMITE, LIMITE_NOMBRE_TRAMITE, TEXTO_MODALIDAD, validarTramite, type FormularioTramite, type Modalidad } from '../../lib/tramites';
-import { colores, espacio } from '../../tema';
+import { colores, espacio, fondos } from '../../tema';
+import { useTema } from '../../context/TemaProvider';
 
 const volver = () => (router.canGoBack() ? router.back() : router.replace('/admin/tramites'));
 
@@ -16,6 +17,7 @@ const VACIO: FormularioTramite = {
 const MODALIDADES: (Modalidad | null)[] = ['presencial', 'etramite', 'mixto', null];
 
 export default function EditarTramite() {
+  useTema();
   const { id } = useLocalSearchParams<{ id?: string }>();
   const editando = Boolean(id);
   const [cargando, setCargando] = useState(editando);
@@ -118,7 +120,7 @@ export default function EditarTramite() {
           icono="eye-outline"
           titulo="Visible en la app"
           detalle="Apagalo para ocultarlo sin borrarlo (por ejemplo, mientras lo revisás)."
-          derecha={<Switch value={visible} onValueChange={setVisible} accessibilityLabel="Visible en la app" trackColor={{ true: colores.marino, false: colores.linea }} thumbColor={colores.blanco} />}
+          derecha={<Switch value={visible} onValueChange={setVisible} accessibilityLabel="Visible en la app" trackColor={{ true: fondos.marino, false: colores.linea }} thumbColor={colores.blanco} />}
           ultima
         />
       </Tarjeta>

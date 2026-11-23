@@ -6,7 +6,8 @@ import { aprobarSolicitud, cargarSolicitudesPendientes, rechazarSolicitud, socio
 import { usarDatos } from '../../datos/usarDatos';
 import { estadoCarnet, fechaCorta, formatearCi } from '../../lib/carnet';
 import type { SocioDb, SolicitudCarnetDb } from '../../lib/tipos-db';
-import { colores, espacio, radio } from '../../tema';
+import { colores, espacio, fondos, radio } from '../../tema';
+import { useTema } from '../../context/TemaProvider';
 
 const volver = () => (router.canGoBack() ? router.back() : router.replace('/admin'));
 
@@ -14,6 +15,7 @@ const MOTIVOS = ['La foto no se lee', 'Los datos no coinciden con la foto', 'No 
 
 /** Carnets físicos que los estudiantes fotografiaron: el CEQ los aprueba con un toque. */
 export default function SolicitudesCarnet() {
+  useTema();
   const { datos, cargando, error, refrescando, recargar, setDatos } = usarDatos(cargarSolicitudesPendientes, []);
   const sacar = (id: string) => setDatos((datos ?? []).filter((x) => x.id !== id));
 
@@ -84,9 +86,9 @@ function Solicitud({ sol, onListo }: { sol: SolicitudCarnetDb; onListo: () => vo
     <Tarjeta>
       <Pressable onPress={() => setGrande((g) => !g)} accessibilityRole="imagebutton" accessibilityLabel={grande ? 'Achicar la foto' : 'Agrandar la foto del carnet'}>
         {foto ? (
-          <Image source={{ uri: foto }} style={{ width: '100%', height: grande ? 360 : 180, borderRadius: radio.m, backgroundColor: colores.tarjeta }} resizeMode="contain" />
+          <Image source={{ uri: foto }} style={{ width: '100%', height: grande ? 360 : 180, borderRadius: radio.m, backgroundColor: fondos.tarjeta }} resizeMode="contain" />
         ) : (
-          <View style={{ height: 120, borderRadius: radio.m, backgroundColor: colores.tarjeta, alignItems: 'center', justifyContent: 'center' }}>
+          <View style={{ height: 120, borderRadius: radio.m, backgroundColor: fondos.tarjeta, alignItems: 'center', justifyContent: 'center' }}>
             <Text style={s.filaDetalle}>Foto del carnet</Text>
           </View>
         )}

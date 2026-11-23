@@ -5,11 +5,13 @@ import { BarraSuperior, BotonFlotante, Campo, Cargando, EstadoVacio, Insignia, P
 import { cargarTramitesAdmin } from '../../datos/tramites';
 import { usarDatos } from '../../datos/usarDatos';
 import { agruparPorCategoria, filtrarTramites } from '../../lib/tramites';
-import { colores, espacio } from '../../tema';
+import { colores, espacio, fondos } from '../../tema';
+import { useTema } from '../../context/TemaProvider';
 
 const volver = () => (router.canGoBack() ? router.back() : router.replace('/admin'));
 
 export default function TramitesAdmin() {
+  useTema();
   const { datos, cargando, error, refrescando, recargar } = usarDatos(cargarTramitesAdmin, []);
   const [busqueda, setBusqueda] = useState('');
   const grupos = useMemo(() => agruparPorCategoria(filtrarTramites(datos ?? [], busqueda)), [datos, busqueda]);
@@ -41,7 +43,7 @@ export default function TramitesAdmin() {
                 <Tarjeta key={t.id} onPress={() => router.push(`/admin/tramite?id=${t.id}`)} etiqueta={`Editar ${t.nombre}`}>
                   {!t.publicado && (
                     <View style={{ flexDirection: 'row', marginBottom: espacio.s }}>
-                      <Insignia texto="Oculto" color={colores.gris} fondo={colores.grisFondo} icono="eye-off-outline" />
+                      <Insignia texto="Oculto" color={colores.gris} fondo={fondos.grisFondo} icono="eye-off-outline" />
                     </View>
                   )}
                   <Text style={[s.filaTitulo, { color: colores.marino }]}>{t.nombre}</Text>

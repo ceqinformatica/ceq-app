@@ -1,7 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { Carnet } from '../../components/Carnet';
 import { AVISO_CARNET_PAGO } from '../../lib/carnet';
 import { BarraProgreso } from '../../components/graficos';
@@ -10,7 +10,8 @@ import { useSesion } from '../../context/SesionProvider';
 import { cargarAvisos, cargarEncuestas, haceCuanto, cargarSocio, enviarSugerencia, votar, type EncuestaConResultados } from '../../datos/ceq';
 import { cargarTramites } from '../../datos/tramites';
 import { usarDatos } from '../../datos/usarDatos';
-import { colores, espacio, fuentes, radio, sombras } from '../../tema';
+import { colores, crearEstilos, espacio, fondos, fuentes, radio, sombras } from '../../tema';
+import { useTema } from '../../context/TemaProvider';
 
 /** Los más consultados: se muestran primero en la pestaña del CEQ. */
 const TRAMITES_DESTACADOS = ['inscripcion-finales', 'certificado-estudios', 'constancia-general', 'matriculacion'];
@@ -23,6 +24,7 @@ async function cargar(uid: string) {
 }
 
 export default function Ceq() {
+  useTema();
   const { sesion, perfil } = useSesion();
   const uid = sesion?.user.id ?? '';
   const { datos, cargando, error, refrescando, recargar, setDatos } = usarDatos(() => cargar(uid), [uid]);
@@ -104,7 +106,7 @@ export default function Ceq() {
 
       <Tarjeta variante="celeste" onPress={() => setSugerir(true)} etiqueta="Enviar una sugerencia" estilo={{ marginTop: espacio.m }}>
         <View style={{ flexDirection: 'row', gap: espacio.m, alignItems: 'center' }}>
-          <View style={[est.iconoGrande, { backgroundColor: colores.blanco }]}><Ionicons name="chatbubble-ellipses-outline" size={24} color={colores.marino} /></View>
+          <View style={[est.iconoGrande, { backgroundColor: fondos.superficieBlanca }]}><Ionicons name="chatbubble-ellipses-outline" size={24} color={colores.marino} /></View>
           <View style={{ flex: 1 }}>
             <Text style={[s.filaTitulo, { color: colores.marino }]}>¿Qué podemos mejorar?</Text>
             <Text style={s.filaDetalle}>Mandale tu sugerencia o reclamo al CEQ.</Text>
@@ -165,13 +167,13 @@ function Encuesta({ encuesta, onVotado }: { encuesta: EncuestaConResultados; onV
                   <Text style={s.cuerpo}>{o.texto}</Text>
                   <Text style={[s.cuerpo, { fontFamily: fuentes.semibold, color: colores.marino }]}>{porc} %</Text>
                 </View>
-                <BarraProgreso valor={porc} fondo={colores.lineaSuave} />
+                <BarraProgreso valor={porc} fondo={fondos.lineaSuave} />
               </View>
             );
           }
           const activo = elegida === o.id;
           return (
-            <Pressable key={o.id} onPress={() => setElegida(o.id)} accessibilityRole="radio" accessibilityState={{ checked: activo }} style={[est.opcion, activo && { borderColor: colores.marino, backgroundColor: colores.tarjeta }]}>
+            <Pressable key={o.id} onPress={() => setElegida(o.id)} accessibilityRole="radio" accessibilityState={{ checked: activo }} style={[est.opcion, activo && { borderColor: colores.marino, backgroundColor: fondos.tarjeta }]}>
               <View style={[s.radio, activo && { borderColor: colores.marino }]}>{activo && <View style={s.radioPunto} />}</View>
               <Text style={[s.cuerpo, { flex: 1 }]}>{o.texto}</Text>
             </Pressable>
@@ -224,12 +226,12 @@ function FormSugerencia({ visible, onCerrar }: { visible: boolean; onCerrar: () 
   );
 }
 
-const est = StyleSheet.create({
-  iconoGrande: { width: 48, height: 48, borderRadius: 14, backgroundColor: colores.tarjeta, alignItems: 'center', justifyContent: 'center' },
+const est = crearEstilos(() => ({
+  iconoGrande: { width: 48, height: 48, borderRadius: 14, backgroundColor: fondos.tarjeta, alignItems: 'center', justifyContent: 'center' },
   accesos: { flexDirection: 'row', gap: espacio.s, marginTop: espacio.l, marginBottom: espacio.s },
-  acceso: { flex: 1, alignItems: 'center', gap: 6, backgroundColor: colores.superficieBlanca, borderRadius: radio.l, paddingVertical: espacio.m, ...sombras.suave },
-  accesoIcono: { width: 44, height: 44, borderRadius: 14, backgroundColor: colores.tarjeta, alignItems: 'center', justifyContent: 'center' },
+  acceso: { flex: 1, alignItems: 'center', gap: 6, backgroundColor: fondos.superficieBlanca, borderRadius: radio.l, paddingVertical: espacio.m, ...sombras.suave },
+  accesoIcono: { width: 44, height: 44, borderRadius: 14, backgroundColor: fondos.tarjeta, alignItems: 'center', justifyContent: 'center' },
   accesoTexto: { fontFamily: fuentes.semibold, fontSize: 12, color: colores.marino },
   avisoFecha: { fontFamily: fuentes.semibold, fontSize: 11, color: colores.azul, letterSpacing: 0.4, marginBottom: 4, textTransform: 'uppercase' },
   opcion: { flexDirection: 'row', alignItems: 'center', gap: espacio.m, borderWidth: 1, borderColor: colores.lineaSuave, borderRadius: radio.m, padding: espacio.m, marginBottom: espacio.s },
-});
+}));

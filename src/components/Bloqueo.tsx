@@ -4,7 +4,7 @@ import { Image, Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSesion } from '../context/SesionProvider';
 import { salir } from '../lib/auth';
-import { colores, espacio, fuentes } from '../tema';
+import { colores, espacio, fondos, fuentes } from '../tema';
 import { Hexagono, TramaHex } from './graficos';
 import { Boton, logoCeq, Mensaje } from './ui';
 
@@ -27,12 +27,12 @@ export function Bloqueo() {
 
   return (
     <View
-      style={{ flex: 1, backgroundColor: colores.marino, paddingTop: insets.top, paddingBottom: insets.bottom + espacio.xl, paddingHorizontal: espacio.xl }}
+      style={{ flex: 1, backgroundColor: fondos.marino, paddingTop: insets.top, paddingBottom: insets.bottom + espacio.xl, paddingHorizontal: espacio.xl }}
       onLayout={(e) => setTam({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}
     >
       {tam.w > 0 && <TramaHex ancho={tam.w} alto={tam.h} opacidad={0.08} tam={44} />}
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-        <Hexagono tamano={112} relleno={colores.blanco}>
+        <Hexagono tamano={112} relleno={fondos.blanco}>
           <Image source={logoCeq} style={{ width: 76, height: 76 }} accessibilityLabel="Logo del CEQ" />
         </Hexagono>
         <Text style={{ fontFamily: fuentes.bold, fontSize: 24, color: colores.blanco, marginTop: espacio.xl, textTransform: 'uppercase', letterSpacing: 1 }} accessibilityRole="header">

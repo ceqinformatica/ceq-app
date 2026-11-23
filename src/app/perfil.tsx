@@ -2,18 +2,20 @@ import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Alert, Linking, Platform, Switch, Text, View } from 'react-native';
 import { Hexagono } from '../components/graficos';
-import { BarraSuperior, Boton, Fila, Mensaje, Pantalla, s, Seccion, Tarjeta } from '../components/ui';
+import { BarraSuperior, Boton, Fila, Mensaje, Pantalla, s, Seccion, Segmentado, Tarjeta } from '../components/ui';
 import { useSesion } from '../context/SesionProvider';
 import { db, MODO_DEMO } from '../datos/demo';
 import { eliminarCuenta, salir } from '../lib/auth';
 import { registrarEsteCelular, type EstadoRegistro } from '../lib/notificaciones';
 import { activarBiometria, biometriaActiva, biometriaDisponible, desactivarBiometria } from '../lib/biometria';
 import { supabase } from '../lib/supabase';
-import { colores, espacio, fuentes, texto } from '../tema';
+import { colores, espacio, fondos, fuentes, texto } from '../tema';
+import { useTema, type PreferenciaTema } from '../context/TemaProvider';
 
 const volver = () => (router.canGoBack() ? router.back() : router.replace('/'));
 
 export default function Perfil() {
+  const { preferencia, cambiarPreferencia: cambiarTema } = useTema();
   const { sesion, perfil, actualizarPerfil } = useSesion();
   const [carrera, setCarrera] = useState<string | null>(null);
   const [plan, setPlan] = useState<string | null>(null);
@@ -89,7 +91,7 @@ export default function Perfil() {
       <BarraSuperior titulo="Mi perfil" onVolver={volver} />
 
       <View style={{ alignItems: 'center', marginBottom: espacio.l }}>
-        <Hexagono tamano={92} relleno={colores.marino}>
+        <Hexagono tamano={92} relleno={fondos.marino}>
           <Text style={{ fontFamily: fuentes.bold, fontSize: 34, color: colores.blanco }}>{inicial}</Text>
         </Hexagono>
         <Text style={[texto.titulo, { color: colores.marino, marginTop: espacio.m, textAlign: 'center' }]}>{perfil?.nombre ?? 'Sin nombre'}</Text>
@@ -151,6 +153,20 @@ export default function Perfil() {
       )}
       {push === 'error' && <Mensaje tipo="info" texto="No pudimos activar las notificaciones en este celular. Probá de nuevo más tarde." />}
 
+      <Seccion estilo={{ marginTop: espacio.xl }}>Apariencia</Seccion>
+      <Segmentado<PreferenciaTema>
+        opciones={[
+          { valor: 'sistema', texto: 'Automático' },
+          { valor: 'claro', texto: 'Claro' },
+          { valor: 'oscuro', texto: 'Oscuro' },
+        ]}
+        valor={preferencia}
+        onCambio={cambiarTema}
+      />
+      <Text style={[s.filaDetalle, { marginTop: -espacio.s }]}>
+        {preferencia === 'sistema' ? 'Sigue el modo claro u oscuro de tu celular.' : preferencia === 'oscuro' ? 'Modo oscuro siempre, aunque el celular esté en claro.' : 'Modo claro siempre, aunque el celular esté en oscuro.'}
+      </Text>
+
       <Seccion estilo={{ marginTop: espacio.xl }}>Seguridad</Seccion>
       <Tarjeta estilo={{ paddingVertical: espacio.xs }}>
         {bio && !bio.disponible ? (
@@ -166,7 +182,7 @@ export default function Perfil() {
                 onValueChange={cambiarBio}
                 disabled={!bio}
                 accessibilityLabel={`Desbloquear con ${bio?.nombre ?? 'huella'}`}
-                trackColor={{ true: colores.marino, false: colores.linea }}
+                trackColor={{ true: fondos.marino, false: colores.linea }}
                 thumbColor={colores.blanco}
               />
             }
@@ -191,7 +207,7 @@ function Interruptor({ valor, onCambio, etiqueta }: { valor: boolean; onCambio: 
       value={valor}
       onValueChange={onCambio}
       accessibilityLabel={etiqueta}
-      trackColor={{ true: colores.marino, false: colores.linea }}
+      trackColor={{ true: fondos.marino, false: colores.linea }}
       thumbColor={colores.blanco}
     />
   );

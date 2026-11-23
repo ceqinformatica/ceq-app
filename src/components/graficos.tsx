@@ -1,6 +1,6 @@
 import { Text, View, type ViewStyle } from 'react-native';
 import Svg, { Circle, Polygon } from 'react-native-svg';
-import { colores, fuentes, radio } from '../tema';
+import { colores, fondos, fuentes, radio } from '../tema';
 
 /** Puntos de un hexágono "de punta" (como el logo del CEQ) centrado en (cx, cy). */
 function puntosHex(cx: number, cy: number, r: number) {
@@ -11,7 +11,7 @@ function puntosHex(cx: number, cy: number, r: number) {
 }
 
 /** Hexágono suelto: para íconos, insignias y fondos. */
-export function Hexagono({ tamano = 40, relleno = colores.marino, borde, grosor = 0, children, estilo }: {
+export function Hexagono({ tamano = 40, relleno = fondos.marino, borde, grosor = 0, children, estilo }: {
   tamano?: number; relleno?: string; borde?: string; grosor?: number; children?: React.ReactNode; estilo?: ViewStyle;
 }) {
   const r = tamano / 2 - grosor;
@@ -53,7 +53,7 @@ export function TramaHex({ ancho, alto, color = '#FFFFFF', opacidad = 0.08, tam 
 }
 
 /** Anillo de progreso con el porcentaje en el centro. */
-export function AnilloProgreso({ porcentaje, tamano = 120, grosor = 11, color = colores.marino, fondo = colores.cielo, colorTexto = colores.marino, etiqueta }: {
+export function AnilloProgreso({ porcentaje, tamano = 120, grosor = 11, color = colores.marino, fondo = fondos.cielo, colorTexto = colores.marino, etiqueta }: {
   porcentaje: number; tamano?: number; grosor?: number; color?: string; fondo?: string; colorTexto?: string; etiqueta?: string;
 }) {
   const r = (tamano - grosor) / 2;
@@ -79,7 +79,7 @@ export function AnilloProgreso({ porcentaje, tamano = 120, grosor = 11, color = 
 }
 
 /** Barra de progreso horizontal, con marca opcional (ej. el mínimo para firmar). */
-export function BarraProgreso({ valor, marca, color = colores.marino, fondo = colores.cielo, alto = 8 }: {
+export function BarraProgreso({ valor, marca, color = colores.marino, fondo = fondos.cielo, alto = 8 }: {
   valor: number | null; marca?: number | null; color?: string; fondo?: string; alto?: number;
 }) {
   const v = Math.max(0, Math.min(100, valor ?? 0));

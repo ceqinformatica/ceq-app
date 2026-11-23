@@ -2,7 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import * as DocumentPicker from 'expo-document-picker';
 import { router } from 'expo-router';
 import { useMemo, useRef, useState } from 'react';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, Text, View } from 'react-native';
 import { nombreSemestre, nota as fmtNota } from '../components/academico';
 import { BarraSuperior, Boton, Campo, Cargando, Dato, EstadoVacio, Hoja, Insignia, Mensaje, Pantalla, s, Seccion, Tarjeta } from '../components/ui';
 import { useSesion } from '../context/SesionProvider';
@@ -11,7 +11,8 @@ import { usarDatos } from '../datos/usarDatos';
 import { emparejar, leerExtracto, normalizar, planDeImportacion, UMBRAL_SEGURO, type Extracto, type FilaExtracto } from '../lib/extracto-ealu';
 import { textoDePdf } from '../lib/texto-pdf';
 import type { MateriaDb } from '../lib/tipos-db';
-import { colores, espacio, fuentes, radio } from '../tema';
+import { colores, crearEstilos, espacio, fondos, fuentes, radio } from '../tema';
+import { useTema } from '../context/TemaProvider';
 
 const SIN_MATERIAS: MateriaDb[] = [];
 
@@ -54,6 +55,7 @@ async function bytesDelPdf(asset: DocumentPicker.DocumentPickerAsset): Promise<U
 }
 
 export default function ImportarExtracto() {
+  useTema();
   const { perfil } = useSesion();
   const planId = perfil?.plan_id ?? '';
   const { datos: malla, cargando, error: errorMalla } = usarDatos(() => cargarMalla(planId, perfil?.carrera_id), [planId]);
@@ -137,7 +139,7 @@ export default function ImportarExtracto() {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: colores.fondo }}>
+    <View style={{ flex: 1, backgroundColor: fondos.fondo }}>
       <Pantalla>
         <BarraSuperior titulo="Importar extracto" onVolver={volver} />
         {paso.tipo === 'inicio' && <Inicio onElegir={elegirPdf} error={error} />}
@@ -312,7 +314,7 @@ function FilaRenglon({ r, materia, dudosa, onAlternar, onCambiarMateria }: {
           accessibilityState={{ checked: marcada }}
           accessibilityLabel={`Importar ${materia.nombre}`}
           hitSlop={8}
-          style={[est.casilla, marcada && { backgroundColor: colores.marino, borderColor: colores.marino }]}
+          style={[est.casilla, marcada && { backgroundColor: fondos.marino, borderColor: colores.marino }]}
         >
           {marcada && <Ionicons name="checkmark" size={15} color={colores.blanco} />}
         </Pressable>
@@ -332,7 +334,7 @@ function FilaRenglon({ r, materia, dudosa, onAlternar, onCambiarMateria }: {
         )}
         <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
           <Text style={s.filaDetalle}>{detalle}</Text>
-          {dudosa && <Insignia texto="¿Es la misma?" color={colores.amarillo} fondo={colores.amarilloFondo} />}
+          {dudosa && <Insignia texto="¿Es la misma?" color={colores.amarillo} fondo={fondos.amarilloFondo} />}
         </View>
       </View>
       <Pressable onPress={onCambiarMateria} accessibilityRole="button" accessibilityLabel={materia ? 'Cambiar materia' : 'Elegir materia'} hitSlop={8}>
@@ -357,7 +359,7 @@ function ElegirMateria({ visible, nombreExtracto, materias, ocupadas, onCerrar, 
           key={m.id}
           onPress={() => { setBusqueda(''); onElegir(m.id); }}
           accessibilityRole="button"
-          style={({ pressed }) => [est.opcion, pressed && { backgroundColor: colores.tarjeta }]}
+          style={({ pressed }) => [est.opcion, pressed && { backgroundColor: fondos.tarjeta }]}
         >
           <Text style={[s.filaTitulo, { flex: 1 }]} numberOfLines={2}>{m.nombre}</Text>
           <Text style={s.filaDetalle}>{m.grupo_optativa_id ? 'Optativa' : nombreSemestre(m.semestre)}</Text>
@@ -390,15 +392,15 @@ function Listo({ finales, aprobadas, repetidas }: { finales: number; aprobadas: 
   );
 }
 
-const est = StyleSheet.create({
-  icono: { width: 40, height: 40, borderRadius: 12, backgroundColor: colores.blanco, alignItems: 'center', justifyContent: 'center' },
-  numero: { width: 26, height: 26, borderRadius: 13, backgroundColor: colores.marino, alignItems: 'center', justifyContent: 'center' },
+const est = crearEstilos(() => ({
+  icono: { width: 40, height: 40, borderRadius: 12, backgroundColor: fondos.superficieBlanca, alignItems: 'center', justifyContent: 'center' },
+  numero: { width: 26, height: 26, borderRadius: 13, backgroundColor: fondos.marino, alignItems: 'center', justifyContent: 'center' },
   numeroTexto: { fontFamily: fuentes.bold, fontSize: 13, color: colores.blanco },
   renglon: {
-    flexDirection: 'row', alignItems: 'center', gap: espacio.m, backgroundColor: colores.superficieBlanca, borderRadius: radio.m,
+    flexDirection: 'row', alignItems: 'center', gap: espacio.m, backgroundColor: fondos.superficieBlanca, borderRadius: radio.m,
     borderWidth: 1.5, borderColor: colores.lineaSuave, padding: espacio.m, marginBottom: espacio.s,
   },
   casilla: { width: 24, height: 24, borderRadius: 7, borderWidth: 2, borderColor: colores.linea, alignItems: 'center', justifyContent: 'center' },
   opcion: { flexDirection: 'row', alignItems: 'center', gap: espacio.m, paddingVertical: espacio.m, paddingHorizontal: espacio.s, borderBottomWidth: 1, borderBottomColor: colores.lineaSuave },
-  barra: { position: 'absolute', left: espacio.l, right: espacio.l, bottom: espacio.l, backgroundColor: colores.marino, borderRadius: radio.l, padding: espacio.s },
-});
+  barra: { position: 'absolute', left: espacio.l, right: espacio.l, bottom: espacio.l, backgroundColor: fondos.marino, borderRadius: radio.l, padding: espacio.s },
+}));
