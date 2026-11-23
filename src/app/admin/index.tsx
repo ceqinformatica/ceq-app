@@ -34,6 +34,7 @@ export default function PanelAdmin() {
         <Fila icono="megaphone-outline" titulo="Avisos" detalle="Publicar, programar y editar comunicados" onPress={() => router.push('/admin/avisos')} />
         <Fila icono="notifications-outline" titulo="Notificaciones" detalle="Recordatorios y mensajes al celular, ahora o programados" onPress={() => router.push('/admin/notificaciones')} />
         <Fila icono="stats-chart-outline" titulo="Encuestas" detalle="Crear encuestas anónimas y ver resultados" onPress={() => router.push('/admin/encuestas')} />
+        <Fila icono="calendar-outline" titulo="Calendario académico" detalle="Fechas de inscripción, finales, aranceles y feriados" onPress={() => router.push('/admin/calendario')} />
         <Fila icono="document-text-outline" titulo="Guía de trámites" detalle="Editar pasos, requisitos, plazos y costos" onPress={() => router.push('/admin/tramites')} />
         <Fila
           icono="chatbubbles-outline"

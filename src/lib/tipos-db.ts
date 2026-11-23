@@ -6,6 +6,7 @@
  */
 
 import type { TramiteNuevo } from './tramites';
+import type { CategoriaCalendario } from './calendario';
 
 export type RolUsuario = 'estudiante' | 'validador' | 'admin';
 export type EstadoMateriaDb = 'pendiente' | 'cursando' | 'firmada' | 'aprobada';
@@ -84,6 +85,10 @@ export type AvisoDb = {
   /** Cuándo aparece para los estudiantes (avisos programados). */
   publicar_en?: string; carrera_id?: string | null;
 }
+export type CalendarioDb = {
+  id: string; clave: string | null; anio: number; semestre: number | null; categoria: CategoriaCalendario;
+  titulo: string; desde: string; hasta: string; detalle: string | null; created_at: string; updated_at: string;
+};
 export type TramiteDb = TramiteNuevo & { id: string; orden: number; publicado: boolean; updated_at: string };
 export type SugerenciaDb = {
   id: string; usuario_id: string | null; categoria: string | null; texto: string;
@@ -113,6 +118,7 @@ export type DispositivoDb = { token: string; usuario_id: string; plataforma: str
 export type Database = {
   public: {
     Tables: {
+      calendario_academico: Tabla<CalendarioDb, 'id' | 'clave' | 'semestre' | 'detalle' | 'created_at' | 'updated_at'>;
       carreras: Tabla<Carrera, 'id' | 'sigla' | 'activa' | 'created_at'>;
       planes: Tabla<Plan, 'id' | 'anio' | 'vigente' | 'unidad_avance' | 'created_at'>;
       grupos_optativas: Tabla<GrupoOptativasDb, 'id' | 'cantidad_exigida'>;

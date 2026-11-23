@@ -549,6 +549,29 @@ select pg_temp.debe_ser('Beto ve el motivo del rechazo', (select count(*) from p
 select pg_temp.debe_ser('rechazada no habilita', (select count(*) from public.socios where activo), 0);
 reset role;
 
+-- Calendario académico ----------------------------------------------
+reset role;
+select pg_temp.debe_ser('el calendario 2026 se cargó una sola vez', (select count(*) from public.calendario_academico where clave is not null), (select count(distinct clave) from public.calendario_academico));
+select pg_temp.debe_ser('el calendario no está vacío', (select (count(*) >= 60)::int from public.calendario_academico), 1);
+select pg_temp.debe_fallar('rango al revés', $$insert into public.calendario_academico (anio, categoria, titulo, desde, hasta) values (2026, 'clases', 'Algo', '2026-05-02', '2026-05-01')$$);
+select pg_temp.debe_fallar('categoría inventada', $$insert into public.calendario_academico (anio, categoria, titulo, desde, hasta) values (2026, 'fiesta', 'Algo', '2026-05-01', '2026-05-01')$$);
+select pg_temp.como(null);
+select pg_temp.debe_fallar('anon no lee el calendario', 'select * from public.calendario_academico');
+select pg_temp.como('00000000-0000-0000-0000-00000000000a');
+select pg_temp.debe_ser('Ana lee el calendario', (select (count(*) >= 60)::int from public.calendario_academico), 1);
+select pg_temp.debe_fallar('Ana no agrega fechas', $$insert into public.calendario_academico (anio, categoria, titulo, desde, hasta) values (2026, 'clases', 'Trucho', '2026-05-01', '2026-05-01')$$);
+select pg_temp.debe_ser('Ana no edita fechas', pg_temp.filas($q$update public.calendario_academico set titulo = 'Sin clases'$q$), 0);
+select pg_temp.debe_ser('Ana no borra fechas', pg_temp.filas($q$delete from public.calendario_academico$q$), 0);
+select pg_temp.debe_fallar('Ana no ve las claves borradas', 'select * from public.calendario_claves_borradas');
+select pg_temp.como('00000000-0000-0000-0000-0000000000ad');
+insert into public.calendario_academico (anio, semestre, categoria, titulo, desde, hasta) values (2027, 1, 'clases', 'Clases 2027', '2027-02-22', '2027-06-05');
+select pg_temp.debe_ser('admin edita una fecha', pg_temp.filas($q$update public.calendario_academico set titulo = 'Navidad (feriado)' where clave = '2026-fer-navidad'$q$), 1);
+select pg_temp.debe_ser('admin borra una fecha', pg_temp.filas($q$delete from public.calendario_academico where clave = '2026-asu-noche-vieja'$q$), 1);
+reset role;
+\i supabase/migrations/20261123120000_calendario_academico.sql
+select pg_temp.debe_ser('lo borrado no vuelve al re-ejecutar', (select count(*) from public.calendario_academico where clave = '2026-asu-noche-vieja'), 0);
+select pg_temp.debe_ser('lo editado no se pisa', (select count(*) from public.calendario_academico where titulo = 'Navidad (feriado)'), 1);
+
 -- Todas las tablas públicas tienen RLS ------------------------------
 select pg_temp.debe_ser('tablas sin RLS',
   (select count(*) from pg_class c join pg_namespace n on n.oid = c.relnamespace
