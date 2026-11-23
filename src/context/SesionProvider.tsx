@@ -6,10 +6,11 @@ import { db as demo, MODO_DEMO, UID_DEMO } from '../datos/demo';
 import { esErrorDeRed, textoError } from '../lib/errores';
 import { biometriaActiva, verificarIdentidad } from '../lib/biometria';
 import { almacenSeguro } from '../lib/almacenSeguro';
+import { comprobarPin, pinActivo, type ResultadoPin } from '../lib/pinGuardado';
 import { supabase } from '../lib/supabase';
 import type { Perfil } from '../lib/tipos-db';
 
-/** Segundos en segundo plano antes de volver a pedir la huella. */
+/** Segundos en segundo plano antes de volver a pedir la huella o el PIN. */
 const BLOQUEO_TRAS_SEGUNDOS = 60;
 
 interface SesionCtx {
@@ -18,9 +19,10 @@ interface SesionCtx {
   perfil: Perfil | null;
   /** Error al leer el perfil (por ejemplo sin internet). Mientras haya error no se manda al onboarding. */
   errorPerfil: string | null;
-  /** true cuando hay que pasar la huella o el rostro antes de ver la app. */
+  /** true cuando hay que pasar la huella, el rostro o el PIN antes de ver la app. */
   bloqueado: boolean;
   desbloquear: () => Promise<boolean>;
+  desbloquearConPin: (pin: string) => Promise<ResultadoPin>;
   recargarPerfil: () => Promise<void>;
   actualizarPerfil: (cambios: Partial<Pick<Perfil, 'nombre' | 'ci' | 'carrera_id' | 'plan_id' | 'anio_ingreso' | 'notif_avisos' | 'notif_recordatorios'>>) => Promise<string | null>;
 }
@@ -70,7 +72,10 @@ export function SesionProvider({ children }: { children: ReactNode }) {
     if (MODO_DEMO) {
       setSesion({ user: { id: UID_DEMO, email: demo.correo } } as Session);
       setPerfil(demo.perfil);
-      setCargando(false);
+      hayBloqueo().then((b) => {
+        setBloqueado(b);
+        setCargando(false);
+      });
       return;
     }
     let activo = true;
@@ -85,7 +90,7 @@ export function SesionProvider({ children }: { children: ReactNode }) {
       if (!activo) return;
       setSesion(inicial);
       const data = { session: inicial };
-      if (data.session && (await biometriaActiva())) setBloqueado(true);
+      if (data.session && (await hayBloqueo())) setBloqueado(true);
       await cargarPerfil(data.session?.user.id);
       setCargando(false);
     })();
@@ -113,7 +118,7 @@ export function SesionProvider({ children }: { children: ReactNode }) {
       if (estado === 'active' && enFondoDesde.current) {
         const segundos = (Date.now() - enFondoDesde.current) / 1000;
         enFondoDesde.current = null;
-        if (sesion && segundos > BLOQUEO_TRAS_SEGUNDOS && (await biometriaActiva())) setBloqueado(true);
+        if (sesion && segundos > BLOQUEO_TRAS_SEGUNDOS && (await hayBloqueo())) setBloqueado(true);
       }
     });
     return () => sub.remove();
@@ -123,6 +128,12 @@ export function SesionProvider({ children }: { children: ReactNode }) {
     const ok = await verificarIdentidad();
     if (ok) setBloqueado(false);
     return ok;
+  }, []);
+
+  const desbloquearConPin = useCallback(async (pin: string) => {
+    const r = await comprobarPin(pin);
+    if (r.ok) setBloqueado(false);
+    return r;
   }, []);
 
   const recargarPerfil = useCallback(() => cargarPerfil(sesion?.user.id), [cargarPerfil, sesion]);
@@ -145,10 +156,16 @@ export function SesionProvider({ children }: { children: ReactNode }) {
   );
 
   return (
-    <Ctx.Provider value={{ cargando, sesion, perfil, errorPerfil, bloqueado, desbloquear, recargarPerfil, actualizarPerfil }}>
+    <Ctx.Provider value={{ cargando, sesion, perfil, errorPerfil, bloqueado, desbloquear, desbloquearConPin, recargarPerfil, actualizarPerfil }}>
       {children}
     </Ctx.Provider>
   );
+}
+
+/** Si este dispositivo tiene huella/rostro o PIN activado para abrir la app. */
+async function hayBloqueo(): Promise<boolean> {
+  const [bio, pin] = await Promise.all([biometriaActiva().catch(() => false), pinActivo().catch(() => false)]);
+  return bio || pin;
 }
 
 /** La sesión tal como quedó guardada en el celular (para usar la app sin internet). */

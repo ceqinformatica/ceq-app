@@ -88,6 +88,7 @@ function Navegacion() {
       <Stack.Protected guard={Boolean(sesion) && conCarrera}>
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="perfil" />
+        <Stack.Screen name="pin" />
         <Stack.Screen name="materia/[id]" />
         <Stack.Screen name="firma/[id]" />
         <Stack.Screen name="extracto" />

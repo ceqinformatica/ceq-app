@@ -1,5 +1,5 @@
-import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
 import { Alert, Linking, Platform, Switch, Text, View } from 'react-native';
 import { Hexagono } from '../components/graficos';
 import { BarraSuperior, Boton, Fila, Mensaje, Pantalla, s, Seccion, Segmentado, Tarjeta } from '../components/ui';
@@ -8,6 +8,7 @@ import { db, MODO_DEMO } from '../datos/demo';
 import { eliminarCuenta, salir } from '../lib/auth';
 import { registrarEsteCelular, type EstadoRegistro } from '../lib/notificaciones';
 import { activarBiometria, biometriaActiva, biometriaDisponible, desactivarBiometria } from '../lib/biometria';
+import { pinActivo } from '../lib/pinGuardado';
 import { supabase } from '../lib/supabase';
 import { colores, espacio, fondos, fuentes, texto } from '../tema';
 import { useTema, type PreferenciaTema } from '../context/TemaProvider';
@@ -20,6 +21,7 @@ export default function Perfil() {
   const [carrera, setCarrera] = useState<string | null>(null);
   const [plan, setPlan] = useState<string | null>(null);
   const [bio, setBio] = useState<{ disponible: boolean; nombre: string; activa: boolean } | null>(null);
+  const [conPin, setConPin] = useState<boolean | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [push, setPush] = useState<EstadoRegistro | null>(null);
   const [borrando, setBorrando] = useState(false);
@@ -61,6 +63,13 @@ export default function Perfil() {
       setBio({ ...d, activa });
     })().catch(() => setBio({ disponible: false, nombre: 'huella', activa: false }));
   }, []);
+
+  // Al volver de crear, cambiar o quitar el PIN.
+  useFocusEffect(
+    useCallback(() => {
+      pinActivo().then(setConPin).catch(() => setConPin(false));
+    }, []),
+  );
 
   useEffect(() => {
     if (MODO_DEMO) {
@@ -170,7 +179,7 @@ export default function Perfil() {
       <Seccion estilo={{ marginTop: espacio.xl }}>Seguridad</Seccion>
       <Tarjeta estilo={{ paddingVertical: espacio.xs }}>
         {bio && !bio.disponible ? (
-          <Fila icono="finger-print" titulo="Desbloqueo biométrico" detalle="Este celular no tiene huella ni rostro configurados." ultima />
+          <Fila icono="finger-print" titulo="Desbloqueo biométrico" detalle="Este dispositivo no tiene huella ni rostro configurados. Podés usar un PIN." />
         ) : (
           <Fila
             icono="finger-print"
@@ -186,9 +195,25 @@ export default function Perfil() {
                 thumbColor={colores.blanco}
               />
             }
-            ultima
           />
         )}
+        <Fila
+          icono="keypad-outline"
+          titulo="PIN de la app"
+          detalle={bio?.activa ? 'Para entrar si la huella no funciona, o en vez de ella.' : 'Pide un PIN de 4 a 6 números al abrir la app en este dispositivo.'}
+          derecha={
+            <Switch
+              value={conPin ?? false}
+              onValueChange={(v) => router.push(v ? '/pin?modo=crear' : '/pin?modo=quitar')}
+              disabled={conPin == null}
+              accessibilityLabel="PIN de la app"
+              trackColor={{ true: fondos.marino, false: colores.linea }}
+              thumbColor={colores.blanco}
+            />
+          }
+          ultima={!conPin}
+        />
+        {conPin && <Fila icono="create-outline" titulo="Cambiar PIN" onPress={() => router.push('/pin?modo=cambiar')} ultima />}
       </Tarjeta>
 
       <Mensaje texto={error} />
