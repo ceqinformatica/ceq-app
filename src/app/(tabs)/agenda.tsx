@@ -401,7 +401,13 @@ type PropsForm = { visible: boolean; datos?: DatosAgenda | null; onCursando: (id
 function FormClase({ visible, clase, diaInicial, datos, recordatoriosApagados, onCursando, onCerrar, onListo }: PropsForm & {
   clase: HorarioDb | null; diaInicial: number; recordatoriosApagados: boolean;
 }) {
-  const cursando = misMaterias(datos, ['cursando']);
+  // Las que cursás, y también las que ya firmaste (o aprobaste) pero siguen
+  // en tu horario: el semestre puede no haber terminado todavía.
+  const cursando = useMemo(() => {
+    const conClases = new Set((datos?.horario ?? []).map((h) => h.materia_id).filter(Boolean));
+    return misMaterias(datos, ['cursando', 'firmada', 'aprobada'])
+      .filter((m) => datos?.estados.get(m.id) === 'cursando' || conClases.has(m.id));
+  }, [datos]);
   const unica = cursando.length === 1 ? cursando[0].id : null;
   const [materia, setMateria] = useState<string | null>(null);
   const [titulo, setTitulo] = useState('');
