@@ -130,3 +130,18 @@ test('PDF sin texto (escaneado) o que no es PDF', () => {
   const soloImagen = '%PDF-1.4\n1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n2 0 obj\n<< /Type /Pages /Kids [3 0 R] >>\nendobj\n3 0 obj\n<< /Type /Page /Contents 4 0 R >>\nendobj\n4 0 obj\n<< /Length 20 >>\nstream\nq 600 0 0 800 0 0 cm\nendstream\nendobj\n%%EOF';
   assert.equal(textoDePdfGeneral(new Uint8Array(Buffer.from(soloImagen, 'latin1'))), '');
 });
+
+test('detecta la carrera en el encabezado', async () => {
+  const { detectarCarrera, isoATexto, textoAIso } = await import('../horario-finales.ts');
+  const carreras = [
+    { id: 'b', nombre: 'Bioquímica' }, { id: 'iq', nombre: 'Ingeniería Química' }, { id: 'qi', nombre: 'Química Industrial' },
+    { id: 'ia', nombre: 'Ingeniería de Alimentos' }, { id: 'cta', nombre: 'Ciencia y Tecnología de Alimentos' },
+  ];
+  assert.equal(detectarCarrera(textoDePdfGeneral(fixture('finales-columnas.pdf')), carreras), 'b');
+  assert.equal(detectarCarrera(textoDePdfGeneral(fixture('finales-secciones.pdf')), carreras), 'qi');
+  assert.equal(detectarCarrera('FCQ\nCARRERA: INGENIERIA DE ALIMENTOS\nBioquímica General 01/12', carreras), 'ia');
+  assert.equal(detectarCarrera('Horario general', carreras), null);
+  assert.equal(isoATexto('2026-12-07'), '07/12/2026');
+  assert.equal(textoAIso('7/12/2026'), '2026-12-07');
+  assert.equal(textoAIso('31/02/2026'), null);
+});

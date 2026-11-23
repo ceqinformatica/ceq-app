@@ -6,7 +6,7 @@
  */
 import type {
   AsistenciaDb, AvisoDb, CalendarioDb, Carrera, EncuestaDb, EvaluacionDb, EventoDb, ExamenFinalDb, GrupoOptativasDb, HorarioDb, MateriaDb,
-  MateriaEstudianteDb, OpcionEncuestaDb, Perfil, Plan, PrerrequisitoDb, ReglaFirmaDb, SocioDb, SolicitudCarnetDb, SugerenciaDb, NotificacionDb, TramiteDb,
+  MateriaEstudianteDb, OpcionEncuestaDb, HorarioFinalesDb, FechaFinalDb, VentanaDb, Perfil, Plan, PrerrequisitoDb, ReglaFirmaDb, SocioDb, SolicitudCarnetDb, SugerenciaDb, NotificacionDb, TramiteDb,
 } from '../lib/tipos-db';
 import { GUIA_TRAMITES_FCQ } from './guia-tramites-fcq';
 import { CALENDARIO_FCQ_2026 } from './calendario-fcq';
@@ -156,6 +156,23 @@ export const db = {
     { id: 'o3', encuesta_id: 'enc1', texto: 'Tarde (17:00 a 19:00)', orden: 2 },
   ] as OpcionEncuestaDb[],
   votos: { o1: 12, o2: 31, o3: 24 } as Record<string, number>,
+  horariosFinales: [
+    { id: 'hf1', carrera_id: 'car-1', titulo: 'Anteproyecto diciembre ' + ahora.getFullYear(), pdf_path: null, publicado: true, publicado_en: enDias(-1), creado_por: null, created_at: enDias(-1), updated_at: enDias(-1) },
+  ] as HorarioFinalesDb[],
+  fechasFinales: ([
+    ['Química Analítica I', 1, 8, '08:00', 'Aula 12'], ['Fisicoquímica I', 1, 10, '13:30', null], ['Bioquímica', 1, 12, '08:00', 'Aula 7'],
+    ['Química Orgánica I', 1, 9, '08:00', null], ['Física II', 1, 11, '07:30', null], ['Microbiología', 1, 13, '08:00', null],
+    ['Química Analítica I', 2, 22, '08:00', 'Aula 12'], ['Fisicoquímica I', 2, 24, '13:30', null], ['Bioquímica', 2, 26, '08:00', 'Aula 7'],
+  ] as const).map(([materia, llamado, dias, hora, aula], i): FechaFinalDb => ({
+    id: `ff${i + 1}`, horario_id: 'hf1', materia, llamado, fecha: enDias(dias).slice(0, 10), hora, aula, created_at: enDias(-1),
+  })),
+  ventanas: [
+    {
+      id: 'vt1', titulo: '¡Salieron las fechas de finales!', cuerpo: 'Ya podés ver cuándo rendís cada materia y agregarlas a tu agenda con un toque.', imagen_url: null, icono: 'school',
+      boton_texto: 'Ver mis fechas', boton_destino: '/finales-fechas', color: 'celeste', forma: 'centro', alineacion: 'centro', donde: 'inicio', frecuencia: 'una_vez', cerrable: true,
+      carrera_id: null, desde: enDias(-1), hasta: enDias(20), activa: process.env.EXPO_PUBLIC_DEMO_VENTANA === '1', prioridad: 10, creada_por: null, created_at: enDias(-1), updated_at: enDias(-1),
+    },
+  ] as VentanaDb[],
   yaVote: new Set<string>(),
 };
 

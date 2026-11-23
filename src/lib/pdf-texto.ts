@@ -39,6 +39,8 @@ interface Objeto {
 interface Trozo {
   x: number;
   y: number;
+  /** Dónde termina (x + ancho del texto). */
+  fin: number;
   tam: number;
   texto: string;
   orden: number;
@@ -48,6 +50,9 @@ interface Trozo {
 interface Fuente {
   bytes: 1 | 2;
   mapa: Map<number, string> | null;
+  /** Ancho de cada código en milésimas del tamaño de letra. */
+  anchos: Map<number, number>;
+  anchoPorDefecto: number;
 }
 
 function latin1(bytes: Uint8Array): string {
@@ -220,15 +225,54 @@ function leerCMap(cmap: string): { mapa: Map<number, string>; bytes: 1 | 2 } {
   return { mapa, bytes };
 }
 
+function numeros(objetos: Map<number, Objeto>, v: string | null): number[] {
+  const o = resolver(objetos, v);
+  return o ? (o.dicc.match(/[-+]?\d*\.?\d+/g) ?? []).map(Number) : [];
+}
+
+/** Anchos de una fuente simple (/FirstChar + /Widths) o CID (/W). */
+function leerAnchos(objetos: Map<number, Objeto>, obj: Objeto, tipo0: boolean): { anchos: Map<number, number>; anchoPorDefecto: number } {
+  const anchos = new Map<number, number>();
+  if (!tipo0) {
+    const primero = Number(valor(obj.dicc, 'FirstChar') ?? 0);
+    numeros(objetos, valor(obj.dicc, 'Widths')).forEach((w, i) => anchos.set(primero + i, w));
+    return { anchos, anchoPorDefecto: 500 };
+  }
+  const desc = resolver(objetos, valor(obj.dicc, 'DescendantFonts'));
+  const cid = desc ? resolver(objetos, referencias(desc.dicc).length ? `${referencias(desc.dicc)[0]} 0 R` : desc.dicc) : null;
+  if (!cid) return { anchos, anchoPorDefecto: 1000 };
+  const dw = Number(valor(cid.dicc, 'DW') ?? 1000);
+  const w = resolver(objetos, valor(cid.dicc, 'W'));
+  if (w) {
+    // [c [w1 w2 ...]  c1 c2 w ...]
+    const tokens = w.dicc.replace(/^\[|\]$/g, '').match(/\[[^\]]*\]|[-+]?\d*\.?\d+/g) ?? [];
+    for (let i = 0; i < tokens.length; ) {
+      const c = Number(tokens[i]);
+      const sig = tokens[i + 1];
+      if (sig?.startsWith('[')) {
+        (sig.match(/[-+]?\d*\.?\d+/g) ?? []).map(Number).forEach((x, j) => anchos.set(c + j, x));
+        i += 2;
+      } else {
+        const hasta = Number(sig);
+        const ancho = Number(tokens[i + 2]);
+        for (let k = c; k <= hasta && k - c < 0xffff; k++) anchos.set(k, ancho);
+        i += 3;
+      }
+    }
+  }
+  return { anchos, anchoPorDefecto: dw };
+}
+
 function leerFuente(objetos: Map<number, Objeto>, obj: Objeto | null): Fuente {
-  if (!obj) return { bytes: 1, mapa: null };
+  if (!obj) return { bytes: 1, mapa: null, anchos: new Map(), anchoPorDefecto: 500 };
   const tipo0 = /\/Subtype\s*\/Type0/.test(obj.dicc);
+  const { anchos, anchoPorDefecto } = leerAnchos(objetos, obj, tipo0);
   const tu = resolver(objetos, valor(obj.dicc, 'ToUnicode'));
   if (tu?.flujo) {
     const { mapa, bytes } = leerCMap(tu.flujo);
-    return { bytes: tipo0 ? 2 : bytes, mapa };
+    return { bytes: tipo0 ? 2 : bytes, mapa, anchos, anchoPorDefecto };
   }
-  return { bytes: tipo0 ? 2 : 1, mapa: null };
+  return { bytes: tipo0 ? 2 : 1, mapa: null, anchos, anchoPorDefecto };
 }
 
 /** Bytes de una cadena (literal o hex) del flujo de contenido. */
@@ -255,23 +299,19 @@ function bytesDeCadena(t: string): string {
   });
 }
 
-function decodificar(crudo: string, f: Fuente | undefined): string {
-  if (!f) return crudo;
-  if (f.bytes === 2) {
-    let s = '';
-    for (let i = 0; i + 1 < crudo.length; i += 2) {
-      const c = (crudo.charCodeAt(i) << 8) | crudo.charCodeAt(i + 1);
-      s += f.mapa?.get(c) ?? '';
-    }
-    return s;
+/** Texto y ancho (en milésimas) de los bytes de una cadena. */
+function decodificar(crudo: string, f: Fuente | undefined): { texto: string; ancho: number } {
+  let texto = '';
+  let ancho = 0;
+  const paso = f?.bytes === 2 ? 2 : 1;
+  for (let i = 0; i + paso - 1 < crudo.length; i += paso) {
+    const c = paso === 2 ? (crudo.charCodeAt(i) << 8) | crudo.charCodeAt(i + 1) : crudo.charCodeAt(i);
+    if (!f) texto += String.fromCharCode(c);
+    else if (f.mapa?.has(c)) texto += f.mapa.get(c);
+    else if (paso === 1) texto += String.fromCharCode(c);
+    ancho += f ? f.anchos.get(c) ?? f.anchoPorDefecto : 500;
   }
-  if (!f.mapa) return crudo;
-  let s = '';
-  for (let i = 0; i < crudo.length; i++) {
-    const c = crudo.charCodeAt(i);
-    s += f.mapa.get(c) ?? String.fromCharCode(c);
-  }
-  return s;
+  return { texto, ancho };
 }
 
 const TOKEN = /\((?:\\[\s\S]|[^\\)])*\)|<[0-9A-Fa-f\s]*>|\[|\]|<<|>>|\/[^\s/[\]()<>{}%]+|[-+]?\d*\.?\d+|[A-Za-z'"*][A-Za-z0-9'"*]*|%[^\n]*/g;
@@ -290,12 +330,29 @@ function trozosDePagina(contenido: string, fuentes: Map<string, Fuente>): Trozo[
   let fuente: Fuente | undefined;
   let orden = 0;
 
-  const emitir = (cadenas: string[]) => {
-    const texto = cadenas.map((c) => decodificar(bytesDeCadena(c), fuente)).join('');
-    if (!texto.trim()) return;
+  // Dentro de TJ: cadenas y desplazamientos (en milésimas, negativos = hacia la derecha).
+  const emitir = (partes: string[]) => {
+    let texto = '';
+    let avance = 0;
+    for (const p of partes) {
+      if (/^[-+]?\d*\.?\d+$/.test(p)) {
+        const d = Number(p);
+        // Un hueco grande dentro de un TJ es un espacio entre palabras.
+        if (d < -180 && texto && !texto.endsWith(' ')) texto += ' ';
+        avance -= d;
+        continue;
+      }
+      const r = decodificar(bytesDeCadena(p), fuente);
+      texto += r.texto;
+      avance += r.ancho;
+    }
     const m = multiplicar(tm, ctm);
-    const escala = Math.hypot(m[2], m[3]) || 1;
-    trozos.push({ x: m[4], y: m[5], tam: Math.abs(tamano * escala), texto, orden: orden++ });
+    const escalaX = Math.hypot(m[0], m[1]) || 1;
+    const escalaY = Math.hypot(m[2], m[3]) || 1;
+    const ancho = (avance / 1000) * tamano * escalaX;
+    if (texto.trim()) trozos.push({ x: m[4], y: m[5], fin: m[4] + ancho, tam: Math.abs(tamano * escalaY), texto, orden: orden++ });
+    // El cursor avanza lo que ocupó el texto.
+    tm = multiplicar([1, 0, 0, 1, (avance / 1000) * tamano, 0], tm);
   };
   const nuevaLinea = (tx: number, ty: number) => {
     tlm = multiplicar([1, 0, 0, 1, tx, ty], tlm);
@@ -315,8 +372,7 @@ function trozosDePagina(contenido: string, fuentes: Map<string, Fuente>): Trozo[
       continue;
     }
     if (arreglo) {
-      if (t.startsWith('(') || (t.startsWith('<') && t !== '<<')) arreglo.push(t);
-      else if (/^[-+]?\d*\.?\d+$/.test(t) && Number(t) < -200) arreglo.push('( )'); // espacio grande dentro de TJ
+      if (t.startsWith('(') || (t.startsWith('<') && t !== '<<') || /^[-+]?\d*\.?\d+$/.test(t)) arreglo.push(t);
       continue;
     }
     if (!/^[A-Za-z'"*]/.test(t)) {
@@ -400,13 +456,16 @@ export function armarLineas(trozos: Trozo[]): string[] {
     let linea = '';
     let finAnterior = -Infinity;
     for (const t of fila) {
-      // Ancho aproximado: medio tamaño de letra por carácter.
       const hueco = t.x - finAnterior;
-      const sep = linea === '' ? '' : hueco > t.tam * 1.2 ? '   ' : hueco > t.tam * 0.15 && !linea.endsWith(' ') && !t.texto.startsWith(' ') ? ' ' : '';
+      let sep = '';
+      if (linea !== '') {
+        if (hueco > t.tam * 1.5) sep = '   ';
+        else if (hueco > t.tam * 0.18 && !linea.endsWith(' ') && !t.texto.startsWith(' ')) sep = ' ';
+      }
       linea += sep + t.texto;
-      finAnterior = Math.max(finAnterior, t.x + t.texto.length * t.tam * 0.5);
+      finAnterior = Math.max(finAnterior, t.fin);
     }
-    return linea.replace(/[ \t]+$/, '');
+    return linea.replace(/[ \t]+$/, '').replace(/ {4,}/g, '   ');
   });
 }
 

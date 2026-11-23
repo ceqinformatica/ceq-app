@@ -303,3 +303,34 @@ export function mismaMateria(a: string, b: string): boolean {
 }
 
 export const textoLlamado = (n: number) => `${n}.${n === 1 || n === 3 ? 'er' : 'º'} llamado`;
+
+/**
+ * Carrera de la que habla el PDF, mirando el encabezado ("CARRERA:
+ * BIOQUÍMICA"). Devuelve el id o null si no se reconoce.
+ */
+export function detectarCarrera(texto: string, carreras: { id: string; nombre: string; sigla?: string | null }[]): string | null {
+  const encabezado = texto.split('\n').map((l) => l.trim()).filter(Boolean).slice(0, 15).map(normalizar);
+  const nombres = carreras
+    .map((c) => ({ id: c.id, n: normalizar(c.nombre).replace(/^(carrera de|licenciatura en|lic en)\s+/, '') }))
+    .sort((a, b) => b.n.length - a.n.length);
+  const buscar = (linea: string) => nombres.find((c) => new RegExp(`(^| )${escapar(c.n)}( |$)`).test(linea))?.id ?? null;
+  for (const l of encabezado) if (/\bcarrera\b/.test(l)) {
+    const id = buscar(l);
+    if (id) return id;
+  }
+  for (const l of encabezado) {
+    const id = buscar(l);
+    if (id) return id;
+  }
+  return null;
+}
+
+/** "2026-12-07" → "07/12/2026" (para los campos de fecha). */
+export const isoATexto = (iso: string) => iso.split('-').reverse().join('/');
+/** "07/12/2026" → "2026-12-07", o null. */
+export function textoAIso(t: string): string | null {
+  const m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(t.trim());
+  if (!m) return null;
+  const [d, mes, a] = [Number(m[1]), Number(m[2]), Number(m[3])];
+  return valida(a, mes, d) ? `${a}-${dos(mes)}-${dos(d)}` : null;
+}

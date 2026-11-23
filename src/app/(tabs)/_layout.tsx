@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDisposicion } from '../../components/disposicion';
 import { colores, fondos, fuentes, sombras } from '../../tema';
 import { useTema } from '../../context/TemaProvider';
+import { VentanasDelCeq } from '../../components/Ventana';
 
 type Icono = ComponentProps<typeof Ionicons>['name'];
 
@@ -26,6 +27,7 @@ export default function TabsLayout() {
   // Tablet en horizontal: las pestañas van en una barra a la izquierda.
   const { barraLateral } = useDisposicion();
   return (
+    <>
     <Tabs
       screenOptions={{
         headerShown: false,
@@ -54,5 +56,8 @@ export default function TabsLayout() {
       <Tabs.Screen name="agenda" options={{ title: 'Agenda', tabBarIcon: icono('calendar') }} />
       <Tabs.Screen name="ceq" options={{ title: 'CEQ', tabBarIcon: icono('people') }} />
     </Tabs>
+    {/* Carteles que arma el CEQ desde el panel. */}
+    <VentanasDelCeq />
+    </>
   );
 }

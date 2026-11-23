@@ -113,6 +113,24 @@ export type NotificacionDb = {
   creada_por: string | null; created_at: string;
 }
 export type ResumenAdmin = { usuarios: number; celulares: number; sugerencias_nuevas: number; programadas: number };
+export type PendientesPanel = { carnets_pendientes: number; ventanas_activas: number; horarios_borrador: number };
+export type HorarioFinalesDb = {
+  id: string; carrera_id: string; titulo: string; pdf_path: string | null; publicado: boolean; publicado_en: string | null;
+  creado_por: string | null; created_at: string; updated_at: string;
+}
+export type FechaFinalDb = {
+  id: string; horario_id: string; materia: string; llamado: number; fecha: string; hora: string | null; aula: string | null; created_at: string;
+}
+export type ColorVentana = 'celeste' | 'marino' | 'rojo' | 'amarillo' | 'gris' | 'blanco' | string;
+export type FormaVentana = 'centro' | 'abajo' | 'pantalla';
+export type FrecuenciaVentana = 'una_vez' | 'diaria' | 'siempre';
+export type VentanaDb = {
+  id: string; titulo: string; cuerpo: string; imagen_url: string | null; icono: string | null;
+  boton_texto: string | null; boton_destino: string | null; color: ColorVentana; forma: FormaVentana;
+  alineacion: 'izquierda' | 'centro'; donde: 'inicio' | 'todas'; frecuencia: FrecuenciaVentana; cerrable: boolean;
+  carrera_id: string | null; desde: string; hasta: string | null; activa: boolean; prioridad: number;
+  creada_por: string | null; created_at: string; updated_at: string;
+}
 export type DispositivoDb = { token: string; usuario_id: string; plataforma: string | null; updated_at: string }
 
 export type Database = {
@@ -142,6 +160,9 @@ export type Database = {
       examenes_finales: Tabla<ExamenFinalDb, 'id' | 'usuario_id' | 'periodo' | 'llamado' | 'fecha' | 'created_at' | 'porcentaje' | 'tipo' | 'cursada_anterior'>;
       solicitudes_carnet: Tabla<SolicitudCarnetDb, 'id' | 'usuario_id' | 'numero_socio' | 'estado' | 'motivo' | 'revisado_por' | 'revisado_en' | 'created_at'>;
       dispositivos: Tabla<DispositivoDb, 'usuario_id' | 'plataforma' | 'updated_at'>;
+      horarios_finales: Tabla<HorarioFinalesDb, 'id' | 'pdf_path' | 'publicado' | 'publicado_en' | 'creado_por' | 'created_at' | 'updated_at'>;
+      fechas_finales: Tabla<FechaFinalDb, 'id' | 'hora' | 'aula' | 'created_at'>;
+      ventanas: Tabla<VentanaDb, 'id' | 'cuerpo' | 'imagen_url' | 'icono' | 'boton_texto' | 'boton_destino' | 'color' | 'forma' | 'alineacion' | 'donde' | 'frecuencia' | 'cerrable' | 'carrera_id' | 'desde' | 'hasta' | 'activa' | 'prioridad' | 'creada_por' | 'created_at' | 'updated_at'>;
     };
     Views: {
       resultados_encuesta: { Row: { encuesta_id: string; opcion_id: string; texto: string; votos: number }; Relationships: [] };
@@ -162,6 +183,9 @@ export type Database = {
       aprobar_solicitud_carnet: { Args: { p_id: string; p_version: string }; Returns: string };
       rechazar_solicitud_carnet: { Args: { p_id: string; p_motivo: string | null }; Returns: undefined };
       eliminar_mi_cuenta: { Args: Record<string, never>; Returns: undefined };
+      pendientes_panel: { Args: Record<string, never>; Returns: PendientesPanel };
+      publicar_horario_finales: { Args: { p_id: string; p_notificar?: boolean }; Returns: number };
+      guardar_fechas_finales: { Args: { p_horario: string; p_fechas: { materia: string; llamado: number; fecha: string; hora: string | null; aula: string | null }[] }; Returns: number };
     };
     Enums: {
       rol_usuario: RolUsuario;
