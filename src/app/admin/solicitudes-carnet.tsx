@@ -8,6 +8,7 @@ import { estadoCarnet, fechaCorta, formatearCi } from '../../lib/carnet';
 import type { SocioDb, SolicitudCarnetDb } from '../../lib/tipos-db';
 import { colores, espacio, fondos, radio } from '../../tema';
 import { useTema } from '../../context/TemaProvider';
+import { textoError } from '../../lib/errores';
 
 const volver = () => (router.canGoBack() ? router.back() : router.replace('/admin'));
 
@@ -77,7 +78,7 @@ function Solicitud({ sol, onListo }: { sol: SolicitudCarnetDb; onListo: () => vo
       await accion();
       onListo();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'No se pudo guardar.');
+      setError(textoError(e, 'No se pudo guardar.'));
       setOcupado(false);
     }
   }

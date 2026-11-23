@@ -9,10 +9,7 @@ import { estadoCarnet, leerQr, normalizarCi, type FormularioSocio } from '../lib
 import { supabase } from '../lib/supabase';
 import type { EstudianteEncontrado, SocioDb, SolicitudCarnetDb, VerificacionCarnet } from '../lib/tipos-db';
 import { db, esperar, idDemo, MODO_DEMO, UID_DEMO } from './demo';
-
-function lanzar(error: { message: string } | null) {
-  if (error) throw new Error(error.message);
-}
+import { lanzar } from '../lib/errores';
 
 const todosDemo = () => [...(db.socio ? [db.socio] : []), ...db.otrosSocios];
 

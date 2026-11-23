@@ -12,6 +12,7 @@ import { aplicarRecuperatorio, aplicarRegularizacion, esRecuperatorio, esRegular
 import { supabase } from '../lib/supabase';
 import type { AsistenciaDb, ComponenteDb, EvaluacionDb, ExamenFinalDb, GrupoOptativasDb, MateriaDb, Plan, PrerrequisitoDb, ReglaFirmaDb } from '../lib/tipos-db';
 import { db, esperar, idDemo, MODO_DEMO, UID_DEMO } from './demo';
+import { lanzar } from '../lib/errores';
 
 export interface Malla {
   plan: Plan | null;
@@ -30,10 +31,6 @@ export interface Malla {
 const aMateria = (m: MateriaDb): Materia => ({ id: m.id, nombre: m.nombre, semestre: m.semestre, horas: m.horas, creditos: m.creditos, grupoOptativaId: m.grupo_optativa_id });
 const aGrupo = (g: GrupoOptativasDb): GrupoOptativas => ({ id: g.id, nombre: g.nombre, cantidadExigida: g.cantidad_exigida });
 const aPre = (p: PrerrequisitoDb): Prerrequisito => ({ materiaId: p.materia_id, requiereId: p.requiere_id, tipo: p.tipo });
-
-function lanzar(error: { message: string } | null) {
-  if (error) throw new Error(error.message);
-}
 
 export async function cargarMalla(planId: string, carreraId?: string | null): Promise<Malla> {
   let plan: Plan | null;

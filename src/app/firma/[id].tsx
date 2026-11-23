@@ -18,6 +18,7 @@ import { esRecuperatorio, esRegularizacion, puedeRecuperar, RECUPERACION_DESDE, 
 import type { AsistenciaDb, ComponenteDb, EvaluacionDb } from '../../lib/tipos-db';
 import { colores, coloresSemaforo, espacio, fondos, fuentes, radio, texto } from '../../tema';
 import { useTema } from '../../context/TemaProvider';
+import { textoError } from '../../lib/errores';
 
 const ICONO_TIPO: Record<TipoEvaluacion, 'document-text-outline' | 'create-outline' | 'flask-outline' | 'refresh-outline' | 'swap-horizontal-outline'> = {
   parcial: 'document-text-outline',
@@ -116,7 +117,7 @@ export default function CalculadoraFirma() {
       setDatos({ ...datos, firmaGuardada: promedio });
       setMsgFirma({ tipo: 'exito', texto: `Listo. Tu firma en ${materia.nombre} es ${pct(promedio)}.` });
     } catch (e) {
-      setMsgFirma({ tipo: 'error', texto: e instanceof Error ? e.message : 'No se pudo guardar la firma.' });
+      setMsgFirma({ tipo: 'error', texto: textoError(e, 'No se pudo guardar la firma.') });
     } finally {
       setGuardandoFirma(false);
     }
@@ -305,7 +306,7 @@ function TarjetaAsistencia({ titulo, materiaId, componente, valor, r, onGuardado
         setError(null);
         onGuardado({ usuario_id: valor?.usuario_id ?? '', materia_id: materiaId, componente, ...a });
       } catch (e) {
-        setError(e instanceof Error ? e.message : 'No se pudo guardar.');
+        setError(textoError(e, 'No se pudo guardar.'));
       }
     }, 500);
     return () => {
@@ -409,7 +410,7 @@ function FormEvaluacion({ visible, evaluacion, materiaId, onCerrar, onGuardado }
       await guardarEvaluacion(materiaId, datos, evaluacion?.id);
       onGuardado();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'No se pudo guardar.');
+      setError(textoError(e, 'No se pudo guardar.'));
     } finally {
       setGuardando(false);
     }
@@ -422,7 +423,7 @@ function FormEvaluacion({ visible, evaluacion, materiaId, onCerrar, onGuardado }
       await borrarEvaluacion(evaluacion.id);
       onGuardado();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'No se pudo borrar.');
+      setError(textoError(e, 'No se pudo borrar.'));
     } finally {
       setGuardando(false);
     }

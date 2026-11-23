@@ -6,6 +6,7 @@ import { borrarTramite, cargarTramite, guardarTramite } from '../../datos/tramit
 import { aFormulario, CATEGORIAS_TRAMITE, LIMITE_NOMBRE_TRAMITE, TEXTO_MODALIDAD, validarTramite, type FormularioTramite, type Modalidad } from '../../lib/tramites';
 import { colores, espacio, fondos } from '../../tema';
 import { useTema } from '../../context/TemaProvider';
+import { textoError } from '../../lib/errores';
 
 const volver = () => (router.canGoBack() ? router.back() : router.replace('/admin/tramites'));
 
@@ -37,7 +38,7 @@ export default function EditarTramite() {
         setClave(t.clave);
         setVisible(t.publicado);
       })
-      .catch((e) => setError(e instanceof Error ? e.message : 'No se pudo cargar el trámite.'))
+      .catch((e) => setError(textoError(e, 'No se pudo cargar el trámite.')))
       .finally(() => setCargando(false));
   }, [id]);
 
@@ -52,7 +53,7 @@ export default function EditarTramite() {
       await guardarTramite(id ?? null, r.tramite, visible);
       volver();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'No se pudo guardar.');
+      setError(textoError(e, 'No se pudo guardar.'));
     } finally {
       setGuardando(false);
     }
@@ -70,7 +71,7 @@ export default function EditarTramite() {
       await borrarTramite(id);
       volver();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'No se pudo borrar.');
+      setError(textoError(e, 'No se pudo borrar.'));
       setGuardando(false);
     }
   };

@@ -1,7 +1,7 @@
 /// <reference types="node" />
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { calcularProgreso, estaDesbloqueada, promedioGeneral, seDesbloquean, type EstadoEstudiante, type Materia, type Prerrequisito } from '../progreso.ts';
+import { calcularProgreso, materiasContadas, estaDesbloqueada, promedioGeneral, seDesbloquean, type EstadoEstudiante, type Materia, type Prerrequisito } from '../progreso.ts';
 
 const materias: Materia[] = [
   { id: 'a', nombre: 'Química General', semestre: 1, horas: 90 },
@@ -44,4 +44,9 @@ test('promedio general', () => {
   const e = est({ a: { estado: 'aprobada', notaFinal: 5 }, b: { estado: 'aprobada', notaFinal: 3 }, c: { estado: 'firmada' } });
   assert.equal(promedioGeneral(materias, e), 4);
   assert.equal(promedioGeneral(materias, e, 'horas'), 4);
+});
+
+test('materias contadas coincide con el porcentaje (optativas hasta lo exigido)', () => {
+  const p = calcularProgreso(materias, grupos, est({ a: { estado: 'aprobada' }, o1: { estado: 'aprobada' }, o2: { estado: 'aprobada' }, o3: { estado: 'aprobada' } }));
+  assert.deepEqual(materiasContadas(p), { aprobadas: 3, total: 5 });
 });

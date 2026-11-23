@@ -7,6 +7,7 @@ import { fechaCorta, formatearCi, hoyPy, opcionesVigencia, validarSocio, type Fo
 import type { EstudianteEncontrado } from '../../lib/tipos-db';
 import { colores, espacio, fondos } from '../../tema';
 import { useTema } from '../../context/TemaProvider';
+import { textoError } from '../../lib/errores';
 
 const volver = () => (router.canGoBack() ? router.back() : router.replace('/admin/socios'));
 
@@ -40,7 +41,7 @@ export default function EditarSocio() {
         });
         setCuenta(x.usuario_id ? 'Cuenta vinculada' : null);
       })
-      .catch((e) => setError(e instanceof Error ? e.message : 'No se pudo cargar el socio.'))
+      .catch((e) => setError(textoError(e, 'No se pudo cargar el socio.')))
       .finally(() => setCargando(false));
   }, [id]);
 
@@ -57,7 +58,7 @@ export default function EditarSocio() {
     const h = setTimeout(() => {
       buscarEstudiantes(t)
         .then((r) => vivo && setResultados(r))
-        .catch((e) => vivo && setError(e instanceof Error ? e.message : 'No se pudo buscar.'))
+        .catch((e) => vivo && setError(textoError(e, 'No se pudo buscar.')))
         .finally(() => vivo && setBuscando(false));
     }, 350);
     return () => {
@@ -84,7 +85,7 @@ export default function EditarSocio() {
       await guardarSocio(id ?? null, f);
       volver();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'No se pudo guardar.');
+      setError(textoError(e, 'No se pudo guardar.'));
     } finally {
       setGuardando(false);
     }
@@ -97,7 +98,7 @@ export default function EditarSocio() {
       await renovarCodigo(id);
       setAviso('Listo: el QR anterior de este socio ya no sirve. Su app muestra el nuevo al abrir el carnet.');
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'No se pudo cambiar el código.');
+      setError(textoError(e, 'No se pudo cambiar el código.'));
     }
   };
 

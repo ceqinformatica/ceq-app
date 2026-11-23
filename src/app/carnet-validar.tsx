@@ -11,6 +11,7 @@ import { enviarSolicitud } from '../datos/socios';
 import { isoDeTexto, problemaVencimiento } from '../lib/carnet';
 import { colores, crearEstilos, espacio, fondos, radio } from '../tema';
 import { useTema } from '../context/TemaProvider';
+import { textoError } from '../lib/errores';
 
 const volver = () => (router.canGoBack() ? router.back() : router.replace('/carnet'));
 
@@ -89,7 +90,7 @@ export default function ValidarCarnet() {
       await enviarSolicitud({ nombre, ci, numero_socio: numero, vigente_hasta: venceIso }, foto);
       setListo(true);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'No se pudo enviar.');
+      setError(textoError(e, 'No se pudo enviar.'));
     } finally {
       setEnviando(false);
     }

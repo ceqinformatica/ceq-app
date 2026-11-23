@@ -8,6 +8,7 @@ import { LIMITE_AVISO, LIMITE_TITULO, TITULO_RECOMENDADO, validarMensaje } from 
 import type { AvisoDb, Carrera, NotificacionDb } from '../../lib/tipos-db';
 import { colores, espacio, fondos } from '../../tema';
 import { useTema } from '../../context/TemaProvider';
+import { textoError } from '../../lib/errores';
 
 const volver = () => (router.canGoBack() ? router.back() : router.replace('/admin/avisos'));
 
@@ -51,7 +52,7 @@ export default function EditarAviso() {
         setNotif(await notificacionDeAviso(a.id));
       }
     })()
-      .catch((e) => setError(e instanceof Error ? e.message : 'No se pudo cargar el aviso.'))
+      .catch((e) => setError(textoError(e, 'No se pudo cargar el aviso.')))
       .finally(() => setCargando(false));
   }, [id]);
 
@@ -75,7 +76,7 @@ export default function EditarAviso() {
       });
       volver();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo guardar.');
+      setError(textoError(err, 'No se pudo guardar.'));
     } finally {
       setGuardando(false);
     }
@@ -89,7 +90,7 @@ export default function EditarAviso() {
       await borrarAviso(id);
       volver();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo borrar.');
+      setError(textoError(err, 'No se pudo borrar.'));
       setGuardando(false);
     }
   };

@@ -24,6 +24,7 @@ import type { ExamenFinalDb } from '../lib/tipos-db';
 import { colores, espacio, fondos, fuentes } from '../tema';
 import { pct } from './academico';
 import { Boton, Campo, Mensaje, s, Segmentado, Tarjeta } from './ui';
+import { textoError } from '../lib/errores';
 
 const LLAMADOS = [1, 2, 3] as const;
 const NOMBRE_LLAMADO = { 1: '1.er llamado', 2: '2.º llamado', 3: '3.er llamado' } as const;
@@ -85,7 +86,7 @@ export function TarjetaFinales({ materiaId, firma: firmaGuardadaEnMateria, aprob
   const [msg, setMsg] = useState<{ texto: string; tipo: 'error' | 'exito' } | null>(null);
 
   useEffect(() => {
-    cargarFinales(materiaId).then(setFinales).catch((e) => setMsg({ tipo: 'error', texto: e instanceof Error ? e.message : 'No se pudieron cargar los finales.' }));
+    cargarFinales(materiaId).then(setFinales).catch((e) => setMsg({ tipo: 'error', texto: textoError(e, 'No se pudieron cargar los finales.') }));
   }, [materiaId]);
 
   // Solo este semestre y los que ya tienen finales cargados. El semestre
@@ -181,7 +182,7 @@ export function TarjetaFinales({ materiaId, firma: firmaGuardadaEnMateria, aprob
       setMsg({ tipo: 'exito', texto: aprobo ? `Guardado. Aprobaste con ${aprobo.nota} (${CONCEPTO[aprobo.nota as Nota]}).` : 'Guardado.' });
       onGuardado(firma);
     } catch (e) {
-      setMsg({ tipo: 'error', texto: e instanceof Error ? e.message : 'No se pudo guardar.' });
+      setMsg({ tipo: 'error', texto: textoError(e, 'No se pudo guardar.') });
     } finally {
       setGuardando(false);
     }
@@ -199,7 +200,7 @@ export function TarjetaFinales({ materiaId, firma: firmaGuardadaEnMateria, aprob
       setFirmaNueva(null);
       onGuardado(null);
     } catch (e) {
-      setMsg({ tipo: 'error', texto: e instanceof Error ? e.message : 'No se pudo marcar para volver a cursar.' });
+      setMsg({ tipo: 'error', texto: textoError(e, 'No se pudo marcar para volver a cursar.') });
       setGuardando(false);
     }
   };
@@ -215,7 +216,7 @@ export function TarjetaFinales({ materiaId, firma: firmaGuardadaEnMateria, aprob
       setFirmaNueva(entera);
       onGuardado(entera);
     } catch (e) {
-      setMsg({ tipo: 'error', texto: e instanceof Error ? e.message : 'No se pudo guardar la firma.' });
+      setMsg({ tipo: 'error', texto: textoError(e, 'No se pudo guardar la firma.') });
     } finally {
       setGuardando(false);
     }

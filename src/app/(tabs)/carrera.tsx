@@ -13,6 +13,7 @@ import { promedios } from '../../lib/finales';
 import { calcularProgreso, promedioGeneral, requisitosFaltantes } from '../../lib/progreso';
 import { colores, crearEstilos, espacio, fondos, fuentes, radio, sombras } from '../../tema';
 import { useTema } from '../../context/TemaProvider';
+import { textoError } from '../../lib/errores';
 
 type Filtro = 'todas' | 'disponibles' | 'cursando' | 'aprobadas' | 'optativas';
 const FILTROS: { valor: Filtro; texto: string }[] = [
@@ -132,7 +133,7 @@ export default function Carrera() {
       setSeleccion(null);
       setAviso({ texto: `Marcaste ${ids.length} ${ids.length === 1 ? 'materia' : 'materias'} como aprobadas. La nota la podés cargar después en cada una.`, deshacer: previos });
     } catch (e) {
-      setAviso({ texto: e instanceof Error ? e.message : 'No se pudo guardar.', error: true });
+      setAviso({ texto: textoError(e, 'No se pudo guardar.'), error: true });
     } finally {
       setGuardando(false);
     }
@@ -145,7 +146,7 @@ export default function Carrera() {
       aplicar(previos);
       setAviso({ texto: 'Listo, volvió todo como estaba.' });
     } catch (e) {
-      setAviso({ texto: e instanceof Error ? e.message : 'No se pudo deshacer.', error: true });
+      setAviso({ texto: textoError(e, 'No se pudo deshacer.'), error: true });
     } finally {
       setGuardando(false);
     }

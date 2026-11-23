@@ -6,10 +6,7 @@
 import { supabase } from '../lib/supabase';
 import type { AvisoDb, Carrera, EncuestaDb, NotificacionDb, ResumenAdmin, SugerenciaDb } from '../lib/tipos-db';
 import { db, esperar, idDemo, MODO_DEMO } from './demo';
-
-function lanzar(error: { message: string } | null) {
-  if (error) throw new Error(error.message);
-}
+import { lanzar } from '../lib/errores';
 
 export async function cargarResumen(): Promise<ResumenAdmin> {
   if (MODO_DEMO) {

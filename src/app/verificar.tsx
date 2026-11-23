@@ -10,6 +10,7 @@ import { fechaCorta, formatearCi, RESULTADO_VERIFICACION } from '../lib/carnet';
 import type { VerificacionCarnet } from '../lib/tipos-db';
 import { colores, crearEstilos, espacio, fondos, fuentes, radio } from '../tema';
 import { useTema } from '../context/TemaProvider';
+import { textoError } from '../lib/errores';
 
 const volver = () => (router.canGoBack() ? router.back() : router.replace('/'));
 
@@ -63,7 +64,7 @@ function Verificador() {
     } catch (e) {
       // permite volver a escanear el mismo QR, con una pausa para no reintentar sin parar
       setTimeout(() => (ultimoLeido.current = null), 2000);
-      setError(e instanceof Error ? e.message : 'No se pudo verificar.');
+      setError(textoError(e, 'No se pudo verificar.'));
     } finally {
       enCurso.current = false;
       setConsultando(false);

@@ -165,3 +165,13 @@ export function seDesbloquean(
     (id) => !estaDesbloqueada(id, prerrequisitos, estados) && estaDesbloqueada(id, prerrequisitos, despues),
   );
 }
+
+/**
+ * Materias que cuentan para recibirse: obligatorias + las optativas exigidas
+ * (las aprobadas de más no suman). Así el texto coincide con el porcentaje.
+ */
+export function materiasContadas(p: Pick<Progreso, 'obligatoriasAprobadas' | 'obligatoriasTotales' | 'optativas'>) {
+  const exigidas = p.optativas.reduce((s, o) => s + o.exigidas, 0);
+  const aprobadasOpt = p.optativas.reduce((s, o) => s + Math.min(o.aprobadas, o.exigidas), 0);
+  return { aprobadas: p.obligatoriasAprobadas + aprobadasOpt, total: p.obligatoriasTotales + exigidas };
+}

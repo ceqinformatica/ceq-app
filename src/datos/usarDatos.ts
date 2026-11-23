@@ -1,5 +1,6 @@
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
+import { textoError } from '../lib/errores';
 
 /**
  * Carga datos al enfocar la pantalla (y al volver a ella), con estado de
@@ -23,7 +24,7 @@ export function usarDatos<T>(cargar: () => Promise<T>, deps: unknown[]) {
       setError(null);
     } catch (e) {
       if (id !== ultimo.current) return;
-      setError(e instanceof Error ? e.message : 'No se pudieron cargar los datos.');
+      setError(textoError(e, 'No se pudieron cargar los datos.'));
     } finally {
       if (id === ultimo.current) {
         setCargando(false);

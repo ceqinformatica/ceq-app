@@ -2,10 +2,7 @@ import { supabase } from '../lib/supabase';
 import type { EstadoMateriaDb, EventoDb, HorarioDb, TipoEvento } from '../lib/tipos-db';
 import { periodoDe } from '../lib/finales';
 import { db, esperar, idDemo, MODO_DEMO, UID_DEMO } from './demo';
-
-function lanzar(error: { message: string } | null) {
-  if (error) throw new Error(error.message);
-}
+import { lanzar } from '../lib/errores';
 
 export interface Agenda {
   horario: HorarioDb[];
