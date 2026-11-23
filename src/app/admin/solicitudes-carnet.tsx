@@ -2,10 +2,10 @@ import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Image, Pressable, Text, View } from 'react-native';
 import { BarraSuperior, Boton, Cargando, Chip, EstadoVacio, Mensaje, Pantalla, s, Tarjeta } from '../../components/ui';
-import { aprobarSolicitud, cargarSolicitudesPendientes, rechazarSolicitud, urlFotoSolicitud } from '../../datos/socios';
+import { aprobarSolicitud, cargarSolicitudesPendientes, rechazarSolicitud, socioSinCuentaConCi, urlFotoSolicitud } from '../../datos/socios';
 import { usarDatos } from '../../datos/usarDatos';
 import { estadoCarnet, fechaCorta, formatearCi } from '../../lib/carnet';
-import type { SolicitudCarnetDb } from '../../lib/tipos-db';
+import type { SocioDb, SolicitudCarnetDb } from '../../lib/tipos-db';
 import { colores, espacio, radio } from '../../tema';
 
 const volver = () => (router.canGoBack() ? router.back() : router.replace('/admin'));
@@ -48,6 +48,15 @@ function Solicitud({ sol, onListo }: { sol: SolicitudCarnetDb; onListo: () => vo
   const [motivo, setMotivo] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [existente, setExistente] = useState<SocioDb | null>(null);
+
+  useEffect(() => {
+    let vivo = true;
+    socioSinCuentaConCi(sol.ci).then((x) => vivo && setExistente(x)).catch(() => undefined);
+    return () => {
+      vivo = false;
+    };
+  }, [sol.ci]);
 
   useEffect(() => {
     let vivo = true;
@@ -88,6 +97,9 @@ function Solicitud({ sol, onListo }: { sol: SolicitudCarnetDb; onListo: () => vo
       </Text>
       <Text style={[s.filaDetalle, vencida && { color: colores.rojo }]}>Vence el {fechaCorta(sol.vigente_hasta)}{vencida ? ' (vencido)' : ''}</Text>
 
+      {existente && (
+        <Mensaje tipo="info" texto={`Al aprobar se vincula al socio ${existente.numero_socio ?? ''} (${existente.nombre}) que el CEQ cargó con esta cédula, y se renueva hasta ${fechaCorta(sol.vigente_hasta)}.`} />
+      )}
       <Mensaje texto={error} />
       {rechazando ? (
         <>
@@ -102,7 +114,7 @@ function Solicitud({ sol, onListo }: { sol: SolicitudCarnetDb; onListo: () => vo
         </>
       ) : (
         <View style={{ flexDirection: 'row', gap: espacio.s, marginTop: espacio.m }}>
-          <Boton texto="Aprobar" icono="checkmark" onPress={() => hacer(() => aprobarSolicitud(sol.id))} cargando={ocupado} deshabilitado={vencida} compacto estilo={{ flex: 1 }} />
+          <Boton texto="Aprobar" icono="checkmark" onPress={() => hacer(() => aprobarSolicitud(sol.id, sol.created_at))} cargando={ocupado} deshabilitado={vencida} compacto estilo={{ flex: 1 }} />
           <Boton texto="Rechazar" variante="secundario" onPress={() => setRechazando(true)} deshabilitado={ocupado} compacto estilo={{ flex: 1 }} />
         </View>
       )}

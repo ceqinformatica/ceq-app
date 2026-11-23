@@ -60,6 +60,9 @@ begin
              and (s.vigente_hasta is null or s.vigente_hasta >= hoy)) then
     raise exception 'Ya tenés tu carnet digital habilitado';
   end if;
+  if exists (select 1 from public.socios s where (s.usuario_id = uid or s.ci = v_ci) and not s.activo) then
+    raise exception 'Tu carnet fue dado de baja por el CEQ. Consultá en la sede';
+  end if;
 
   update public.solicitudes_carnet
      set nombre = btrim(p_nombre), ci = v_ci, numero_socio = nullif(btrim(coalesce(p_numero, '')), ''),
@@ -79,7 +82,10 @@ grant execute on function public.solicitar_carnet(text, text, text, date, text) 
 -- ---------------------------------------------------------------
 -- El admin aprueba: crea o renueva el socio y habilita el carnet.
 -- ---------------------------------------------------------------
-create or replace function public.aprobar_solicitud_carnet(p_id uuid)
+-- Se aprueba la versión que el admin vio: si el estudiante la reenvió
+-- mientras tanto (cambia created_at), hay que volver a mirarla.
+drop function if exists public.aprobar_solicitud_carnet(uuid);
+create or replace function public.aprobar_solicitud_carnet(p_id uuid, p_version timestamptz)
 returns uuid language plpgsql security definer set search_path = public as $$
 declare
   sol public.solicitudes_carnet;
@@ -88,6 +94,9 @@ begin
   if not public.es_admin() then raise exception 'Solo admin'; end if;
   select * into sol from public.solicitudes_carnet where id = p_id and estado = 'pendiente' for update;
   if not found then raise exception 'La solicitud ya fue revisada o no existe'; end if;
+  if sol.created_at is distinct from p_version then
+    raise exception 'El estudiante cambió la solicitud. Actualizá la lista y revisala de nuevo';
+  end if;
 
   if sol.numero_socio is not null and exists (
        select 1 from public.socios where upper(numero_socio) = upper(sol.numero_socio)
@@ -123,8 +132,8 @@ begin
    where id = p_id;
   return socio_id;
 end $$;
-revoke all on function public.aprobar_solicitud_carnet(uuid) from public, anon;
-grant execute on function public.aprobar_solicitud_carnet(uuid) to authenticated;
+revoke all on function public.aprobar_solicitud_carnet(uuid, timestamptz) from public, anon;
+grant execute on function public.aprobar_solicitud_carnet(uuid, timestamptz) to authenticated;
 
 create or replace function public.rechazar_solicitud_carnet(p_id uuid, p_motivo text)
 returns void language plpgsql security definer set search_path = public as $$

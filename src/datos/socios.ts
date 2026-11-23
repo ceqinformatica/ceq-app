@@ -192,6 +192,7 @@ export async function enviarSolicitud(datos: DatosSolicitud, foto: { uri: string
   const cuerpo = Platform.OS === 'web' ? await (await fetch(foto.uri)).blob() : await bytesDe(foto.uri);
   const { error } = await supabase.storage.from(BUCKET_SOLICITUDES).upload(path, cuerpo, { contentType: foto.tipo ?? 'image/jpeg', upsert: false });
   lanzar(error);
+  const { data: anterior } = await supabase.from('solicitudes_carnet').select('foto_path').eq('usuario_id', uid).eq('estado', 'pendiente').maybeSingle();
   const { error: e2 } = await supabase.rpc('solicitar_carnet', {
     p_nombre: datos.nombre.trim(), p_ci: datos.ci, p_numero: datos.numero_socio.trim() || null, p_vence: datos.vigente_hasta, p_foto: path,
   });
@@ -199,6 +200,17 @@ export async function enviarSolicitud(datos: DatosSolicitud, foto: { uri: string
     await supabase.storage.from(BUCKET_SOLICITUDES).remove([path]).catch(() => undefined);
     lanzar(e2);
   }
+  // La foto de la solicitud que se reemplazó ya no sirve.
+  if (anterior?.foto_path && anterior.foto_path !== path) {
+    await supabase.storage.from(BUCKET_SOLICITUDES).remove([anterior.foto_path]).catch(() => undefined);
+  }
+}
+
+/** Panel: si al aprobar se va a vincular un socio que el CEQ cargó sin cuenta. */
+export async function socioSinCuentaConCi(ci: string): Promise<SocioDb | null> {
+  if (MODO_DEMO) return todosDemo().find((x) => x.ci === ci && !x.usuario_id) ?? null;
+  const { data } = await supabase.from('socios').select('*').eq('ci', ci).is('usuario_id', null).maybeSingle();
+  return data;
 }
 
 /** Panel: solicitudes pendientes, la más vieja primero. */
@@ -218,7 +230,7 @@ export async function urlFotoSolicitud(path: string): Promise<string | null> {
   return data?.signedUrl ?? null;
 }
 
-export async function aprobarSolicitud(id: string): Promise<void> {
+export async function aprobarSolicitud(id: string, version: string): Promise<void> {
   if (MODO_DEMO) {
     await esperar(300);
     const x = db.solicitudesCarnet.find((y) => y.id === id);
@@ -228,7 +240,7 @@ export async function aprobarSolicitud(id: string): Promise<void> {
     }
     return;
   }
-  const { error } = await supabase.rpc('aprobar_solicitud_carnet', { p_id: id });
+  const { error } = await supabase.rpc('aprobar_solicitud_carnet', { p_id: id, p_version: version });
   lanzar(error);
 }
 

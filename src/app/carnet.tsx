@@ -103,12 +103,7 @@ export default function PantallaCarnet() {
             <Text style={[s.filaDetalle, { fontVariant: ['tabular-nums'] }]}>En vivo · {hora}</Text>
           </View>
 
-          {estado === 'vencido' && (
-            <>
-              <Mensaje texto="Tu carnet venció. Si ya lo renovaste en la sede, validá el carnet nuevo con una foto." />
-              <Boton texto="Validar mi carnet renovado" icono="camera" variante="secundario" onPress={() => router.push('/carnet-validar')} />
-            </>
-          )}
+          {estado === 'vencido' && <Renovacion uid={sesion?.user.id ?? ''} />}
           {estado === 'inactivo' && <Mensaje texto="El CEQ dio de baja este carnet. Consultá en la sede." />}
           <Mensaje texto={mensaje?.texto ?? null} tipo={mensaje?.tipo} />
 
@@ -147,6 +142,20 @@ export default function PantallaCarnet() {
         <SinCarnet uid={sesion?.user.id ?? ''} />
       )}
     </Pantalla>
+  );
+}
+
+/** Carnet vencido: validar el renovado, o ver que ya está en revisión. */
+function Renovacion({ uid }: { uid: string }) {
+  const { datos: sol } = usarDatos(() => cargarMiSolicitud(uid), [uid]);
+  if (sol?.estado === 'pendiente') {
+    return <Mensaje tipo="info" texto="Tu carnet venció y el CEQ está revisando la foto del renovado. Cuando lo aprueben, se actualiza solo." />;
+  }
+  return (
+    <>
+      <Mensaje texto={sol?.estado === 'rechazada' ? `Tu carnet venció y el CEQ no pudo validar el renovado${sol.motivo ? `: ${sol.motivo}` : '.'}` : 'Tu carnet venció. Si ya lo renovaste en la sede, validá el carnet nuevo con una foto.'} />
+      <Boton texto="Validar mi carnet renovado" icono="camera" variante="secundario" onPress={() => router.push('/carnet-validar')} />
+    </>
   );
 }
 

@@ -2,7 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as DocumentPicker from 'expo-document-picker';
 import { router } from 'expo-router';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Image, Platform, StyleSheet, Text, View } from 'react-native';
 import { CampoFechaHora, hoy } from '../components/fecha';
 import { BarraSuperior, Boton, Campo, Mensaje, Pantalla, s, Seccion, Tarjeta } from '../components/ui';
@@ -33,6 +33,12 @@ export default function ValidarCarnet() {
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [listo, setListo] = useState(false);
+
+  // Si el perfil terminó de cargar después de abrir la pantalla.
+  useEffect(() => {
+    if (perfil?.nombre) setNombre((n) => n || perfil.nombre || '');
+    if (perfil?.ci) setCi((c) => c || perfil.ci || '');
+  }, [perfil?.nombre, perfil?.ci]);
 
   const venceIso = vence ? isoDeTexto(vence) : null;
   const problemaFecha = vence ? problemaVencimiento(venceIso) : null;

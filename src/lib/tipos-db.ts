@@ -153,7 +153,7 @@ export type Database = {
       poner_foto_carnet: { Args: { p_socio: string; p_path: string | null }; Returns: undefined };
       buscar_estudiantes: { Args: { p_texto: string }; Returns: EstudianteEncontrado[] };
       solicitar_carnet: { Args: { p_nombre: string; p_ci: string; p_numero: string | null; p_vence: string; p_foto: string }; Returns: string };
-      aprobar_solicitud_carnet: { Args: { p_id: string }; Returns: string };
+      aprobar_solicitud_carnet: { Args: { p_id: string; p_version: string }; Returns: string };
       rechazar_solicitud_carnet: { Args: { p_id: string; p_motivo: string | null }; Returns: undefined };
       eliminar_mi_cuenta: { Args: Record<string, never>; Returns: undefined };
     };
