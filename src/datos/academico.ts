@@ -302,6 +302,14 @@ export async function guardarFinales(materiaId: string, periodo: string, llamado
     }
     return;
   }
+  // Antes de borrar: si el Recu o la Regu ya se usó en otro semestre, el
+  // insert fallaría y se perderían los finales de este semestre.
+  if (filas.some((f) => f.tipo !== 'final')) {
+    const otro = await supabase.from('examenes_finales').select('id').eq('materia_id', materiaId).eq('cursada_anterior', false)
+      .neq('periodo', periodo).in('tipo', ['recuperatorio', 'regularizacion']).limit(1);
+    lanzar(otro.error);
+    if (otro.data?.length) throw new Error('Ya usaste el Recu o la Regu en otro semestre de esta cursada. Se usa uno solo.');
+  }
   const borrar = await supabase.from('examenes_finales').delete().eq('materia_id', materiaId).eq('periodo', periodo).eq('cursada_anterior', false);
   lanzar(borrar.error);
   if (filas.length) {

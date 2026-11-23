@@ -317,7 +317,7 @@ export function TarjetaFinales({ materiaId, firma: firmaGuardadaEnMateria, aprob
             <Text style={[s.filaDetalle, { marginTop: espacio.s }]}>Recu o Regu, uno solo: Regu si faltaste a un parcial (1.º o 2.º llamado); Recu si rendiste todos los parciales y no llegaste a la firma (solo 1.er llamado).</Text>
           )}
           {recuReguEnOtroPeriodo && f.llamado === 1 && (
-            <Text style={[s.filaDetalle, { marginTop: espacio.s }]}>Ya usaste {recuReguEnOtroPeriodo.tipo === 'recuperatorio' ? 'el Recu' : 'la Regu'} en el {nombrePeriodo(recuReguEnOtroPeriodo.periodo!)}. Solo se puede uno por cursada.</Text>
+            <Text style={[s.filaDetalle, { marginTop: espacio.s }]}>Ya usaste {recuReguEnOtroPeriodo.tipo === 'recuperatorio' ? 'el Recu' : 'la Regu'}{recuReguEnOtroPeriodo.periodo ? ` en el ${nombrePeriodo(recuReguEnOtroPeriodo.periodo)}` : ''}. Solo se puede uno por cursada.</Text>
           )}
           {f.tipo === 'regu' && (
             <Text style={[s.filaDetalle, { marginTop: espacio.s }]}>Regularización: rendiste el parcial al que faltaste. Este llamado queda usado y no lleva nota. Cargá la nota en la calculadora de firma.</Text>
