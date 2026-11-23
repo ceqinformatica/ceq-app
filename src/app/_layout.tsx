@@ -7,11 +7,13 @@ import { StatusBar } from 'expo-status-bar';
 import { ActivityIndicator, Image, Platform, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Bloqueo } from '../components/Bloqueo';
+import { Recorrido } from '../components/Recorrido';
 import { Hexagono } from '../components/graficos';
 import { Boton, EstadoVacio, logoCeq, Mensaje } from '../components/ui';
 import { SesionProvider, useSesion } from '../context/SesionProvider';
 import { configurarNotificaciones, registrarEsteCelular, rutaDeNotificacion } from '../lib/notificaciones';
 import { colores, fondos } from '../tema';
+import { RecorridoProvider } from '../context/RecorridoProvider';
 import { TemaProvider, useCargarPreferenciaTema, useTema } from '../context/TemaProvider';
 import { useOrientacionPorDispositivo } from '../components/disposicion';
 
@@ -78,6 +80,7 @@ function Navegacion() {
   const conCarrera = Boolean(perfil?.plan_id);
   const esAdmin = conCarrera && perfil?.rol === 'admin';
   return (
+    <>
     <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: fondos.fondo }, animation: 'slide_from_right' }}>
       <Stack.Protected guard={!sesion}>
         <Stack.Screen name="login" />
@@ -106,6 +109,9 @@ function Navegacion() {
       </Stack.Protected>
       <Stack.Screen name="auth/callback" />
     </Stack>
+    {/* Ventanitas de bienvenida: la primera vez que la cuenta entra (o al pedirlo desde el perfil). */}
+    {conCarrera && <Recorrido />}
+    </>
   );
 }
 
@@ -126,7 +132,9 @@ export default function RootLayout() {
       <TemaProvider inicial={tema.inicial}>
         <SesionProvider>
           <StatusBar style="light" />
-          <Navegacion />
+          <RecorridoProvider>
+            <Navegacion />
+          </RecorridoProvider>
         </SesionProvider>
       </TemaProvider>
     </SafeAreaProvider>

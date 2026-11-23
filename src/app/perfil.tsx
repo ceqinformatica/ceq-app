@@ -11,12 +11,14 @@ import { activarBiometria, biometriaActiva, biometriaDisponible, desactivarBiome
 import { supabase } from '../lib/supabase';
 import { colores, espacio, fondos, fuentes, texto } from '../tema';
 import { useTema, type PreferenciaTema } from '../context/TemaProvider';
+import { useRecorrido } from '../context/RecorridoProvider';
 
 const volver = () => (router.canGoBack() ? router.back() : router.replace('/'));
 
 export default function Perfil() {
   const { preferencia, cambiarPreferencia: cambiarTema } = useTema();
   const { sesion, perfil, actualizarPerfil } = useSesion();
+  const recorrido = useRecorrido();
   const [carrera, setCarrera] = useState<string | null>(null);
   const [plan, setPlan] = useState<string | null>(null);
   const [bio, setBio] = useState<{ disponible: boolean; nombre: string; activa: boolean } | null>(null);
@@ -166,6 +168,22 @@ export default function Perfil() {
       <Text style={[s.filaDetalle, { marginTop: -espacio.s }]}>
         {preferencia === 'sistema' ? 'Sigue el modo claro u oscuro de tu celular.' : preferencia === 'oscuro' ? 'Modo oscuro siempre, aunque el celular esté en claro.' : 'Modo claro siempre, aunque el celular esté en oscuro.'}
       </Text>
+
+      <Seccion estilo={{ marginTop: espacio.xl }}>Ayuda</Seccion>
+      <Tarjeta estilo={{ paddingVertical: espacio.xs }}>
+        <Fila
+          icono="help-buoy-outline"
+          titulo="Ver el recorrido de bienvenida"
+          detalle="Las ventanitas que explican cada sección de la app."
+          onPress={() => {
+            // Se vuelve a las pestañas y ahí se abre el recorrido.
+            if (router.canGoBack()) router.back();
+            else router.replace('/');
+            recorrido.iniciar();
+          }}
+          ultima
+        />
+      </Tarjeta>
 
       <Seccion estilo={{ marginTop: espacio.xl }}>Seguridad</Seccion>
       <Tarjeta estilo={{ paddingVertical: espacio.xs }}>
