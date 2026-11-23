@@ -572,6 +572,64 @@ reset role;
 select pg_temp.debe_ser('lo borrado no vuelve al re-ejecutar', (select count(*) from public.calendario_academico where clave = '2026-asu-noche-vieja'), 0);
 select pg_temp.debe_ser('lo editado no se pisa', (select count(*) from public.calendario_academico where titulo = 'Navidad (feriado)'), 1);
 
+-- Panel: aviso de carnets por validar --------------------------------
+reset role;
+select pg_temp.debe_ser('al admin le llega un aviso por cada pedido (el reenvío inmediato no repite)',
+  (select count(*) from public.notificaciones where ruta = '/admin/solicitudes-carnet' and usuario_id = '00000000-0000-0000-0000-0000000000ad'), 2);
+select pg_temp.debe_ser('a los estudiantes no les llega',
+  (select count(*) from public.notificaciones where ruta = '/admin/solicitudes-carnet' and usuario_id <> '00000000-0000-0000-0000-0000000000ad'), 0);
+select pg_temp.como('00000000-0000-0000-0000-0000000000ad');
+select pg_temp.debe_ser('el resumen cuenta los carnets pendientes', (public.pendientes_panel() ->> 'carnets_pendientes')::int, 0);
+select pg_temp.como('00000000-0000-0000-0000-00000000000a');
+select pg_temp.debe_fallar('Ana no ve los pendientes del panel', 'select public.pendientes_panel()');
+
+-- Horarios de finales ------------------------------------------------
+select pg_temp.debe_fallar('Ana no carga horarios', $$insert into public.horarios_finales (carrera_id, titulo) values ('10000000-0000-0000-0000-000000000001', 'Trucho')$$);
+select pg_temp.como('00000000-0000-0000-0000-0000000000ad');
+select pg_temp.debe_fallar('no se crea ya publicado', $$insert into public.horarios_finales (carrera_id, titulo, publicado) values ('10000000-0000-0000-0000-000000000001', 'Diciembre', true)$$);
+insert into public.horarios_finales (id, carrera_id, titulo) values ('60000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000001', 'Diciembre 2026');
+select pg_temp.debe_fallar('no se publica vacío', $$select public.publicar_horario_finales('60000000-0000-0000-0000-000000000001')$$);
+select pg_temp.debe_ser('guarda las fechas de una vez', public.guardar_fechas_finales('60000000-0000-0000-0000-000000000001',
+  '[{"materia":"Química General","llamado":1,"fecha":"2026-12-07","hora":"08:00"},{"materia":"Química General","llamado":2,"fecha":"2026-12-21","hora":""},{"materia":"Física I","llamado":1,"fecha":"2026-12-09","hora":"13:30","aula":"Aula 3"}]'::jsonb), 3);
+select pg_temp.debe_fallar('fecha inválida no guarda nada', $$select public.guardar_fechas_finales('60000000-0000-0000-0000-000000000001', '[{"materia":"Física I","llamado":1,"fecha":"2026-13-40"}]'::jsonb)$$);
+select pg_temp.debe_ser('las fechas siguen enteras tras el error', (select count(*) from public.fechas_finales), 3);
+select pg_temp.como('00000000-0000-0000-0000-00000000000b');
+select pg_temp.debe_ser('Beto no ve el borrador', (select count(*) from public.horarios_finales), 0);
+select pg_temp.debe_ser('Beto no ve sus fechas', (select count(*) from public.fechas_finales), 0);
+select pg_temp.debe_fallar('Beto no publica', $$select public.publicar_horario_finales('60000000-0000-0000-0000-000000000001')$$);
+select pg_temp.debe_fallar('Beto no guarda fechas', $$select public.guardar_fechas_finales('60000000-0000-0000-0000-000000000001', '[]'::jsonb)$$);
+select pg_temp.debe_ser('Beto no publica a mano', pg_temp.filas($q$update public.horarios_finales set publicado = true$q$), 0);
+select pg_temp.como('00000000-0000-0000-0000-0000000000ad');
+select pg_temp.debe_ser('publicar devuelve las fechas', public.publicar_horario_finales('60000000-0000-0000-0000-000000000001'), 3);
+select public.publicar_horario_finales('60000000-0000-0000-0000-000000000001');
+update public.horarios_finales set publicado = false where id = '60000000-0000-0000-0000-000000000001';
+select public.publicar_horario_finales('60000000-0000-0000-0000-000000000001');
+reset role;
+select pg_temp.debe_ser('avisa una sola vez a la carrera (ni al re-publicar tras ocultarlo)', (select count(*) from public.notificaciones where ruta = '/finales-fechas' and carrera_id = '10000000-0000-0000-0000-000000000001' and usuario_id is null), 1);
+select pg_temp.como('00000000-0000-0000-0000-00000000000b');
+select pg_temp.debe_ser('Beto ve el horario publicado', (select count(*) from public.fechas_finales), 3);
+select pg_temp.debe_ser('Beto no borra fechas', pg_temp.filas($q$delete from public.fechas_finales$q$), 0);
+
+-- Ventanas flotantes -------------------------------------------------
+select pg_temp.debe_fallar('Beto no crea ventanas', $$insert into public.ventanas (titulo) values ('Hola')$$);
+select pg_temp.como('00000000-0000-0000-0000-0000000000ad');
+select pg_temp.debe_fallar('botón sin destino', $$insert into public.ventanas (titulo, boton_texto) values ('Hola', 'Ir')$$);
+select pg_temp.debe_fallar('destino raro', $$insert into public.ventanas (titulo, boton_texto, boton_destino) values ('Hola', 'Ir', 'javascript:alert(1)')$$);
+select pg_temp.debe_fallar('color inventado', $$insert into public.ventanas (titulo, color) values ('Hola', 'fucsia')$$);
+select pg_temp.debe_fallar('imagen sin https', $$insert into public.ventanas (titulo, imagen_url) values ('Hola', 'http://x.com/a.png')$$);
+insert into public.ventanas (titulo, cuerpo, boton_texto, boton_destino, color) values ('Para todos', 'Hola', 'Ver', '/calendario', '#1879B4');
+insert into public.ventanas (titulo, carrera_id) values ('Para otra carrera', (select id from public.carreras where id <> '10000000-0000-0000-0000-000000000001' limit 1));
+insert into public.ventanas (titulo, desde) values ('Programada', now() + interval '1 day');
+insert into public.ventanas (titulo, activa) values ('Apagada', false);
+insert into public.ventanas (titulo, desde, hasta) values ('Vencida', now() - interval '2 days', now() - interval '1 day');
+select pg_temp.debe_ser('admin ve todas', (select count(*) from public.ventanas), 5);
+select pg_temp.como('00000000-0000-0000-0000-00000000000b');
+select pg_temp.debe_ser('Beto ve solo las vigentes para él', (select count(*) from public.ventanas), (select case when exists (select 1 from public.carreras where id <> '10000000-0000-0000-0000-000000000001') then 1 else 2 end));
+select pg_temp.debe_ser('Beto no edita ventanas', pg_temp.filas($q$update public.ventanas set titulo = 'x'$q$), 0);
+select pg_temp.como(null);
+select pg_temp.debe_fallar('anon no ve ventanas', 'select * from public.ventanas');
+reset role;
+
 -- Todas las tablas públicas tienen RLS ------------------------------
 select pg_temp.debe_ser('tablas sin RLS',
   (select count(*) from pg_class c join pg_namespace n on n.oid = c.relnamespace

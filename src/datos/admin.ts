@@ -4,7 +4,7 @@
  * llegue a estas pantallas.
  */
 import { supabase } from '../lib/supabase';
-import type { AvisoDb, Carrera, EncuestaDb, NotificacionDb, ResumenAdmin, SugerenciaDb } from '../lib/tipos-db';
+import type { AvisoDb, Carrera, EncuestaDb, NotificacionDb, PendientesPanel, ResumenAdmin, SugerenciaDb } from '../lib/tipos-db';
 import { db, esperar, idDemo, MODO_DEMO } from './demo';
 import { lanzar } from '../lib/errores';
 
@@ -16,6 +16,19 @@ export async function cargarResumen(): Promise<ResumenAdmin> {
   const { data, error } = await supabase.rpc('resumen_admin');
   lanzar(error);
   return data as ResumenAdmin;
+}
+
+/** Lo que espera al CEQ: carnets por validar, ventanas visibles, horarios en borrador. Si falla (migración sin aplicar), ceros. */
+export async function cargarPendientes(): Promise<PendientesPanel | null> {
+  if (MODO_DEMO) {
+    return {
+      carnets_pendientes: db.solicitudesCarnet.filter((x) => x.estado === 'pendiente').length,
+      ventanas_activas: db.ventanas.filter((v) => v.activa).length,
+      horarios_borrador: db.horariosFinales.filter((h) => !h.publicado).length,
+    };
+  }
+  const { data, error } = await supabase.rpc('pendientes_panel');
+  return error ? null : (data as PendientesPanel);
 }
 
 export async function cargarCarreras(): Promise<Carrera[]> {
