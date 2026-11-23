@@ -43,6 +43,8 @@ export function usarDatos<T>(cargar: () => Promise<T>, deps: unknown[], opciones
       guardadoEl.current = null;
       desdeCache.current = false;
       setDatos(null);
+      setError(null);
+      setSinConexion(false);
       setCargando(true);
     }
     // Primero lo guardado, para no esperar a la red.
