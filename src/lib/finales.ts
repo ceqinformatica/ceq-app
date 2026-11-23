@@ -69,7 +69,8 @@ export function promedios(
     }
     const e = estados.get(id);
     const aprobada = notaAprobada(id, propios) ?? (e?.estado === 'aprobada' ? e.notaFinal ?? null : null);
-    if (aprobada != null) {
+    // Solo notas de aprobación válidas (2 a 5): una nota mal cargada no entra al promedio.
+    if (aprobada != null && aprobada >= 2 && aprobada <= 5) {
       notasAprobadas.push(aprobada);
       if (!propios.some((i) => i.nota >= 2)) todas.push(aprobada);
     }
