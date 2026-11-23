@@ -3,7 +3,7 @@
  * pantallas. Usa Supabase, o los datos de ejemplo en modo demostración.
  * El cálculo vive en src/lib/progreso.ts y src/lib/firma.ts.
  */
-import { periodoDe } from '../lib/finales';
+import { periodoAlCambiar, periodoDe } from '../lib/finales';
 import { pesosIguales, type Asistencia, type Evaluacion, type ReglaFirma } from '../lib/firma';
 import type { EstadoEstudiante, EstadoMateria, GrupoOptativas, Materia, Prerrequisito, UnidadAvance } from '../lib/progreso';
 import type { IntentoAImportar, PlanImportacion } from '../lib/extracto-ealu';
@@ -135,19 +135,6 @@ export async function guardarEstadoMateria(materiaId: string, estado: EstadoMate
   lanzar(error);
 }
 
-/**
- * Semestre en que la materia quedó firmada o aprobada (la agenda la sigue
- * mostrando ese semestre). Solo se marca al pasar a firmada o aprobada
- * desde la materia; si no cambia el estado, se conserva. Las cargas en
- * bloque del historial no lo marcan.
- */
-function periodoAlCambiar(antes: EstadoMateria | null, periodoAntes: string | null, ahora: EstadoMateria): string | null {
-  if (ahora !== 'firmada' && ahora !== 'aprobada') return null;
-  if (antes === ahora) return periodoAntes;
-  // De firmada a aprobada (o al revés): se conserva el semestre de la firma.
-  if (antes === 'firmada' || antes === 'aprobada') return periodoAntes;
-  return periodoDe();
-}
 
 /**
  * Guarda el promedio de firma de la materia. Si estaba pendiente o cursando
@@ -162,7 +149,7 @@ export async function guardarFirma(materiaId: string, promedio: number) {
       previo.promedio_firma = promedio;
       return;
     }
-    const periodo = previo?.estado === 'firmada' ? previo.periodo : periodoDe();
+    const periodo = previo?.estado === 'firmada' && previo.periodo ? previo.periodo : periodoDe();
     db.estados = db.estados.filter((e) => e.materia_id !== materiaId);
     db.estados.push({ usuario_id: UID_DEMO, materia_id: materiaId, estado: 'firmada', nota_final: null, fecha: null, periodo, updated_at: new Date().toISOString(), promedio_firma: promedio });
     return;
@@ -179,7 +166,8 @@ export async function guardarFirma(materiaId: string, promedio: number) {
     .upsert({
       materia_id: materiaId, estado: 'firmada', nota_final: null, nota_desde_final: false, promedio_firma: promedio, respaldo_recursada: null,
       // Firmada desde la calculadora: queda como de este semestre (salvo que ya estuviera firmada).
-      periodo: (data as { estado: EstadoMateria; periodo: string | null } | null)?.estado === 'firmada' ? (data as { periodo: string | null }).periodo : periodoDe(),
+      // Si ya estaba firmada pero sin semestre (de antes de guardarlo), toma este.
+      periodo: (data as { estado: EstadoMateria; periodo: string | null } | null)?.estado === 'firmada' ? (data as { periodo: string | null }).periodo ?? periodoDe() : periodoDe(),
     }, { onConflict: 'usuario_id,materia_id' });
   lanzar(r.error);
 }
@@ -212,8 +200,9 @@ export async function importarExtracto(plan: PlanImportacion) {
     await esperar(200);
     const hoy = new Date().toISOString();
     const aprobar = (materia_id: string, nota: number | null, fecha: string | null) => {
+      const periodo = db.estados.find((e) => e.materia_id === materia_id)?.periodo ?? null;
       db.estados = db.estados.filter((e) => e.materia_id !== materia_id);
-      db.estados.push({ usuario_id: UID_DEMO, materia_id, estado: 'aprobada', nota_final: nota, fecha, periodo: null, updated_at: hoy });
+      db.estados.push({ usuario_id: UID_DEMO, materia_id, estado: 'aprobada', nota_final: nota, fecha, periodo, updated_at: hoy });
     };
     // Como el trigger de la base: aprueba con la mejor nota aprobada (≥ 2).
     const mejor = new Map<string, IntentoAImportar>();
@@ -261,10 +250,12 @@ export async function guardarEstadosEnBloque(cambios: CambioEstado[], opciones: 
     await esperar(250);
     const tocadas = new Set(cambios.map((c) => c.materiaId));
     const existentes = new Set(db.estados.map((e) => e.materia_id));
+    const previos = new Map(db.estados.map((e) => [e.materia_id, e.periodo]));
     if (!opciones.soloNuevas) db.estados = db.estados.filter((e) => !tocadas.has(e.materia_id));
     for (const g of guardar) {
       if (opciones.soloNuevas && existentes.has(g.materia_id)) continue;
-      db.estados.push({ usuario_id: UID_DEMO, ...g, fecha: null, periodo: null, updated_at: new Date().toISOString() });
+      // Igual que el upsert de la base: el periodo que ya tenía se conserva.
+      db.estados.push({ usuario_id: UID_DEMO, ...g, fecha: null, periodo: previos.get(g.materia_id) ?? null, updated_at: new Date().toISOString() });
     }
     return;
   }

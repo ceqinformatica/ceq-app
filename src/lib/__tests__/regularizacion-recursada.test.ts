@@ -1,7 +1,7 @@
 /// <reference types="node" />
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { aplazosDeLaCursada, esSeminario, notaAprobada, promedios, type IntentoFinal } from '../finales.ts';
+import { aplazosDeLaCursada, esSeminario, notaAprobada, periodoAlCambiar, promedios, type IntentoFinal } from '../finales.ts';
 import { pesosIguales, evaluarFirma, type Evaluacion } from '../firma.ts';
 import { REGLA_FCQ, aplicarRecuperatorio, aplicarRegularizacion } from '../reglamento-fcq.ts';
 import { promedioGeneral, type EstadoEstudiante } from '../progreso.ts';
@@ -123,4 +123,15 @@ test('la firma vence después de dos periodos sin aprobar (Art. 49 y 62)', async
   assert.equal(firmaVencida([f('2026-1', 1), f('2026-2', 3)], '2027-1'), false);
   // Al recursar, lo anterior no cuenta.
   assert.equal(firmaVencida([{ ...f('2025-1', 1), cursada_anterior: true }, { ...f('2025-2', 1), cursada_anterior: true }, f('2026-1', 1)], '2026-2'), false);
+});
+
+test('periodoAlCambiar: el semestre de la firma para la agenda', () => {
+  // Al firmar o aprobar desde la materia: este semestre.
+  assert.equal(periodoAlCambiar('cursando', null, 'firmada', '2026-2'), '2026-2');
+  assert.equal(periodoAlCambiar(null, null, 'aprobada', '2026-2'), '2026-2');
+  // Sin cambio de estado, o de firmada a aprobada: se conserva.
+  assert.equal(periodoAlCambiar('firmada', '2026-1', 'firmada', '2026-2'), '2026-1');
+  assert.equal(periodoAlCambiar('firmada', '2026-2', 'aprobada', '2027-1'), '2026-2');
+  // Volver a cursando o pendiente lo borra.
+  assert.equal(periodoAlCambiar('firmada', '2026-2', 'cursando', '2026-2'), null);
 });
