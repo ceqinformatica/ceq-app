@@ -9,6 +9,9 @@ import { useSesion } from '../../context/SesionProvider';
 import { aAsistencia, cargarFirmas, cargarMalla, REGLA_POR_DEFECTO, reglaDe, tieneLab } from '../../datos/academico';
 import { cargarAgenda, cuentaRegresiva, diaSemanaHoy, diasHasta, hora, horaDe, partesFecha } from '../../datos/agenda';
 import { cargarAvisos, haceCuanto } from '../../datos/ceq';
+import { cargarCalendario } from '../../datos/calendario';
+import { destacados, hoyPy, type EventoCalendario } from '../../lib/calendario';
+import { FilaCalendario } from '../../components/calendario';
 import { usarDatos } from '../../datos/usarDatos';
 import { evaluarFirma } from '../../lib/firma';
 import { calcularProgreso, esSeminario, materiasContadas } from '../../lib/progreso';
@@ -19,10 +22,12 @@ const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', '
 const DIAS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
 
 async function cargar(planId: string | null | undefined, carreraId: string | null | undefined) {
-  const [malla, agenda, avisos] = await Promise.all([
+  const [malla, agenda, avisos, calendario] = await Promise.all([
     planId ? cargarMalla(planId, carreraId) : Promise.resolve(null),
     cargarAgenda(planId),
     cargarAvisos(2),
+    // El calendario es un extra: si falla, el inicio igual se muestra.
+    cargarCalendario().catch(() => [] as EventoCalendario[]),
   ]);
   let progreso = null;
   let firmas: { id: string; nombre: string; semaforo: keyof typeof coloresSemaforo; firma: boolean; teoria: number | null }[] = [];
@@ -38,7 +43,7 @@ async function cargar(planId: string | null | undefined, carreraId: string | nul
     });
   }
   const hoy = diaSemanaHoy();
-  return { progreso, firmas, clasesHoy: agenda.horario.filter((h) => h.dia_semana === hoy), eventos: agenda.eventos.slice(0, 3), nombres: agenda.nombres, avisos };
+  return { progreso, firmas, facultad: destacados(calendario, hoyPy(), 3), clasesHoy: agenda.horario.filter((h) => h.dia_semana === hoy), eventos: agenda.eventos.slice(0, 3), nombres: agenda.nombres, avisos };
 }
 
 export default function Inicio() {
@@ -191,6 +196,16 @@ export default function Inicio() {
                 </Pressable>
               );
             })}
+          </Tarjeta>
+        </>
+      )}
+
+      {/* Calendario de la facultad */}
+      {!!datos?.facultad?.length && (
+        <>
+          <Seccion accion={{ texto: 'Calendario', onPress: () => router.push('/calendario') }}>En la facultad</Seccion>
+          <Tarjeta estilo={{ paddingVertical: espacio.xs }}>
+            {datos.facultad.map((e, i) => <FilaCalendario key={e.id} e={e} hoy={hoyPy()} ultima={i === datos.facultad.length - 1} />)}
           </Tarjeta>
         </>
       )}

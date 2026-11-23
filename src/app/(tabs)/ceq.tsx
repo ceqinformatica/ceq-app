@@ -74,6 +74,15 @@ export default function Ceq() {
         <Acceso icono="chatbubble-ellipses" texto="Sugerir" onPress={() => setSugerir(true)} />
         <Acceso icono="card" texto="Carnet" onPress={() => router.push('/carnet')} />
       </View>
+      <Tarjeta estilo={{ paddingVertical: espacio.xs }}>
+        <Fila
+          icono="calendar-outline"
+          titulo="Calendario académico"
+          detalle="Inscripciones, finales, aranceles y feriados de la FCQ"
+          onPress={() => router.push('/calendario')}
+          ultima
+        />
+      </Tarjeta>
 
       <Seccion accion={{ texto: 'Ver todos', onPress: () => router.push('/avisos') }}>Avisos</Seccion>
       {cargando && !datos ? (

@@ -98,6 +98,7 @@ function Navegacion() {
         <Stack.Screen name="avisos" />
         <Stack.Screen name="aviso/[id]" />
         <Stack.Screen name="tramites" />
+        <Stack.Screen name="calendario" />
         <Stack.Screen name="tramite/[id]" />
       </Stack.Protected>
       <Stack.Protected guard={Boolean(sesion) && esAdmin}>

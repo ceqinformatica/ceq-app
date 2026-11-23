@@ -150,7 +150,18 @@ export default function Agenda() {
             <HorarioOficial carreraId={perfil?.carrera_id} />
           </>
         ) : (
-          <ListaEventos datos={datos!} onElegir={setEventoElegido} />
+          <>
+            <ListaEventos datos={datos!} onElegir={setEventoElegido} />
+            <Tarjeta estilo={{ marginTop: espacio.m }}>
+              <Fila
+                icono="calendar-outline"
+                titulo="Calendario académico de la FCQ"
+                detalle="Inscripciones, finales, vencimientos de aranceles y feriados."
+                onPress={() => router.push('/calendario')}
+                ultima
+              />
+            </Tarjeta>
+          </>
         )}
         <View style={{ height: 64 }} />
       </Pantalla>

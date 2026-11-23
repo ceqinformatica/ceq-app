@@ -5,10 +5,11 @@
  * Los datos de acá son inventados: no son la malla real de ninguna carrera.
  */
 import type {
-  AsistenciaDb, AvisoDb, Carrera, EncuestaDb, EvaluacionDb, EventoDb, ExamenFinalDb, GrupoOptativasDb, HorarioDb, MateriaDb,
+  AsistenciaDb, AvisoDb, CalendarioDb, Carrera, EncuestaDb, EvaluacionDb, EventoDb, ExamenFinalDb, GrupoOptativasDb, HorarioDb, MateriaDb,
   MateriaEstudianteDb, OpcionEncuestaDb, Perfil, Plan, PrerrequisitoDb, ReglaFirmaDb, SocioDb, SolicitudCarnetDb, SugerenciaDb, NotificacionDb, TramiteDb,
 } from '../lib/tipos-db';
 import { GUIA_TRAMITES_FCQ } from './guia-tramites-fcq';
+import { CALENDARIO_FCQ_2026 } from './calendario-fcq';
 
 export const MODO_DEMO = process.env.EXPO_PUBLIC_DEMO === '1';
 export const UID_DEMO = '00000000-0000-4000-8000-000000000001';
@@ -137,6 +138,7 @@ export const db = {
     { id: 'a3', titulo: 'Tutorías de Fisicoquímica', cuerpo: 'Arrancan las tutorías entre pares de Fisicoquímica I. Martes y jueves a las 17:00 en el Aula 5.', imagen_url: null, notificar: false, publicado: true, autor_id: null, created_at: enDias(-8) },
   ] as AvisoDb[],
   tramites: GUIA_TRAMITES_FCQ.map((t, i): TramiteDb => ({ ...t, id: `t${i + 1}`, orden: i * 10, publicado: true, updated_at: ahora.toISOString() })),
+  calendario: CALENDARIO_FCQ_2026.map((f, i): CalendarioDb => ({ ...f, id: `cal${i + 1}`, detalle: f.detalle ?? null, created_at: ahora.toISOString(), updated_at: ahora.toISOString() })),
   sugerencias: [
     { id: 'sg1', usuario_id: 'otro', categoria: 'Infraestructura', texto: 'Faltan enchufes en la biblioteca para cargar la notebook.', estado: 'recibida', respuesta: null, created_at: enDias(-1) },
     { id: 'sg2', usuario_id: 'otro', categoria: 'Académico', texto: '¿Se pueden subir los exámenes viejos de Fisicoquímica?', estado: 'respondida', respuesta: 'Sí, los estamos juntando con los docentes.', created_at: enDias(-6) },
