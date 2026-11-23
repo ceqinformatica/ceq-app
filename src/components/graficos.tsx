@@ -1,6 +1,6 @@
 import { Animated, Text, View, type ViewStyle } from 'react-native';
-import Svg, { Circle, Polygon } from 'react-native-svg';
-import { colores, fondos, fuentes, radio } from '../tema';
+import Svg, { Circle, Defs, LinearGradient, Path, Polygon, Rect, Stop } from 'react-native-svg';
+import { colores, degradadoMarca, fondos, fuentes, radio } from '../tema';
 import { NumeroAnimado, useLlenado } from './movimiento';
 
 const CirculoAnimado = Animated.createAnimatedComponent(Circle);
@@ -25,6 +25,29 @@ export function Hexagono({ tamano = 40, relleno = fondos.marino, borde, grosor =
       </Svg>
       {children}
     </View>
+  );
+}
+
+/**
+ * Fondo de las cabeceras: degradado azul con dos ondas claras que bajan
+ * desde la derecha. Va detrás del contenido, del tamaño de la cabecera.
+ */
+export function FondoOndas({ ancho, alto }: { ancho: number; alto: number }) {
+  const w = ancho;
+  const h = alto;
+  return (
+    <Svg width={w} height={h} style={{ position: 'absolute', top: 0, left: 0 }} pointerEvents="none">
+      <Defs>
+        <LinearGradient id="ceqFondo" x1="0" y1="0" x2="1" y2="1">
+          <Stop offset="0" stopColor={degradadoMarca.desde} />
+          <Stop offset="1" stopColor={degradadoMarca.hasta} />
+        </LinearGradient>
+      </Defs>
+      <Rect x={0} y={0} width={w} height={h} fill="url(#ceqFondo)" />
+      <Path d={`M ${w * 0.35} ${h} C ${w * 0.6} ${h * 0.72}, ${w * 0.78} ${h * 0.95}, ${w} ${h * 0.5} L ${w} ${h} Z`} fill="#FFFFFF" fillOpacity={0.07} />
+      <Path d={`M ${w * 0.55} 0 C ${w * 0.7} ${h * 0.35}, ${w * 0.9} ${h * 0.15}, ${w} ${h * 0.42} L ${w} 0 Z`} fill="#FFFFFF" fillOpacity={0.06} />
+      <Path d={`M 0 ${h * 0.82} C ${w * 0.3} ${h * 0.62}, ${w * 0.55} ${h * 1.02}, ${w} ${h * 0.7}`} stroke="#FFFFFF" strokeOpacity={0.12} strokeWidth={1.5} fill="none" />
+    </Svg>
   );
 }
 

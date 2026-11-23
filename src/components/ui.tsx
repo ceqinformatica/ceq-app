@@ -9,8 +9,9 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTema } from '../context/TemaProvider';
 import { useDisposicion } from './disposicion';
+import { FondoOndas, Hexagono } from './graficos';
 import { Aparecer, NumeroAnimado, PressableAnimado, useAparecer, usePresion, vibrar } from './movimiento';
-import { colores, crearEstilos, espacio, fondos, fuentes, radio, sombras, texto } from '../tema';
+import { colores, crearEstilos, degradadoMarca, espacio, fondos, fuentes, radio, sombras, texto } from '../tema';
 
 /**
  * Deja lugar al teclado para que no tape lo que se escribe.
@@ -110,8 +111,9 @@ export function Pantalla({ children, scroll = true, estilo, cabecera, refrescand
 }
 
 /**
- * Banda celeste del CEQ: la firma visual de la app.
- * Va arriba de las pestañas principales.
+ * Cabecera azul del CEQ, con degradado y ondas: la firma visual de la app.
+ * Sin `titulo` muestra la marca (logo y "Portal CEQ"), como en el inicio;
+ * con `titulo`, el nombre de la pestaña.
  */
 export function CabeceraMarca({ titulo, sub, derecha, children, compacta, sinConexion }: {
   titulo?: string; sub?: string; derecha?: ReactNode; children?: ReactNode; compacta?: boolean;
@@ -120,23 +122,35 @@ export function CabeceraMarca({ titulo, sub, derecha, children, compacta, sinCon
 }) {
   const insets = useSafeAreaInsets();
   const { anchoMaximo } = useDisposicion();
+  const [tam, setTam] = useState({ w: 0, h: 0 });
   useBarraEstado('light');
   return (
     <View
-      style={[s.cabecera, { paddingTop: insets.top + espacio.m, paddingBottom: compacta ? espacio.xl : espacio.xxl + espacio.l }]}
+      style={[s.cabecera, { paddingTop: insets.top + espacio.m, paddingBottom: compacta ? espacio.xl + espacio.s : espacio.xxl + espacio.l }]}
+      onLayout={(e) => setTam({ w: Math.round(e.nativeEvent.layout.width), h: Math.round(e.nativeEvent.layout.height) })}
     >
+      {tam.w > 0 && <FondoOndas ancho={tam.w} alto={tam.h} />}
       <View style={anchoMaximo ? { width: '100%', maxWidth: anchoMaximo, alignSelf: 'center' } : null}>
-      <View style={s.cabeceraFila}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: espacio.s }}>
-          <View style={s.logoPastilla}>
-            <Image source={logoCeq} style={{ width: 26, height: 26 }} accessibilityLabel="Logo del CEQ" />
-          </View>
-          <Text style={s.cabeceraMarca}>Portal CEQ</Text>
+      {titulo ? (
+        <View style={s.cabeceraFila}>
+          <Text style={s.cabeceraTitulo} accessibilityRole="header" numberOfLines={1}>{titulo}</Text>
+          {derecha}
         </View>
-        {derecha}
-      </View>
+      ) : (
+        <View style={s.cabeceraFila}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: espacio.m }}>
+            <Hexagono tamano={54} relleno={fondos.blanco}>
+              <Image source={logoCeq} style={{ width: 34, height: 34 }} accessibilityLabel="Logo del CEQ" />
+            </Hexagono>
+            <View>
+              <Text style={s.cabeceraMarca}>Portal CEQ</Text>
+              <Text style={s.cabeceraMarcaSub}>Centro de Estudiantes{'\n'}FCQ - UNA</Text>
+            </View>
+          </View>
+          {derecha}
+        </View>
+      )}
       <Aparecer distancia={10}>
-      {titulo ? <Text style={s.cabeceraTitulo} accessibilityRole="header">{titulo}</Text> : null}
       {sub ? <Text style={s.cabeceraSub}>{sub}</Text> : null}
       {children}
       </Aparecer>
@@ -201,15 +215,16 @@ export function Titulo({ children, sub }: { children: ReactNode; sub?: ReactNode
   );
 }
 
-/** Título de bloque con la barrita marina a la izquierda (como en la web). */
-export function Seccion({ children, accion, estilo }: { children: ReactNode; accion?: { texto: string; onPress: () => void }; estilo?: ViewStyle }) {
+/** Título de bloque, con un ícono opcional y una acción ("Ver todo ›") a la derecha. */
+export function Seccion({ children, accion, estilo, icono }: { children: ReactNode; accion?: { texto: string; onPress: () => void }; estilo?: ViewStyle; icono?: NombreIcono }) {
   return (
     <Aparecer estilo={[s.seccionFila, estilo]} distancia={8}>
-      <View style={s.seccionBarra} />
+      {icono ? <Ionicons name={icono} size={19} color={colores.marino} /> : null}
       <Text style={s.seccionTexto} accessibilityRole="header">{children}</Text>
       {accion && (
-        <Pressable onPress={accion.onPress} hitSlop={10} accessibilityRole="link" style={{ marginLeft: 'auto' }}>
+        <Pressable onPress={accion.onPress} hitSlop={10} accessibilityRole="link" style={{ marginLeft: 'auto', flexDirection: 'row', alignItems: 'center', gap: 2 }}>
           <Text style={s.enlace}>{accion.texto}</Text>
+          {!accion.texto.startsWith('+') && <Ionicons name="chevron-forward" size={14} color={colores.azul} />}
         </Pressable>
       )}
     </Aparecer>
@@ -575,14 +590,15 @@ export const s = crearEstilos(() => ({
   contenido: { padding: espacio.l, paddingBottom: espacio.xxxl + espacio.xl },
 
   cabecera: {
-    backgroundColor: fondos.celesteMarca, paddingHorizontal: espacio.l, borderBottomLeftRadius: radio.xl + 6, borderBottomRightRadius: radio.xl + 6,
+    backgroundColor: degradadoMarca.desde, paddingHorizontal: espacio.l, borderBottomLeftRadius: radio.xl + 6, borderBottomRightRadius: radio.xl + 6,
     overflow: 'hidden', marginBottom: espacio.xs,
   },
-  cabeceraFila: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: espacio.l },
+  cabeceraFila: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: espacio.m, gap: espacio.m },
   logoPastilla: { width: 36, height: 36, borderRadius: 10, backgroundColor: fondos.blanco, alignItems: 'center', justifyContent: 'center' },
-  cabeceraMarca: { fontFamily: fuentes.bold, fontSize: 19, color: colores.blanco, letterSpacing: 1.5 },
-  cabeceraTitulo: { ...texto.titulo, color: colores.blanco, textTransform: 'uppercase', letterSpacing: 0.6 },
-  cabeceraSub: { ...texto.cuerpo, color: '#FFFFFF', marginTop: 2 },
+  cabeceraMarca: { fontFamily: fuentes.bold, fontSize: 22, color: colores.blanco, letterSpacing: 0.2 },
+  cabeceraMarcaSub: { fontFamily: fuentes.medium, fontSize: 12, lineHeight: 15, color: colores.blanco, marginTop: 1 },
+  cabeceraTitulo: { flex: 1, fontFamily: fuentes.bold, fontSize: 24, lineHeight: 30, color: colores.blanco },
+  cabeceraSub: { ...texto.cuerpo, color: colores.blanco, marginTop: -espacio.xs },
 
   encabezado: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: espacio.xl },
   marca: { fontFamily: fuentes.bold, fontSize: 22, color: colores.marino, letterSpacing: 1 },
@@ -659,7 +675,7 @@ export const s = crearEstilos(() => ({
   seccion: { ...texto.etiqueta, color: colores.marino, marginBottom: espacio.s, marginTop: espacio.m },
   seccionFila: { flexDirection: 'row', alignItems: 'center', gap: espacio.s, marginBottom: espacio.m, marginTop: espacio.m },
   seccionBarra: { width: 3.5, height: 18, backgroundColor: colores.marino, borderRadius: 2 },
-  seccionTexto: { fontFamily: fuentes.bold, fontSize: 16.5, color: colores.marino },
+  seccionTexto: { fontFamily: fuentes.bold, fontSize: 17, color: colores.texto },
 
   velo: { flex: 1, backgroundColor: 'rgba(14, 58, 85, 0.45)' },
   hoja: {

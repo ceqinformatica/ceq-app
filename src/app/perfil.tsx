@@ -1,8 +1,7 @@
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Alert, Linking, Platform, Switch, Text, View } from 'react-native';
-import { Hexagono } from '../components/graficos';
-import { BarraSuperior, Boton, Fila, Mensaje, Pantalla, s, Seccion, Segmentado, Tarjeta } from '../components/ui';
+import { Boton, BotonIcono, CabeceraMarca, Fila, Mensaje, Pantalla, s, Seccion, Segmentado, Tarjeta } from '../components/ui';
 import { useSesion } from '../context/SesionProvider';
 import { db, MODO_DEMO } from '../datos/demo';
 import { eliminarCuenta, salir } from '../lib/auth';
@@ -87,18 +86,23 @@ export default function Perfil() {
   const inicial = (perfil?.nombre?.[0] ?? sesion?.user.email?.[0] ?? '?').toUpperCase();
 
   return (
-    <Pantalla>
-      <BarraSuperior titulo="Mi perfil" onVolver={volver} />
-
-      <View style={{ alignItems: 'center', marginBottom: espacio.l }}>
-        <Hexagono tamano={92} relleno={fondos.marino}>
-          <Text style={{ fontFamily: fuentes.bold, fontSize: 34, color: colores.blanco }}>{inicial}</Text>
-        </Hexagono>
-        <Text style={[texto.titulo, { color: colores.marino, marginTop: espacio.m, textAlign: 'center' }]}>{perfil?.nombre ?? 'Sin nombre'}</Text>
-        <Text style={s.filaDetalle}>{sesion?.user.email}</Text>
-      </View>
-
-      <Seccion>Situación académica</Seccion>
+    <Pantalla
+      cabecera={
+        <CabeceraMarca titulo="Mi perfil" compacta derecha={<BotonIcono icono="close" etiqueta="Volver" claro onPress={volver} />}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: espacio.l, marginTop: espacio.l }}>
+            <View style={{ width: 68, height: 68, borderRadius: 34, backgroundColor: fondos.blanco, alignItems: 'center', justifyContent: 'center' }}>
+              <Text style={{ fontFamily: fuentes.bold, fontSize: 28, color: colores.marinoFijo }}>{inicial}</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontFamily: fuentes.bold, fontSize: 20, color: colores.blanco }} numberOfLines={2}>{perfil?.nombre ?? 'Sin nombre'}</Text>
+              <Text style={{ fontFamily: fuentes.regular, fontSize: 13, color: colores.blanco, marginTop: 2 }} numberOfLines={1}>{carrera ?? sesion?.user.email}</Text>
+            </View>
+          </View>
+        </CabeceraMarca>
+      }
+    >
+      <View style={{ height: espacio.s }} />
+      <Seccion icono="school-outline">Situación académica</Seccion>
       <Tarjeta estilo={{ paddingVertical: espacio.xs }}>
         <Fila icono="school-outline" titulo={carrera ?? '…'} detalle="Carrera" />
         <Fila icono="git-network-outline" titulo={plan ?? '…'} detalle="Plan de estudios" />
@@ -113,7 +117,7 @@ export default function Perfil() {
 
       {perfil?.rol === 'validador' && (
         <>
-          <Seccion estilo={{ marginTop: espacio.xl }}>CEQ</Seccion>
+          <Seccion icono="qr-code-outline" estilo={{ marginTop: espacio.xl }}>CEQ</Seccion>
           <Tarjeta estilo={{ paddingVertical: espacio.xs }}>
             <Fila icono="qr-code-outline" titulo="Verificar carnet" detalle="Escanear el QR de un socio" onPress={() => router.push('/verificar')} ultima />
           </Tarjeta>
@@ -122,14 +126,14 @@ export default function Perfil() {
 
       {perfil?.rol === 'admin' && (
         <>
-          <Seccion estilo={{ marginTop: espacio.xl }}>Administración</Seccion>
+          <Seccion icono="construct-outline" estilo={{ marginTop: espacio.xl }}>Administración</Seccion>
           <Tarjeta estilo={{ paddingVertical: espacio.xs }}>
             <Fila icono="construct-outline" titulo="Panel del CEQ" detalle="Socios, avisos, notificaciones, encuestas y sugerencias" onPress={() => router.push('/admin')} ultima />
           </Tarjeta>
         </>
       )}
 
-      <Seccion estilo={{ marginTop: espacio.xl }}>Notificaciones</Seccion>
+      <Seccion icono="notifications-outline" estilo={{ marginTop: espacio.xl }}>Notificaciones</Seccion>
       <Tarjeta estilo={{ paddingVertical: espacio.xs }}>
         <Fila
           icono="megaphone-outline"
@@ -153,7 +157,7 @@ export default function Perfil() {
       )}
       {push === 'error' && <Mensaje tipo="info" texto="No pudimos activar las notificaciones en este celular. Probá de nuevo más tarde." />}
 
-      <Seccion estilo={{ marginTop: espacio.xl }}>Apariencia</Seccion>
+      <Seccion icono="color-palette-outline" estilo={{ marginTop: espacio.xl }}>Apariencia</Seccion>
       <Segmentado<PreferenciaTema>
         opciones={[
           { valor: 'sistema', texto: 'Automático' },
@@ -167,7 +171,7 @@ export default function Perfil() {
         {preferencia === 'sistema' ? 'Sigue el modo claro u oscuro de tu celular.' : preferencia === 'oscuro' ? 'Modo oscuro siempre, aunque el celular esté en claro.' : 'Modo claro siempre, aunque el celular esté en oscuro.'}
       </Text>
 
-      <Seccion estilo={{ marginTop: espacio.xl }}>Seguridad</Seccion>
+      <Seccion icono="lock-closed-outline" estilo={{ marginTop: espacio.xl }}>Seguridad</Seccion>
       <Tarjeta estilo={{ paddingVertical: espacio.xs }}>
         {bio && !bio.disponible ? (
           <Fila icono="finger-print" titulo="Desbloqueo biométrico" detalle="Este celular no tiene huella ni rostro configurados." ultima />
@@ -184,6 +188,7 @@ export default function Perfil() {
                 accessibilityLabel={`Desbloquear con ${bio?.nombre ?? 'huella'}`}
                 trackColor={{ true: fondos.marino, false: colores.linea }}
                 thumbColor={colores.blanco}
+                {...pulgarWeb}
               />
             }
             ultima
@@ -201,6 +206,9 @@ export default function Perfil() {
   );
 }
 
+/** En la web el interruptor encendido usa un verde agua por defecto: lo dejamos blanco. */
+const pulgarWeb = { activeThumbColor: '#FFFFFF' } as object;
+
 function Interruptor({ valor, onCambio, etiqueta }: { valor: boolean; onCambio: (v: boolean) => void; etiqueta: string }) {
   return (
     <Switch
@@ -209,6 +217,7 @@ function Interruptor({ valor, onCambio, etiqueta }: { valor: boolean; onCambio: 
       accessibilityLabel={etiqueta}
       trackColor={{ true: fondos.marino, false: colores.linea }}
       thumbColor={colores.blanco}
+      {...pulgarWeb}
     />
   );
 }
