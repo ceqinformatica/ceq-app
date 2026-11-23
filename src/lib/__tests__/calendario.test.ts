@@ -37,7 +37,7 @@ test('hoy en Paraguay', () => {
 test('destacados: lo en curso y lo próximo, sin clases ni pasados', () => {
   const hoy = '2026-11-23';
   const lista = [ev('pasado', '2026-11-01'), ev('clases', '2026-08-03', '2026-12-30', 'clases'), ev('lejos', '2026-12-25', '2026-12-25', 'feriado'), ev('insc', '2026-11-19', '2026-12-03'), ev('finales', '2026-11-23', '2026-12-05'), ev('cuota', '2026-11-30', '2026-11-30', 'aranceles')];
-  assert.deepEqual(destacados(lista, hoy).map((e) => e.id), ['cuota', 'insc', 'finales']);
+  assert.deepEqual(destacados(lista, hoy).map((e) => e.id), ['insc', 'finales', 'cuota']);
 });
 
 test('por mes y filtros', () => {

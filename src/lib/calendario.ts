@@ -94,9 +94,10 @@ const orden = (a: EventoCalendario, b: EventoCalendario) => a.desde.localeCompar
  */
 export function destacados(eventos: EventoCalendario[], hoy: string, max = 3): EventoCalendario[] {
   const utiles = eventos.filter((e) => momento(e, hoy) !== 'pasado' && e.categoria !== 'clases');
-  // Primero lo que vence antes (lo en curso por su fin, lo próximo por su inicio).
-  const clave = (e: EventoCalendario) => (momento(e, hoy) === 'ahora' ? e.hasta : e.desde);
-  return [...utiles].sort((a, b) => clave(a).localeCompare(clave(b)) || orden(a, b)).slice(0, max);
+  // Primero lo que está en curso (lo que cierra antes arriba), después lo próximo.
+  const enCurso = utiles.filter((e) => momento(e, hoy) === 'ahora').sort((a, b) => a.hasta.localeCompare(b.hasta) || orden(a, b));
+  const proximos = utiles.filter((e) => momento(e, hoy) === 'proximo').sort(orden);
+  return [...enCurso, ...proximos].slice(0, max);
 }
 
 export interface MesCalendario {
