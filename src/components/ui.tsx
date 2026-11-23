@@ -10,7 +10,6 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useTema } from '../context/TemaProvider';
 import { useDisposicion } from './disposicion';
 import { colores, crearEstilos, espacio, fondos, fuentes, radio, sombras, texto } from '../tema';
-import { TramaHex } from './graficos';
 
 /**
  * Deja lugar al teclado para que no tape lo que se escribe.
@@ -110,7 +109,7 @@ export function Pantalla({ children, scroll = true, estilo, cabecera, refrescand
 }
 
 /**
- * Banda marina con la trama de hexágonos: la firma visual de la app.
+ * Banda celeste del CEQ: la firma visual de la app.
  * Va arriba de las pestañas principales.
  */
 export function CabeceraMarca({ titulo, sub, derecha, children, compacta, sinConexion }: {
@@ -119,15 +118,12 @@ export function CabeceraMarca({ titulo, sub, derecha, children, compacta, sinCon
   sinConexion?: string | null;
 }) {
   const insets = useSafeAreaInsets();
-  const [tam, setTam] = useState({ w: 0, h: 0 });
   const { anchoMaximo } = useDisposicion();
   useBarraEstado('light');
   return (
     <View
       style={[s.cabecera, { paddingTop: insets.top + espacio.m, paddingBottom: compacta ? espacio.xl : espacio.xxl + espacio.l }]}
-      onLayout={(e) => setTam({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}
     >
-      {tam.w > 0 && <TramaHex ancho={tam.w} alto={tam.h} />}
       <View style={anchoMaximo ? { width: '100%', maxWidth: anchoMaximo, alignSelf: 'center' } : null}>
       <View style={s.cabeceraFila}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: espacio.s }}>
@@ -552,14 +548,14 @@ export const s = crearEstilos(() => ({
   contenido: { padding: espacio.l, paddingBottom: espacio.xxxl + espacio.xl },
 
   cabecera: {
-    backgroundColor: fondos.marino, paddingHorizontal: espacio.l, borderBottomLeftRadius: radio.xl + 6, borderBottomRightRadius: radio.xl + 6,
+    backgroundColor: fondos.celesteMarca, paddingHorizontal: espacio.l, borderBottomLeftRadius: radio.xl + 6, borderBottomRightRadius: radio.xl + 6,
     overflow: 'hidden', marginBottom: espacio.xs,
   },
   cabeceraFila: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: espacio.l },
   logoPastilla: { width: 36, height: 36, borderRadius: 10, backgroundColor: fondos.blanco, alignItems: 'center', justifyContent: 'center' },
   cabeceraMarca: { fontFamily: fuentes.bold, fontSize: 19, color: colores.blanco, letterSpacing: 1.5 },
   cabeceraTitulo: { ...texto.titulo, color: colores.blanco, textTransform: 'uppercase', letterSpacing: 0.6 },
-  cabeceraSub: { ...texto.cuerpo, color: colores.celeste, marginTop: 2 },
+  cabeceraSub: { ...texto.cuerpo, color: '#FFFFFF', marginTop: 2 },
 
   encabezado: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: espacio.xl },
   marca: { fontFamily: fuentes.bold, fontSize: 22, color: colores.marino, letterSpacing: 1 },
@@ -638,7 +634,7 @@ export const s = crearEstilos(() => ({
   seccionBarra: { width: 3.5, height: 18, backgroundColor: colores.marino, borderRadius: 2 },
   seccionTexto: { fontFamily: fuentes.bold, fontSize: 16.5, color: colores.marino },
 
-  velo: { flex: 1, backgroundColor: 'rgba(14, 37, 82, 0.45)' },
+  velo: { flex: 1, backgroundColor: 'rgba(14, 58, 85, 0.45)' },
   hoja: {
     backgroundColor: fondos.fondo, borderTopLeftRadius: radio.xl, borderTopRightRadius: radio.xl, paddingHorizontal: espacio.l,
     paddingTop: espacio.s, maxHeight: '88%',

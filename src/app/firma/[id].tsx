@@ -3,7 +3,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Text, View } from 'react-native';
 import { pct, resumenFirma, semaforoVisible } from '../../components/academico';
-import { BarraProgreso, TramaHex } from '../../components/graficos';
+import { BarraProgreso } from '../../components/graficos';
 import {
   AvisoSinConexion, BarraSuperior, Boton, Campo, Cargando, Chip, Contador, EstadoVacio, Fila, Hoja, Insignia, Mensaje, Pantalla, s, Seccion, Segmentado, Tarjeta,
 } from '../../components/ui';
@@ -133,10 +133,9 @@ export default function CalculadoraFirma() {
       <AvisoSinConexion texto={sinConexion && datos ? error : null} />
 
       <View style={{ backgroundColor: fondos.marino, borderRadius: radio.l + 4, padding: espacio.l, overflow: 'hidden', marginBottom: espacio.m }}>
-        <TramaHex ancho={420} alto={240} opacidad={0.07} />
         <Text style={{ ...texto.etiqueta, color: colores.celeste }}>{materia.nombre}</Text>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: espacio.s, marginTop: espacio.s }}>
-          <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: sem === 'verde' ? '#5FD38D' : sem === 'amarillo' ? '#FFC94D' : sem === 'rojo' ? '#FF7A6E' : fondos.celeste }} />
+          <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: sem === 'verde' ? '#8FD0F3' : sem === 'amarillo' ? '#E3EAF1' : sem === 'rojo' ? '#FF8F86' : fondos.celeste }} />
           <Text style={{ ...texto.display, color: colores.blanco, fontSize: 28 }}>{tituloEstado}</Text>
         </View>
         <Text style={{ ...texto.cuerpo, color: colores.cielo, marginTop: espacio.xs }}>{resumenFirma(resultado)}</Text>

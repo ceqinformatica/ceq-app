@@ -25,33 +25,6 @@ export function Hexagono({ tamano = 40, relleno = fondos.marino, borde, grosor =
   );
 }
 
-/**
- * Trama de hexágonos de línea fina, decorativa, para cabeceras y carnet.
- * Evoca el logo y la estructura molecular sin competir con el contenido.
- */
-export function TramaHex({ ancho, alto, color = '#FFFFFF', opacidad = 0.08, tam = 34 }: {
-  ancho: number; alto: number; color?: string; opacidad?: number; tam?: number;
-}) {
-  const r = tam / 2;
-  const dx = Math.sqrt(3) * r;
-  const dy = 1.5 * r;
-  const hexes: string[] = [];
-  for (let fila = -1; fila * dy < alto + tam; fila++) {
-    for (let col = -1; col * dx < ancho + tam; col++) {
-      const cx = col * dx + (fila % 2 ? dx / 2 : 0);
-      const cy = fila * dy;
-      hexes.push(puntosHex(cx, cy, r - 1.5));
-    }
-  }
-  return (
-    <Svg width={ancho} height={alto} style={{ position: 'absolute', top: 0, left: 0 }} pointerEvents="none">
-      {hexes.map((p, i) => (
-        <Polygon key={i} points={p} fill="none" stroke={color} strokeOpacity={opacidad} strokeWidth={1.2} />
-      ))}
-    </Svg>
-  );
-}
-
 /** Anillo de progreso con el porcentaje en el centro. */
 export function AnilloProgreso({ porcentaje, tamano = 120, grosor = 11, color = colores.marino, fondo = fondos.cielo, colorTexto = colores.marino, etiqueta }: {
   porcentaje: number; tamano?: number; grosor?: number; color?: string; fondo?: string; colorTexto?: string; etiqueta?: string;

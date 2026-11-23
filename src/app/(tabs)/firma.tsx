@@ -114,8 +114,8 @@ export default function Firma() {
 function Resumen({ numero, texto, alerta }: { numero: number; texto: string; alerta?: boolean }) {
   return (
     <View style={{ flex: 1, backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: 12, paddingVertical: 10, paddingHorizontal: 12 }}>
-      <Text style={{ fontFamily: fuentes.bold, fontSize: 22, color: alerta ? '#FFD27A' : colores.blanco }}>{numero}</Text>
-      <Text style={{ fontFamily: fuentes.medium, fontSize: 12, color: colores.celeste }}>{texto}</Text>
+      <Text style={{ fontFamily: fuentes.bold, fontSize: 22, color: alerta ? '#FFC9C4' : colores.blanco }}>{numero}</Text>
+      <Text style={{ fontFamily: fuentes.medium, fontSize: 12, color: '#FFFFFF' }}>{texto}</Text>
     </View>
   );
 }

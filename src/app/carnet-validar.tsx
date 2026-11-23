@@ -4,11 +4,10 @@ import * as DocumentPicker from 'expo-document-picker';
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Image, Platform, StyleSheet, Text, View } from 'react-native';
-import { CampoFechaHora, hoy } from '../components/fecha';
-import { BarraSuperior, Boton, Campo, Mensaje, Pantalla, s, Seccion, Tarjeta } from '../components/ui';
+import { BarraSuperior, Boton, Campo, Chip, Mensaje, Pantalla, s, Seccion, Tarjeta } from '../components/ui';
 import { useSesion } from '../context/SesionProvider';
 import { enviarSolicitud } from '../datos/socios';
-import { isoDeTexto, problemaVencimiento } from '../lib/carnet';
+import { opcionesSemestre, problemaVencimiento } from '../lib/carnet';
 import { colores, crearEstilos, espacio, fondos, radio } from '../tema';
 import { useTema } from '../context/TemaProvider';
 import { textoError } from '../lib/errores';
@@ -31,7 +30,6 @@ export default function ValidarCarnet() {
   const [foto, setFoto] = useState<Foto | null>(null);
   const [nombre, setNombre] = useState(perfil?.nombre ?? '');
   const [ci, setCi] = useState(perfil?.ci ?? '');
-  const [numero, setNumero] = useState('');
   const [vence, setVence] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -43,7 +41,8 @@ export default function ValidarCarnet() {
     if (perfil?.ci) setCi((c) => c || perfil.ci || '');
   }, [perfil?.nombre, perfil?.ci]);
 
-  const venceIso = vence ? isoDeTexto(vence) : null;
+  const semestres = opcionesSemestre();
+  const venceIso = vence || null;
   const problemaFecha = vence ? problemaVencimiento(venceIso) : null;
 
   async function abrirCamara() {
@@ -84,10 +83,10 @@ export default function ValidarCarnet() {
     if (nombre.trim().length < 3) return setError('Escribí tu nombre completo.');
     if (ci.replace(/\D/g, '').length < 4) return setError('Revisá tu número de cédula.');
     const p = problemaVencimiento(venceIso);
-    if (p || !venceIso) return setError(p ?? 'Elegí la fecha de vencimiento.');
+    if (p || !venceIso) return setError(p ?? 'Elegí el semestre de vencimiento.');
     setEnviando(true);
     try {
-      await enviarSolicitud({ nombre, ci, numero_socio: numero, vigente_hasta: venceIso }, foto);
+      await enviarSolicitud({ nombre, ci, numero_socio: '', vigente_hasta: venceIso }, foto);
       setListo(true);
     } catch (e) {
       setError(textoError(e, 'No se pudo enviar.'));
@@ -141,24 +140,19 @@ export default function ValidarCarnet() {
         <>
           <Boton texto="Sacar foto del carnet" icono="camera" onPress={abrirCamara} />
           <Boton texto="Elegir de la galería" icono="images-outline" variante="fantasma" onPress={elegirDeGaleria} />
-          <Text style={[s.filaDetalle, { marginTop: espacio.xs }]}>Del lado donde se ven tu nombre y la fecha de vencimiento, con buena luz y sin reflejos.</Text>
+          <Text style={[s.filaDetalle, { marginTop: espacio.xs }]}>Del lado donde se ven tu nombre y el vencimiento, con buena luz y sin reflejos.</Text>
         </>
       )}
 
       <Seccion>2. Datos del carnet</Seccion>
-      <CampoFechaHora
-        etiqueta="Vence el"
-        modo="date"
-        valor={vence}
-        onCambio={setVence}
-        minimo={hoy()}
-        placeholder="Elegí la fecha que figura en el carnet"
-        ayuda="La fecha de vencimiento impresa en tu carnet."
-      />
+      <Text style={[s.etiqueta, { marginBottom: espacio.s }]}>Vence</Text>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: espacio.s, marginBottom: espacio.xs }} accessibilityRole="radiogroup">
+        {semestres.map((o) => <Chip key={o.valor} texto={o.texto} elegido={vence === o.valor} onPress={() => setVence(o.valor)} />)}
+      </View>
+      <Text style={[s.filaDetalle, { marginBottom: espacio.m }]}>El semestre de vencimiento que figura en tu carnet.</Text>
       {problemaFecha && <Mensaje texto={problemaFecha} />}
       <Campo etiqueta="Nombre completo" value={nombre} onChangeText={setNombre} placeholder="Como figura en el carnet" maxLength={80} />
       <Campo etiqueta="Cédula" value={ci} onChangeText={setCi} placeholder="Ej.: 4.555.666" keyboardType="number-pad" maxLength={14} />
-      <Campo etiqueta="Número de socio (si figura)" value={numero} onChangeText={setNumero} placeholder="Ej.: CEQ-0042" autoCapitalize="characters" maxLength={20} />
 
       <Mensaje texto={error} />
       <Boton texto="Enviar al CEQ" icono="send" onPress={enviar} cargando={enviando} deshabilitado={!foto || !vence || Boolean(problemaFecha)} />

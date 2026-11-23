@@ -54,7 +54,7 @@ function Navegacion() {
 
   if (cargando) {
     return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: fondos.marino, gap: 28 }}>
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: fondos.celesteMarca, gap: 28 }}>
         <Hexagono tamano={104} relleno={fondos.blanco}>
           <Image source={logoCeq} style={{ width: 70, height: 70 }} accessibilityLabel="Logo del CEQ" />
         </Hexagono>

@@ -36,13 +36,13 @@ export function isoDeTexto(t: string): string | null {
  * Devuelve el problema, o null si se puede enviar.
  */
 export function problemaVencimiento(vence: string | null, ahora = new Date()): string | null {
-  if (!vence) return 'Elegí la fecha de vencimiento que figura en tu carnet.';
+  if (!vence) return 'Elegí el semestre de vencimiento que figura en tu carnet.';
   const hoy = hoyPy(ahora);
   if (vence < hoy) return 'Tu carnet está vencido. Renovalo en la sede del CEQ para tener el carnet digital.';
   // Igual que la base: hasta 3 años y 1 mes desde hoy.
   const [y, m, d] = sumarAnios(hoy, ANIOS_VIGENCIA).split('-').map(Number);
   const limite = new Date(Date.UTC(y, m, Math.min(d, new Date(Date.UTC(y, m + 1, 0)).getUTCDate()))).toISOString().slice(0, 10);
-  if (vence > limite) return 'Esa fecha no es posible: el carnet dura 3 años.';
+  if (vence > limite) return 'Ese vencimiento no es posible: el carnet dura 3 años.';
   return null;
 }
 
@@ -83,13 +83,62 @@ export function estadoCarnet(socio: { activo?: boolean | null; vigente_hasta: st
 }
 
 /**
- * Opciones de vigencia para el alta, sin teclear fechas: 3 años
- * (6 semestres) desde hoy, o sin vencimiento.
+ * El carnet vence por semestre, no en una fecha exacta: "1.er semestre 2027",
+ * "2.º semestre 2028". En la base se guarda como el último día del semestre
+ * (31/07 para el 1.º y 31/12 para el 2.º), así las reglas de vencido y
+ * vigente siguen funcionando con fechas.
+ */
+export type Semestre = { semestre: 1 | 2; anio: number };
+
+/** Último día del semestre, como AAAA-MM-DD. */
+export function finDeSemestre({ semestre, anio }: Semestre) {
+  return `${anio}-${semestre === 1 ? '07-31' : '12-31'}`;
+}
+
+/** Semestre al que pertenece una fecha (enero a julio = 1.º). */
+export function semestreDe(iso: string): Semestre {
+  const [a, m] = iso.slice(0, 10).split('-').map(Number);
+  return { semestre: m <= 7 ? 1 : 2, anio: a };
+}
+
+/** "1.er semestre 2027". */
+export function textoSemestre(iso: string) {
+  const { semestre, anio } = semestreDe(iso);
+  return `${semestre === 1 ? '1.er' : '2.º'} semestre ${anio}`;
+}
+
+/** Suma semestres: 2.º 2026 + 1 = 1.º 2027. */
+export function sumarSemestres({ semestre, anio }: Semestre, n: number): Semestre {
+  const indice = anio * 2 + (semestre - 1) + n;
+  return { semestre: ((indice % 2) + 1) as 1 | 2, anio: Math.floor(indice / 2) };
+}
+
+/** Semestres que dura el carnet. */
+export const SEMESTRES_VIGENCIA = ANIOS_VIGENCIA * 2;
+
+/**
+ * Semestres en que puede vencer un carnet que hoy está vigente: desde el
+ * actual hasta el último que entra en 3 años (el mismo límite que la base).
+ */
+export function opcionesSemestre(ahora = new Date()): { texto: string; valor: string }[] {
+  const actual = semestreDe(hoyPy(ahora));
+  const r: { texto: string; valor: string }[] = [];
+  for (let i = 0; i <= SEMESTRES_VIGENCIA; i++) {
+    const valor = finDeSemestre(sumarSemestres(actual, i));
+    if (problemaVencimiento(valor, ahora)) continue;
+    r.push({ texto: textoSemestre(valor), valor });
+  }
+  return r;
+}
+
+/**
+ * Opciones de vigencia para el alta, sin teclear fechas: 6 semestres
+ * contando el actual, o sin vencimiento.
  */
 export function opcionesVigencia(ahora = new Date()): { texto: string; valor: string | null }[] {
-  const tres = sumarAnios(hoyPy(ahora), ANIOS_VIGENCIA);
+  const fin = finDeSemestre(sumarSemestres(semestreDe(hoyPy(ahora)), SEMESTRES_VIGENCIA - 1));
   return [
-    { texto: `3 años (hasta ${fechaCorta(tres)})`, valor: tres },
+    { texto: `6 semestres (hasta el ${textoSemestre(fin)})`, valor: fin },
     { texto: 'Sin vencimiento', valor: null },
   ];
 }
@@ -115,14 +164,13 @@ export function validarSocio(f: FormularioSocio): string | null {
   if (f.nombre.trim().length < 3) return 'Escribí el nombre completo del socio.';
   const ci = normalizarCi(f.ci);
   if (ci.length < 4 || ci.length > 12) return 'La cédula tiene que tener entre 4 y 12 caracteres.';
-  if (f.numero_socio.trim().length > 20) return 'El número de socio es muy largo.';
   return null;
 }
 
 /** Texto y colores del resultado de una verificación. */
 export const RESULTADO_VERIFICACION = {
-  vigente: { titulo: 'Carnet válido', detalle: 'Socio del CEQ al día.', icono: 'checkmark-circle', color: '#1D7A47', fondo: '#E3F4EA' },
-  vencido: { titulo: 'Carnet vencido', detalle: 'Fue socio, pero no renovó la cuota.', icono: 'time', color: '#A86A00', fondo: '#FFF3D6' },
+  vigente: { titulo: 'Carnet válido', detalle: 'Socio del CEQ al día.', icono: 'checkmark-circle', color: '#1677B0', fondo: '#E1F2FC' },
+  vencido: { titulo: 'Carnet vencido', detalle: 'Fue socio, pero no renovó la cuota.', icono: 'time', color: '#3F5168', fondo: '#E9EEF4' },
   inactivo: { titulo: 'Carnet dado de baja', detalle: 'El CEQ deshabilitó este carnet.', icono: 'close-circle', color: '#B2392F', fondo: '#FBE3E1' },
   no_encontrado: { titulo: 'No es un carnet del CEQ', detalle: 'El código no existe o ya fue renovado.', icono: 'alert-circle', color: '#B2392F', fondo: '#FBE3E1' },
 } as const;

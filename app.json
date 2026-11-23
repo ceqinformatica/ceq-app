@@ -55,7 +55,7 @@
         "expo-notifications",
         {
           "icon": "./assets/notificacion.png",
-          "color": "#173874",
+          "color": "#2A8FCC",
           "defaultChannel": "avisos"
         }
       ],
@@ -74,7 +74,7 @@
     "experiments": {
       "typedRoutes": false
     },
-    "primaryColor": "#173874",
+    "primaryColor": "#2A8FCC",
     "owner": "ceq-una",
     "extra": {
       "eas": {

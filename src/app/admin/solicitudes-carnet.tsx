@@ -4,7 +4,7 @@ import { Image, Pressable, Text, View } from 'react-native';
 import { BarraSuperior, Boton, Cargando, Chip, EstadoVacio, Mensaje, Pantalla, s, Tarjeta } from '../../components/ui';
 import { aprobarSolicitud, cargarSolicitudesPendientes, rechazarSolicitud, socioSinCuentaConCi, urlFotoSolicitud } from '../../datos/socios';
 import { usarDatos } from '../../datos/usarDatos';
-import { estadoCarnet, fechaCorta, formatearCi } from '../../lib/carnet';
+import { estadoCarnet, formatearCi, textoSemestre } from '../../lib/carnet';
 import type { SocioDb, SolicitudCarnetDb } from '../../lib/tipos-db';
 import { colores, espacio, fondos, radio } from '../../tema';
 import { useTema } from '../../context/TemaProvider';
@@ -96,12 +96,12 @@ function Solicitud({ sol, onListo }: { sol: SolicitudCarnetDb; onListo: () => vo
       </Pressable>
       <Text style={[s.filaTitulo, { color: colores.marino, marginTop: espacio.m }]}>{sol.nombre}</Text>
       <Text style={s.filaDetalle}>
-        C.I. {formatearCi(sol.ci)}{sol.numero_socio ? ` · ${sol.numero_socio}` : ''}
+        C.I. {formatearCi(sol.ci)}
       </Text>
-      <Text style={[s.filaDetalle, vencida && { color: colores.rojo }]}>Vence el {fechaCorta(sol.vigente_hasta)}{vencida ? ' (vencido)' : ''}</Text>
+      <Text style={[s.filaDetalle, vencida && { color: colores.rojo }]}>Vence el {textoSemestre(sol.vigente_hasta)}{vencida ? ' (vencido)' : ''}</Text>
 
       {existente && (
-        <Mensaje tipo="info" texto={`Al aprobar se vincula al socio ${existente.numero_socio ?? ''} (${existente.nombre}) que el CEQ cargó con esta cédula, y se renueva hasta ${fechaCorta(sol.vigente_hasta)}.`} />
+        <Mensaje tipo="info" texto={`Al aprobar se vincula al socio ${existente.nombre} que el CEQ cargó con esta cédula, y se renueva hasta el ${textoSemestre(sol.vigente_hasta)}.`} />
       )}
       <Mensaje texto={error} />
       {rechazando ? (

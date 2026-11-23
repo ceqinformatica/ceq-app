@@ -19,8 +19,8 @@ import { colores, crearEstilos, espacio, fondos, fuentes, radio, sombras } from 
 import { useTema } from '../../context/TemaProvider';
 import { textoError } from '../../lib/errores';
 
-/** Paleta suave para distinguir materias en el horario (siempre dentro de la familia azul del CEQ + acentos). */
-const TONOS = ['#173874', '#3873CE', '#1D7A47', '#A86A00', '#7A3E9D', '#0F7C8C', '#5A6B85'];
+/** Tonos para distinguir materias en el horario: celestes y grises del CEQ (sin verdes ni naranjas). */
+const TONOS = ['#0F5F94', '#2A8FCC', '#3F5168', '#1677B0', '#4F7FA0', '#55687A', '#2C6E8F'];
 const tonoDe = (clave: string) => TONOS[[...clave].reduce((a, ch) => a + ch.charCodeAt(0), 0) % TONOS.length];
 
 const TIPOS: { valor: TipoEvento; texto: string; icono: 'school' | 'document-text' | 'notifications' }[] = [
