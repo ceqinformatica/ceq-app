@@ -29,18 +29,29 @@ export function usarDatos<T>(cargar: () => Promise<T>, deps: unknown[], opciones
   const desdeCache = useRef(false);
   /** Qué clave ya se leyó, para leer lo guardado una sola vez por clave. */
   const leida = useRef<string | null>(null);
+  /** De qué clave son los datos en pantalla: nunca se guardan bajo otra. */
+  const claveDeDatos = useRef<string | null>(null);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const ejecutar = useCallback(async (manual = false) => {
     const id = ++ultimo.current;
     const k = claveRef.current;
     if (manual) setRefrescando(true);
+    // Cambió la clave (por ejemplo, otro plan): lo de antes no sirve.
+    if (k && claveDeDatos.current && claveDeDatos.current !== k) {
+      claveDeDatos.current = null;
+      guardadoEl.current = null;
+      desdeCache.current = false;
+      setDatos(null);
+      setCargando(true);
+    }
     // Primero lo guardado, para no esperar a la red.
     if (k && leida.current !== k) {
       leida.current = k;
       const g = await leerCache<T>(k);
       if (g && id === ultimo.current) {
         desdeCache.current = true;
+        claveDeDatos.current = k;
         guardadoEl.current = g.guardado;
         setDatos(g.valor);
         setCargando(false);
@@ -50,6 +61,7 @@ export function usarDatos<T>(cargar: () => Promise<T>, deps: unknown[], opciones
       const d = await cargar();
       if (id !== ultimo.current) return;
       desdeCache.current = false;
+      claveDeDatos.current = k;
       guardadoEl.current = Date.now();
       setDatos(d);
       setError(null);
@@ -78,8 +90,14 @@ export function usarDatos<T>(cargar: () => Promise<T>, deps: unknown[], opciones
       desdeCache.current = false;
       return;
     }
-    if (clave && datos != null) guardarCache(clave, datos);
+    if (clave && datos != null && claveDeDatos.current === clave) guardarCache(clave, datos);
   }, [datos, clave]);
+
+  /** Para que la pantalla cambie lo que muestra (y quede guardado). */
+  const cambiarDatos = useCallback((v: T | null | ((actual: T | null) => T | null)) => {
+    claveDeDatos.current = claveRef.current;
+    setDatos(v);
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
@@ -87,5 +105,5 @@ export function usarDatos<T>(cargar: () => Promise<T>, deps: unknown[], opciones
     }, [ejecutar]),
   );
 
-  return { datos, setDatos, cargando, refrescando, error, sinConexion, recargar: () => ejecutar(true) };
+  return { datos, setDatos: cambiarDatos, cargando, refrescando, error, sinConexion, recargar: () => ejecutar(true) };
 }

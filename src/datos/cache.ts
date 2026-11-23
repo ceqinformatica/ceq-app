@@ -8,6 +8,8 @@ import { claveCache, deserializar, PREFIJO_CACHE, serializar } from '../lib/cach
 import { MODO_DEMO } from './demo';
 
 let usuario: string | null = null;
+/** Sube con cada borrado: una escritura que empezó antes no se guarda. */
+let generacion = 0;
 
 /** Lo llama la sesión: sin usuario no se lee ni se guarda nada. */
 export function fijarUsuarioCache(uid: string | null) {
@@ -28,8 +30,14 @@ export async function leerCache<T>(clave: string): Promise<{ valor: T; guardado:
 
 export async function guardarCache(clave: string, valor: unknown): Promise<void> {
   if (!usuario || MODO_DEMO) return;
+  const gen = generacion;
+  const k = claveCache(usuario, clave);
   try {
-    await AsyncStorage.setItem(claveCache(usuario, clave), JSON.stringify({ t: Date.now(), v: serializar(valor) }));
+    const texto = JSON.stringify({ t: Date.now(), v: serializar(valor) });
+    if (gen !== generacion) return;
+    await AsyncStorage.setItem(k, texto);
+    // Si se borró todo mientras se escribía, se saca esto también.
+    if (gen !== generacion) await AsyncStorage.removeItem(k);
   } catch {
     // Sin espacio o sin permiso: la app sigue andando, solo no queda guardado.
   }
@@ -37,6 +45,7 @@ export async function guardarCache(clave: string, valor: unknown): Promise<void>
 
 /** Borra todo lo guardado (al cerrar sesión o eliminar la cuenta). */
 export async function borrarCache(): Promise<void> {
+  generacion++;
   try {
     const claves = (await AsyncStorage.getAllKeys()).filter((k) => k.startsWith(PREFIJO_CACHE));
     if (claves.length) await AsyncStorage.multiRemove(claves);

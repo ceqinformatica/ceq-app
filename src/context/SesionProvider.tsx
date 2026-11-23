@@ -35,20 +35,24 @@ export function SesionProvider({ children }: { children: ReactNode }) {
   const [bloqueado, setBloqueado] = useState(false);
   const enFondoDesde = useRef<number | null>(null);
   const sinConexionAlEmpezar = useRef(false);
+  const usuarioActual = useRef<string | null>(null);
 
   const cargarPerfil = useCallback(async (uid: string | undefined) => {
     fijarUsuarioCache(uid ?? null);
+    usuarioActual.current = uid ?? null;
     if (!uid) {
       setPerfil(null);
       setErrorPerfil(null);
       return;
     }
     const { data, error } = await supabase.from('perfiles').select('*').eq('id', uid).maybeSingle();
+    // Si mientras tanto cambió la cuenta, esta respuesta ya no corresponde.
+    if (usuarioActual.current !== uid) return;
     if (error) {
       // Sin conexión no hay que confundir "no se pudo leer" con "no tiene carrera":
       // se usa el perfil guardado en el celular (o el anterior) y se avisa.
-      const guardado = await leerCache<Perfil>('perfil');
-      if (guardado) {
+      const guardado = esErrorDeRed(error) ? await leerCache<Perfil>('perfil') : null;
+      if (guardado && usuarioActual.current === uid && guardado.valor.id === uid) {
         setPerfil((p) => p ?? guardado.valor);
         setErrorPerfil(null);
         return;
