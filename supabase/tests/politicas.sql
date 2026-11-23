@@ -602,8 +602,10 @@ select pg_temp.debe_ser('Beto no publica a mano', pg_temp.filas($q$update public
 select pg_temp.como('00000000-0000-0000-0000-0000000000ad');
 select pg_temp.debe_ser('publicar devuelve las fechas', public.publicar_horario_finales('60000000-0000-0000-0000-000000000001'), 3);
 select public.publicar_horario_finales('60000000-0000-0000-0000-000000000001');
+update public.horarios_finales set publicado = false where id = '60000000-0000-0000-0000-000000000001';
+select public.publicar_horario_finales('60000000-0000-0000-0000-000000000001');
 reset role;
-select pg_temp.debe_ser('avisa una sola vez a la carrera', (select count(*) from public.notificaciones where ruta = '/finales-fechas' and carrera_id = '10000000-0000-0000-0000-000000000001' and usuario_id is null), 1);
+select pg_temp.debe_ser('avisa una sola vez a la carrera (ni al re-publicar tras ocultarlo)', (select count(*) from public.notificaciones where ruta = '/finales-fechas' and carrera_id = '10000000-0000-0000-0000-000000000001' and usuario_id is null), 1);
 select pg_temp.como('00000000-0000-0000-0000-00000000000b');
 select pg_temp.debe_ser('Beto ve el horario publicado', (select count(*) from public.fechas_finales), 3);
 select pg_temp.debe_ser('Beto no borra fechas', pg_temp.filas($q$delete from public.fechas_finales$q$), 0);

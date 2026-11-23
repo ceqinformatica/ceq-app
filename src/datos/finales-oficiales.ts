@@ -90,7 +90,14 @@ export async function crearHorario(carreraId: string, titulo: string, pdf: Uint8
     if (path) await supabase.storage.from(BUCKET).remove([path]).catch(() => undefined);
     lanzar(error);
   }
-  await guardarFechas(data!.id, fechas);
+  try {
+    await guardarFechas(data!.id, fechas);
+  } catch (e) {
+    // Que un reintento no deje un horario vacío de más.
+    await supabase.from('horarios_finales').delete().eq('id', data!.id);
+    if (path) await supabase.storage.from(BUCKET).remove([path]).catch(() => undefined);
+    throw e;
+  }
   return data!.id;
 }
 

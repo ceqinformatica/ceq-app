@@ -174,7 +174,6 @@ export default function HorarioFinalesAdmin() {
     if (r) setHorario(r.horario);
     setFilas((l) => l.filter((f) => f.materia));
     setCambios(false);
-    router.setParams({ id: nuevo });
     return nuevo;
   };
 
@@ -193,7 +192,7 @@ export default function HorarioFinalesAdmin() {
       const hid = await guardar();
       if (!hid) return;
       if (tipo === 'publicar') {
-        const n = await publicarHorario(hid, notificar);
+        const n = await publicarHorario(hid, notificar && !horario?.publicado_en);
         setHorario((h) => (h ? { ...h, publicado: true, publicado_en: h.publicado_en ?? new Date().toISOString() } : h));
         setAviso(`Publicado: ${n} fechas.${notificar && !horario?.publicado_en ? ' Les avisamos a los estudiantes de la carrera.' : ''}`);
       } else {
@@ -225,7 +224,7 @@ export default function HorarioFinalesAdmin() {
   };
 
   const agregarAMano = () =>
-    setEditando({ clave: nuevaClave(), materia: null, llamado: 1, fecha: new Date().toISOString().slice(0, 10), hora: null, aula: null });
+    setEditando({ clave: nuevaClave(), materia: null, llamado: 1, fecha: (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })(), hora: null, aula: null });
 
   if (cargando) {
     return (

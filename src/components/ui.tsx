@@ -537,7 +537,7 @@ export function Hoja({ visible, titulo, onCerrar, children }: { visible: boolean
   const { height } = useWindowDimensions();
   const centrada = tablet;
   const estiloHoja: ViewStyle = centrada
-    ? { width: '92%', maxWidth: 640, alignSelf: 'center', borderRadius: radio.xl, maxHeight: Math.max(320, height - insets.top - insets.bottom - espacio.xl * 2), paddingBottom: espacio.l }
+    ? { width: '92%', maxWidth: 640, alignSelf: 'center', borderRadius: radio.xl, flexShrink: 1, maxHeight: Math.max(320, height - insets.top - insets.bottom - espacio.xl * 2), paddingBottom: espacio.l }
     : { paddingBottom: insets.bottom + espacio.l };
   return (
     <Modal

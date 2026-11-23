@@ -17,7 +17,7 @@ create or replace function public.avisar_solicitud_carnet()
 returns trigger language plpgsql security definer set search_path = public as $$
 begin
   if new.estado <> 'pendiente' then return new; end if;
-  -- Un reenvío de la misma persona en los últimos 10 minutos no vuelve a avisar.
+  -- Si reenvía antes de 10 minutos de su envío anterior, no se vuelve a avisar.
   if tg_op = 'UPDATE' and old.created_at > now() - interval '10 minutes' then return new; end if;
   insert into public.notificaciones (tipo, titulo, cuerpo, ruta, usuario_id, programada_para, creada_por)
   select 'mensaje', 'Carnet para validar',
@@ -113,8 +113,9 @@ begin
   if n = 0 then raise exception 'El horario no tiene fechas: agregá al menos una antes de publicarlo'; end if;
   if h.publicado then return n; end if;
 
-  update public.horarios_finales set publicado = true, publicado_en = now() where id = p_id;
-  if p_notificar then
+  -- publicado_en queda de la primera vez: al volver a publicar (tras ocultarlo) no se avisa de nuevo.
+  update public.horarios_finales set publicado = true, publicado_en = coalesce(publicado_en, now()) where id = p_id;
+  if p_notificar and h.publicado_en is null then
     select coalesce(c.sigla, c.nombre) into carrera from public.carreras c where c.id = h.carrera_id;
     insert into public.notificaciones (tipo, titulo, cuerpo, ruta, carrera_id, programada_para)
     values ('mensaje', 'Salieron las fechas de finales',
@@ -249,7 +250,8 @@ begin
 
   drop policy if exists "horarios-finales: ver" on storage.objects;
   create policy "horarios-finales: ver" on storage.objects for select to authenticated
-    using (bucket_id = 'horarios-finales');
+    using (bucket_id = 'horarios-finales' and ((select public.es_admin())
+      or exists (select 1 from public.horarios_finales h where h.pdf_path = name and h.publicado)));
   drop policy if exists "horarios-finales: subir" on storage.objects;
   create policy "horarios-finales: subir" on storage.objects for insert to authenticated
     with check (bucket_id = 'horarios-finales' and (select public.es_admin()));

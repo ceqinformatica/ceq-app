@@ -151,3 +151,11 @@ test('título sugerido', async () => {
   assert.equal(tituloSugerido(textoDePdfGeneral(fixture('finales-columnas.pdf'))), 'Anteproyecto de finales · diciembre 2026');
   assert.equal(tituloSugerido('Horario', new Date(2027, 6, 2)), 'Horario de finales · julio 2027');
 });
+
+test('largo del flujo en otro objeto con número de 2 dígitos', () => {
+  const flujo = 'BT /F1 10 Tf 1 0 0 1 50 700 Tm (Microbiologia 07/12/2026) Tj ET';
+  const pdf = ['%PDF-1.4\n', '1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n', '2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n',
+    '3 0 obj\n<< /Type /Page /Parent 2 0 R /Contents 4 0 R >>\nendobj\n', `4 0 obj\n<< /Length 12 0 R >>\nstream\n${flujo}\nendstream\nendobj\n`,
+    `12 0 obj\n${flujo.length}\nendobj\n%%EOF`].join('');
+  assert.equal(textoDePdfGeneral(new Uint8Array(Buffer.from(pdf, 'latin1'))), 'Microbiologia 07/12/2026');
+});

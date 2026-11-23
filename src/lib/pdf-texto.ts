@@ -105,7 +105,7 @@ function leerObjetos(pdf: string): Map<number, Objeto> {
       const dicc = cuerpo.slice(0, s);
       const arranque = cuerpo.indexOf('\n', s) + 1;
       // Con /Length directo se corta justo; si no, hasta "endstream".
-      const largo = /\/Length\s+(\d+)(?!\s+\d+\s+R)/.exec(dicc);
+      const largo = /\/Length\s+(\d+)(?!\d|\s+\d+\s+R)/.exec(dicc);
       let crudo: string;
       if (largo && arranque + Number(largo[1]) <= cuerpo.length) {
         crudo = cuerpo.slice(arranque, arranque + Number(largo[1]));
