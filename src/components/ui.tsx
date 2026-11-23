@@ -3,13 +3,12 @@ import { useFocusEffect } from 'expo-router';
 import { setStatusBarStyle } from 'expo-status-bar';
 import { useCallback, useEffect, useRef, useState, type ComponentProps, type ComponentRef, type ReactNode } from 'react';
 import {
-  ActivityIndicator, Animated, Image, Keyboard, KeyboardAvoidingView, Modal, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text,
+  ActivityIndicator, Image, Keyboard, KeyboardAvoidingView, Modal, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text,
   TextInput, View, type TextInputProps, type TextStyle, type ViewStyle,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTema } from '../context/TemaProvider';
 import { useDisposicion } from './disposicion';
-import { Aparecer, NumeroAnimado, PressableAnimado, useAparecer, usePresion, vibrar } from './movimiento';
 import { colores, crearEstilos, espacio, fondos, fuentes, radio, sombras, texto } from '../tema';
 
 /**
@@ -135,11 +134,9 @@ export function CabeceraMarca({ titulo, sub, derecha, children, compacta, sinCon
         </View>
         {derecha}
       </View>
-      <Aparecer distancia={10}>
       {titulo ? <Text style={s.cabeceraTitulo} accessibilityRole="header">{titulo}</Text> : null}
       {sub ? <Text style={s.cabeceraSub}>{sub}</Text> : null}
       {children}
-      </Aparecer>
       {sinConexion ? (
         <View style={s.pildoraSinConexion} accessibilityRole="alert" accessibilityLiveRegion="polite">
           <Ionicons name="cloud-offline-outline" size={15} color={colores.blanco} />
@@ -204,7 +201,7 @@ export function Titulo({ children, sub }: { children: ReactNode; sub?: ReactNode
 /** Título de bloque con la barrita marina a la izquierda (como en la web). */
 export function Seccion({ children, accion, estilo }: { children: ReactNode; accion?: { texto: string; onPress: () => void }; estilo?: ViewStyle }) {
   return (
-    <Aparecer estilo={[s.seccionFila, estilo]} distancia={8}>
+    <View style={[s.seccionFila, estilo]}>
       <View style={s.seccionBarra} />
       <Text style={s.seccionTexto} accessibilityRole="header">{children}</Text>
       {accion && (
@@ -212,7 +209,7 @@ export function Seccion({ children, accion, estilo }: { children: ReactNode; acc
           <Text style={s.enlace}>{accion.texto}</Text>
         </Pressable>
       )}
-    </Aparecer>
+    </View>
   );
 }
 
@@ -220,27 +217,16 @@ export function Seccion({ children, accion, estilo }: { children: ReactNode; acc
 /* Superficies                                                         */
 /* ------------------------------------------------------------------ */
 
-export function Tarjeta({ children, estilo, variante = 'blanca', onPress, etiqueta, retraso = 0 }: {
+export function Tarjeta({ children, estilo, variante = 'blanca', onPress, etiqueta }: {
   children: ReactNode; estilo?: ViewStyle | ViewStyle[]; variante?: 'blanca' | 'celeste' | 'marino' | 'borde';
   onPress?: () => void; etiqueta?: string;
-  /** ms antes de aparecer, para escalonar varias tarjetas. */
-  retraso?: number;
 }) {
-  const { opacity, translateY } = useAparecer(retraso);
-  const { escala, onPressIn, onPressOut } = usePresion(0.98);
   const base = [s.tarjeta, variantesTarjeta()[variante], estilo];
-  if (!onPress) return <Animated.View style={[...base, { opacity, transform: [{ translateY }] }]}>{children}</Animated.View>;
+  if (!onPress) return <View style={base}>{children}</View>;
   return (
-    <PressableAnimado
-      onPress={() => { vibrar(); onPress(); }}
-      onPressIn={onPressIn}
-      onPressOut={onPressOut}
-      accessibilityRole="button"
-      accessibilityLabel={etiqueta}
-      style={[...base, { opacity, transform: [{ translateY }, { scale: escala }] }]}
-    >
+    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={etiqueta} style={({ pressed }) => [...base, pressed && { opacity: 0.92, transform: [{ scale: 0.99 }] }]}>
       {children}
-    </PressableAnimado>
+    </Pressable>
   );
 }
 
@@ -291,23 +277,19 @@ export function Boton({
 }) {
   const inactivo = deshabilitado || cargando;
   const v = variantesBoton()[variante];
-  const { escala, onPressIn, onPressOut } = usePresion(0.97);
-  const [presionado, setPresionado] = useState(false);
   return (
-    <PressableAnimado
+    <Pressable
       accessibilityRole="button"
       accessibilityLabel={etiqueta}
       accessibilityState={{ disabled: inactivo, busy: cargando }}
-      onPress={() => { vibrar(); onPress(); }}
-      onPressIn={() => { setPresionado(true); onPressIn(); }}
-      onPressOut={() => { setPresionado(false); onPressOut(); }}
+      onPress={onPress}
       disabled={inactivo}
-      style={[
+      style={({ pressed }) => [
         s.boton,
         compacto && s.botonCompacto,
         v.caja,
-        presionado && v.presionado,
-        { opacity: inactivo ? 0.5 : 1, transform: [{ scale: escala }] },
+        pressed && v.presionado,
+        { opacity: inactivo ? 0.5 : 1 },
         estilo,
       ]}
     >
@@ -319,7 +301,7 @@ export function Boton({
           <Text style={[s.botonTexto, compacto && { fontSize: 13.5 }, { color: v.color }]}>{etiqueta.toUpperCase()}</Text>
         </View>
       )}
-    </PressableAnimado>
+    </Pressable>
   );
 }
 
@@ -395,20 +377,17 @@ export function Opcion({ texto: t, detalle, elegida, onPress, icono }: { texto: 
 
 /** Pastilla seleccionable (filtros, días de la semana). */
 export function Chip({ texto: t, elegido, onPress, icono }: { texto: string; elegido?: boolean; onPress?: () => void; icono?: NombreIcono }) {
-  const { escala, onPressIn, onPressOut } = usePresion(0.94);
   return (
-    <PressableAnimado
-      onPress={onPress ? () => { vibrar(); onPress(); } : undefined}
-      onPressIn={onPressIn}
-      onPressOut={onPressOut}
+    <Pressable
+      onPress={onPress}
       disabled={!onPress}
       accessibilityRole={onPress ? 'button' : undefined}
       accessibilityState={{ selected: elegido }}
-      style={[s.chip, elegido && { backgroundColor: fondos.marino, borderColor: colores.marino }, { transform: [{ scale: escala }] }]}
+      style={[s.chip, elegido && { backgroundColor: fondos.marino, borderColor: colores.marino }]}
     >
       {icono && <Ionicons name={icono} size={14} color={elegido ? colores.blanco : colores.marino} />}
       <Text style={[s.chipTexto, elegido && { color: colores.blanco }]}>{t}</Text>
-    </PressableAnimado>
+    </Pressable>
   );
 }
 
@@ -465,12 +444,10 @@ export function Mensaje({ texto: t, tipo = 'error' }: { texto: string | null; ti
     exito: { color: colores.verde, fondo: fondos.verdeFondo, icono: 'checkmark-circle' as NombreIcono },
   }[tipo];
   return (
-    <Aparecer key={t} distancia={6} estilo={[s.mensaje, { backgroundColor: estilos.fondo }]}>
-      <View style={{ flexDirection: 'row', gap: espacio.s, flex: 1 }} accessibilityRole={tipo === 'error' ? 'alert' : 'text'} accessibilityLiveRegion="polite">
-        <Ionicons name={estilos.icono} size={18} color={estilos.color} />
-        <Text style={[s.mensajeTexto, { color: estilos.color }]}>{t}</Text>
-      </View>
-    </Aparecer>
+    <View style={[s.mensaje, { backgroundColor: estilos.fondo }]} accessibilityRole={tipo === 'error' ? 'alert' : 'text'} accessibilityLiveRegion="polite">
+      <Ionicons name={estilos.icono} size={18} color={estilos.color} />
+      <Text style={[s.mensajeTexto, { color: estilos.color }]}>{t}</Text>
+    </View>
   );
 }
 
@@ -556,11 +533,7 @@ export function Hoja({ visible, titulo, onCerrar, children }: { visible: boolean
 export function Dato({ valor, etiqueta, color = colores.marino, estilo }: { valor: string; etiqueta: string; color?: string; estilo?: TextStyle }) {
   return (
     <View style={{ flex: 1 }}>
-      {/^\d+$/.test(valor) ? (
-        <NumeroAnimado valor={Number(valor)} estilo={[texto.numero, { color, fontSize: 24, lineHeight: 28 }, estilo]} />
-      ) : (
-        <Text style={[texto.numero, { color, fontSize: 24, lineHeight: 28 }, estilo]}>{valor}</Text>
-      )}
+      <Text style={[texto.numero, { color, fontSize: 24, lineHeight: 28 }, estilo]}>{valor}</Text>
       <Text style={[s.filaDetalle, { marginTop: 2 }]}>{etiqueta}</Text>
     </View>
   );
