@@ -271,6 +271,9 @@ export async function cargarFinales(materiaId: string): Promise<ExamenFinalDb[]>
  * anterior no se tocan.
  */
 export async function guardarFinales(materiaId: string, periodo: string, llamados: LlamadoCargado[]) {
+  if (llamados.filter((l) => l.tipo === 'recuperatorio' || l.tipo === 'regularizacion').length > 1) {
+    throw new Error('Recu o Regu: se usa uno solo por cursada.');
+  }
   const filas = llamados.map((l) => ({
     materia_id: materiaId,
     periodo,
@@ -281,6 +284,9 @@ export async function guardarFinales(materiaId: string, periodo: string, llamado
   }));
   if (MODO_DEMO) {
     await esperar(200);
+    // Igual que el índice de la base: Recu o Regu, uno solo por cursada.
+    const otro = db.finales.some((f) => f.materia_id === materiaId && f.periodo !== periodo && !f.cursada_anterior && (f.tipo === 'recuperatorio' || f.tipo === 'regularizacion'));
+    if (otro && filas.some((f) => f.tipo !== 'final')) throw new Error('Ya usaste el Recu o la Regu en otro semestre de esta cursada. Se usa uno solo.');
     db.finales = db.finales.filter((f) => !(f.materia_id === materiaId && f.periodo === periodo && !f.cursada_anterior));
     const hoy = new Date().toISOString();
     for (const f of filas) db.finales.push({ id: idDemo(), usuario_id: UID_DEMO, fecha: null, created_at: hoy, cursada_anterior: false, ...f });
@@ -300,6 +306,7 @@ export async function guardarFinales(materiaId: string, periodo: string, llamado
   lanzar(borrar.error);
   if (filas.length) {
     const { error } = await supabase.from('examenes_finales').insert(filas);
+    if (error?.code === '23505' && error.message.includes('recu_o_regu')) throw new Error('Ya usaste el Recu o la Regu en otro semestre de esta cursada. Se usa uno solo.');
     lanzar(error);
   }
 }
