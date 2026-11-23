@@ -8,8 +8,8 @@ import { logoCeq } from './ui';
 
 /** Solo se marca cuando hay un problema: un carnet al día no necesita cartel. */
 const AVISO = {
-  vencido: { texto: 'VENCIDO', fondo: 'rgba(255, 255, 255, 0.92)', color: '#B23A3A' },
-  inactivo: { texto: 'DE BAJA', fondo: 'rgba(255, 255, 255, 0.92)', color: '#B23A3A' },
+  vencido: { texto: 'VENCIDO', fondo: '#FBE6E6', color: '#B23A3A' },
+  inactivo: { texto: 'DE BAJA', fondo: '#FBE6E6', color: '#B23A3A' },
 };
 
 /** Carnet de socio del CEQ: celeste liso, como la credencial física. */
@@ -50,7 +50,7 @@ export function Carnet({ socio, carrera, conQr = false, foto }: { socio: SocioDb
       <View style={[est.fila, { marginTop: espacio.m, justifyContent: 'flex-start', gap: espacio.xl }]}>
         <Dato etiqueta="C.I." valor={formatearCi(socio.ci)} />
         <Dato etiqueta="Vence" valor={vence ?? 'Sin vencimiento'} />
-        {!conQr && <Ionicons name="qr-code" size={30} color={colores.blanco} style={{ marginLeft: 'auto', opacity: 0.9 }} />}
+        {!conQr && <Ionicons name="qr-code" size={30} color={colores.sobreCeleste} style={{ marginLeft: 'auto', opacity: 0.9 }} />}
       </View>
     </View>
   );
@@ -66,17 +66,17 @@ function Dato({ etiqueta, valor }: { etiqueta: string; valor: string }) {
 }
 
 const est = crearEstilos(() => ({
-  carnet: { backgroundColor: fondos.celesteMarca, borderRadius: radio.xl, padding: espacio.l + 2, overflow: 'hidden' },
+  carnet: { backgroundColor: fondos.celesteMarca, borderRadius: radio.xl, padding: espacio.l + 2, overflow: 'hidden', borderWidth: 1, borderColor: colores.linea },
   fila: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   logo: { width: 40, height: 40, borderRadius: 11, backgroundColor: fondos.blanco, alignItems: 'center', justifyContent: 'center' },
-  marca: { fontFamily: fuentes.bold, fontSize: 17, color: colores.blanco, letterSpacing: 1.5 },
-  marcaSub: { fontFamily: fuentes.regular, fontSize: 11, color: '#FFFFFF' },
+  marca: { fontFamily: fuentes.bold, fontSize: 17, color: colores.sobreCeleste, letterSpacing: 1.5 },
+  marcaSub: { fontFamily: fuentes.regular, fontSize: 11, color: colores.sobreCelesteSuave },
   estado: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: radio.s },
   estadoTexto: { fontFamily: fuentes.bold, fontSize: 10.5, letterSpacing: 1 },
   qr: { alignSelf: 'center', backgroundColor: fondos.blanco, padding: espacio.m, borderRadius: radio.l, marginTop: espacio.xl },
-  etiqueta: { fontFamily: fuentes.medium, fontSize: 11, color: '#FFFFFF' },
-  nombre: { fontFamily: fuentes.bold, fontSize: 20, color: colores.blanco },
+  etiqueta: { fontFamily: fuentes.medium, fontSize: 11, color: colores.sobreCelesteSuave },
+  nombre: { fontFamily: fuentes.bold, fontSize: 20, color: colores.sobreCeleste },
   foto: { width: 64, height: 80, borderRadius: radio.m, borderWidth: 2, borderColor: colores.blanco, backgroundColor: fondos.marino },
-  carrera: { fontFamily: fuentes.regular, fontSize: 13.5, color: '#FFFFFF', marginTop: 2 },
-  valor: { fontFamily: fuentes.semibold, fontSize: 14, color: colores.blanco, marginTop: 1 },
+  carrera: { fontFamily: fuentes.regular, fontSize: 13.5, color: colores.sobreCelesteSuave, marginTop: 2 },
+  valor: { fontFamily: fuentes.semibold, fontSize: 14, color: colores.sobreCeleste, marginTop: 1 },
 }));

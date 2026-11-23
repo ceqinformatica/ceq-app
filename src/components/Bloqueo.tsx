@@ -32,20 +32,20 @@ export function Bloqueo() {
         <Hexagono tamano={112} relleno={fondos.blanco}>
           <Image source={logoCeq} style={{ width: 76, height: 76 }} accessibilityLabel="Logo del CEQ" />
         </Hexagono>
-        <Text style={{ fontFamily: fuentes.bold, fontSize: 24, color: colores.blanco, marginTop: espacio.xl, textTransform: 'uppercase', letterSpacing: 1 }} accessibilityRole="header">
+        <Text style={{ fontFamily: fuentes.bold, fontSize: 24, color: colores.sobreCeleste, marginTop: espacio.xl, textTransform: 'uppercase', letterSpacing: 1 }} accessibilityRole="header">
           App bloqueada
         </Text>
-        <Text style={{ fontFamily: fuentes.regular, fontSize: 15, color: '#FFFFFF', marginTop: espacio.s, textAlign: 'center' }}>
+        <Text style={{ fontFamily: fuentes.regular, fontSize: 15, color: colores.sobreCelesteSuave, marginTop: espacio.s, textAlign: 'center' }}>
           Usá tu huella o tu rostro para entrar.
         </Text>
-        <Pressable onPress={intentar} accessibilityRole="button" accessibilityLabel="Desbloquear" style={({ pressed }) => ({ marginTop: espacio.xxl, width: 84, height: 84, borderRadius: 42, backgroundColor: pressed ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.14)', alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: 'rgba(203,226,250,0.5)' })}>
-          <Ionicons name="finger-print" size={44} color={colores.blanco} />
+        <Pressable onPress={intentar} accessibilityRole="button" accessibilityLabel="Desbloquear" style={({ pressed }) => ({ marginTop: espacio.xxl, width: 84, height: 84, borderRadius: 42, backgroundColor: pressed ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.5)', alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: colores.sobreCelesteSuave })}>
+          <Ionicons name="finger-print" size={44} color={colores.sobreCeleste} />
         </Pressable>
       </View>
       <Mensaje texto={error} />
       <Boton texto="Desbloquear" variante="claro" onPress={intentar} />
       <Pressable onPress={salir} accessibilityRole="button" style={{ alignSelf: 'center', padding: espacio.m, marginTop: espacio.s }}>
-        <Text style={{ fontFamily: fuentes.semibold, fontSize: 14, color: '#FFFFFF' }}>Cerrar sesión</Text>
+        <Text style={{ fontFamily: fuentes.semibold, fontSize: 14, color: colores.sobreCeleste }}>Cerrar sesión</Text>
       </Pressable>
     </View>
   );

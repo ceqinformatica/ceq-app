@@ -247,10 +247,10 @@ function Acceso({ icono, texto, onPress }: { icono: NombreIcono; texto: string; 
 }
 
 const est = crearEstilos(() => ({
-  avatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: fondos.blanco, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#FFFFFF' },
+  avatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: fondos.blanco, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: colores.linea },
   avatarTexto: { fontFamily: fuentes.bold, fontSize: 17, color: colores.marinoFijo },
-  fecha: { fontFamily: fuentes.medium, fontSize: 13.5, color: '#FFFFFF' },
-  saludo: { fontFamily: fuentes.bold, fontSize: 27, lineHeight: 33, color: colores.blanco, marginTop: 2, letterSpacing: -0.3 },
+  fecha: { fontFamily: fuentes.medium, fontSize: 13.5, color: colores.sobreCelesteSuave },
+  saludo: { fontFamily: fuentes.bold, fontSize: 27, lineHeight: 33, color: colores.sobreCeleste, marginTop: 2, letterSpacing: -0.3 },
   etiquetaCaja: { fontFamily: fuentes.semibold, fontSize: 10.5, letterSpacing: 1, color: colores.azul },
   accesos: { flexDirection: 'row', gap: espacio.s, marginTop: espacio.xs, marginBottom: espacio.xs },
   acceso: { flex: 1, alignItems: 'center', gap: 6, paddingVertical: espacio.m, backgroundColor: fondos.superficieBlanca, borderRadius: radio.l, ...sombras.suave },

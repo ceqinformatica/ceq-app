@@ -58,8 +58,10 @@ const claro = {
   // Marino de marca que no cambia con el tema (texto sobre fondos blancos fijos: logo, QR, botón claro)
   marinoFijo: '#0F5F94',
 
-  // Celeste del CEQ: cabeceras y carnet (con texto blanco grande)
-  celesteMarca: '#1879B4',
+  // Celeste claro del CEQ: cabeceras, carnet, login (con texto oscuro encima)
+  celesteMarca: '#CFEAFA',
+  sobreCeleste: '#0C3A57',
+  sobreCelesteSuave: '#2C5D7C',
 };
 
 type Paleta = { [K in keyof typeof claro]: string };
@@ -101,7 +103,12 @@ const tintaOscura: Paleta = {
   borde: '#24394A',
   marinoFijo: '#0F5F94',
   celesteMarca: '#8CCDF2',
+  sobreCeleste: '#FFFFFF',
+  sobreCelesteSuave: '#E3F2FB',
 };
+
+/** Fondos del tema claro: botones y bloques en un celeste algo más claro que el texto. */
+const fondoClaro: Paleta = { ...claro, marino: '#1677B0', primario: '#1677B0' };
 
 /** Fondos del tema oscuro: el marino sigue siendo marino (botones, cabeceras). */
 const fondoOscuro: Paleta = {
@@ -148,7 +155,7 @@ function vista(elegir: () => Paleta): Readonly<Paleta> {
 /** Colores para texto, íconos y bordes. */
 export const colores = vista(() => (esquema === 'oscuro' ? tintaOscura : claro));
 /** Colores para fondos y rellenos. */
-export const fondos = vista(() => (esquema === 'oscuro' ? fondoOscuro : claro));
+export const fondos = vista(() => (esquema === 'oscuro' ? fondoOscuro : fondoClaro));
 
 /**
  * Como StyleSheet.create, pero los estilos se arman de nuevo (una vez por
