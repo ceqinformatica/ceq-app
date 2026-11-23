@@ -79,7 +79,7 @@ export default function DetalleMateria() {
     );
   }
 
-    // La insignia muestra lo guardado, no lo que se está eligiendo abajo.
+  // La insignia muestra lo guardado, no lo que se está eligiendo abajo.
   const guardado = actual?.estado ?? 'pendiente';
   const c = coloresEstado[guardado === 'pendiente' && info.faltan ? 'bloqueada' : guardado];
 

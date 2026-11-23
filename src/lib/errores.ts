@@ -7,7 +7,7 @@
 
 export const SIN_CONEXION = 'Sin conexión a internet. Revisá tu conexión y probá de nuevo.';
 
-const RED = /network request failed|failed to fetch|networkerror|network error|load failed|timed? ?out|timeout|aborted|econn|enotfound|internet connection appears to be offline|could not connect/i;
+const RED = /network request failed|failed to fetch|networkerror|network error|load failed|timed? ?out|timeout|econn|enotfound|internet connection appears to be offline|could not connect/i;
 
 const TECNICOS: [RegExp, string][] = [
   [/row-level security|permission denied|not authorized/i, 'No tenés permiso para hacer esto. Si recién entraste, cerrá sesión y volvé a entrar.'],
