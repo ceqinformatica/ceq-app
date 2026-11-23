@@ -86,15 +86,16 @@ export function TarjetaFinales({ materiaId, firma: firmaGuardadaEnMateria, aprob
     cargarFinales(materiaId).then(setFinales).catch((e) => setMsg({ tipo: 'error', texto: e instanceof Error ? e.message : 'No se pudieron cargar los finales.' }));
   }, [materiaId]);
 
-  // El actual y los cinco anteriores (dos años y medio), más los ya guardados.
   // Solo este semestre y los que ya tienen finales cargados. El semestre
   // pasado aparece solo si el estudiante dice que rindió ahí.
-  const [conAnterior, setConAnterior] = useState(false);
+  // El elegido siempre está en la lista, aunque se le borren los finales.
   const periodos = useMemo(() => {
-    const lista = new Set([periodoDe(), ...(finales ?? []).map((f) => f.periodo).filter((p): p is string => !!p)]);
-    if (conAnterior) lista.add(anterior(periodoDe()));
+    const lista = new Set([periodoDe(), periodo, ...(finales ?? []).map((f) => f.periodo).filter((p): p is string => !!p)]);
     return [...lista].sort().reverse();
-  }, [finales, conAnterior]);
+  }, [finales, periodo]);
+  useEffect(() => {
+    if (periodos.length <= 1) setEligiendoPeriodo(false);
+  }, [periodos.length]);
   // Resumen de lo cargado en cada periodo, para la lista de periodos.
   const resumen = (p: string) => {
     const delPeriodo = (finales ?? []).filter((f) => f.periodo === p && f.llamado != null).sort((a, b) => (a.llamado ?? 0) - (b.llamado ?? 0));
@@ -238,10 +239,7 @@ export function TarjetaFinales({ materiaId, firma: firmaGuardadaEnMateria, aprob
       {periodos.length === 1 && !periodos.includes(anterior(periodoDe())) && (
         <Enlace
           texto={`¿Rendiste en el ${nombrePeriodo(anterior(periodoDe()))}?`}
-          onPress={() => {
-            setConAnterior(true);
-            setPeriodo(anterior(periodoDe()));
-          }}
+          onPress={() => setPeriodo(anterior(periodoDe()))}
         />
       )}
       {eligiendoPeriodo && (
