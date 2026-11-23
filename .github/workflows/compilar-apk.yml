@@ -13,10 +13,10 @@ on:
   workflow_dispatch:
     inputs:
       perfil:
-        description: "Perfil de eas.json (preview = APK para instalar, production = AAB para Play Store)"
+        description: "Perfil de eas.json (preview = APK para probar, production = AAB para Play Store, tiendas = APK firmado para Galaxy Store y AppGallery)"
         default: preview
         type: choice
-        options: [preview, production]
+        options: [preview, production, tiendas]
 
 permissions:
   contents: read
