@@ -96,7 +96,10 @@ npx eas-cli@latest build --profile preview --platform android
 ```
 
 EAS devuelve un enlace para descargar el APK. Para Play Store se usa
-`--profile production` (genera un .aab).
+`--profile production` (genera un .aab). Para Samsung Galaxy Store y Huawei
+AppGallery, que piden APK, se usa `--profile tiendas`: es un APK de
+producción con el número de versión que sigue. Los tres perfiles se pueden
+compilar también desde Actions › Compilar APK › Run workflow.
 
 ## Estilo visual
 
