@@ -14,7 +14,7 @@ const volver = () => (router.canGoBack() ? router.back() : router.replace('/admi
 /** Panel: editar el calendario académico que ven todos. */
 export default function AdminCalendario() {
   useTema();
-  const { datos, cargando, error, refrescando, recargar } = usarDatos(cargarCalendario, []);
+  const { datos, cargando, error, refrescando, recargar } = usarDatos(() => cargarCalendario(false), []);
   const [vista, setVista] = useState<'proximas' | 'todas'>('proximas');
   const hoy = hoyPy();
   const meses = useMemo(() => porMes((datos ?? []).filter((e) => vista === 'todas' || momento(e, hoy) !== 'pasado')), [datos, vista, hoy]);

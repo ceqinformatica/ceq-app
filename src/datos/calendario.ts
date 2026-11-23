@@ -21,14 +21,15 @@ function copiaLocal(): EventoCalendario[] {
 
 const orden = (a: CalendarioDb, b: CalendarioDb) => a.desde.localeCompare(b.desde) || a.hasta.localeCompare(b.hasta) || a.titulo.localeCompare(b.titulo, 'es');
 
-export async function cargarCalendario(): Promise<EventoCalendario[]> {
+/** Con `copiaSiFalta`, si la tabla todavía no existe se usa la copia incluida (el panel no la usa). */
+export async function cargarCalendario(copiaSiFalta = true): Promise<EventoCalendario[]> {
   if (MODO_DEMO) {
     await esperar(150);
     return [...db.calendario].sort(orden).map(aEvento);
   }
   const { data, error } = await supabase.from('calendario_academico').select('*').order('desde').order('hasta').limit(1000);
   // Si la tabla todavía no existe en la base, se usa la copia que viene con la app.
-  if (error && /calendario_academico|schema cache|does not exist/i.test(error.message)) return copiaLocal();
+  if (error && copiaSiFalta && (error.code === 'PGRST205' || error.code === '42P01')) return copiaLocal();
   lanzar(error);
   return (data ?? []).map(aEvento);
 }
@@ -69,9 +70,13 @@ export async function guardarFechaCalendario(id: string | null, f: FormularioFec
     else db.calendario.push({ ...fila, id: idDemo(), clave: null, created_at: fila.updated_at });
     return;
   }
-  const { error } = id
-    ? await supabase.from('calendario_academico').update(fila).eq('id', id)
-    : await supabase.from('calendario_academico').insert(fila);
+  if (id) {
+    const { data, error } = await supabase.from('calendario_academico').update(fila).eq('id', id).select('id');
+    lanzar(error);
+    if (!data?.length) throw new Error('Esta fecha ya no existe: puede que otra persona la haya borrado.');
+    return;
+  }
+  const { error } = await supabase.from('calendario_academico').insert(fila);
   lanzar(error);
 }
 

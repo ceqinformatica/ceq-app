@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Linking, ScrollView, View } from 'react-native';
+import * as WebBrowser from 'expo-web-browser';
+import { ScrollView, View } from 'react-native';
 import { FilaCalendario } from '../components/calendario';
 import { AvisoSinConexion, BarraSuperior, Boton, Cargando, Chip, EstadoVacio, Mensaje, Pantalla, Seccion, Tarjeta } from '../components/ui';
 import { useTema } from '../context/TemaProvider';
@@ -81,7 +82,7 @@ export default function Calendario() {
         tipo="info"
         texto="Fechas del calendario oficial de la FCQ. Pueden cambiar por resolución: ante la duda, confirmá en la Dirección Académica."
       />
-      <Boton texto="Ver el calendario en qui.una.py" variante="fantasma" icono="open-outline" onPress={() => Linking.openURL(FUENTE_CALENDARIO)} />
+      <Boton texto="Ver el calendario en qui.una.py" variante="fantasma" icono="open-outline" onPress={() => WebBrowser.openBrowserAsync(FUENTE_CALENDARIO).catch(() => {})} />
       <View style={{ height: espacio.xl }} />
     </Pantalla>
   );
