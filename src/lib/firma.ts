@@ -272,8 +272,11 @@ export function promedioFirma(r: Pick<ResultadoFirma, 'teoria' | 'laboratorio'>,
   const llega = (c: ResultadoComponente | null) => c == null || (c.actual != null && c.actual >= c.minimo && c.necesario == null);
   if (!llega(r.teoria) || !llega(r.laboratorio) || r.teoria.actual == null) return null;
   const lab = r.laboratorio?.actual ?? null;
-  const pg = redondear(lab == null ? r.teoria.actual : (r.teoria.actual + lab) / 2);
-  // Tras el examen de recuperación (Art. 46) se exige PG ≥ 50 %.
-  if (opciones.recuperado && pg < PG_MINIMO_RECUPERADO) return null;
-  return pg;
+  const crudo = lab == null ? r.teoria.actual : (r.teoria.actual + lab) / 2;
+  // Tras el examen de recuperación (Art. 46) se exige PG ≥ 50 %, sin redondear
+  // (igual que evaluarFirma).
+  if (opciones.recuperado && crudo < PG_MINIMO_RECUPERADO) return null;
+  // La firma se redondea a un número entero desde 0,5 hacia arriba
+  // (90,5 → 91). El 1e-9 cubre lo que pierde el punto flotante.
+  return Math.round(crudo + 1e-9);
 }
