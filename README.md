@@ -1,4 +1,4 @@
-# App CEQ
+# Portal CEQ
 
 App del Centro de Estudiantes de la FCQ para la vida académica: malla con
 prerrequisitos, calculadora de firma, progreso de carrera, agenda y módulos del
