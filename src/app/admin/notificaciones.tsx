@@ -20,6 +20,8 @@ const DESTINOS = [
   { ruta: '/avisos', texto: 'Avisos' },
   { ruta: '/ceq', texto: 'CEQ' },
   { ruta: '/carrera', texto: 'Mi carrera' },
+  { ruta: '/finales-fechas', texto: 'Fechas de finales' },
+  { ruta: '/calendario', texto: 'Calendario' },
 ];
 
 const TIPOS: Record<string, string> = { aviso: 'Aviso', mensaje: 'Mensaje', recordatorio: 'Fecha oficial' };

@@ -247,7 +247,9 @@ export default function HorarioFinalesAdmin() {
           <Text style={[s.filaDetalle, { marginTop: 2 }]}>
             {pdf
               ? texto
-                ? `Encontramos ${filas.length} fechas${sinMateria.length ? `, ${sinMateria.length} para revisar` : ''}.`
+                ? carreraId
+                  ? `Encontramos ${filas.length} fechas${sinMateria.length ? `, ${sinMateria.length} para revisar` : ''}.`
+                  : 'Elegí la carrera para ver las fechas.'
                 : 'Sin texto para leer.'
               : 'El horario o anteproyecto de exámenes finales que publica la Dirección Académica.'}
           </Text>
@@ -265,6 +267,7 @@ export default function HorarioFinalesAdmin() {
       {(pdf || horario) && (
         <>
           <Text style={s.etiqueta}>Carrera{detectada && nuevo ? ' (detectada en el PDF)' : ''}</Text>
+          {nuevo && !carreraId && texto ? <Mensaje tipo="info" texto="No encontramos la carrera en el PDF: elegila para reconocer las materias." /> : null}
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: espacio.s, marginBottom: espacio.m }}>
             {carreras.map((c) => (
               <Chip key={c.id} texto={c.sigla ?? c.nombre} elegido={carreraId === c.id} onPress={nuevo ? () => { setCarreraId(c.id); setDetectada(false); } : undefined} />
