@@ -42,7 +42,7 @@ export async function cargarMalla(planId: string, carreraId?: string | null): Pr
   let pre: PrerrequisitoDb[];
   let reglas: ReglaFirmaDb[];
   let finalesDb: Pick<ExamenFinalDb, 'materia_id' | 'nota' | 'llamado' | 'periodo' | 'fecha' | 'tipo'>[];
-  let estadosDb: { materia_id: string; estado: EstadoMateria; nota_final: number | null; promedio_firma?: number | null }[];
+  let estadosDb: { materia_id: string; estado: EstadoMateria; nota_final: number | null; promedio_firma?: number | null; respaldo_recursada?: unknown }[];
 
   if (MODO_DEMO) {
     await esperar();
@@ -73,7 +73,7 @@ export async function cargarMalla(planId: string, carreraId?: string | null): Pr
     if (ids.length) {
       const [rPre, rEst, rFin] = await Promise.all([
         supabase.from('prerrequisitos').select('*').in('materia_id', ids),
-        supabase.from('materias_estudiante').select('materia_id, estado, nota_final, promedio_firma').in('materia_id', ids),
+        supabase.from('materias_estudiante').select('materia_id, estado, nota_final, promedio_firma, respaldo_recursada').in('materia_id', ids),
         supabase.from('examenes_finales').select('materia_id, nota, llamado, periodo, fecha, tipo').in('materia_id', ids),
       ]);
       lanzar(rPre.error); lanzar(rEst.error); lanzar(rFin.error);
@@ -94,7 +94,12 @@ export async function cargarMalla(planId: string, carreraId?: string | null): Pr
     materias: materiasDb.map(aMateria),
     grupos: grupos.map(aGrupo),
     prerrequisitos: pre.map(aPre),
-    estados: new Map(estadosDb.map((e) => [e.materia_id, { estado: e.estado, notaFinal: e.nota_final, promedioFirma: e.promedio_firma == null ? null : Number(e.promedio_firma) }])),
+    estados: new Map(estadosDb.map((e) => [e.materia_id, {
+      estado: e.estado,
+      notaFinal: e.nota_final,
+      promedioFirma: e.promedio_firma == null ? null : Number(e.promedio_firma),
+      puedeDeshacerRecursada: e.estado === 'cursando' && e.respaldo_recursada != null,
+    }])),
     reglas,
     unidad: plan?.unidad_avance ?? 'materias',
     // Los llamados usados para regularizar no tienen nota: no son intentos de final.
@@ -119,7 +124,7 @@ export async function guardarEstadoMateria(materiaId: string, estado: EstadoMate
     lanzar(error);
     return;
   }
-  const { error } = await supabase.from('materias_estudiante').upsert({ materia_id: materiaId, estado, nota_final: nota, nota_desde_final: false }, { onConflict: 'usuario_id,materia_id' });
+  const { error } = await supabase.from('materias_estudiante').upsert({ materia_id: materiaId, estado, nota_final: nota, nota_desde_final: false, respaldo_recursada: null }, { onConflict: 'usuario_id,materia_id' });
   lanzar(error);
 }
 
@@ -143,13 +148,13 @@ export async function guardarFirma(materiaId: string, promedio: number) {
   const { data, error } = await supabase.from('materias_estudiante').select('estado').eq('materia_id', materiaId).maybeSingle();
   lanzar(error);
   if ((data as { estado: EstadoMateria } | null)?.estado === 'aprobada') {
-    const r = await supabase.from('materias_estudiante').update({ promedio_firma: promedio }).eq('materia_id', materiaId);
+    const r = await supabase.from('materias_estudiante').update({ promedio_firma: promedio, respaldo_recursada: null }).eq('materia_id', materiaId);
     lanzar(r.error);
     return;
   }
   const r = await supabase
     .from('materias_estudiante')
-    .upsert({ materia_id: materiaId, estado: 'firmada', nota_final: null, nota_desde_final: false, promedio_firma: promedio }, { onConflict: 'usuario_id,materia_id' });
+    .upsert({ materia_id: materiaId, estado: 'firmada', nota_final: null, nota_desde_final: false, promedio_firma: promedio, respaldo_recursada: null }, { onConflict: 'usuario_id,materia_id' });
   lanzar(r.error);
 }
 
@@ -225,7 +230,7 @@ export async function guardarEstadosEnBloque(cambios: CambioEstado[], opciones: 
   const borrar = cambios.filter((c) => c.estado === 'pendiente').map((c) => c.materiaId);
   const guardar = cambios
     .filter((c) => c.estado !== 'pendiente')
-    .map((c) => ({ materia_id: c.materiaId, estado: c.estado, nota_final: c.estado === 'aprobada' ? c.notaFinal : null, nota_desde_final: false }));
+    .map((c) => ({ materia_id: c.materiaId, estado: c.estado, nota_final: c.estado === 'aprobada' ? c.notaFinal : null, nota_desde_final: false, respaldo_recursada: null }));
   if (MODO_DEMO) {
     await esperar(250);
     const tocadas = new Set(cambios.map((c) => c.materiaId));
@@ -300,36 +305,64 @@ export async function guardarFinales(materiaId: string, periodo: string, llamado
 }
 
 /**
- * Volver a cursar una materia (Art. 45): se borran los parciales y la
- * asistencia de teoría y se conserva el laboratorio. La firma guardada se
- * borra y los finales rendidos quedan como de una cursada anterior (siguen
- * contando para el promedio con aplazos). La materia vuelve a "cursando".
+ * Volver a cursar una materia (Art. 45), en un solo paso en la base: se
+ * guarda un respaldo, se borran los parciales y la asistencia de teoría
+ * (el laboratorio se conserva), la firma guardada se borra y los finales
+ * quedan como de una cursada anterior. La materia vuelve a "cursando".
+ * Se puede deshacer con deshacerRecursada.
  */
 export async function recursarMateria(materiaId: string) {
   if (MODO_DEMO) {
     await esperar(200);
-    db.evaluaciones = db.evaluaciones.filter((e) => !(e.materia_id === materiaId && e.componente === 'teoria'));
+    const e = db.estados.find((x) => x.materia_id === materiaId);
+    if (e?.estado === 'cursando' && e.respaldo_recursada) throw new Error('Ya marcaste que volvés a cursar esta materia');
+    const respaldo = {
+      estado: e?.estado ?? 'pendiente',
+      nota_final: e?.nota_final ?? null,
+      nota_desde_final: e?.nota_desde_final ?? false,
+      promedio_firma: e?.promedio_firma ?? null,
+      evaluaciones: db.evaluaciones.filter((x) => x.materia_id === materiaId && x.componente === 'teoria'),
+      asistencia: db.asistencias.find((a) => a.materia_id === materiaId && a.componente === 'teoria') ?? null,
+      finales: db.finales.filter((f) => f.materia_id === materiaId && !f.cursada_anterior).map((f) => f.id),
+    };
+    db.evaluaciones = db.evaluaciones.filter((x) => !(x.materia_id === materiaId && x.componente === 'teoria'));
     db.asistencias = db.asistencias.filter((a) => !(a.materia_id === materiaId && a.componente === 'teoria'));
     for (const f of db.finales) if (f.materia_id === materiaId) f.cursada_anterior = true;
-    const e = db.estados.find((x) => x.materia_id === materiaId);
-    const cambios = { estado: 'cursando' as const, nota_final: null, promedio_firma: null, nota_desde_final: false };
+    const cambios = { estado: 'cursando' as const, nota_final: null, promedio_firma: null, nota_desde_final: false, respaldo_recursada: respaldo };
     if (e) Object.assign(e, cambios);
     else db.estados.push({ usuario_id: UID_DEMO, materia_id: materiaId, fecha: null, periodo: null, updated_at: new Date().toISOString(), ...cambios });
     return;
   }
-  const [ev, as, fi] = await Promise.all([
-    supabase.from('evaluaciones').delete().eq('materia_id', materiaId).eq('componente', 'teoria'),
-    supabase.from('asistencias').delete().eq('materia_id', materiaId).eq('componente', 'teoria'),
-    supabase.from('examenes_finales').update({ cursada_anterior: true }).eq('materia_id', materiaId),
-  ]);
-  lanzar(ev.error);
-  lanzar(as.error);
-  lanzar(fi.error);
-  const { error } = await supabase
-    .from('materias_estudiante')
-    .upsert({ materia_id: materiaId, estado: 'cursando', nota_final: null, promedio_firma: null, nota_desde_final: false }, { onConflict: 'usuario_id,materia_id' });
+  const { error } = await supabase.rpc('recursar_materia', { p_materia: materiaId });
   lanzar(error);
 }
+
+/** Deshace "volver a cursar": la materia, la firma, los parciales y los finales vuelven como estaban. */
+export async function deshacerRecursada(materiaId: string) {
+  if (MODO_DEMO) {
+    await esperar(200);
+    const e = db.estados.find((x) => x.materia_id === materiaId);
+    const r = e?.respaldo_recursada as RespaldoDemo | null | undefined;
+    if (!e || !r) throw new Error('No hay nada para deshacer en esta materia');
+    if (
+      db.evaluaciones.some((x) => x.materia_id === materiaId && x.componente === 'teoria') ||
+      db.asistencias.some((x) => x.materia_id === materiaId && x.componente === 'teoria') ||
+      db.finales.some((f) => f.materia_id === materiaId && !f.cursada_anterior)
+    ) throw new Error('Ya cargaste parciales, asistencia o finales de la nueva cursada: no se puede deshacer');
+    db.evaluaciones = db.evaluaciones.filter((x) => !(x.materia_id === materiaId && x.componente === 'teoria')).concat(r.evaluaciones);
+    db.asistencias = db.asistencias.filter((a) => !(a.materia_id === materiaId && a.componente === 'teoria')).concat(r.asistencia ? [r.asistencia] : []);
+    for (const f of db.finales) if (r.finales.includes(f.id)) f.cursada_anterior = false;
+    Object.assign(e, { estado: r.estado, nota_final: r.nota_final, nota_desde_final: r.nota_desde_final, promedio_firma: r.promedio_firma, respaldo_recursada: null });
+    return;
+  }
+  const { error } = await supabase.rpc('deshacer_recursada', { p_materia: materiaId });
+  lanzar(error);
+}
+
+type RespaldoDemo = {
+  estado: EstadoMateria; nota_final: number | null; nota_desde_final: boolean; promedio_firma: number | null;
+  evaluaciones: EvaluacionDb[]; asistencia: AsistenciaDb | null; finales: string[];
+};
 
 /** Regla que aplica a una materia: la propia, o la general del plan. */
 export function reglaDe(reglas: ReglaFirmaDb[], materiaId: string): ReglaFirma | null {

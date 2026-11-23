@@ -41,6 +41,7 @@ export type Perfil = {
 export type MateriaEstudianteDb = {
   usuario_id: string; materia_id: string; estado: EstadoMateriaDb; nota_final: number | null; fecha: string | null;
   periodo: string | null; updated_at: string; nota_desde_final?: boolean; promedio_firma?: number | null;
+  respaldo_recursada?: unknown;
 }
 export type EvaluacionDb = {
   id: string; usuario_id: string; materia_id: string; nombre: string; componente: ComponenteDb; ponderacion: number;
@@ -107,7 +108,7 @@ export type Database = {
       prerrequisitos: Tabla<PrerrequisitoDb, 'tipo'>;
       reglas_firma: Tabla<ReglaFirmaDb, 'id' | 'materia_id' | 'minimo_teoria' | 'minimo_laboratorio' | 'minimo_asistencia' | 'minimo_asistencia_lab' | 'modo_laboratorio' | 'peso_laboratorio' | 'notas'>;
       perfiles: Tabla<Perfil, 'nombre' | 'ci' | 'carrera_id' | 'plan_id' | 'anio_ingreso' | 'rol' | 'avatar_url' | 'created_at' | 'updated_at'>;
-      materias_estudiante: Tabla<MateriaEstudianteDb, 'usuario_id' | 'estado' | 'nota_final' | 'fecha' | 'periodo' | 'updated_at' | 'nota_desde_final' | 'promedio_firma'>;
+      materias_estudiante: Tabla<MateriaEstudianteDb, 'usuario_id' | 'estado' | 'nota_final' | 'fecha' | 'periodo' | 'updated_at' | 'nota_desde_final' | 'promedio_firma' | 'respaldo_recursada'>;
       evaluaciones: Tabla<EvaluacionDb, 'id' | 'usuario_id' | 'componente' | 'porcentaje' | 'puntaje_obtenido' | 'puntaje_total' | 'rendida' | 'fecha' | 'orden' | 'created_at'>;
       asistencias: Tabla<AsistenciaDb, 'usuario_id' | 'componente' | 'clases_dictadas' | 'clases_asistidas' | 'clases_totales'>;
       horario: Tabla<HorarioDb, 'id' | 'usuario_id' | 'materia_id' | 'titulo' | 'aula' | 'aviso_minutos' | 'avisado_el'>;
@@ -128,6 +129,8 @@ export type Database = {
     };
     Functions: {
       votar: { Args: { p_encuesta: string; p_opcion: string }; Returns: undefined };
+      recursar_materia: { Args: { p_materia: string }; Returns: undefined };
+      deshacer_recursada: { Args: { p_materia: string }; Returns: undefined };
       es_admin: { Args: Record<string, never>; Returns: boolean };
       registrar_dispositivo: { Args: { p_token: string; p_plataforma?: string | null }; Returns: undefined };
       alcance_notificacion: { Args: { p_carrera?: string | null }; Returns: number };

@@ -34,6 +34,8 @@ export interface EstadoEstudiante {
   notaFinal?: number | null;
   /** Promedio con el que firmó (0 a 100), si lo guardó desde la calculadora. */
   promedioFirma?: number | null;
+  /** Volvió a cursar la materia y todavía puede deshacerlo. */
+  puedeDeshacerRecursada?: boolean;
 }
 
 export type UnidadAvance = 'materias' | 'creditos' | 'horas';
