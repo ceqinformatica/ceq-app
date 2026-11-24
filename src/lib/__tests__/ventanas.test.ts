@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { coloresVentana, elegirVentana, marcarVista, tocaMostrar, validarVentana, type Vistas } from '../ventanas.ts';
+import { COLOR_TEMA, coloresVentana, elegirVentana, marcarVista, tocaMostrar, validarVentana, type Vistas } from '../ventanas.ts';
 import type { VentanaDb } from '../tipos-db.ts';
 
 const AHORA = new Date(2026, 10, 23, 10, 0);
@@ -44,10 +44,26 @@ test('elige la vigente de mayor prioridad, de mi carrera y para esta pantalla', 
 });
 
 test('colores: paleta y color propio con texto legible', () => {
-  assert.deepEqual(coloresVentana('celeste'), { fondo: '#1879B4', texto: '#FFFFFF' });
+  const c = coloresVentana('celeste');
+  assert.equal(c.fondo, '#1879B4');
+  assert.equal(c.texto, '#FFFFFF');
+  assert.equal(c.boton, '#FFFFFF', 'botón del color del texto');
+  assert.equal(c.textoBoton, '#1879B4');
   assert.equal(coloresVentana('#FFF5CC').texto, '#1F2A33');
   assert.equal(coloresVentana('#202060').texto, '#FFFFFF');
-  assert.equal(coloresVentana('fucsia').fondo, '#1879B4');
+  assert.equal(coloresVentana('fucsia').fondo, '#FFFFFF', 'un valor desconocido sigue el tema');
+});
+
+test('colores: según el tema del usuario', () => {
+  assert.equal(COLOR_TEMA, 'blanco', 'se guarda con un valor que la base ya acepta');
+  const claro = coloresVentana(COLOR_TEMA, false);
+  const oscuro = coloresVentana(COLOR_TEMA, true);
+  assert.equal(claro.fondo, '#FFFFFF');
+  assert.notEqual(oscuro.fondo, claro.fondo);
+  assert.notEqual(oscuro.texto, claro.texto);
+  // Un color fijo se ve igual en los dos modos.
+  assert.equal(coloresVentana('rojo', true).fondo, coloresVentana('rojo', false).fondo);
+  assert.equal(validarVentana({ titulo: 'Hola', cuerpo: '', imagen_url: '', icono: '', boton_texto: '', boton_destino: '', color: COLOR_TEMA, cerrable: true }), null);
 });
 
 test('validar formulario', () => {

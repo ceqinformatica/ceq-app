@@ -6,7 +6,7 @@ import { usarDatos } from '../../datos/usarDatos';
 import { cargarVentanasAdmin } from '../../datos/ventanas';
 import { describirCuando } from '../../lib/programacion';
 import type { VentanaDb } from '../../lib/tipos-db';
-import { coloresVentana, vigente } from '../../lib/ventanas';
+import { coloresVentana, esColorTema, vigente } from '../../lib/ventanas';
 import { colores, espacio, fondos, radio } from '../../tema';
 
 const volver = () => (router.canGoBack() ? router.back() : router.replace('/admin'));
@@ -46,7 +46,14 @@ export default function VentanasAdmin() {
             return (
               <Tarjeta key={v.id} onPress={() => router.push(`/admin/ventana?id=${v.id}`)} etiqueta={`Editar ${v.titulo}`}>
                 <View style={{ flexDirection: 'row', gap: espacio.m, alignItems: 'flex-start' }}>
-                  <View style={{ width: 36, height: 36, borderRadius: radio.m, backgroundColor: c.fondo, borderWidth: 1, borderColor: colores.linea }} />
+                  {esColorTema(v.color) ? (
+                    <View style={{ width: 36, height: 36, borderRadius: radio.m, overflow: 'hidden', flexDirection: 'row', borderWidth: 1, borderColor: colores.linea }} accessibilityLabel="Según el tema del usuario">
+                      <View style={{ flex: 1, backgroundColor: coloresVentana(v.color, false).fondo }} />
+                      <View style={{ flex: 1, backgroundColor: coloresVentana(v.color, true).fondo }} />
+                    </View>
+                  ) : (
+                    <View style={{ width: 36, height: 36, borderRadius: radio.m, backgroundColor: c.fondo, borderWidth: 1, borderColor: colores.linea }} />
+                  )}
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: espacio.s, marginBottom: espacio.s }}>
                       <Insignia texto={e.texto} color={e.color} fondo={e.fondo} />
