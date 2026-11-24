@@ -47,7 +47,10 @@ export function conParcialesMinimos<T extends { id: string; nombre: string; comp
 ): T[] {
   const cantidad = evaluaciones.filter(esParcialTeorico).length;
   if (cantidad >= PARCIALES_MINIMOS) return evaluaciones;
-  const faltan = NOMBRES.slice(cantidad).map((n, i) => crear(n, cantidad + i));
+  // Nombres que todavía no existen (si cargó primero el segundo, falta el primero).
+  const existentes = new Set(evaluaciones.map((e) => e.nombre.trim().toLowerCase()));
+  const libres = NOMBRES.filter((n) => !existentes.has(n.toLowerCase()));
+  const faltan = libres.slice(libres.length - (PARCIALES_MINIMOS - cantidad)).map((n, i) => crear(n, cantidad + i));
   // Los parciales van antes del laboratorio, el recuperatorio y la regularización.
   const ultimoParcial = evaluaciones.reduce((u, e, i) => (esParcialTeorico(e) ? i : u), -1);
   return [...evaluaciones.slice(0, ultimoParcial + 1), ...faltan, ...evaluaciones.slice(ultimoParcial + 1)];

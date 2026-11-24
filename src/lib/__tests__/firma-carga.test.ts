@@ -74,3 +74,8 @@ test('un final aprobado no cuenta si la materia volvió a firmada', () => {
   assert.equal(p.sinAplazos, 4);
   assert.equal(p.conAplazos, 2.5); // (1 + 4) / 2
 });
+
+test('si cargó primero el segundo parcial, falta el primero (sin duplicar)', () => {
+  const r = conParcialesMinimos<E>([{ id: 'b', nombre: 'Segundo parcial', componente: 'teoria', rendida: true }], crear);
+  assert.deepEqual(r.map((e) => e.nombre), ['Segundo parcial', 'Primer parcial']);
+});

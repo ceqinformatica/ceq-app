@@ -184,7 +184,7 @@ export default function DetalleMateria() {
       {(actual?.estado === 'firmada' || actual?.estado === 'aprobada') && !seminario && (
         <>
           <Seccion estilo={{ marginTop: espacio.xl }}>Finales</Seccion>
-          <TarjetaFinales materiaId={materia.id} firma={actual.promedioFirma ?? null} aprobada={actual.estado === 'aprobada'} onGuardado={() => recargar()} />
+          <TarjetaFinales key={`${actual.estado}-${actual.notaFinal ?? ''}`} materiaId={materia.id} firma={actual.promedioFirma ?? null} aprobada={actual.estado === 'aprobada'} onGuardado={() => recargar()} />
         </>
       )}
 

@@ -303,6 +303,7 @@ function TarjetaAsistencia({ titulo, materiaId, componente, valor, r, onGuardado
   const [guardandoCasilla, setGuardandoCasilla] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const temporizador = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendiente = useRef<(() => Promise<void>) | null>(null);
   const cumplida = esAsistenciaCumplida(valor);
 
   const guardar = async (a: { clases_dictadas: number; clases_asistidas: number; clases_totales: number | null }) => {
@@ -313,20 +314,31 @@ function TarjetaAsistencia({ titulo, materiaId, componente, valor, r, onGuardado
 
   // Contador: guarda solo, medio segundo después del último toque.
   useEffect(() => {
-    if (!contando || !tocado) return;
+    if (!tocado) return;
     if (temporizador.current) clearTimeout(temporizador.current);
-    temporizador.current = setTimeout(async () => {
+    const a = { clases_dictadas: dictadas, clases_asistidas: Math.min(asistidas, dictadas), clases_totales: totales || null };
+    pendiente.current = async () => {
+      pendiente.current = null;
       try {
-        await guardar({ clases_dictadas: dictadas, clases_asistidas: Math.min(asistidas, dictadas), clases_totales: totales || null });
+        await guardar(a);
       } catch (e) {
         setError(textoError(e, 'No se pudo guardar.'));
       }
-    }, 500);
+    };
+    temporizador.current = setTimeout(() => pendiente.current?.(), 500);
     return () => {
       if (temporizador.current) clearTimeout(temporizador.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dictadas, asistidas, totales, contando, tocado]);
+  }, [dictadas, asistidas, totales, tocado]);
+
+  // Al cambiar de modo: guarda lo que quedó pendiente del contador y no vuelve a guardar sin un toque nuevo.
+  const cambiarModo = async (contar: boolean) => {
+    if (temporizador.current) clearTimeout(temporizador.current);
+    setTocado(false);
+    setContando(contar);
+    await pendiente.current?.();
+  };
 
   const marcar = async () => {
     vibrar();
@@ -371,7 +383,7 @@ function TarjetaAsistencia({ titulo, materiaId, componente, valor, r, onGuardado
             <Text style={[s.cuerpo, { flex: 1 }]}>Cumplí la asistencia mínima</Text>
           </Pressable>
           {ayuda ? <Text style={[s.filaDetalle, { marginTop: 4 }]}>{ayuda}</Text> : null}
-          <Enlace texto="Prefiero contar mis clases" onPress={() => setContando(true)} />
+          <Enlace texto="Prefiero contar mis clases" onPress={() => cambiarModo(true)} />
         </>
       ) : (
         <>
@@ -390,7 +402,7 @@ function TarjetaAsistencia({ titulo, materiaId, componente, valor, r, onGuardado
               </Text>
             </View>
           )}
-          <Enlace texto="Mejor marco solo que la cumplí" onPress={() => setContando(false)} />
+          <Enlace texto="Mejor marco solo que la cumplí" onPress={() => cambiarModo(false)} />
         </>
       )}
       <Mensaje texto={error} />
