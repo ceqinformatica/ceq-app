@@ -2,7 +2,7 @@ import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold, us
 import * as Notifications from 'expo-notifications';
 import { router, Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect, useRef } from 'react';
+import { useEffect, useLayoutEffect, useRef } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { ActivityIndicator, Image, Platform, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -50,8 +50,13 @@ function useNotificaciones(uid: string | null, lista: boolean) {
 }
 
 function Navegacion() {
-  useTema();
+  const { fijarSoloClaro } = useTema();
   const { cargando, sesion, perfil, errorPerfil, bloqueado, recargarPerfil } = useSesion();
+  // Acceso (sin sesión) y bloqueo van siempre en claro, como la maqueta. Antes de dibujar, para que no parpadee.
+  const soloClaro = !cargando && (!sesion || bloqueado);
+  useLayoutEffect(() => {
+    fijarSoloClaro(soloClaro);
+  }, [soloClaro, fijarSoloClaro]);
   useNotificaciones(sesion?.user.id ?? null, !cargando && !bloqueado && Boolean(perfil?.plan_id));
 
   if (cargando) {
