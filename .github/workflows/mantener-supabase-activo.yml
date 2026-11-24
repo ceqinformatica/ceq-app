@@ -1,0 +1,42 @@
+# Evita que Supabase pause el proyecto por inactividad (el plan gratis lo
+# pausa después de 7 días sin uso, por ejemplo en vacaciones).
+# Cada 3 días hace una consulta real y liviana a la base con la clave
+# pública de la app (la misma de eas.json, no es secreta).
+# Si falla, GitHub avisa por correo; también se puede correr a mano desde
+# la pestaña Actions ("Run workflow").
+name: Mantener Supabase activo
+
+on:
+  schedule:
+    - cron: "17 12 */3 * *" # 09:17 de Paraguay, cada 3 días
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  consultar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      SUPABASE_URL: https://yyuaoqwdmuculvqrtpiv.supabase.co
+      SUPABASE_CLAVE_PUBLICA: sb_publishable_haGiYUiSnokxtvNq-4HGUA_n6nxTgdA
+    steps:
+      - name: Consultar la base
+        run: |
+          for intento in 1 2 3; do
+            # es_admin() responde false sin sesión, pero pasa por la base.
+            # Si algún día se le quita el permiso a anon, cambiar esta consulta.
+            codigo=$(curl -sS -o respuesta.json -w '%{http_code}' -X POST \
+              -H "apikey: $SUPABASE_CLAVE_PUBLICA" \
+              -H "Content-Type: application/json" -d '{}' \
+              "$SUPABASE_URL/rest/v1/rpc/es_admin" || echo 000)
+            echo "Intento $intento: HTTP $codigo"
+            if [ "$codigo" -ge 200 ] && [ "$codigo" -lt 300 ]; then
+              echo "Supabase respondió bien."
+              exit 0
+            fi
+            sleep 20
+          done
+          echo "::error::Supabase no respondió (HTTP $codigo). Si el proyecto está pausado, reactivalo desde el panel de Supabase."
+          cat respuesta.json || true
+          exit 1
