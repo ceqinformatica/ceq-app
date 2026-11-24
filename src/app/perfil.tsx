@@ -115,9 +115,10 @@ export default function Perfil() {
       <View style={{ height: espacio.s }} />
       <Seccion icono="school-outline">Situación académica</Seccion>
       <Tarjeta estilo={{ paddingVertical: espacio.xs }}>
-        <Fila icono="school-outline" titulo={carrera ?? '…'} detalle="Carrera" />
-        <Fila icono="git-network-outline" titulo={plan ?? '…'} detalle="Plan de estudios" />
-        <Fila icono="calendar-outline" titulo={perfil?.anio_ingreso ? String(perfil.anio_ingreso) : 'Sin cargar'} detalle="Año de ingreso" ultima />
+        <Fila simple icono="school-outline" titulo={carrera ?? '…'} detalle="Carrera" />
+        <Fila simple icono="git-network-outline" titulo={plan ?? '…'} detalle="Plan de estudios" />
+        <Fila simple icono="calendar-outline" titulo={perfil?.anio_ingreso ? String(perfil.anio_ingreso) : 'Sin cargar'} detalle="Año de ingreso" />
+        <Fila simple icono="stats-chart-outline" titulo="Mi progreso académico" detalle="Promedio y estadísticas" onPress={() => router.push('/estadisticas')} ultima />
       </Tarjeta>
       <Boton
         texto="Cambiar carrera o plan"
@@ -130,7 +131,7 @@ export default function Perfil() {
         <>
           <Seccion icono="qr-code-outline" estilo={{ marginTop: espacio.xl }}>CEQ</Seccion>
           <Tarjeta estilo={{ paddingVertical: espacio.xs }}>
-            <Fila icono="qr-code-outline" titulo="Verificar carnet" detalle="Escanear el QR de un socio" onPress={() => router.push('/verificar')} ultima />
+            <Fila simple icono="qr-code-outline" titulo="Verificar carnet" detalle="Escanear el QR de un socio" onPress={() => router.push('/verificar')} ultima />
           </Tarjeta>
         </>
       )}
@@ -139,7 +140,7 @@ export default function Perfil() {
         <>
           <Seccion icono="construct-outline" estilo={{ marginTop: espacio.xl }}>Administración</Seccion>
           <Tarjeta estilo={{ paddingVertical: espacio.xs }}>
-            <Fila icono="construct-outline" titulo="Panel del CEQ" detalle="Socios, avisos, notificaciones, encuestas y sugerencias" onPress={() => router.push('/admin')} ultima />
+            <Fila simple icono="construct-outline" titulo="Panel del CEQ" detalle="Socios, avisos, notificaciones, encuestas y sugerencias" onPress={() => router.push('/admin')} ultima />
           </Tarjeta>
         </>
       )}
@@ -147,12 +148,14 @@ export default function Perfil() {
       <Seccion icono="notifications-outline" estilo={{ marginTop: espacio.xl }}>Notificaciones</Seccion>
       <Tarjeta estilo={{ paddingVertical: espacio.xs }}>
         <Fila
+          simple
           icono="megaphone-outline"
           titulo="Avisos del CEQ"
           detalle="Comunicados, fechas importantes y novedades."
           derecha={<Interruptor valor={perfil?.notif_avisos ?? true} onCambio={(v) => cambiarPreferencia('notif_avisos', v)} etiqueta="Avisos del CEQ" />}
         />
         <Fila
+          simple
           icono="alarm-outline"
           titulo="Recordatorios de mi agenda"
           detalle="Un aviso antes de cada parcial, final o entrega que cargues."
@@ -185,6 +188,7 @@ export default function Perfil() {
       <Seccion icono="help-circle-outline" estilo={{ marginTop: espacio.xl }}>Ayuda</Seccion>
       <Tarjeta estilo={{ paddingVertical: espacio.xs }}>
         <Fila
+          simple
           icono="help-buoy-outline"
           titulo="Ver el recorrido de bienvenida"
           detalle="Las ventanitas que explican cada sección de la app."
@@ -201,9 +205,10 @@ export default function Perfil() {
       <Seccion icono="lock-closed-outline" estilo={{ marginTop: espacio.xl }}>Seguridad</Seccion>
       <Tarjeta estilo={{ paddingVertical: espacio.xs }}>
         {bio && !bio.disponible ? (
-          <Fila icono="finger-print" titulo="Desbloqueo biométrico" detalle="Este dispositivo no tiene huella ni rostro configurados. Podés usar un PIN." />
+          <Fila simple icono="finger-print" titulo="Desbloqueo biométrico" detalle="Este dispositivo no tiene huella ni rostro configurados. Podés usar un PIN." />
         ) : (
           <Fila
+          simple
             icono="finger-print"
             titulo={`Desbloquear con ${bio?.nombre ?? 'huella'}`}
             detalle="Tus datos biométricos nunca salen del celular."
@@ -221,6 +226,7 @@ export default function Perfil() {
           />
         )}
         <Fila
+          simple
           icono="keypad-outline"
           titulo="PIN de la app"
           detalle={bio?.activa ? 'Para entrar si la huella no funciona, o en vez de ella.' : 'Pide un PIN de 4 a 6 números al abrir la app en este dispositivo.'}
@@ -237,7 +243,7 @@ export default function Perfil() {
           }
           ultima={!conPin}
         />
-        {conPin && <Fila icono="create-outline" titulo="Cambiar PIN" onPress={() => router.push('/pin?modo=cambiar')} ultima />}
+        {conPin && <Fila simple icono="create-outline" titulo="Cambiar PIN" onPress={() => router.push('/pin?modo=cambiar')} ultima />}
       </Tarjeta>
 
       <Mensaje texto={error} />

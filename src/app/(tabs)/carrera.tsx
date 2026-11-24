@@ -351,7 +351,7 @@ export default function Carrera() {
                         />
                       );
                     })}
-                    {Array.from({ length: porFila - fila.length }, (_, j) => <View key={`v${j}`} style={{ flex: 1 }} />)}
+                    {Array.from({ length: porFila - fila.length }, (_, j) => <View key={`v${j}`} style={{ flex: 1, flexBasis: 0, padding: espacio.m, borderWidth: 1, borderColor: 'transparent' }} />)}
                   </View>
                 ))}
               </View>

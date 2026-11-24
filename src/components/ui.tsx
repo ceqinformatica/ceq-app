@@ -267,17 +267,23 @@ const variantesTarjeta = (): Record<string, ViewStyle> => ({
 });
 
 /** Fila de lista: ícono en hexágono suave, textos y algo a la derecha. */
-export function Fila({ icono, colorIcono = colores.marino, fondoIcono = fondos.tarjeta, titulo, detalle, derecha, onPress, ultima }: {
+export function Fila({ icono, colorIcono = colores.marino, fondoIcono = fondos.tarjeta, titulo, detalle, derecha, onPress, ultima, simple }: {
   icono?: NombreIcono; colorIcono?: string; fondoIcono?: string; titulo: string; detalle?: string;
   derecha?: ReactNode; onPress?: () => void; ultima?: boolean;
+  /** Ícono suelto, sin el cuadradito de fondo (estilo menú). */
+  simple?: boolean;
 }) {
   const cuerpo = (
     <>
-      {icono && (
+      {icono && (simple ? (
+        <View style={s.filaIconoSimple}>
+          <Ionicons name={icono} size={21} color={colorIcono} />
+        </View>
+      ) : (
         <View style={[s.filaIcono, { backgroundColor: fondoIcono }]}>
           <Ionicons name={icono} size={19} color={colorIcono} />
         </View>
-      )}
+      ))}
       <View style={{ flex: 1 }}>
         <Text style={s.filaTitulo} numberOfLines={2}>{titulo}</Text>
         {detalle ? <Text style={s.filaDetalle} numberOfLines={2}>{detalle}</Text> : null}
@@ -630,6 +636,7 @@ export const s = crearEstilos(() => ({
   fila: { flexDirection: 'row', alignItems: 'center', gap: espacio.m, paddingVertical: espacio.m },
   filaLinea: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colores.linea },
   filaIcono: { width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  filaIconoSimple: { width: 26, alignItems: 'center', justifyContent: 'center' },
   filaTitulo: { fontFamily: fuentes.semibold, fontSize: 15, lineHeight: 20, color: colores.texto },
   filaDetalle: { fontFamily: fuentes.regular, fontSize: 13, lineHeight: 18, color: colores.textoSuave },
 
