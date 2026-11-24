@@ -213,3 +213,47 @@ export function recuReguDespuesDeFinal<T extends { periodo: string | null; llama
   }
   return null;
 }
+
+/** Llamados por materia: se comparten entre el semestre normal y el opuesto. */
+export const LLAMADOS_POR_MATERIA = 3;
+
+/** Finales rendidos en la cursada actual. El Recu y la Regu son parciales: no gastan un final. */
+export function llamadosUsados(finales: { llamado?: number | null; tipo?: string | null; cursada_anterior?: boolean | null }[]): number {
+  return finales.filter((f) => f.llamado != null && !f.cursada_anterior && (f.tipo ?? 'final') === 'final').length;
+}
+
+export type MotivoSinOpuesto = 'llamados' | 'aplazos' | 'vencida' | 'aprobada' | 'plan';
+
+/**
+ * ¿Puede volver a cursar en el semestre opuesto? (Res. 0108-00-2024)
+ * - Art. 62: con tres aplazos o la firma vencida (dos periodos) lo pierde.
+ * - Los tres llamados son de la materia: si ya los usó todos, no hay opuesto.
+ * - Art. 23: las materias del plan 2018 no se ofrecen en semestre opuesto
+ *   (se respeta solo si `sinOpuestoEnPlan` es true).
+ * Las prácticas aprobadas y la asistencia cumplida (Art. 7 c) las confirma
+ * el estudiante.
+ */
+export function semestreOpuesto(params: {
+  finales: { nota: number | null; tipo?: string | null; periodo?: string | null; llamado?: number | null; cursada_anterior?: boolean | null }[];
+  aprobada?: boolean;
+  periodoActual?: string;
+  sinOpuestoEnPlan?: boolean;
+}): { puede: boolean; motivo: MotivoSinOpuesto | null; llamadosRestantes: number } {
+  const usados = llamadosUsados(params.finales);
+  const restantes = Math.max(0, LLAMADOS_POR_MATERIA - usados);
+  const no = (motivo: MotivoSinOpuesto) => ({ puede: false, motivo, llamadosRestantes: restantes });
+  if (params.aprobada) return no('aprobada');
+  if (aplazosDeLaCursada(params.finales).debeRecursar) return no('aplazos');
+  if (firmaVencida(params.finales, params.periodoActual ?? periodoDe())) return no('vencida');
+  if (restantes === 0) return no('llamados');
+  if (params.sinOpuestoEnPlan) return no('plan');
+  return { puede: true, motivo: null, llamadosRestantes: restantes };
+}
+
+export const TEXTO_SIN_OPUESTO: Record<MotivoSinOpuesto, string> = {
+  llamados: 'Ya rendiste los 3 finales de esta materia: no te queda ninguno para el semestre opuesto.',
+  aplazos: 'Con 3 aplazos tenés que volver a cursarla entera y perdés el semestre opuesto (Art. 62).',
+  vencida: 'Pasaron 2 periodos sin aprobar: tenés que volver a cursarla entera y perdés el semestre opuesto (Art. 62).',
+  aprobada: 'Ya aprobaste esta materia.',
+  plan: 'Las materias del plan 2018 no se ofrecen en semestre opuesto (Art. 23).',
+};

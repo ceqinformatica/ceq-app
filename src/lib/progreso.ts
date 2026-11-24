@@ -38,6 +38,8 @@ export interface EstadoEstudiante {
   puedeDeshacerRecursada?: boolean;
   /** Semestre en que quedó firmada o aprobada ("2026-1"), si se sabe. */
   periodo?: string | null;
+  /** Vuelve a cursarla en el semestre opuesto: solo parciales y finales, sin recuperatorio. */
+  semestreOpuesto?: boolean;
 }
 
 export type UnidadAvance = 'materias' | 'creditos' | 'horas';
