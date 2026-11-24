@@ -152,8 +152,8 @@ export function TarjetaFinales({ materiaId, firma: firmaGuardadaEnMateria, aprob
   // Un final marcado pero sin nota todavía no se puede guardar.
   const falta = filas.some((f) => f.tipo === 'final' && f.v == null);
   const todoValidoSinOrden = filas.every((f) => f.valido) && !falta;
-  // En el semestre opuesto los 3 llamados son los mismos de la materia: no se pasa de 3 en la cursada.
-  const usadosEnTotal = llamadosUsados((finales ?? []).filter((f) => f.periodo !== periodo)) + filas.filter((f) => f.tipo !== 'no').length;
+  // En el semestre opuesto los 3 finales son los mismos de la materia: no se pasa de 3 en la cursada (Recu y Regu no cuentan).
+  const usadosEnTotal = llamadosUsados((finales ?? []).filter((f) => f.periodo !== periodo)) + filas.filter((f) => f.tipo === 'final').length;
   const pasaDeLlamados = !!semestreOpuesto && usadosEnTotal > LLAMADOS_POR_MATERIA;
   // Después de aprobar no se rinde de nuevo: avisa si cargó un llamado posterior.
   const primeraAprobada = filas.find((f) => f.nota != null && f.nota >= 2)?.llamado ?? null;
@@ -317,7 +317,7 @@ export function TarjetaFinales({ materiaId, firma: firmaGuardadaEnMateria, aprob
             />
           )}
           {f.llamado === 1 && semestreOpuesto && (
-            <Text style={[s.filaDetalle, { marginTop: espacio.s }]}>Semestre opuesto: no hay recuperatorio y usás los llamados que te quedan (son 3 por materia).</Text>
+            <Text style={[s.filaDetalle, { marginTop: espacio.s }]}>Semestre opuesto: no hay recuperatorio y rendís los finales que te quedan (son 3 por materia; la Regu no cuenta).</Text>
           )}
           {f.llamado === 1 && !semestreOpuesto && !recuReguEnOtroPeriodo && !finalEnPeriodoAnterior && f.tipo !== 'final' && !filas.some((x) => esRecuORegu(x.tipo)) && (
             <Text style={[s.filaDetalle, { marginTop: espacio.s }]}>Recu o Regu, uno solo por cursada. Regu: si faltaste a un parcial; la podés rendir en el 1.er o en el 2.º llamado. Recu: si rendiste todos los parciales y no llegaste a la firma; solo en el 1.er llamado.</Text>
@@ -337,7 +337,7 @@ export function TarjetaFinales({ materiaId, firma: firmaGuardadaEnMateria, aprob
       {fueraDeOrden && (
         <Mensaje texto={`Ya rendiste un final antes del ${fueraDeOrden.llamado}.º llamado${fueraDeOrden.periodo !== periodo ? ` del ${nombrePeriodo(fueraDeOrden.periodo ?? periodo)}` : ''}: después de un final no se puede rendir ${fueraDeOrden.tipo === 'recuperatorio' ? 'el Recu' : 'la Regu'}. Si te equivocaste, cambiá ese llamado a "No rendí".`} />
       )}
-      {pasaDeLlamados && <Mensaje texto={`En el semestre opuesto usás los mismos 3 llamados de la materia, y ya cargaste ${usadosEnTotal}. Dejá en "No rendí" los que no rendiste.`} />}
+      {pasaDeLlamados && <Mensaje texto={`En el semestre opuesto usás los mismos 3 finales de la materia, y ya cargaste ${usadosEnTotal}. Dejá en "No rendí" los que no rendiste.`} />}
       {despuesDeAprobar && <Mensaje tipo="info" texto="Marcaste un llamado después del que aprobaste. ¿Seguro que lo rendiste?" />}
       <Boton texto="Guardar finales" icono="checkmark" onPress={guardar} cargando={guardando} deshabilitado={!todoValidoSinOrden || fueraDeOrden != null || pasaDeLlamados || finales == null} />
       {msg && <Mensaje texto={msg.texto} tipo={msg.tipo} />}

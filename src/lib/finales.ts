@@ -217,9 +217,9 @@ export function recuReguDespuesDeFinal<T extends { periodo: string | null; llama
 /** Llamados por materia: se comparten entre el semestre normal y el opuesto. */
 export const LLAMADOS_POR_MATERIA = 3;
 
-/** Llamados usados en la cursada actual (final, Recu o Regu). */
-export function llamadosUsados(finales: { llamado?: number | null; cursada_anterior?: boolean | null }[]): number {
-  return finales.filter((f) => f.llamado != null && !f.cursada_anterior).length;
+/** Finales rendidos en la cursada actual. El Recu y la Regu son parciales: no gastan un final. */
+export function llamadosUsados(finales: { llamado?: number | null; tipo?: string | null; cursada_anterior?: boolean | null }[]): number {
+  return finales.filter((f) => f.llamado != null && !f.cursada_anterior && (f.tipo ?? 'final') === 'final').length;
 }
 
 export type MotivoSinOpuesto = 'llamados' | 'aplazos' | 'vencida' | 'aprobada' | 'plan';
@@ -251,7 +251,7 @@ export function semestreOpuesto(params: {
 }
 
 export const TEXTO_SIN_OPUESTO: Record<MotivoSinOpuesto, string> = {
-  llamados: 'Ya usaste los 3 llamados de esta materia: no te queda ninguno para el semestre opuesto.',
+  llamados: 'Ya rendiste los 3 finales de esta materia: no te queda ninguno para el semestre opuesto.',
   aplazos: 'Con 3 aplazos tenés que volver a cursarla entera y perdés el semestre opuesto (Art. 62).',
   vencida: 'Pasaron 2 periodos sin aprobar: tenés que volver a cursarla entera y perdés el semestre opuesto (Art. 62).',
   aprobada: 'Ya aprobaste esta materia.',

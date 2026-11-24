@@ -87,8 +87,10 @@ test('semestre opuesto: solo si quedan llamados y no llegó al Art. 62', async (
   assert.deepEqual(semestreOpuesto({ finales: [], periodoActual: '2026-2' }), { puede: true, motivo: null, llamadosRestantes: 3 });
   // Un aplazo: le quedan 2.
   assert.equal(semestreOpuesto({ finales: [f(1, 1)], periodoActual: '2026-2' }).llamadosRestantes, 2);
-  // Regu + 2 aplazos: usó los 3 llamados.
-  assert.equal(semestreOpuesto({ finales: [f(1, null, 'regularizacion'), f(2, 1), f(3, 1)], periodoActual: '2026-1' }).motivo, 'llamados');
+  // Regu + 2 aplazos: la Regu es un parcial, le queda 1 final (pedido de Josie).
+  assert.deepEqual(semestreOpuesto({ finales: [f(1, null, 'regularizacion'), f(2, 1), f(3, 1)], periodoActual: '2026-1' }), { puede: true, motivo: null, llamadosRestantes: 1 });
+  // Recu en el 1.º y aplazos en 2.º y 3.º del mismo semestre, más uno en el siguiente: 3 finales usados.
+  assert.equal(semestreOpuesto({ finales: [f(1, null, 'recuperatorio'), f(2, 1), f(3, 1), f(1, 1, 'final', '2026-2')], periodoActual: '2026-2' }).motivo, 'aplazos');
   // Tres aplazos: Art. 62.
   assert.equal(semestreOpuesto({ finales: [f(1, 1), f(2, 1), f(3, 1)], periodoActual: '2026-1' }).motivo, 'aplazos');
   // Los de una cursada anterior no cuentan.

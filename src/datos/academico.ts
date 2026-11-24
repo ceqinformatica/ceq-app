@@ -3,7 +3,7 @@
  * pantallas. Usa Supabase, o los datos de ejemplo en modo demostración.
  * El cálculo vive en src/lib/progreso.ts y src/lib/firma.ts.
  */
-import { periodoAlCambiar, periodoDe, recuReguDespuesDeFinal } from '../lib/finales';
+import { llamadosUsados, periodoAlCambiar, periodoDe, recuReguDespuesDeFinal } from '../lib/finales';
 import { conParcialesMinimos, idPredefinido } from '../lib/firma-carga';
 import { pesosIguales, type Asistencia, type Evaluacion, type ReglaFirma } from '../lib/firma';
 import type { EstadoEstudiante, EstadoMateria, GrupoOptativas, Materia, Prerrequisito, UnidadAvance } from '../lib/progreso';
@@ -126,7 +126,7 @@ export async function guardarEstadoMateria(materiaId: string, estado: EstadoMate
     db.estados = db.estados.filter((e) => e.materia_id !== materiaId);
     if (estado !== 'pendiente') {
       const periodo = periodoAlCambiar(previo?.estado ?? null, previo?.periodo ?? null, estado);
-      db.estados.push({ usuario_id: UID_DEMO, materia_id: materiaId, estado, nota_final: nota, fecha: null, periodo, updated_at: new Date().toISOString() });
+      db.estados.push({ usuario_id: UID_DEMO, materia_id: materiaId, estado, nota_final: nota, fecha: null, periodo, updated_at: new Date().toISOString(), semestre_opuesto: previo?.semestre_opuesto ?? false });
     }
     return;
   }
@@ -162,7 +162,7 @@ export async function guardarFirma(materiaId: string, promedio: number) {
     }
     const periodo = previo?.estado === 'firmada' && previo.periodo ? previo.periodo : periodoDe();
     db.estados = db.estados.filter((e) => e.materia_id !== materiaId);
-    db.estados.push({ usuario_id: UID_DEMO, materia_id: materiaId, estado: 'firmada', nota_final: null, fecha: null, periodo, updated_at: new Date().toISOString(), promedio_firma: promedio });
+    db.estados.push({ usuario_id: UID_DEMO, materia_id: materiaId, estado: 'firmada', nota_final: null, fecha: null, periodo, updated_at: new Date().toISOString(), promedio_firma: promedio, semestre_opuesto: previo?.semestre_opuesto ?? false });
     return;
   }
   const { data, error } = await supabase.from('materias_estudiante').select('estado, periodo').eq('materia_id', materiaId).maybeSingle();
@@ -370,6 +370,7 @@ export async function recursarMateria(materiaId: string) {
   if (MODO_DEMO) {
     await esperar(200);
     const e = db.estados.find((x) => x.materia_id === materiaId);
+    if (e?.estado === 'aprobada') throw new Error('Ya aprobaste esta materia');
     if (e?.estado === 'cursando' && e.respaldo_recursada) throw new Error('Ya marcaste que volvés a cursar esta materia');
     const respaldo = {
       estado: e?.estado ?? 'pendiente',
@@ -404,6 +405,8 @@ export async function cursarSemestreOpuesto(materiaId: string) {
     const e = db.estados.find((x) => x.materia_id === materiaId);
     if (e?.estado === 'aprobada') throw new Error('Ya aprobaste esta materia');
     if (e?.estado === 'cursando' && e.respaldo_recursada) throw new Error('Ya marcaste que volvés a cursar esta materia');
+    // Igual que la base: el Recu y la Regu no gastan un final.
+    if (llamadosUsados(db.finales.filter((f) => f.materia_id === materiaId)) >= 3) throw new Error('Ya rendiste los tres finales: tenés que volver a cursar en el semestre normal (Art. 62)');
     const respaldo = {
       modo: 'opuesto',
       estado: e?.estado ?? 'pendiente',

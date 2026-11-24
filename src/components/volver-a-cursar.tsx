@@ -7,7 +7,7 @@
  * - Semestre opuesto: solo parciales y finales, sin recuperatorio (Art. 23).
  *   El laboratorio y la asistencia siguen valiendo y los llamados que queden
  *   se comparten (son 3 por materia). Con 3 aplazos o la firma vencida no hay
- *   opuesto (Art. 62).
+ *   opuesto (Art. 62). El Recu y la Regu son parciales: no gastan un final.
  */
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
@@ -44,7 +44,9 @@ export function VolverACursar({ materiaId, aprobada, anioPlan, motivo, onHecho }
     cargarFinales(materiaId).then(setFinales).catch((e) => setError(textoError(e, 'No se pudieron cargar los finales.')));
   }, [materiaId]);
 
-  const opuesto = semestreOpuesto({ finales: finales ?? [], aprobada, sinOpuestoEnPlan: sinOpuestoEnPlan(anioPlan) });
+  const calculado = semestreOpuesto({ finales: finales ?? [], aprobada, sinOpuestoEnPlan: sinOpuestoEnPlan(anioPlan) });
+  // Hasta saber cuántos finales rindió (o si no se pudieron cargar), el opuesto no se puede elegir.
+  const opuesto = finales == null ? { ...calculado, puede: false } : calculado;
 
   const elegir = (m: Modo) => {
     vibrar();
@@ -84,8 +86,8 @@ export function VolverACursar({ materiaId, aprobada, anioPlan, motivo, onHecho }
       <Opcion
         titulo="Semestre opuesto"
         texto={opuesto.puede
-          ? `Solo rendís los parciales y los finales, sin recuperatorio. Tu laboratorio y tu asistencia siguen valiendo. ${opuesto.llamadosRestantes === 1 ? 'Te queda 1 llamado' : `Te quedan ${opuesto.llamadosRestantes} llamados`} de los 3.`
-          : finales == null ? 'Revisando tus llamados…' : TEXTO_SIN_OPUESTO[opuesto.motivo!]}
+          ? `Solo rendís los parciales y los finales, sin recuperatorio. Tu laboratorio y tu asistencia siguen valiendo. ${opuesto.llamadosRestantes === 1 ? 'Te queda 1 final' : `Te quedan ${opuesto.llamadosRestantes} finales`} de los 3.`
+          : finales == null ? 'Revisando tus finales…' : TEXTO_SIN_OPUESTO[opuesto.motivo!]}
         elegida={modo === 'opuesto'}
         deshabilitada={!opuesto.puede}
         onPress={() => elegir('opuesto')}

@@ -6,8 +6,8 @@
 -- asistencia de teoría cumplida (Art. 7 c): por eso se conservan el
 -- laboratorio y la asistencia. Los tres llamados de finales son de la materia
 -- y se comparten con el semestre normal: el opuesto solo se puede elegir si
--- queda al menos un llamado sin usar en la cursada (final, Recu o Regu
--- cuentan como usados), y los finales de la cursada siguen contando. Quien
+-- queda al menos un final sin rendir en la cursada (el Recu y la Regu son
+-- parciales: no gastan un final), y los finales de la cursada siguen contando. Quien
 -- reprobó tres veces o dejó pasar dos periodos pierde el opuesto (Art. 62).
 --
 -- cursar_semestre_opuesto guarda el mismo respaldo que recursar_materia, con
@@ -36,7 +36,7 @@ begin
     raise exception 'Ya marcaste que volvés a cursar esta materia';
   end if;
   select count(*) into usados from public.examenes_finales
-   where usuario_id = u and materia_id = p_materia and not cursada_anterior and llamado is not null;
+   where usuario_id = u and materia_id = p_materia and not cursada_anterior and llamado is not null and tipo = 'final';
   if usados >= 3 then
     raise exception 'Ya usaste los tres llamados: tenés que volver a cursar en el semestre normal (Art. 62)';
   end if;
@@ -65,7 +65,8 @@ begin
 end;
 $$;
 
--- Volver a cursar en el semestre normal: ya no es semestre opuesto.
+-- Volver a cursar en el semestre normal: ya no es semestre opuesto. Una materia
+-- aprobada no se recursa.
 create or replace function public.recursar_materia(p_materia uuid)
 returns void language plpgsql security invoker set search_path = public as $$
 declare
@@ -78,6 +79,9 @@ begin
   end if;
   select * into me from public.materias_estudiante
    where usuario_id = u and materia_id = p_materia for update;
+  if me.estado = 'aprobada' then
+    raise exception 'Ya aprobaste esta materia';
+  end if;
   if me.estado = 'cursando' and me.respaldo_recursada is not null then
     raise exception 'Ya marcaste que volvés a cursar esta materia';
   end if;

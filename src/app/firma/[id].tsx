@@ -60,7 +60,7 @@ async function cargar(planId: string, materiaId: string) {
   const estado = malla.estados.get(materiaId);
   return {
     materia, regla: regla ?? REGLA_POR_DEFECTO, reglaOficial: Boolean(regla), firmaGuardada: estado?.promedioFirma ?? null,
-    semestreOpuesto: estado?.semestreOpuesto ?? false, recienRecursada: estado?.puedeDeshacerRecursada ?? false, anioPlan: malla.plan?.anio ?? null,
+    estadoMateria: estado?.estado ?? 'pendiente', semestreOpuesto: estado?.semestreOpuesto ?? false, recienRecursada: estado?.puedeDeshacerRecursada ?? false, anioPlan: malla.plan?.anio ?? null,
     ...firmas.get(materiaId)!,
   };
 }
@@ -120,8 +120,11 @@ export default function CalculadoraFirma() {
   );
 
   // Ya rindió todo y no le alcanza para la firma: puede volver a cursar (normal u opuesto, Art. 7 c).
-  const sinFirmaPosible = !resultado.firma && !datos.evaluacionesDb.some((e) => !e.rendida && !esRecuperatorio(e) && !esRegularizacion(e))
-    && (resultado.teoria.imposible || (resultado.laboratorio?.imposible ?? false));
+  // Solo mientras la cursa (no si ya firmó o aprobó) y si no le queda el recuperatorio.
+  const sinFirmaPosible = (datos.estadoMateria === 'cursando' || datos.estadoMateria === 'pendiente')
+    && !resultado.firma && !datos.evaluacionesDb.some((e) => !e.rendida && !esRecuperatorio(e) && !esRegularizacion(e))
+    && (resultado.teoria.imposible || (resultado.laboratorio?.imposible ?? false))
+    && !(!datos.semestreOpuesto && !datos.recuperado && !tieneRecuperatorio && puedeRecuperar(resultado.teoria));
 
   const guardarMiFirma = async () => {
     if (promedio == null) return;
