@@ -7,7 +7,7 @@ import { Hexagono } from '../components/graficos';
 import { Boton, Campo, EvitaTeclado, logoCeq, Mensaje, s } from '../components/ui';
 import type { ModoAcceso, Proveedor } from '../lib/acceso';
 import { leerModoInicial } from '../lib/accesoGuardado';
-import { entrarConCorreo, entrarConGoogle, entrarConMicrosoft, pedirRecuperarClave, registrarseConCorreo } from '../lib/auth';
+import { entrarConCorreo, entrarConGoogle, entrarConMicrosoft, pedirRecuperarClave, proveedoresDisponibles, registrarseConCorreo } from '../lib/auth';
 import { CLAVE_MINIMA, correoValido } from '../lib/recuperacion';
 import { supabaseConfigurado } from '../lib/supabase';
 import { colores, crearEstilos, espacio, fondos, fuentes, radio } from '../tema';
@@ -31,10 +31,12 @@ export default function Login() {
   const [cargando, setCargando] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
+  const [proveedores, setProveedores] = useState<Proveedor[]>(['google']);
 
   useEffect(() => {
     let activo = true;
     leerModoInicial().then((m) => activo && setModo((actual) => actual ?? m));
+    proveedoresDisponibles().then((p) => activo && setProveedores(p));
     return () => {
       activo = false;
     };
@@ -84,7 +86,7 @@ export default function Login() {
         <Text style={s.filaDetalle}>o continuá con</Text>
         <View style={est.linea} />
       </View>
-      {(['google', 'microsoft'] as const).map((p) => (
+      {proveedores.map((p) => (
         <BotonProveedor key={p} proveedor={p} cargando={cargando === p} deshabilitado={ocupado} onPress={() => ejecutar(p, ENTRAR_CON[p])} />
       ))}
     </>

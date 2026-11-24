@@ -6,7 +6,7 @@ import { olvidarEsteCelular } from './notificaciones';
 import { desactivarBiometria } from './biometria';
 import { borrarPin } from './pinGuardado';
 import { resultadoGoogle, traducirErrorClave } from './recuperacion';
-import { NOMBRE_PROVEEDOR, resultadoRegistro, type Proveedor } from './acceso';
+import { NOMBRE_PROVEEDOR, proveedoresVisibles, resultadoRegistro, type Proveedor } from './acceso';
 import { olvidarYaEntro } from './accesoGuardado';
 
 WebBrowser.maybeCompleteAuthSession();
@@ -145,6 +145,22 @@ export async function registrarseConCorreo(
     return { error: traducirError(error.message) };
   }
   return { resultado: resultadoRegistro(data) };
+}
+
+/**
+ * Botones de otras cuentas que se pueden mostrar (Google siempre; Microsoft
+ * solo si ya está habilitado en Supabase). Sin internet, solo Google.
+ */
+export async function proveedoresDisponibles(): Promise<Proveedor[]> {
+  const url = process.env.EXPO_PUBLIC_SUPABASE_URL;
+  const clave = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !clave) return proveedoresVisibles(null);
+  try {
+    const r = await fetch(`${url}/auth/v1/settings`, { headers: { apikey: clave } });
+    return proveedoresVisibles(r.ok ? await r.json() : null);
+  } catch {
+    return proveedoresVisibles(null);
+  }
 }
 
 /** Dirección del enlace del correo para elegir una contraseña nueva. */

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { modoInicial, resultadoRegistro } from '../acceso.ts';
+import { modoInicial, proveedoresVisibles, resultadoRegistro } from '../acceso.ts';
 
 test('la primera vez se ve Crear cuenta', () => {
   assert.equal(modoInicial(null), 'registro');
@@ -23,4 +23,10 @@ test('cuenta creada sin sesión: hay que confirmar el correo', () => {
 
 test('correo que ya tenía cuenta (Supabase lo disimula sin identidades)', () => {
   assert.equal(resultadoRegistro({ session: null, user: { identities: [] } }), 'ya-existe');
+});
+
+test('Microsoft aparece solo cuando está habilitado en Supabase', () => {
+  assert.deepEqual(proveedoresVisibles({ external: { google: true, azure: true } }), ['google', 'microsoft']);
+  assert.deepEqual(proveedoresVisibles({ external: { google: true, azure: false } }), ['google']);
+  assert.deepEqual(proveedoresVisibles(null), ['google']);
 });

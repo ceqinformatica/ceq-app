@@ -40,3 +40,12 @@ export function resultadoRegistro(r: RespuestaRegistro): 'adentro' | 'confirmar'
 /** Nombre visible de cada forma de entrar con otra cuenta. */
 export const NOMBRE_PROVEEDOR = { google: 'Google', microsoft: 'Microsoft' } as const;
 export type Proveedor = keyof typeof NOMBRE_PROVEEDOR;
+
+/**
+ * Qué botones de otras cuentas mostrar según la configuración pública de
+ * Supabase (GET /auth/v1/settings). Google se muestra siempre; Microsoft solo
+ * cuando está habilitado, así nadie toca un botón que todavía no anda.
+ */
+export function proveedoresVisibles(ajustes: { external?: Record<string, unknown> } | null | undefined): Proveedor[] {
+  return ajustes?.external?.azure === true ? ['google', 'microsoft'] : ['google'];
+}
