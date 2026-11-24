@@ -48,19 +48,27 @@ export function FichaMateria({ nombre, codigo, estado, notaFinal, faltan, onPres
         </View>
       )}
       <View style={est.fichaArriba}>
-        {codigo ? <Text style={[est.codigo, { color: c.texto }]} numberOfLines={1}>{codigo}</Text> : <View />}
-        {!modoSeleccion && <Ionicons name={c.icono as NombreIcono} size={16} color={c.texto} />}
+        {!modoSeleccion ? (
+          <View style={[est.estadoIcono, estado === 'aprobada' && { backgroundColor: c.texto }]}>
+            <Ionicons name={(estado === 'aprobada' ? 'checkmark' : c.icono) as NombreIcono} size={estado === 'aprobada' ? 15 : 19} color={estado === 'aprobada' ? fondos.superficieBlanca : c.texto} />
+          </View>
+        ) : <View />}
+        {codigo ? <Text style={[est.codigo, { color: c.texto }, modoSeleccion && { marginRight: 26 }]} numberOfLines={1}>{codigo}</Text> : null}
       </View>
       <Text style={[est.fichaNombre, estado === 'bloqueada' && { color: colores.gris }]} numberOfLines={3}>{nombre}</Text>
       <View style={{ marginTop: 'auto', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
         <Text style={[est.fichaEstado, { color: c.texto }]}>
           {estado === 'bloqueada' && faltan ? `Faltan ${faltan}` : c.nombre}
         </Text>
-        {notaFinal != null && (
+        {notaFinal != null ? (
           <View style={est.nota}>
             <Text style={est.notaTexto}>{nota(notaFinal)}</Text>
           </View>
-        )}
+        ) : estado === 'cursando' || estado === 'firmada' ? (
+          <View style={[est.nota, { backgroundColor: 'transparent', borderWidth: 1, borderColor: c.borde }]}>
+            <Text style={[est.notaTexto, { color: c.texto }]}>–</Text>
+          </View>
+        ) : null}
       </View>
     </PressableAnimado>
   );
@@ -151,16 +159,17 @@ export function SelectorEstado({ valor, onCambio, bloqueada, sinFirma }: {
 }
 
 const est = crearEstilos(() => ({
-  ficha: { flex: 1, minHeight: 118, borderRadius: radio.m, borderWidth: 1, padding: espacio.m, gap: 6 },
+  ficha: { flex: 1, flexBasis: 0, minWidth: 0, minHeight: 124, borderRadius: radio.l, borderWidth: 1, padding: espacio.m, gap: 6 },
+  estadoIcono: { width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   casilla: {
     position: 'absolute', top: 8, right: 8, width: 22, height: 22, borderRadius: 7, borderWidth: 2, borderColor: colores.linea,
     backgroundColor: fondos.superficieBlanca, alignItems: 'center', justifyContent: 'center', zIndex: 1,
   },
   fichaArriba: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   codigo: { fontFamily: fuentes.semibold, fontSize: 10.5, letterSpacing: 0.8, opacity: 0.9 },
-  fichaNombre: { fontFamily: fuentes.semibold, fontSize: 14, lineHeight: 18, color: colores.marino },
+  fichaNombre: { fontFamily: fuentes.bold, fontSize: 14.5, lineHeight: 19, color: colores.marino },
   fichaEstado: { fontFamily: fuentes.medium, fontSize: 11.5 },
-  nota: { minWidth: 26, height: 26, paddingHorizontal: 6, borderRadius: 8, backgroundColor: fondos.verde, alignItems: 'center', justifyContent: 'center' },
+  nota: { minWidth: 28, height: 28, paddingHorizontal: 6, borderRadius: 9, backgroundColor: fondos.verde, alignItems: 'center', justifyContent: 'center' },
   notaTexto: { fontFamily: fuentes.bold, fontSize: 13, color: colores.blanco },
   leyenda: { flexDirection: 'row', flexWrap: 'wrap', gap: espacio.m, marginBottom: espacio.m },
   leyendaPunto: { width: 12, height: 12, borderRadius: 4, borderWidth: 1 },
