@@ -17,10 +17,10 @@ import type { HorarioDb } from '../lib/tipos-db';
 import { infoTipoClase } from '../lib/tipo-clase';
 import { colores, crearEstilos, espacio, fondos, fuentes, radio } from '../tema';
 
-/** La imagen se diseña en 360 × 640 puntos y sale en 1080 × 1920 (9:16). */
-const ANCHO = 360;
-const ALTO = 640;
-const SALIDA = { width: 1080, height: 1920 };
+/** La imagen se diseña en 480 × 360 puntos y sale en 1440 × 1080 (horizontal 4:3). */
+const ANCHO = 480;
+const ALTO = 360;
+const SALIDA = { width: 1440, height: 1080 };
 const CLAVE_PREFERENCIAS = 'ceq.imagenHorario';
 const TITULO_PREDETERMINADO = 'Mi horario';
 
@@ -191,7 +191,7 @@ export function ImagenHorario({ refVista, ancho, clases, nombre, titulo, subtitu
   // Alto de la zona de bloques, medido en puntos del diseño (sin escalar).
   const [altoGrilla, setAltoGrilla] = useState(0);
   const altoHora = altoGrilla > 0 ? altoGrilla / horas.length : 0;
-  const anchoDia = (ANCHO - 40 - 16 - 24) / dias.length;
+  const anchoDia = (ANCHO - 36 - 16 - 24) / dias.length;
   const acento = paleta.tonos[0];
 
   return (
@@ -199,27 +199,31 @@ export function ImagenHorario({ refVista, ancho, clases, nombre, titulo, subtitu
       ref={refVista}
       collapsable={false}
       testID="imagen-horario"
-      style={{ width: ancho, height: (ancho * ALTO) / ANCHO, backgroundColor: f.fondo, padding: u(20), overflow: 'hidden' }}
+      style={{ width: ancho, height: (ancho * ALTO) / ANCHO, backgroundColor: f.fondo, padding: u(18), overflow: 'hidden' }}
     >
       {/* Burbujas de fondo del color de la paleta */}
-      <View style={{ position: 'absolute', width: u(260), height: u(260), borderRadius: u(130), top: u(-120), right: u(-90), backgroundColor: acento, opacity: 0.16 }} />
-      <View style={{ position: 'absolute', width: u(140), height: u(140), borderRadius: u(70), bottom: u(-70), left: u(-50), backgroundColor: paleta.tonos[1], opacity: 0.12 }} />
+      <View style={{ position: 'absolute', width: u(200), height: u(200), borderRadius: u(100), top: u(-110), right: u(-50), backgroundColor: acento, opacity: 0.16 }} />
+      <View style={{ position: 'absolute', width: u(120), height: u(120), borderRadius: u(60), bottom: u(-70), left: u(-40), backgroundColor: paleta.tonos[1], opacity: 0.12 }} />
 
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: u(7) }}>
-        <View style={{ width: u(24), height: u(24), borderRadius: u(12), backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' }}>
-          <Image source={logoCeq} style={{ width: u(16), height: u(16) }} accessibilityLabel="Logo del CEQ" />
+      <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: u(12) }}>
+        <View style={{ flex: 1 }}>
+          <T style={{ fontFamily: fuentes.bold, fontSize: u(22), lineHeight: u(26), letterSpacing: u(-0.3), color: f.texto }} numberOfLines={1}>
+            {titulo}
+          </T>
+          {subtitulo ? (
+            <T style={{ fontFamily: fuentes.medium, fontSize: u(11), lineHeight: u(14), color: f.textoSuave, marginTop: u(1) }} numberOfLines={1}>{subtitulo}</T>
+          ) : null}
         </View>
-        <T style={{ fontFamily: fuentes.bold, fontSize: u(9.5), letterSpacing: u(1.6), color: f.textoSuave }}>PORTAL CEQ</T>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: u(6), paddingBottom: u(2) }}>
+          <View style={{ width: u(22), height: u(22), borderRadius: u(11), backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' }}>
+            <Image source={logoCeq} style={{ width: u(15), height: u(15) }} accessibilityLabel="Logo del CEQ" />
+          </View>
+          <T style={{ fontFamily: fuentes.bold, fontSize: u(8.5), letterSpacing: u(1.4), color: f.textoSuave }}>PORTAL CEQ</T>
+        </View>
       </View>
-      <T style={{ fontFamily: fuentes.bold, fontSize: u(27), lineHeight: u(32), letterSpacing: u(-0.4), color: f.texto, marginTop: u(12) }} numberOfLines={2}>
-        {titulo}
-      </T>
-      {subtitulo ? (
-        <T style={{ fontFamily: fuentes.medium, fontSize: u(13), lineHeight: u(17), color: f.textoSuave, marginTop: u(2) }} numberOfLines={1}>{subtitulo}</T>
-      ) : null}
 
-      <View style={{ flex: 1, marginTop: u(14), backgroundColor: f.tarjeta, borderRadius: u(16), paddingTop: u(10), paddingBottom: u(10), paddingLeft: u(4), paddingRight: u(12) }}>
-        <View style={{ flexDirection: 'row', height: u(18) }}>
+      <View style={{ flex: 1, marginTop: u(10), backgroundColor: f.tarjeta, borderRadius: u(16), paddingTop: u(8), paddingBottom: u(8), paddingLeft: u(4), paddingRight: u(10) }}>
+        <View style={{ flexDirection: 'row', height: u(16) }}>
           <View style={{ width: u(24) }} />
           {dias.map((d) => (
             <T key={d} style={{ flex: 1, textAlign: 'center', fontFamily: fuentes.bold, fontSize: u(9.5), letterSpacing: u(0.6), color: f.texto }}>
@@ -245,13 +249,18 @@ export function ImagenHorario({ refVista, ancho, clases, nombre, titulo, subtitu
                 const tinta = textoSobre(tono);
                 const top = ((minutos(c.hora_inicio) - desde) / 60) * altoHora;
                 const alto = Math.max(((minutos(c.hora_fin) - minutos(c.hora_inicio)) / 60) * altoHora - 2, 14);
-                const lineas = Math.max(1, Math.floor((alto - 6) / 11.5));
+                const lineas = Math.max(1, Math.floor((alto - 5) / 11.5));
                 const tipo = infoTipoClase(c.tipo_clase);
+                // Con dos líneas: el nombre arriba y "TEO · Aula 12" abajo si el
+                // nombre entra en una línea; si no, el nombre completo en dos.
+                const cabeEnUna = nombre(c).length * 4.6 <= (anchoDia / columnas) - 11;
+                const dosLineas = lineas === 2 && cabeEnUna && (tipo != null || !!c.aula);
                 const conTipo = tipo != null && lineas >= 3;
                 const conAula = !!c.aula && lineas >= 4;
                 const conHora = lineas >= 5;
-                const lineasNombre = Math.max(1, lineas - (conTipo ? 1 : 0) - (conAula ? 1 : 0) - (conHora ? 1 : 0));
-                const largo = anchoDia / columnas >= 50 ? 9 : 6;
+                const lineasNombre = dosLineas ? 1 : Math.max(1, lineas - (conTipo ? 1 : 0) - (conAula ? 1 : 0) - (conHora ? 1 : 0));
+                const detalle = [tipo?.corto.toUpperCase(), c.aula].filter(Boolean).join(' · ');
+                const largo = anchoDia / columnas >= 70 ? 14 : anchoDia / columnas >= 50 ? 9 : 6;
                 return (
                   <View
                     key={c.id}
@@ -264,8 +273,9 @@ export function ImagenHorario({ refVista, ancho, clases, nombre, titulo, subtitu
                     <View style={{ flex: 1, backgroundColor: tono, borderRadius: u(7), paddingHorizontal: u(4), paddingVertical: u(3), overflow: 'hidden' }}>
                       {conTipo ? <T style={[txt(u, 7.5, fuentes.bold, tinta), { opacity: 0.85, letterSpacing: u(0.4) }]} numberOfLines={1}>{tipo!.corto.toUpperCase()}</T> : null}
                       <T style={txt(u, 9, fuentes.semibold, tinta)} numberOfLines={lineasNombre}>
-                        {tipo && !conTipo ? `${tipo.corto} · ` : ''}{abreviar(nombre(c), largo)}
+                        {tipo && !conTipo && lineas === 1 ? `${tipo.corto} · ` : ''}{abreviar(nombre(c), largo)}
                       </T>
+                      {dosLineas ? <T style={[txt(u, 7.5, fuentes.medium, tinta), { opacity: 0.85 }]} numberOfLines={1}>{detalle}</T> : null}
                       {conAula ? <T style={[txt(u, 7.5, fuentes.medium, tinta), { opacity: 0.85 }]} numberOfLines={1}>{c.aula}</T> : null}
                       {conHora ? <T style={[txt(u, 7.5, fuentes.medium, tinta), { opacity: 0.85 }]} numberOfLines={1}>{hora(c.hora_inicio)}</T> : null}
                     </View>
@@ -278,22 +288,18 @@ export function ImagenHorario({ refVista, ancho, clases, nombre, titulo, subtitu
       </View>
 
       {leyenda.length > 0 ? (
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginTop: u(12), rowGap: u(6) }}>
-          {(leyenda.length > 10 ? leyenda.slice(0, 9) : leyenda).map((m) => (
-            <View key={m.clave} style={{ width: '50%', flexDirection: 'row', alignItems: 'center', gap: u(6), paddingRight: u(6) }}>
-              <View style={{ width: u(10), height: u(10), borderRadius: u(3), backgroundColor: colorDe.get(m.clave) }} />
-              <T style={{ flex: 1, fontFamily: fuentes.semibold, fontSize: u(10), color: f.texto }} numberOfLines={1}>{m.nombre}</T>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginTop: u(9), columnGap: u(14), rowGap: u(4) }}>
+          {(leyenda.length > 8 ? leyenda.slice(0, 7) : leyenda).map((m) => (
+            <View key={m.clave} style={{ flexDirection: 'row', alignItems: 'center', gap: u(5), maxWidth: '48%' }}>
+              <View style={{ width: u(9), height: u(9), borderRadius: u(3), backgroundColor: colorDe.get(m.clave) }} />
+              <T style={{ flexShrink: 1, fontFamily: fuentes.semibold, fontSize: u(9), color: f.texto }} numberOfLines={1}>{m.nombre}</T>
             </View>
           ))}
-          {leyenda.length > 10 ? (
-            <T style={{ width: '50%', fontFamily: fuentes.medium, fontSize: u(10), color: f.textoSuave, paddingLeft: u(16) }}>+{leyenda.length - 9} más</T>
+          {leyenda.length > 8 ? (
+            <T style={{ fontFamily: fuentes.medium, fontSize: u(9), color: f.textoSuave }}>+{leyenda.length - 7} más</T>
           ) : null}
         </View>
       ) : null}
-
-      <T style={{ marginTop: u(12), fontFamily: fuentes.medium, fontSize: u(8.5), color: f.textoSuave, textAlign: 'center', letterSpacing: u(0.3) }}>
-        Hecho con la app Portal CEQ
-      </T>
     </View>
   );
 }

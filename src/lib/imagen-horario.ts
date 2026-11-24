@@ -1,7 +1,7 @@
 /**
  * Imagen del horario para compartir (WhatsApp, historias): paletas de
  * colores, modo claro u oscuro y las cuentas de la grilla. La imagen se
- * arma a propósito en formato 9:16 (1080 × 1920), no es una captura de
+ * arma a propósito en formato horizontal 4:3 (1440 × 1080), no es una captura de
  * la pantalla.
  */
 
