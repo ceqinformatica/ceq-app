@@ -585,10 +585,14 @@ export function Hoja({ visible, titulo, onCerrar, children }: { visible: boolean
     : { paddingBottom: insets.bottom + espacio.l };
   // El velo se funde y la hoja sube sola (con animationType="slide" subía también el velo oscuro, como una cortina).
   const { montado, progreso } = useEntradaFlotante(visible);
+  // Mientras baja, se sigue viendo lo último que tenía (quien la usa suele vaciar su estado al cerrar).
+  const ultimo = useRef({ titulo, children });
+  if (visible) ultimo.current = { titulo, children };
+  const mostrado = visible ? { titulo, children } : ultimo.current;
   const opacidad = progreso.interpolate({ inputRange: [0, 1], outputRange: [0, 1], extrapolate: 'clamp' });
   const movimiento = centrada
     ? { opacity: opacidad, transform: [{ scale: progreso.interpolate({ inputRange: [0, 1], outputRange: [0.94, 1] }) }] }
-    : { transform: [{ translateY: progreso.interpolate({ inputRange: [0, 1], outputRange: [Math.min(height, 700), 0] }) }] };
+    : { transform: [{ translateY: progreso.interpolate({ inputRange: [0, 1], outputRange: [height, 0] }) }] };
   if (!montado) return null;
   return (
     <Modal
@@ -605,14 +609,14 @@ export function Hoja({ visible, titulo, onCerrar, children }: { visible: boolean
         <Animated.View style={[StyleSheet.absoluteFill, s.veloFondo, { opacity: opacidad }]}>
           <Pressable style={StyleSheet.absoluteFill} onPress={onCerrar} accessibilityLabel="Cerrar" />
         </Animated.View>
-        <Animated.View style={[s.hoja, estiloHoja, movimiento]}>
+        <Animated.View style={[s.hoja, estiloHoja, movimiento]} pointerEvents={visible ? 'auto' : 'none'}>
           {!centrada && <View style={s.hojaAsa} />}
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: espacio.l, paddingTop: centrada ? espacio.m : 0 }}>
-            <Text style={[s.barraTitulo, { textAlign: 'left' }]}>{titulo}</Text>
+            <Text style={[s.barraTitulo, { textAlign: 'left' }]}>{mostrado.titulo}</Text>
             <BotonIcono icono="close" etiqueta="Cerrar" onPress={onCerrar} tamano={20} />
           </View>
           <ScrollView keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive" showsVerticalScrollIndicator={false} style={{ flexShrink: 1 }}>
-            {children}
+            {mostrado.children}
           </ScrollView>
         </Animated.View>
       </EvitaTeclado>

@@ -158,7 +158,7 @@ export function VentanasDelCeq() {
   const opacidad = progreso.interpolate({ inputRange: [0, 1], outputRange: [0, 1], extrapolate: 'clamp' });
   // Al centro: crece un poco y sube. Desde abajo: sube desde el borde. Pantalla completa: se funde.
   const movimiento = abajo
-    ? [{ translateY: progreso.interpolate({ inputRange: [0, 1], outputRange: [height * 0.6, 0] }) }]
+    ? [{ translateY: progreso.interpolate({ inputRange: [0, 1], outputRange: [height, 0] }) }]
     : pantalla
       ? [{ scale: progreso.interpolate({ inputRange: [0, 1], outputRange: [1.04, 1] }) }]
       : [{ translateY: progreso.interpolate({ inputRange: [0, 1], outputRange: [24, 0] }) }, { scale: progreso.interpolate({ inputRange: [0, 1], outputRange: [0.92, 1] }) }];
@@ -185,7 +185,7 @@ export function VentanasDelCeq() {
         }}
       >
         <Animated.View
-          pointerEvents="box-none"
+          pointerEvents={cerrando ? 'none' : 'box-none'}
           style={{ width: '100%', alignItems: 'center', flex: pantalla ? 1 : undefined, maxHeight: abajo ? height - insets.top - espacio.xl : undefined, opacity: abajo ? 1 : opacidad, transform: movimiento }}
         >
           <ScrollView
