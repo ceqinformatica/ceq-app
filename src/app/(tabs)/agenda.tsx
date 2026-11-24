@@ -1,10 +1,11 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useLocalSearchParams } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
-import { useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { type ComponentRef, useEffect, useMemo, useRef, useState } from 'react';
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { compartirVistaComoImagen, puedeCompartirImagen } from '../../components/compartir-imagen';
 import { CampoFechaHora, hoy } from '../../components/fecha';
-import { CabeceraMarca, Boton, BotonIcono, Campo, Cargando, Chip, EstadoVacio, Fila, Hoja, Insignia, Mensaje, Pantalla, s, Segmentado, Tarjeta } from '../../components/ui';
+import { CabeceraMarca, Boton, BotonIcono, Campo, Cargando, Chip, EstadoVacio, Fila, Hoja, Insignia, logoCeq, Mensaje, Pantalla, s, Segmentado, Tarjeta } from '../../components/ui';
 import { useSesion } from '../../context/SesionProvider';
 import {
   actualizarClase, borrarClase, borrarEvento, cargarAgenda, crearClases, crearEvento, cuentaRegresiva, DIAS, DIAS_CORTOS, diaSemanaHoy, diasHasta, hora, horaDe,
@@ -18,6 +19,8 @@ import type { EstadoMateriaDb, EventoDb, HorarioDb, TipoEvento } from '../../lib
 import { colores, crearEstilos, espacio, fondos, fuentes, radio, sombras } from '../../tema';
 import { useTema } from '../../context/TemaProvider';
 import { textoError } from '../../lib/errores';
+import { textoSemestre } from '../../lib/carnet';
+import { clasesPorDia, infoTipoClase, nombreConTipo, TIPOS_CLASE, type TipoClase } from '../../lib/tipo-clase';
 
 /** Tonos para distinguir materias en el horario: celestes y grises del CEQ (sin verdes ni naranjas). */
 const TONOS = ['#0F5F94', '#2A8FCC', '#3F5168', '#1677B0', '#4F7FA0', '#55687A', '#2C6E8F'];
@@ -39,6 +42,7 @@ export default function Agenda() {
   const [nuevaClase, setNuevaClase] = useState(false);
   const [editando, setEditando] = useState<HorarioDb | null>(null);
   const [nuevoEvento, setNuevoEvento] = useState(false);
+  const [compartiendo, setCompartiendo] = useState(false);
   const { nueva } = useLocalSearchParams<{ nueva?: string }>();
 
   // Desde Inicio: "Agregar fecha" abre directo el formulario.
@@ -79,6 +83,11 @@ export default function Agenda() {
             <View style={{ flexDirection: 'row', gap: espacio.s, paddingBottom: espacio.m }}>
               <Chip texto="Semana" icono="grid-outline" elegido={modoHorario === 'semana'} onPress={() => setModoHorario('semana')} />
               <Chip texto="Por día" icono="list-outline" elegido={modoHorario === 'dia'} onPress={() => setModoHorario('dia')} />
+              {datos && datos.horario.length > 0 ? (
+                <View style={{ marginLeft: 'auto' }}>
+                  <Chip texto="Compartir" icono="share-social-outline" onPress={() => setCompartiendo(true)} />
+                </View>
+              ) : null}
             </View>
             {modoHorario === 'semana' ? (
               datos && datos.horario.length > 0 ? (
@@ -118,15 +127,17 @@ export default function Agenda() {
             ) : (
               clasesDelDia.map((h) => {
                 const tono = tonoDe(h.materia_id ?? h.titulo ?? '');
+                const tipo = infoTipoClase(h.tipo_clase);
                 return (
-                  <Pressable key={h.id} onPress={() => setClaseElegida(h)} accessibilityRole="button" accessibilityLabel={`${nombreClase(h)}, de ${hora(h.hora_inicio)} a ${hora(h.hora_fin)}${h.aula ? `, ${h.aula}` : ''}`} style={({ pressed }) => [est.clase, pressed && { opacity: 0.85 }]}>
+                  <Pressable key={h.id} onPress={() => setClaseElegida(h)} accessibilityRole="button" accessibilityLabel={`${nombreConTipo(nombreClase(h), h.tipo_clase)}, de ${hora(h.hora_inicio)} a ${hora(h.hora_fin)}${h.aula ? `, ${h.aula}` : ''}`} style={({ pressed }) => [est.clase, pressed && { opacity: 0.85 }]}>
                     <View style={est.claseHora}>
                       <Text style={est.horaInicio}>{hora(h.hora_inicio)}</Text>
                       <Text style={est.horaFin}>{hora(h.hora_fin)}</Text>
                     </View>
                     <View style={[est.claseCuerpo, { borderLeftColor: tono }]}>
                       <Text style={est.claseNombre} numberOfLines={2}>{nombreClase(h)}</Text>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: espacio.m, marginTop: 4 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', columnGap: espacio.m, rowGap: 4, marginTop: 4 }}>
+                        {tipo ? <Insignia texto={tipo.texto} icono={tipo.icono} /> : null}
                         {h.aula ? (
                           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, flexShrink: 1 }}>
                             <Ionicons name="location-outline" size={13} color={colores.textoSuave} />
@@ -192,12 +203,14 @@ export default function Agenda() {
         onCerrar={() => { setNuevaClase(false); setEditando(null); }}
         onListo={() => { setNuevaClase(false); setEditando(null); recargar(); }}
       />
+      <CompartirHorario visible={compartiendo} clases={datos?.horario ?? []} nombre={nombreClase} onCerrar={() => setCompartiendo(false)} />
       <FormEvento visible={nuevoEvento} uid={sesion?.user.id ?? ''} datos={datos} onCursando={marcarCursando} onCerrar={() => setNuevoEvento(false)} onListo={() => { setNuevoEvento(false); recargar(); }} />
 
       <Hoja visible={claseElegida != null} titulo={claseElegida ? nombreClase(claseElegida) : ''} onCerrar={() => setClaseElegida(null)}>
         {claseElegida && (
           <Detalle
             filas={[
+              ...((tipo) => (tipo ? [[tipo.icono, tipo.texto] as [string, string]] : []))(infoTipoClase(claseElegida.tipo_clase)),
               ['calendar-outline', DIAS[claseElegida.dia_semana - 1]],
               ['time-outline', `${hora(claseElegida.hora_inicio)} a ${hora(claseElegida.hora_fin)}`],
               ...(claseElegida.aula ? [['location-outline', claseElegida.aula] as [string, string]] : []),
@@ -433,6 +446,7 @@ function FormClase({ visible, clase, diaInicial, datos, recordatoriosApagados, o
   const [inicio, setInicio] = useState('');
   const [fin, setFin] = useState('');
   const [aula, setAula] = useState('');
+  const [tipo, setTipo] = useState<TipoClase | null>('teoria');
   const [aviso, setAviso] = useState<number | null>(null);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -441,10 +455,10 @@ function FormClase({ visible, clase, diaInicial, datos, recordatoriosApagados, o
     if (!visible) return;
     if (clase) {
       setMateria(clase.materia_id); setTitulo(clase.titulo ?? ''); setDias([clase.dia_semana]);
-      setInicio(hora(clase.hora_inicio)); setFin(hora(clase.hora_fin)); setAula(clase.aula ?? ''); setAviso(clase.aviso_minutos);
+      setInicio(hora(clase.hora_inicio)); setFin(hora(clase.hora_fin)); setAula(clase.aula ?? ''); setTipo(clase.tipo_clase); setAviso(clase.aviso_minutos);
     } else {
       // Si cursás una sola materia, ya queda elegida.
-      setMateria(unica); setTitulo(''); setDias([diaInicial]); setInicio(''); setFin(''); setAula(''); setAviso(null);
+      setMateria(unica); setTitulo(''); setDias([diaInicial]); setInicio(''); setFin(''); setAula(''); setTipo('teoria'); setAviso(null);
     }
     setError(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -479,7 +493,7 @@ function FormClase({ visible, clase, diaInicial, datos, recordatoriosApagados, o
     setGuardando(true);
     setError(null);
     try {
-      const base = { materia_id: materia, titulo: materia ? null : titulo.trim(), hora_inicio: hi!, hora_fin: hf!, aula: aula.trim() || null, aviso_minutos: aviso };
+      const base = { materia_id: materia, titulo: materia ? null : titulo.trim(), hora_inicio: hi!, hora_fin: hf!, aula: aula.trim() || null, tipo_clase: tipo, aviso_minutos: aviso };
       if (clase) await actualizarClase(clase.id, { ...base, dia_semana: dias[0] });
       else await crearClases(dias.map((d) => ({ ...base, dia_semana: d })));
       onListo();
@@ -503,6 +517,10 @@ function FormClase({ visible, clase, diaInicial, datos, recordatoriosApagados, o
       <>
       {(datos?.materias.length ?? 0) > 0 && <SelectorMateria materias={mias} valor={materia} onCambio={setMateria} onOtra={eleccion.abrir} />}
       {!materia && <Campo etiqueta="Nombre" value={titulo} onChangeText={setTitulo} placeholder="Ej. Tutoría de Física" />}
+      <Text style={[s.etiqueta, { marginBottom: espacio.s }]}>Tipo de clase</Text>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: espacio.s, marginBottom: espacio.m }} accessibilityRole="radiogroup">
+        {TIPOS_CLASE.map((t) => <Chip key={t.valor} texto={t.texto} icono={t.icono} elegido={tipo === t.valor} onPress={() => setTipo(t.valor)} />)}
+      </View>
       <Text style={[s.etiqueta, { marginBottom: espacio.s }]}>{clase ? 'Día' : 'Días (podés elegir varios)'}</Text>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: espacio.s, marginBottom: espacio.m }}>
         {DIAS_CORTOS.slice(0, 6).map((d, i) => <Chip key={d} texto={d} elegido={dias.includes(i + 1)} onPress={() => alternarDia(i + 1)} />)}
@@ -536,21 +554,23 @@ function FormClase({ visible, clase, diaInicial, datos, recordatoriosApagados, o
 
 /** La semana entera en una grilla: cada clase es un bloque en su día y su hora. */
 const ALTO_HORA = 46;
-function GrillaSemana({ clases, nombre, onElegir, onDia }: {
-  clases: HorarioDb[]; nombre: (h: HorarioDb) => string; onElegir: (h: HorarioDb) => void; onDia: (n: number) => void;
+function GrillaSemana({ clases, nombre, onElegir, onDia, paraImagen }: {
+  clases: HorarioDb[]; nombre: (h: HorarioDb) => string; onElegir?: (h: HorarioDb) => void; onDia?: (n: number) => void;
+  /** En la imagen que se comparte no se marca "hoy" ni se puede tocar nada. */
+  paraImagen?: boolean;
 }) {
   const conDomingo = clases.some((c) => c.dia_semana === 7);
   const dias = conDomingo ? [1, 2, 3, 4, 5, 6, 7] : [1, 2, 3, 4, 5, 6];
   const { desde, hasta } = rangoSemana(clases);
   const horas = Array.from({ length: (hasta - desde) / 60 }, (_, i) => desde + i * 60);
   const alto = ((hasta - desde) / 60) * ALTO_HORA;
-  const hoy = diaSemanaHoy();
+  const hoy = paraImagen ? 0 : diaSemanaHoy();
   return (
-    <View style={est.grilla} accessibilityLabel="Horario de la semana">
+    <View style={[est.grilla, paraImagen && est.grillaPlana]} accessibilityLabel="Horario de la semana">
       <View style={{ flexDirection: 'row' }}>
         <View style={{ width: 34 }} />
         {dias.map((d) => (
-          <Pressable key={d} onPress={() => onDia(d)} accessibilityRole="button" accessibilityLabel={`Ver ${DIAS[d - 1]}`} style={est.grillaCabecera}>
+          <Pressable key={d} onPress={onDia ? () => onDia(d) : undefined} disabled={!onDia} accessibilityRole="button" accessibilityLabel={`Ver ${DIAS[d - 1]}`} style={est.grillaCabecera}>
             <Text style={[est.grillaDia, d === hoy && { color: colores.blanco, backgroundColor: fondos.marino }]}>{DIAS_CORTOS[d - 1]}</Text>
           </Pressable>
         ))}
@@ -568,19 +588,26 @@ function GrillaSemana({ clases, nombre, onElegir, onDia }: {
               const top = ((minutos(c.hora_inicio) - desde) / 60) * ALTO_HORA;
               const altoBloque = Math.max(((minutos(c.hora_fin) - minutos(c.hora_inicio)) / 60) * ALTO_HORA - 2, 18);
               const lineas = Math.max(1, Math.floor((altoBloque - 6) / 13));
+              const tipo = infoTipoClase(c.tipo_clase);
+              // El tipo va en su propia línea si entra; si el bloque es muy bajo, delante del nombre.
+              const tipoAparte = tipo != null && lineas >= 2;
+              const conAula = !!c.aula && lineas > (tipoAparte ? 3 : 2);
+              const lineasNombre = Math.max(1, lineas - (tipoAparte ? 1 : 0) - (conAula ? 1 : 0));
               return (
                 <Pressable
                   key={c.id}
-                  onPress={() => onElegir(c)}
+                  onPress={onElegir ? () => onElegir(c) : undefined}
+                  disabled={!onElegir}
                   accessibilityRole="button"
-                  accessibilityLabel={`${nombre(c)}, ${DIAS[d - 1]} de ${hora(c.hora_inicio)} a ${hora(c.hora_fin)}${c.aula ? `, ${c.aula}` : ''}`}
+                  accessibilityLabel={`${nombreConTipo(nombre(c), c.tipo_clase)}, ${DIAS[d - 1]} de ${hora(c.hora_inicio)} a ${hora(c.hora_fin)}${c.aula ? `, ${c.aula}` : ''}`}
                   style={({ pressed }) => [est.bloque, {
                     top, height: altoBloque, left: `${(columna / columnas) * 100}%`, width: `${100 / columnas}%`,
                     backgroundColor: tonoDe(c.materia_id ?? c.titulo ?? ''), opacity: pressed ? 0.8 : 1,
                   }]}
                 >
-                  <Text style={est.bloqueNombre} numberOfLines={c.aula && lineas > 2 ? lineas - 1 : lineas}>{abreviar(nombre(c))}</Text>
-                  {c.aula && lineas > 2 ? <Text style={est.bloqueAula} numberOfLines={1}>{c.aula}</Text> : null}
+                  {tipoAparte ? <Text style={est.bloqueTipo} numberOfLines={1}>{tipo!.corto}</Text> : null}
+                  <Text style={est.bloqueNombre} numberOfLines={lineasNombre}>{tipo && !tipoAparte ? <Text style={est.bloqueTipo}>{tipo.corto} · </Text> : null}{abreviar(nombre(c))}</Text>
+                  {conAula ? <Text style={est.bloqueAula} numberOfLines={1}>{c.aula}</Text> : null}
                 </Pressable>
               );
             })}
@@ -588,6 +615,79 @@ function GrillaSemana({ clases, nombre, onElegir, onDia }: {
         ))}
       </View>
     </View>
+  );
+}
+
+/**
+ * Vista previa del horario como imagen (grilla + lista con tipo y aula),
+ * para mandarlo por WhatsApp o subirlo a una historia.
+ */
+function CompartirHorario({ visible, clases, nombre, onCerrar }: {
+  visible: boolean; clases: HorarioDb[]; nombre: (h: HorarioDb) => string; onCerrar: () => void;
+}) {
+  const ref = useRef<ComponentRef<typeof View>>(null);
+  const [enviando, setEnviando] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => {
+    if (visible) setError(null);
+  }, [visible]);
+
+  const compartir = async () => {
+    setEnviando(true);
+    setError(null);
+    try {
+      await compartirVistaComoImagen(ref, 'Compartir mi horario');
+    } catch (e) {
+      setError(textoError(e, 'No se pudo compartir la imagen.'));
+    } finally {
+      setEnviando(false);
+    }
+  };
+
+  return (
+    <Hoja visible={visible} titulo="Compartir horario" onCerrar={onCerrar}>
+      <View ref={ref} collapsable={false} style={est.imagen}>
+        <View style={est.imagenCabecera}>
+          <View style={est.imagenLogo}>
+            <Image source={logoCeq} style={{ width: 22, height: 22 }} accessibilityLabel="Logo del CEQ" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={est.imagenTitulo}>Mi horario</Text>
+            <Text style={est.imagenSub}>{textoSemestre(new Date().toISOString())} · Portal CEQ</Text>
+          </View>
+        </View>
+        <GrillaSemana clases={clases} nombre={nombre} paraImagen />
+        <View style={{ marginTop: espacio.m, gap: espacio.s }}>
+          {clasesPorDia(clases).map(({ dia, clases: delDia }) => (
+            <View key={dia}>
+              <Text style={est.imagenDia}>{DIAS[dia - 1]}</Text>
+              {delDia.map((c) => {
+                const tipo = infoTipoClase(c.tipo_clase);
+                return (
+                  <View key={c.id} style={est.imagenFila}>
+                    <Text style={est.imagenHora}>{hora(c.hora_inicio)}–{hora(c.hora_fin)}</Text>
+                    <Text style={est.imagenClase}>
+                      {nombre(c)}
+                      {tipo ? <Text style={est.imagenDetalle}>{` · ${tipo.texto}`}</Text> : null}
+                      {c.aula ? <Text style={est.imagenDetalle}>{` · ${c.aula}`}</Text> : null}
+                    </Text>
+                  </View>
+                );
+              })}
+            </View>
+          ))}
+        </View>
+      </View>
+      <Mensaje texto={error} />
+      {puedeCompartirImagen ? (
+        <Boton texto="Compartir imagen" icono="share-social-outline" onPress={compartir} cargando={enviando} estilo={{ marginTop: espacio.m }} />
+      ) : (
+        <View style={{ marginTop: espacio.m }}>
+          <Mensaje tipo="info" texto="Para compartir la imagen, abrí tu horario desde la app del teléfono." />
+        </View>
+      )}
+      <View style={{ height: espacio.l }} />
+    </Hoja>
   );
 }
 
@@ -692,13 +792,26 @@ const est = crearEstilos(() => ({
   fecha: { width: 54, height: 58, borderRadius: radio.m, backgroundColor: fondos.tarjeta, alignItems: 'center', justifyContent: 'center' },
   fechaDia: { fontFamily: fuentes.bold, fontSize: 21, color: colores.marino, lineHeight: 24 },
   grilla: { backgroundColor: fondos.superficieBlanca, borderRadius: radio.l, paddingVertical: espacio.s, paddingRight: espacio.s, ...sombras.suave },
+  grillaPlana: { shadowOpacity: 0, elevation: 0, borderWidth: StyleSheet.hairlineWidth, borderColor: colores.borde },
   grillaCabecera: { flex: 1, alignItems: 'center', paddingBottom: espacio.s },
   grillaDia: { fontFamily: fuentes.semibold, fontSize: 12, color: colores.marino, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8, overflow: 'hidden' },
   grillaHora: { position: 'absolute', right: 6, fontFamily: fuentes.regular, fontSize: 10, color: colores.textoSuave },
   grillaColumna: { flex: 1, position: 'relative', borderLeftWidth: StyleSheet.hairlineWidth, borderLeftColor: colores.borde },
   grillaLinea: { position: 'absolute', left: 0, right: 0, height: StyleSheet.hairlineWidth, backgroundColor: fondos.borde },
   bloque: { position: 'absolute', borderRadius: 6, paddingHorizontal: 3, paddingVertical: 3, borderWidth: 1, borderColor: colores.superficieBlanca, overflow: 'hidden' },
+  bloqueTipo: { fontFamily: fuentes.bold, fontSize: 9, lineHeight: 12, letterSpacing: 0.3, color: colores.blanco, opacity: 0.9, textTransform: 'uppercase' },
   bloqueNombre: { fontFamily: fuentes.semibold, fontSize: 10, lineHeight: 13, color: colores.blanco },
   bloqueAula: { fontFamily: fuentes.regular, fontSize: 9, lineHeight: 12, color: colores.blanco, opacity: 0.9 },
+  // Sin bordes redondeados: las esquinas transparentes se ven negras en algunas apps.
+  imagen: { backgroundColor: fondos.fondo, padding: espacio.m, borderWidth: StyleSheet.hairlineWidth, borderColor: colores.borde },
+  imagenCabecera: { flexDirection: 'row', alignItems: 'center', gap: espacio.s, marginBottom: espacio.m },
+  imagenLogo: { width: 34, height: 34, borderRadius: 17, backgroundColor: fondos.blanco, alignItems: 'center', justifyContent: 'center', borderWidth: StyleSheet.hairlineWidth, borderColor: colores.borde },
+  imagenTitulo: { fontFamily: fuentes.bold, fontSize: 20, color: colores.marino },
+  imagenSub: { fontFamily: fuentes.medium, fontSize: 12, color: colores.textoSuave, marginTop: 1 },
+  imagenDia: { fontFamily: fuentes.bold, fontSize: 12, letterSpacing: 0.6, color: colores.marino, textTransform: 'uppercase', marginBottom: 2 },
+  imagenFila: { flexDirection: 'row', gap: espacio.s, paddingVertical: 2 },
+  imagenHora: { width: 84, fontFamily: fuentes.semibold, fontSize: 12.5, color: colores.texto },
+  imagenClase: { flex: 1, fontFamily: fuentes.semibold, fontSize: 12.5, color: colores.texto },
+  imagenDetalle: { fontFamily: fuentes.regular, color: colores.textoSuave },
   fechaMes: { fontFamily: fuentes.semibold, fontSize: 11, color: colores.textoSuave, letterSpacing: 0.8 },
 }));

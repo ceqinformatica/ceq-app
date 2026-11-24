@@ -18,6 +18,7 @@ import { evaluarFirma } from '../../lib/firma';
 import { calcularProgreso, esSeminario, materiasContadas } from '../../lib/progreso';
 import { colores, coloresSemaforo, crearEstilos, espacio, fondos, fuentes, radio, sombras } from '../../tema';
 import { useTema } from '../../context/TemaProvider';
+import { infoTipoClase } from '../../lib/tipo-clase';
 
 const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 const DIAS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
@@ -122,7 +123,7 @@ export default function Inicio() {
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: espacio.s, paddingBottom: espacio.s, paddingRight: espacio.l }} style={{ marginHorizontal: -espacio.l, paddingLeft: espacio.l }}>
           {datos.clasesHoy.map((h, i) => (
             <Aparecer key={h.id} retraso={250 + i * 90} distancia={10} estilo={est.clase}>
-              <Text style={est.claseHora}>{hora(h.hora_inicio)} – {hora(h.hora_fin)}</Text>
+              <Text style={est.claseHora}>{hora(h.hora_inicio)} – {hora(h.hora_fin)}{((t) => (t ? ` · ${t.texto}` : ''))(infoTipoClase(h.tipo_clase))}</Text>
               <Text style={est.claseNombre} numberOfLines={2}>{h.titulo || (h.materia_id && datos.nombres.get(h.materia_id)) || 'Clase'}</Text>
               {h.aula ? (
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 'auto' }}>

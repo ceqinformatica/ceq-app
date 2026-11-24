@@ -7,6 +7,7 @@
 
 import type { TramiteNuevo } from './tramites';
 import type { CategoriaCalendario } from './calendario';
+import type { TipoClase } from './tipo-clase';
 
 export type RolUsuario = 'estudiante' | 'validador' | 'admin';
 export type EstadoMateriaDb = 'pendiente' | 'cursando' | 'firmada' | 'aprobada';
@@ -56,6 +57,8 @@ export type AsistenciaDb = {
 export type HorarioDb = {
   id: string; usuario_id: string; materia_id: string | null; titulo: string | null; dia_semana: number;
   hora_inicio: string; hora_fin: string; aula: string | null;
+  /** Teoría, RP o Laboratorio; null en las clases cargadas antes de que existiera. */
+  tipo_clase: TipoClase | null;
   /** Minutos antes de la clase para avisar; null = sin aviso. */
   aviso_minutos: number | null; avisado_el: string | null;
 }
