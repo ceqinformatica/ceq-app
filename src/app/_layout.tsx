@@ -110,6 +110,8 @@ function Navegacion() {
         <Stack.Screen name="admin" />
       </Stack.Protected>
       <Stack.Screen name="auth/callback" />
+      {/* Enlace del correo "¿Olvidaste tu contraseña?" (con o sin sesión) y Cambiar contraseña. */}
+      <Stack.Screen name="auth/restablecer" />
     </Stack>
     {/* Ventanitas de bienvenida: la primera vez que la cuenta entra (o al pedirlo desde el perfil). */}
     {conCarrera && <Recorrido />}

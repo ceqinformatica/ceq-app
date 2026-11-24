@@ -4,7 +4,8 @@ import { Image, Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Hexagono } from '../components/graficos';
 import { Boton, Campo, EvitaTeclado, logoCeq, Mensaje, s } from '../components/ui';
-import { entrarConCorreo, entrarConGoogle, registrarseConCorreo } from '../lib/auth';
+import { entrarConCorreo, entrarConGoogle, pedirRecuperarClave, registrarseConCorreo } from '../lib/auth';
+import { correoValido } from '../lib/recuperacion';
 import { supabaseConfigurado } from '../lib/supabase';
 import { colores, crearEstilos, espacio, fondos, fuentes, radio, sombras } from '../tema';
 import { useTema } from '../context/TemaProvider';
@@ -12,7 +13,7 @@ import { useTema } from '../context/TemaProvider';
 export default function Login() {
   useTema();
   const insets = useSafeAreaInsets();
-  const [modo, setModo] = useState<'inicio' | 'entrar' | 'registro'>('inicio');
+  const [modo, setModo] = useState<'inicio' | 'entrar' | 'registro' | 'recuperar'>('inicio');
   const [nombre, setNombre] = useState('');
   const [correo, setCorreo] = useState('');
   const [clave, setClave] = useState('');
@@ -74,6 +75,34 @@ export default function Login() {
               <Boton texto="Entrar con correo" icono="mail-outline" onPress={() => cambiarModo('entrar')} />
               <Boton texto="Crear cuenta" variante="fantasma" onPress={() => cambiarModo('registro')} />
             </>
+          ) : modo === 'recuperar' ? (
+            <>
+              <Pressable onPress={() => cambiarModo('entrar')} accessibilityRole="button" accessibilityLabel="Volver" hitSlop={8} style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: espacio.m }}>
+                <Ionicons name="chevron-back" size={18} color={colores.azul} />
+                <Text style={s.enlace}>Volver a entrar</Text>
+              </Pressable>
+              <Text style={est.titulo} accessibilityRole="header">Recuperar contraseña</Text>
+              <Text style={[s.sub, { marginBottom: espacio.l }]}>
+                Escribí el correo de tu cuenta y te mandamos un enlace para elegir una contraseña nueva.
+              </Text>
+              <Campo etiqueta="Correo" value={correo} onChangeText={setCorreo} keyboardType="email-address" autoCapitalize="none" autoComplete="email" textContentType="emailAddress" placeholder="nombre@ejemplo.com" />
+              <Boton
+                texto="Enviar enlace"
+                icono="send-outline"
+                cargando={cargando === 'recuperar'}
+                deshabilitado={!correoValido(correo)}
+                onPress={() =>
+                  ejecutar(
+                    'recuperar',
+                    () => pedirRecuperarClave(correo),
+                    `Si ${correo.trim()} tiene una cuenta, te llegó un correo. Abrí el enlace desde este mismo celular. Revisá también la carpeta de spam.`,
+                  )
+                }
+              />
+              <Text style={[s.filaDetalle, { marginTop: espacio.m }]}>
+                ¿Entrás con Google? Tu contraseña es la de Google y se recupera desde tu cuenta de Google, no acá.
+              </Text>
+            </>
           ) : (
             <>
               <Pressable onPress={() => cambiarModo('inicio')} accessibilityRole="button" accessibilityLabel="Volver" hitSlop={8} style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: espacio.m }}>
@@ -98,7 +127,12 @@ export default function Login() {
                 </Pressable>
               </View>
               {modo === 'entrar' ? (
-                <Boton texto="Entrar" cargando={cargando === 'correo'} deshabilitado={!correo || !clave} onPress={() => ejecutar('correo', () => entrarConCorreo(correo, clave))} />
+                <>
+                  <Boton texto="Entrar" cargando={cargando === 'correo'} deshabilitado={!correo || !clave} onPress={() => ejecutar('correo', () => entrarConCorreo(correo, clave))} />
+                  <Pressable onPress={() => cambiarModo('recuperar')} accessibilityRole="button" hitSlop={8} style={{ alignSelf: 'center', padding: espacio.s, marginTop: espacio.xs }}>
+                    <Text style={s.enlace}>¿Olvidaste tu contraseña?</Text>
+                  </Pressable>
+                </>
               ) : (
                 <Boton
                   texto="Crear cuenta"

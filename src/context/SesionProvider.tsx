@@ -6,7 +6,7 @@ import { db as demo, MODO_DEMO, UID_DEMO } from '../datos/demo';
 import { esErrorDeRed, textoError } from '../lib/errores';
 import { biometriaActiva, verificarIdentidad } from '../lib/biometria';
 import { almacenSeguro } from '../lib/almacenSeguro';
-import { borrarPin, comprobarPin, pinActivo, reiniciarIntentosPin, type ResultadoPin } from '../lib/pinGuardado';
+import { borrarPin, comprobarPin, guardarPin, pinActivo, reiniciarIntentosPin, type ResultadoPin } from '../lib/pinGuardado';
 import { supabase } from '../lib/supabase';
 import type { Perfil } from '../lib/tipos-db';
 
@@ -23,6 +23,11 @@ interface SesionCtx {
   bloqueado: boolean;
   desbloquear: () => Promise<boolean>;
   desbloquearConPin: (pin: string) => Promise<ResultadoPin>;
+  /**
+   * "Olvidé mi PIN": después de confirmar la cuenta (huella, Google o
+   * contraseña) guarda el PIN nuevo, o lo quita si no se eligió uno, y abre la app.
+   */
+  abrirConPinNuevo: (pinNuevo: string | null) => Promise<string | null>;
   recargarPerfil: () => Promise<void>;
   actualizarPerfil: (cambios: Partial<Pick<Perfil, 'nombre' | 'ci' | 'carrera_id' | 'plan_id' | 'anio_ingreso' | 'notif_avisos' | 'notif_recordatorios'>>) => Promise<string | null>;
 }
@@ -141,6 +146,17 @@ export function SesionProvider({ children }: { children: ReactNode }) {
     return r;
   }, []);
 
+  const abrirConPinNuevo = useCallback(async (pinNuevo: string | null) => {
+    if (pinNuevo) {
+      const err = await guardarPin(pinNuevo).catch(() => 'No se pudo guardar el PIN en este dispositivo.');
+      if (err) return err;
+    } else {
+      await borrarPin().catch(() => {});
+    }
+    setBloqueado(false);
+    return null;
+  }, []);
+
   const recargarPerfil = useCallback(() => cargarPerfil(sesion?.user.id), [cargarPerfil, sesion]);
 
   const actualizarPerfil = useCallback<SesionCtx['actualizarPerfil']>(
@@ -161,7 +177,7 @@ export function SesionProvider({ children }: { children: ReactNode }) {
   );
 
   return (
-    <Ctx.Provider value={{ cargando, sesion, perfil, errorPerfil, bloqueado, desbloquear, desbloquearConPin, recargarPerfil, actualizarPerfil }}>
+    <Ctx.Provider value={{ cargando, sesion, perfil, errorPerfil, bloqueado, desbloquear, desbloquearConPin, abrirConPinNuevo, recargarPerfil, actualizarPerfil }}>
       {children}
     </Ctx.Provider>
   );
