@@ -4,7 +4,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { Pressable, Text, View } from 'react-native';
 import { FichaMateria, LeyendaMalla, nombreSemestre, nota, type EstadoVisual } from '../../components/academico';
 import { useDisposicion } from '../../components/disposicion';
-import { BarraProgreso } from '../../components/graficos';
+import { AnilloProgreso, BarraProgreso } from '../../components/graficos';
 import { Boton, BotonIcono, CabeceraMarca, Cargando, Chip, Dato, EstadoVacio, Mensaje, Pantalla, s, Seccion, Tarjeta } from '../../components/ui';
 import { useSesion } from '../../context/SesionProvider';
 import { cargarMalla, guardarEstadosEnBloque, type CambioEstado } from '../../datos/academico';
@@ -184,10 +184,11 @@ export default function Carrera() {
     return { progreso, promedio, prom, cursando, estadoDe, semestres: [...semestres.entries()].sort((a, b) => orden(a[0]) - orden(b[0])) };
   }, [malla, filtro]);
 
+  const sub = [malla?.carrera, malla?.plan?.nombre].filter(Boolean).join(' · ') || 'Tu malla y tu avance';
 
   return (
     <View style={{ flex: 1, backgroundColor: fondos.fondo }}>
-    <Pantalla cabecera={<CabeceraMarca titulo="Mi carrera" compacta derecha={<BotonIcono icono="stats-chart" etiqueta="Promedio y estadísticas" claro onPress={() => router.push('/estadisticas')} />} sinConexion={sinConexion && malla ? error : null} />} refrescando={refrescando} onRefrescar={recargar}>
+    <Pantalla cabecera={<CabeceraMarca titulo="Mi carrera" sub={sub} derecha={<BotonIcono icono="stats-chart" etiqueta="Promedio y estadísticas" claro onPress={() => router.push('/estadisticas')} />} sinConexion={sinConexion && malla ? error : null} />} refrescando={refrescando} onRefrescar={recargar}>
       {cargando && !malla ? (
         <Tarjeta estilo={{ marginTop: -espacio.xxl }}><Cargando texto="Cargando tu malla…" /></Tarjeta>
       ) : error && !malla ? (
@@ -201,18 +202,8 @@ export default function Carrera() {
       ) : malla && vista ? (
         <>
           <Tarjeta estilo={{ marginTop: -espacio.xxl }} onPress={() => router.push('/estadisticas')} etiqueta="Ver promedio y estadísticas">
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: espacio.m }}>
-              <View style={est.matraz}><Ionicons name="flask-outline" size={30} color={colores.marino} /></View>
-              <View style={{ flex: 1 }}>
-                <Text style={[s.filaTitulo, { fontSize: 17, lineHeight: 22 }]} numberOfLines={2}>{malla.carrera ?? 'Mi carrera'}</Text>
-                <Text style={s.filaDetalle} numberOfLines={1}>{malla.plan?.nombre ? `${malla.plan.nombre} · FCQ - UNA` : 'Facultad de Ciencias Químicas - UNA'}</Text>
-              </View>
-            </View>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: espacio.m, marginTop: espacio.m }}>
-              <View style={{ flex: 1 }}><BarraProgreso valor={vista.progreso.porcentaje} alto={8} /></View>
-              <Text style={est.porcentaje}>{pctCorto(vista.progreso.porcentaje)}<Text style={{ fontSize: 13 }}>%</Text></Text>
-            </View>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: espacio.l, marginTop: espacio.m }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: espacio.l }}>
+              <AnilloProgreso porcentaje={vista.progreso.porcentaje} tamano={112} etiqueta="de la carrera" />
               <View style={{ flex: 1, gap: espacio.m }}>
                 <View style={{ flexDirection: 'row' }}>
                   <Dato valor={`${vista.progreso.obligatoriasAprobadas}/${vista.progreso.obligatoriasTotales}`} etiqueta="Obligatorias" />
@@ -392,11 +383,7 @@ export default function Carrera() {
   );
 }
 
-const pctCorto = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(1).replace('.', ','));
-
 const est = crearEstilos(() => ({
-  matraz: { width: 56, height: 56, borderRadius: 28, backgroundColor: fondos.cielo, alignItems: 'center', justifyContent: 'center' },
-  porcentaje: { fontFamily: fuentes.bold, fontSize: 22, color: colores.marino },
   icono: { width: 38, height: 38, borderRadius: 12, backgroundColor: fondos.tarjeta, alignItems: 'center', justifyContent: 'center' },
   barra: {
     position: 'absolute', left: espacio.l, right: espacio.l, bottom: espacio.l, flexDirection: 'row', alignItems: 'center', gap: espacio.m,
