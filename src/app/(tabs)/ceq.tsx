@@ -2,10 +2,11 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
+import Svg, { Path } from 'react-native-svg';
 import { Carnet } from '../../components/Carnet';
 import { AVISO_CARNET_PAGO } from '../../lib/carnet';
 import { BarraProgreso } from '../../components/graficos';
-import { Boton, CabeceraMarca, Campo, Chip, EstadoVacio, Esqueleto, Fila, Hoja, Mensaje, Pantalla, s, Seccion, Tarjeta } from '../../components/ui';
+import { Boton, BotonIcono, CabeceraMarca, Campo, Chip, EstadoVacio, Esqueleto, Fila, Hoja, Mensaje, Pantalla, s, Seccion, Tarjeta } from '../../components/ui';
 import { useSesion } from '../../context/SesionProvider';
 import { cargarAvisos, cargarEncuestas, haceCuanto, cargarSocio, enviarSugerencia, votar, type EncuestaConResultados } from '../../datos/ceq';
 import { cargarTramites } from '../../datos/tramites';
@@ -32,8 +33,13 @@ export default function Ceq() {
   const [sugerir, setSugerir] = useState(false);
 
   return (
-    <Pantalla cabecera={<CabeceraMarca titulo="Centro de Estudiantes" sub="de Química · FCQ" sinConexion={sinConexion && datos ? error : null} />} refrescando={refrescando} onRefrescar={recargar}>
+    <Pantalla
+      cabecera={<CabeceraMarca titulo="CEQ" compacta derecha={<BotonIcono icono="megaphone-outline" etiqueta="Ver avisos" claro onPress={() => router.push('/avisos')} />} sinConexion={sinConexion && datos ? error : null} />}
+      refrescando={refrescando}
+      onRefrescar={recargar}
+    >
       <View style={{ marginTop: -espacio.xxl }}>
+        <BannerCeq />
         {cargando && !datos ? (
           <Tarjeta><Esqueleto alto={150} /></Tarjeta>
         ) : datos?.socio ? (
@@ -68,6 +74,7 @@ export default function Ceq() {
         </Tarjeta>
       )}
 
+      <Seccion icono="grid-outline">Servicios</Seccion>
       <View style={est.accesos}>
         <Acceso icono="megaphone" texto="Avisos" onPress={() => router.push('/avisos')} />
         <Acceso icono="document-text" texto="Trámites" onPress={() => router.push('/tramites')} />
@@ -85,7 +92,7 @@ export default function Ceq() {
         />
       </Tarjeta>
 
-      <Seccion accion={{ texto: 'Ver todos', onPress: () => router.push('/avisos') }}>Avisos</Seccion>
+      <Seccion icono="newspaper-outline" accion={{ texto: 'Ver todas', onPress: () => router.push('/avisos') }}>Noticias</Seccion>
       {cargando && !datos ? (
         <Tarjeta><Esqueleto alto={14} ancho="70%" /><Esqueleto alto={12} estilo={{ marginTop: 10 }} /></Tarjeta>
       ) : datos?.avisos.length ? (
@@ -106,7 +113,7 @@ export default function Ceq() {
 
       {!!datos?.tramites.length && (
         <>
-          <Seccion accion={{ texto: `Ver los ${datos.totalTramites}`, onPress: () => router.push('/tramites') }}>Guía de trámites</Seccion>
+          <Seccion icono="document-text-outline" accion={{ texto: `Ver los ${datos.totalTramites}`, onPress: () => router.push('/tramites') }}>Guía de trámites</Seccion>
           <Tarjeta estilo={{ paddingVertical: espacio.xs }}>
             {datos.tramites.map((t, i) => (
               <Fila key={t.id} icono="document-text-outline" titulo={t.nombre} detalle={t.descripcion ?? undefined} onPress={() => router.push(`/tramite/${t.id}`)} ultima={i === datos.tramites.length - 1} />
@@ -128,6 +135,29 @@ export default function Ceq() {
 
       <FormSugerencia visible={sugerir} onCerrar={() => setSugerir(false)} />
     </Pantalla>
+  );
+}
+
+/** Banner del CEQ con su lema, sobre la cabecera. */
+function BannerCeq() {
+  const [{ ancho, alto }, setTam] = useState({ ancho: 0, alto: 128 });
+  return (
+    <View style={est.banner} onLayout={(e) => setTam({ ancho: Math.round(e.nativeEvent.layout.width), alto: Math.round(e.nativeEvent.layout.height) })} accessible accessibilityRole="header" accessibilityLabel="CEQ, Centro de Estudiantes FCQ - UNA. Juntos por una facultad mejor">
+      {ancho > 0 && (
+        <Svg width={ancho} height={alto} style={{ position: 'absolute', top: 0, left: 0 }} pointerEvents="none">
+          <Path d={`M ${ancho * 0.72} ${alto} L ${ancho} ${alto * 0.38} L ${ancho} ${alto * 0.6} L ${ancho * 0.84} ${alto} Z`} fill="#3B82E8" />
+          <Path d={`M ${ancho * 0.88} ${alto} L ${ancho} ${alto * 0.74} L ${ancho} ${alto} Z`} fill="#FFFFFF" fillOpacity={0.9} />
+          <Path d={`M ${ancho * 0.6} ${alto} L ${ancho} ${alto * 0.14} L ${ancho} ${alto * 0.24} L ${ancho * 0.65} ${alto} Z`} fill="#FFFFFF" fillOpacity={0.12} />
+        </Svg>
+      )}
+      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+        <View>
+          <Text style={est.bannerMarca}>CEQ</Text>
+          <Text style={est.bannerSub}>Centro de Estudiantes{'\n'}FCQ - UNA</Text>
+        </View>
+        <Text style={est.bannerLema}>Juntos por una{'\n'}facultad mejor</Text>
+      </View>
+    </View>
   );
 }
 
@@ -238,6 +268,10 @@ function FormSugerencia({ visible, onCerrar }: { visible: boolean; onCerrar: () 
 }
 
 const est = crearEstilos(() => ({
+  banner: { minHeight: 128, borderRadius: radio.l, backgroundColor: '#123172', padding: espacio.l, justifyContent: 'center', overflow: 'hidden', marginBottom: espacio.m },
+  bannerMarca: { fontFamily: fuentes.bold, fontSize: 40, lineHeight: 44, color: colores.blanco, letterSpacing: 1 },
+  bannerSub: { fontFamily: fuentes.medium, fontSize: 12, lineHeight: 15, color: colores.blanco },
+  bannerLema: { flex: 1, textAlign: 'right', paddingRight: espacio.xl, fontFamily: fuentes.semibold, fontStyle: 'italic', fontSize: 17, lineHeight: 22, color: colores.blanco, transform: [{ rotate: '-6deg' }] },
   iconoGrande: { width: 48, height: 48, borderRadius: 14, backgroundColor: fondos.tarjeta, alignItems: 'center', justifyContent: 'center' },
   accesos: { flexDirection: 'row', gap: espacio.s, marginTop: espacio.l, marginBottom: espacio.s },
   acceso: { flex: 1, alignItems: 'center', gap: 6, backgroundColor: fondos.superficieBlanca, borderRadius: radio.l, paddingVertical: espacio.m, ...sombras.suave },

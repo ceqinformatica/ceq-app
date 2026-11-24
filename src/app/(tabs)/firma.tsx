@@ -44,20 +44,13 @@ export default function Firma() {
   return (
     <Pantalla
       cabecera={
-        <CabeceraMarca titulo="Calculadora de firma" sub="Cuánto te falta para firmar cada materia" sinConexion={sinConexion && datos ? error : null}>
-          {datos && datos.length > 0 && (
-            <View style={{ flexDirection: 'row', gap: espacio.s, marginTop: espacio.l }}>
-              <Resumen numero={datos.length} texto="cursando" />
-              <Resumen numero={datos.filter((d) => d.semaforo === 'verde').length} texto="van bien" />
-              <Resumen numero={enRiesgo} texto="en riesgo" alerta={enRiesgo > 0} />
-            </View>
-          )}
-        </CabeceraMarca>
+        <CabeceraMarca titulo="Firma" sub="Cuánto te falta para firmar cada materia" sinConexion={sinConexion && datos ? error : null} />
       }
       refrescando={refrescando}
       onRefrescar={recargar}
     >
-      <View style={{ marginTop: -espacio.xl }}>
+      <View style={{ marginTop: -espacio.xxl }}>
+        {datos && datos.length > 0 && <EstadoFirmas total={datos.length} conFirma={datos.filter((d) => d.resultado.firma).length} enRiesgo={enRiesgo} />}
         {cargando && !datos ? (
           <Tarjeta><Cargando /></Tarjeta>
         ) : error && !datos ? (
@@ -96,7 +89,7 @@ export default function Firma() {
 
       {datos && datos.length > 0 && (
         <>
-          <Seccion>Cómo se calcula</Seccion>
+          <Seccion icono="information-circle-outline">Cómo se calcula</Seccion>
           <Tarjeta variante="celeste">
             <View style={{ flexDirection: 'row', gap: espacio.s }}>
               <Ionicons name="information-circle" size={20} color={colores.marino} />
@@ -111,12 +104,23 @@ export default function Firma() {
   );
 }
 
-function Resumen({ numero, texto, alerta }: { numero: number; texto: string; alerta?: boolean }) {
+/** Resumen arriba de todo: si vas bien con todas o cuántas hay que mirar. */
+function EstadoFirmas({ total, conFirma, enRiesgo }: { total: number; conFirma: number; enRiesgo: number }) {
+  const bien = enRiesgo === 0;
+  const color = bien ? colores.azul : colores.rojo;
   return (
-    <View style={{ flex: 1, backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: 12, paddingVertical: 10, paddingHorizontal: 12 }}>
-      <Text style={{ fontFamily: fuentes.bold, fontSize: 22, color: alerta ? '#FFC9C4' : colores.blanco }}>{numero}</Text>
-      <Text style={{ fontFamily: fuentes.medium, fontSize: 12, color: '#FFFFFF' }}>{texto}</Text>
-    </View>
+    <Tarjeta estilo={{ backgroundColor: bien ? fondos.cielo : fondos.rojoFondo, borderWidth: 1, borderColor: bien ? colores.linea : colores.rojo }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: espacio.l }}>
+        <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: fondos.superficieBlanca, alignItems: 'center', justifyContent: 'center' }}>
+          <Ionicons name={bien ? 'checkmark-circle' : 'alert-circle'} size={44} color={color} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={[s.filaTitulo, { fontSize: 15 }]}>Tu estado de firmas</Text>
+          <Text style={{ fontFamily: fuentes.bold, fontSize: 26, lineHeight: 31, color }}>{bien ? 'Vas bien' : `${enRiesgo} en riesgo`}</Text>
+          <Text style={s.filaDetalle}>{total} cursando · {conFirma} con la firma asegurada</Text>
+        </View>
+      </View>
+    </Tarjeta>
   );
 }
 

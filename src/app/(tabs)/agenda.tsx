@@ -4,7 +4,7 @@ import * as WebBrowser from 'expo-web-browser';
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { CampoFechaHora, hoy } from '../../components/fecha';
-import { CabeceraMarca, Boton, Campo, Cargando, Chip, EstadoVacio, Fila, Hoja, Insignia, Mensaje, Pantalla, s, Segmentado, Tarjeta } from '../../components/ui';
+import { CabeceraMarca, Boton, BotonIcono, Campo, Cargando, Chip, EstadoVacio, Fila, Hoja, Insignia, Mensaje, Pantalla, s, Segmentado, Tarjeta } from '../../components/ui';
 import { useSesion } from '../../context/SesionProvider';
 import {
   actualizarClase, borrarClase, borrarEvento, cargarAgenda, crearClases, crearEvento, cuentaRegresiva, DIAS, DIAS_CORTOS, diaSemanaHoy, diasHasta, hora, horaDe,
@@ -62,7 +62,7 @@ export default function Agenda() {
   return (
     <View style={{ flex: 1, backgroundColor: fondos.fondo }}>
       <Pantalla
-        cabecera={<CabeceraMarca titulo="Agenda" sub={vista === 'horario' ? 'Tu semana de clases' : 'Tus exámenes, entregas y recordatorios'} compacta sinConexion={sinConexion && datos ? error : null} />}
+        cabecera={<CabeceraMarca titulo="Agenda" sub={vista === 'horario' ? 'Tu semana de clases' : 'Tus exámenes, entregas y recordatorios'} compacta derecha={<BotonIcono icono="calendar-outline" etiqueta="Calendario de la facultad" claro onPress={() => router.push('/calendario')} />} sinConexion={sinConexion && datos ? error : null} />}
         refrescando={refrescando}
         onRefrescar={recargar}
       >

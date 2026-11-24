@@ -4,7 +4,7 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 import { pct, semaforoVisible } from '../../components/academico';
 import { Columnas } from '../../components/disposicion';
 import { Aparecer, PressableAnimado, useAparecer, usePresion, vibrar } from '../../components/movimiento';
-import { AnilloProgreso } from '../../components/graficos';
+import { AnilloProgreso, BarraProgreso } from '../../components/graficos';
 import { CabeceraMarca, EstadoVacio, Esqueleto, Pantalla, s, Seccion, Tarjeta, type NombreIcono } from '../../components/ui';
 import { useSesion } from '../../context/SesionProvider';
 import { aAsistencia, cargarFirmas, cargarMalla, REGLA_POR_DEFECTO, reglaDe, tieneLab } from '../../datos/academico';
@@ -67,8 +67,8 @@ export default function Inicio() {
             </Pressable>
           }
         >
-          <Text style={est.fecha}>{fecha.charAt(0).toUpperCase() + fecha.slice(1)}</Text>
-          <Text style={est.saludo}>{primerNombre ? `${saludo}, ${primerNombre}` : saludo}</Text>
+          <Text style={est.saludo}>{primerNombre ? `¡Hola, ${primerNombre}!` : `¡${saludo}!`}</Text>
+          <Text style={est.fecha}>{(datos?.progreso?.porcentaje ?? 0) > 0 ? 'Seguís avanzando' : fecha.charAt(0).toUpperCase() + fecha.slice(1)}</Text>
         </CabeceraMarca>
       }
       refrescando={refrescando}
@@ -83,17 +83,19 @@ export default function Inicio() {
           </View>
         ) : (
           <View style={{ flexDirection: 'row', gap: espacio.l, alignItems: 'center' }}>
-            <AnilloProgreso porcentaje={datos?.progreso?.porcentaje ?? 0} tamano={84} grosor={9} />
+            <AnilloProgreso porcentaje={datos?.progreso?.porcentaje ?? 0} tamano={96} grosor={10} />
             <View style={{ flex: 1 }}>
-              <Text style={est.etiquetaCaja}>PROGRESO DE CARRERA</Text>
-              <Text style={[s.filaTitulo, { fontSize: 16, color: colores.marino, marginTop: 2 }]}>
+              <Text style={est.etiquetaCaja}>Avance de carrera</Text>
+              <Text style={[s.filaDetalle, { fontSize: 15, lineHeight: 20, color: colores.texto, marginTop: 2 }]}>
                 {datos?.progreso?.obligatoriasTotales
                   ? (({ aprobadas, total }) => `${aprobadas} de ${total} materias aprobadas`)(materiasContadas(datos.progreso))
                   : error && !datos
                     ? 'No pudimos cargar tu avance'
                     : 'Tu malla está en preparación'}
               </Text>
-              <Text style={[s.filaDetalle, { marginTop: 2 }]}>Tocá para ver tu malla</Text>
+              <View style={{ marginTop: espacio.s }}>
+                <BarraProgreso valor={datos?.progreso?.porcentaje ?? 0} alto={7} />
+              </View>
             </View>
             <Ionicons name="chevron-forward" size={18} color={colores.textoTenue} />
           </View>
@@ -117,7 +119,7 @@ export default function Inicio() {
         izquierda={<>
 
       {/* Clases de hoy */}
-      <Seccion accion={{ texto: 'Horario', onPress: () => router.navigate('/agenda') }}>Hoy</Seccion>
+      <Seccion icono="calendar-outline" accion={{ texto: 'Horario', onPress: () => router.navigate('/agenda') }}>Hoy</Seccion>
       {cargando && !datos ? (
         <Esqueleto alto={84} estilo={{ borderRadius: radio.l }} />
       ) : datos?.clasesHoy.length ? (
@@ -132,6 +134,7 @@ export default function Inicio() {
                   <Text style={est.claseAula}>{h.aula}</Text>
                 </View>
               ) : null}
+              <View style={est.claseIcono}><Ionicons name="flask-outline" size={26} color={colores.blanco} /></View>
             </Aparecer>
           ))}
         </ScrollView>
@@ -145,7 +148,7 @@ export default function Inicio() {
       )}
 
       {/* Próximas fechas */}
-      <Seccion accion={{ texto: '+ Agregar', onPress: () => router.navigate('/agenda?nueva=fecha') }}>Mis próximas fechas</Seccion>
+      <Seccion icono="star" accion={{ texto: '+ Agregar', onPress: () => router.navigate('/agenda?nueva=fecha') }}>Próximas fechas</Seccion>
       <Tarjeta estilo={{ paddingVertical: espacio.s }}>
         {cargando && !datos ? (
           <Esqueleto alto={40} />
@@ -184,7 +187,7 @@ export default function Inicio() {
       {/* Firma en curso */}
       {!!datos?.firmas.length && (
         <>
-          <Seccion accion={{ texto: 'Calculadora', onPress: () => router.navigate('/firma') }}>Firma en curso</Seccion>
+          <Seccion icono="calculator-outline" accion={{ texto: 'Calculadora', onPress: () => router.navigate('/firma') }}>Firma en curso</Seccion>
           <Tarjeta estilo={{ paddingVertical: espacio.xs }}>
             {datos.firmas.map((m, i) => {
               const c = coloresSemaforo[m.firma ? 'verde' : m.semaforo];
@@ -204,7 +207,7 @@ export default function Inicio() {
       {/* Calendario de la facultad */}
       {!!datos?.facultad?.length && (
         <>
-          <Seccion accion={{ texto: 'Calendario', onPress: () => router.push('/calendario') }}>En la facultad</Seccion>
+          <Seccion icono="school-outline" accion={{ texto: 'Calendario', onPress: () => router.push('/calendario') }}>En la facultad</Seccion>
           <Tarjeta estilo={{ paddingVertical: espacio.xs }}>
             {datos.facultad.map((e, i) => <FilaCalendario key={e.id} e={e} hoy={hoyPy()} ultima={i === datos.facultad.length - 1} />)}
           </Tarjeta>
@@ -212,7 +215,7 @@ export default function Inicio() {
       )}
 
       {/* Avisos */}
-      <Seccion accion={{ texto: 'Ver todos', onPress: () => router.push('/avisos') }}>Avisos del CEQ</Seccion>
+      <Seccion icono="megaphone-outline" accion={{ texto: 'Ver todos', onPress: () => router.push('/avisos') }}>Avisos del CEQ</Seccion>
       {cargando && !datos ? (
         <Tarjeta><Esqueleto alto={14} ancho="60%" /><Esqueleto alto={12} estilo={{ marginTop: 10 }} /></Tarjeta>
       ) : datos?.avisos.length ? (
@@ -259,19 +262,20 @@ function Acceso({ icono, texto, onPress, retraso }: { icono: NombreIcono; texto:
 const est = crearEstilos(() => ({
   avatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: fondos.blanco, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#FFFFFF' },
   avatarTexto: { fontFamily: fuentes.bold, fontSize: 17, color: colores.marinoFijo },
-  fecha: { fontFamily: fuentes.medium, fontSize: 13.5, color: '#FFFFFF' },
-  saludo: { fontFamily: fuentes.bold, fontSize: 27, lineHeight: 33, color: colores.blanco, marginTop: 2, letterSpacing: -0.3 },
-  etiquetaCaja: { fontFamily: fuentes.semibold, fontSize: 10.5, letterSpacing: 1, color: colores.azul },
+  fecha: { fontFamily: fuentes.medium, fontSize: 16, color: colores.blanco, marginTop: 2 },
+  saludo: { fontFamily: fuentes.bold, fontSize: 28, lineHeight: 34, color: colores.blanco, marginTop: espacio.s, letterSpacing: -0.3 },
+  etiquetaCaja: { fontFamily: fuentes.bold, fontSize: 16, color: colores.texto },
   accesos: { flexDirection: 'row', gap: espacio.s, marginTop: espacio.xs, marginBottom: espacio.xs },
-  acceso: { flex: 1, alignItems: 'center', gap: 6, paddingVertical: espacio.m, backgroundColor: fondos.superficieBlanca, borderRadius: radio.l, ...sombras.suave },
-  accesoIcono: { width: 44, height: 44, borderRadius: 14, backgroundColor: fondos.tarjeta, alignItems: 'center', justifyContent: 'center' },
-  accesoTexto: { fontFamily: fuentes.semibold, fontSize: 12, color: colores.marino },
-  clase: { width: 170, minHeight: 104, backgroundColor: fondos.marino, borderRadius: radio.l, padding: espacio.m, gap: 4, ...sombras.suave },
+  acceso: { flex: 1, alignItems: 'center', gap: 6, paddingVertical: espacio.m + 2, backgroundColor: fondos.superficieBlanca, borderRadius: radio.l, borderWidth: 1, borderColor: colores.lineaSuave, ...sombras.suave },
+  accesoIcono: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  accesoTexto: { fontFamily: fuentes.semibold, fontSize: 13, color: colores.texto },
+  clase: { width: 280, minHeight: 92, backgroundColor: fondos.marinoProfundo, borderRadius: radio.l, padding: espacio.m, paddingLeft: espacio.l + 2, paddingRight: 56, gap: 4, borderLeftWidth: 5, borderLeftColor: colores.celesteVivo, ...sombras.suave },
+  claseIcono: { position: 'absolute', right: espacio.m, top: 0, bottom: 0, justifyContent: 'center' },
   claseHora: { fontFamily: fuentes.semibold, fontSize: 12, color: colores.celeste },
-  claseNombre: { fontFamily: fuentes.semibold, fontSize: 15, lineHeight: 19, color: colores.blanco },
+  claseNombre: { fontFamily: fuentes.bold, fontSize: 17, lineHeight: 22, color: colores.blanco },
   claseAula: { fontFamily: fuentes.regular, fontSize: 12, color: colores.celeste },
   evento: { flexDirection: 'row', alignItems: 'center', gap: espacio.m, paddingVertical: espacio.s + 2 },
-  fechaCaja: { width: 44, height: 46, borderRadius: 10, backgroundColor: fondos.tarjeta, alignItems: 'center', justifyContent: 'center' },
+  fechaCaja: { width: 46, height: 48, borderRadius: 10, backgroundColor: fondos.tarjeta, alignItems: 'center', justifyContent: 'center' },
   fechaDia: { fontFamily: fuentes.bold, fontSize: 17, lineHeight: 20, color: colores.marino },
   fechaMes: { fontFamily: fuentes.semibold, fontSize: 9.5, letterSpacing: 0.6, color: colores.textoSuave },
   cuenta: { fontFamily: fuentes.semibold, fontSize: 12, color: colores.textoSuave },
