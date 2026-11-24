@@ -1,17 +1,17 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useCallback, useEffect, useState } from 'react';
-import { Image, Pressable, ScrollView, Text, View } from 'react-native';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { Pressable, ScrollView, Text, View, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSesion } from '../context/SesionProvider';
 import { salir } from '../lib/auth';
 import { biometriaActiva, biometriaDisponible } from '../lib/biometria';
 import { problemaPin } from '../lib/pin';
 import { esperaPin, largoPin, reiniciarIntentosPin } from '../lib/pinGuardado';
-import { colores, espacio, fondos, fuentes, radio } from '../tema';
+import { colores, crearEstilos, espacio, fondos, fuentes } from '../tema';
 import { ConfirmarCuenta } from './ConfirmarCuenta';
-import { Hexagono } from './graficos';
 import { TecladoPin } from './TecladoPin';
-import { Boton, logoCeq, Mensaje } from './ui';
+import { LogoAcceso } from './LogoAcceso';
+import { Boton, Mensaje } from './ui';
 
 interface Metodos { bio: boolean; nombreBio: string; largo: number | null }
 
@@ -126,54 +126,53 @@ export function Bloqueo() {
 
   if (vista === 'recuperar') {
     return (
-      <View style={{ flex: 1, backgroundColor: fondos.celesteMarca }}>
+      <Fondo>
         <ScrollView
-          contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingTop: insets.top + espacio.l, paddingBottom: insets.bottom + espacio.l, paddingHorizontal: espacio.l }}
+          contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingTop: insets.top + espacio.xl, paddingBottom: insets.bottom + espacio.l, paddingHorizontal: espacio.xl }}
           keyboardShouldPersistTaps="handled"
           bounces={false}
         >
-          <View style={{ width: '100%', maxWidth: 440, alignSelf: 'center', backgroundColor: fondos.fondo, borderRadius: radio.xl, padding: espacio.xl }}>
+          <View style={{ width: '100%', maxWidth: 440, alignSelf: 'center' }}>
+            {/* ConfirmarCuenta trae su propio encabezado ("¿Olvidaste tu PIN?"), como en la maqueta. */}
+            <Text style={est.titulo}>Recuperá tu acceso</Text>
+            <Text style={[est.sub, { marginBottom: espacio.l }]}>Confirmá tu identidad para elegir un nuevo PIN.</Text>
             <ConfirmarCuenta onConfirmado={cuentaConfirmada} onCancelar={() => { setError(null); setVista('pin'); }} />
           </View>
         </ScrollView>
-      </View>
+      </Fondo>
     );
   }
 
   if (vista === 'nuevo' || vista === 'confirmar') {
     return (
-      <View style={{ flex: 1, backgroundColor: fondos.celesteMarca }}>
+      <Fondo>
         <ScrollView
           contentContainerStyle={{ flexGrow: 1, paddingTop: insets.top + espacio.l, paddingBottom: insets.bottom + espacio.l, paddingHorizontal: espacio.xl }}
           bounces={false}
         >
-          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', width: '100%', maxWidth: 420, alignSelf: 'center' }}>
-            <Ionicons name="checkmark-circle" size={44} color={colores.blanco} />
-            <Text style={{ fontFamily: fuentes.bold, fontSize: 22, color: colores.blanco, marginTop: espacio.m, textTransform: 'uppercase', letterSpacing: 1, textAlign: 'center' }} accessibilityRole="header">
+          <View style={est.centro}>
+            <Text style={est.titulo} accessibilityRole="header">
               {vista === 'nuevo' ? 'Elegí un PIN nuevo' : 'Confirmá el PIN'}
             </Text>
-            <Text style={{ fontFamily: fuentes.regular, fontSize: 15, color: '#FFFFFF', marginTop: espacio.s, marginBottom: espacio.xl, textAlign: 'center' }} accessibilityLiveRegion="polite">
-              {vista === 'nuevo' ? 'Ya confirmamos que sos vos. Escribí de 4 a 6 números y tocá ✓.' : 'Escribilo otra vez para confirmar.'}
+            <Text style={[est.sub, { marginBottom: espacio.l }]} accessibilityLiveRegion="polite">
+              {vista === 'nuevo' ? 'Escribí de 4 a 6 números y tocá ✓.' : 'Escribilo otra vez para confirmar.'}
             </Text>
             <TecladoPin
               key={vista}
-              sobreMarca
               largo={vista === 'confirmar' ? pinNuevo.length : null}
               reinicio={intento}
               deshabilitado={comprobando}
               onCompleto={vista === 'nuevo' ? conPinNuevo : conConfirmacion}
             />
           </View>
-          <View style={{ width: '100%', maxWidth: 420, alignSelf: 'center', marginTop: espacio.l }}>
+          <View style={est.abajo}>
             <Mensaje texto={error} />
             <Pressable onPress={sinPin} accessibilityRole="button" style={{ alignSelf: 'center', padding: espacio.m, marginTop: espacio.s }}>
-              <Text style={{ fontFamily: fuentes.semibold, fontSize: 14, color: '#FFFFFF', textAlign: 'center' }}>
-                {metodos?.bio ? `Seguir solo con la ${metodos.nombreBio}` : 'Seguir sin PIN'}
-              </Text>
+              <Text style={est.enlace}>{metodos?.bio ? `Seguir solo con la ${metodos.nombreBio}` : 'Seguir sin PIN'}</Text>
             </Pressable>
           </View>
         </ScrollView>
-      </View>
+      </Fondo>
     );
   }
 
@@ -187,27 +186,38 @@ export function Bloqueo() {
         : 'Escribí tu PIN para entrar.'
       : 'Usá tu huella o tu rostro para entrar.';
 
+  const pie = (
+        <View style={est.abajo}>
+          <Mensaje texto={error} />
+          {metodos && !conPinActivo && <Boton texto="Desbloquear" onPress={conBiometria} />}
+          {conPinActivo && bloqueoTotal && <Boton texto="Crear un PIN nuevo" onPress={() => { setError(null); setVista('recuperar'); }} />}
+          {conPinActivo && !bloqueoTotal && (
+            <Pressable onPress={() => { setError(null); setVista('recuperar'); }} accessibilityRole="button" style={{ alignSelf: 'center', padding: espacio.m }}>
+              <Text style={[est.enlace, { fontFamily: fuentes.bold, fontSize: 15, textDecorationLine: 'underline' }]}>¿Olvidaste tu PIN?</Text>
+            </Pressable>
+          )}
+          <Pressable onPress={salir} accessibilityRole="button" style={{ alignSelf: 'center', padding: espacio.m, marginTop: espacio.xs }}>
+            <Text style={est.enlace}>Cerrar sesión</Text>
+          </Pressable>
+        </View>
+  );
+
   return (
-    <View style={{ flex: 1, backgroundColor: fondos.celesteMarca }}>
+    <Fondo>
       <ScrollView
         contentContainerStyle={{ flexGrow: 1, paddingTop: insets.top + espacio.l, paddingBottom: insets.bottom + espacio.l, paddingHorizontal: espacio.xl }}
         bounces={false}
       >
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', width: '100%', maxWidth: 420, alignSelf: 'center' }}>
-          <Hexagono tamano={conPinActivo ? 76 : 112} relleno={fondos.blanco}>
-            <Image source={logoCeq} style={{ width: conPinActivo ? 52 : 76, height: conPinActivo ? 52 : 76 }} accessibilityLabel="Logo del CEQ" />
-          </Hexagono>
-          <Text style={{ fontFamily: fuentes.bold, fontSize: 22, color: colores.blanco, marginTop: espacio.l, textTransform: 'uppercase', letterSpacing: 1 }} accessibilityRole="header">
-            App bloqueada
-          </Text>
-          <Text style={{ fontFamily: fuentes.regular, fontSize: 15, color: '#FFFFFF', marginTop: espacio.s, marginBottom: espacio.xl, textAlign: 'center' }}>
-            {subtitulo}
-          </Text>
+        <View style={est.centro}>
+          <View style={{ marginBottom: espacio.m }}>
+            <LogoAcceso tamano={conPinActivo ? 64 : 92} />
+          </View>
+          <Text style={est.titulo} accessibilityRole="header">Desbloqueá tu portal</Text>
+          <Text style={[est.sub, { marginBottom: espacio.l }]}>{subtitulo}</Text>
 
           {metodos && conPinActivo && !bloqueoTotal && (
             <>
               <TecladoPin
-                sobreMarca
                 largo={metodos.largo}
                 reinicio={intento}
                 deshabilitado={espera > 0 || comprobando}
@@ -215,7 +225,7 @@ export function Bloqueo() {
                 teclaExtra={metodos.bio ? { icono: iconoBio, etiqueta: `Usar ${metodos.nombreBio}`, onPress: conBiometria } : undefined}
               />
               {espera > 0 && (
-                <Text style={{ fontFamily: fuentes.semibold, fontSize: 14, color: '#FFFFFF', marginTop: espacio.s }} accessibilityLiveRegion="polite">
+                <Text style={[est.sub, { fontFamily: fuentes.semibold, marginTop: espacio.s }]} accessibilityLiveRegion="polite">
                   Esperá {formatoEspera(espera)} para volver a probar.
                 </Text>
               )}
@@ -223,29 +233,46 @@ export function Bloqueo() {
           )}
 
           {metodos && (!conPinActivo || (bloqueoTotal && metodos.bio)) && (
-            <Pressable onPress={conBiometria} accessibilityRole="button" accessibilityLabel="Desbloquear" style={({ pressed }) => ({ marginTop: espacio.l, width: 84, height: 84, borderRadius: 42, backgroundColor: pressed ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.14)', alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: 'rgba(203,226,250,0.5)' })}>
-              <Ionicons name={iconoBio} size={44} color={colores.blanco} />
+            <Pressable
+              onPress={conBiometria}
+              accessibilityRole="button"
+              accessibilityLabel={`Usar ${metodos.nombreBio}`}
+              style={({ pressed }) => [est.huella, pressed && { backgroundColor: fondos.cielo }]}
+            >
+              <Ionicons name={iconoBio} size={40} color={colores.marino} />
             </Pressable>
           )}
+          {!conPinActivo && pie}
         </View>
 
-        <View style={{ width: '100%', maxWidth: 420, alignSelf: 'center', marginTop: espacio.l }}>
-          <Mensaje texto={error} />
-          {metodos && !conPinActivo && <Boton texto="Desbloquear" variante="claro" onPress={conBiometria} />}
-          {conPinActivo && bloqueoTotal && <Boton texto="Crear un PIN nuevo" variante="claro" onPress={() => { setError(null); setVista('recuperar'); }} />}
-          {conPinActivo && !bloqueoTotal && (
-            <Pressable onPress={() => { setError(null); setVista('recuperar'); }} accessibilityRole="button" style={{ alignSelf: 'center', padding: espacio.m }}>
-              <Text style={{ fontFamily: fuentes.bold, fontSize: 15, color: '#FFFFFF', textAlign: 'center', textDecorationLine: 'underline' }}>¿Olvidaste tu PIN?</Text>
-            </Pressable>
-          )}
-          <Pressable onPress={salir} accessibilityRole="button" style={{ alignSelf: 'center', padding: espacio.m, marginTop: espacio.s }}>
-            <Text style={{ fontFamily: fuentes.semibold, fontSize: 14, color: '#FFFFFF', textAlign: 'center' }}>Cerrar sesión</Text>
-          </Pressable>
-        </View>
+        {conPinActivo && pie}
       </ScrollView>
+    </Fondo>
+  );
+}
+
+/** Fondo claro con un círculo decorativo arriba a la izquierda (como la maqueta). */
+function Fondo({ children }: { children: ReactNode }) {
+  return (
+    <View style={{ flex: 1, backgroundColor: fondos.fondo, overflow: 'hidden' }}>
+      <View pointerEvents="none" style={est.circulo} />
+      {children}
     </View>
   );
 }
+
+const est = crearEstilos(() => ({
+  centro: { flex: 1, alignItems: 'center', justifyContent: 'center', width: '100%', maxWidth: 420, alignSelf: 'center' } as ViewStyle,
+  abajo: { width: '100%', maxWidth: 420, alignSelf: 'center', marginTop: espacio.l } as ViewStyle,
+  titulo: { fontFamily: fuentes.bold, fontSize: 28, color: colores.texto, textAlign: 'center', letterSpacing: -0.4 },
+  sub: { fontFamily: fuentes.regular, fontSize: 14.5, color: colores.textoSuave, marginTop: espacio.s, textAlign: 'center' },
+  enlace: { fontFamily: fuentes.semibold, fontSize: 14.5, color: colores.marino, textAlign: 'center' },
+  huella: {
+    marginTop: espacio.s, marginBottom: espacio.l, width: 84, height: 84, borderRadius: 42, backgroundColor: fondos.tarjeta,
+    alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colores.linea,
+  } as ViewStyle,
+  circulo: { position: 'absolute', top: -110, left: -150, width: 300, height: 300, borderRadius: 150, backgroundColor: fondos.burbuja } as ViewStyle,
+}));
 
 function formatoEspera(seg: number): string {
   if (seg < 60) return `${seg} s`;
