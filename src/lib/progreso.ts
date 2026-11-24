@@ -36,6 +36,8 @@ export interface EstadoEstudiante {
   promedioFirma?: number | null;
   /** Volvió a cursar la materia y todavía puede deshacerlo. */
   puedeDeshacerRecursada?: boolean;
+  /** Semestre en que quedó firmada o aprobada ("2026-1"), si se sabe. */
+  periodo?: string | null;
 }
 
 export type UnidadAvance = 'materias' | 'creditos' | 'horas';

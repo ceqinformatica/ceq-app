@@ -3,7 +3,8 @@
  * pantallas. Usa Supabase, o los datos de ejemplo en modo demostración.
  * El cálculo vive en src/lib/progreso.ts y src/lib/firma.ts.
  */
-import { periodoAlCambiar, periodoDe } from '../lib/finales';
+import { periodoAlCambiar, periodoDe, recuReguDespuesDeFinal } from '../lib/finales';
+import { conParcialesMinimos, idPredefinido } from '../lib/firma-carga';
 import { pesosIguales, type Asistencia, type Evaluacion, type ReglaFirma } from '../lib/firma';
 import type { EstadoEstudiante, EstadoMateria, GrupoOptativas, Materia, Prerrequisito, UnidadAvance } from '../lib/progreso';
 import type { IntentoAImportar, PlanImportacion } from '../lib/extracto-ealu';
@@ -40,7 +41,7 @@ export async function cargarMalla(planId: string, carreraId?: string | null): Pr
   let pre: PrerrequisitoDb[];
   let reglas: ReglaFirmaDb[];
   let finalesDb: Pick<ExamenFinalDb, 'materia_id' | 'nota' | 'llamado' | 'periodo' | 'fecha' | 'tipo'>[];
-  let estadosDb: { materia_id: string; estado: EstadoMateria; nota_final: number | null; promedio_firma?: number | null; respaldo_recursada?: unknown }[];
+  let estadosDb: { materia_id: string; estado: EstadoMateria; nota_final: number | null; promedio_firma?: number | null; respaldo_recursada?: unknown; periodo?: string | null }[];
 
   if (MODO_DEMO) {
     await esperar();
@@ -71,7 +72,7 @@ export async function cargarMalla(planId: string, carreraId?: string | null): Pr
     if (ids.length) {
       const [rPre, rEst, rFin] = await Promise.all([
         supabase.from('prerrequisitos').select('*').in('materia_id', ids),
-        supabase.from('materias_estudiante').select('materia_id, estado, nota_final, promedio_firma, respaldo_recursada').in('materia_id', ids),
+        supabase.from('materias_estudiante').select('materia_id, estado, nota_final, promedio_firma, respaldo_recursada, periodo').in('materia_id', ids),
         supabase.from('examenes_finales').select('materia_id, nota, llamado, periodo, fecha, tipo').in('materia_id', ids),
       ]);
       lanzar(rPre.error); lanzar(rEst.error); lanzar(rFin.error);
@@ -97,6 +98,7 @@ export async function cargarMalla(planId: string, carreraId?: string | null): Pr
       notaFinal: e.nota_final,
       promedioFirma: e.promedio_firma == null ? null : Number(e.promedio_firma),
       puedeDeshacerRecursada: e.estado === 'cursando' && e.respaldo_recursada != null,
+      periodo: e.periodo ?? null,
     }])),
     reglas,
     unidad: plan?.unidad_avance ?? 'materias',
@@ -109,8 +111,16 @@ export async function cargarMalla(planId: string, carreraId?: string | null): Pr
 
 export async function guardarEstadoMateria(materiaId: string, estado: EstadoMateria, notaFinal: number | null) {
   const nota = estado === 'aprobada' ? notaFinal : null;
+  // Si deja de estar aprobada (por ejemplo, cargó un final por error y la
+  // vuelve a marcar como firmada), se borran los finales aprobados de esta
+  // cursada: si no, la nota seguiría contando en el promedio y la base la
+  // volvería a aprobar. Los aplazos se conservan.
+  const borrarAprobados = estado !== 'aprobada';
   if (MODO_DEMO) {
     await esperar(150);
+    if (borrarAprobados) {
+      db.finales = db.finales.filter((f) => !(f.materia_id === materiaId && !f.cursada_anterior && (f.tipo ?? 'final') === 'final' && f.nota != null && f.nota >= 2));
+    }
     const previo = db.estados.find((e) => e.materia_id === materiaId);
     db.estados = db.estados.filter((e) => e.materia_id !== materiaId);
     if (estado !== 'pendiente') {
@@ -118,6 +128,10 @@ export async function guardarEstadoMateria(materiaId: string, estado: EstadoMate
       db.estados.push({ usuario_id: UID_DEMO, materia_id: materiaId, estado, nota_final: nota, fecha: null, periodo, updated_at: new Date().toISOString() });
     }
     return;
+  }
+  if (borrarAprobados) {
+    const r = await supabase.from('examenes_finales').delete().eq('materia_id', materiaId).eq('cursada_anterior', false).eq('tipo', 'final').gte('nota', 2);
+    lanzar(r.error);
   }
   if (estado === 'pendiente') {
     const { error } = await supabase.from('materias_estudiante').delete().eq('materia_id', materiaId);
@@ -283,6 +297,8 @@ export async function cargarFinales(materiaId: string): Promise<ExamenFinalDb[]>
  * firmada si ya no hay ninguna aprobada. Los intentos de una cursada
  * anterior no se tocan.
  */
+export const ERROR_REGU_TRAS_FINAL = 'Ya rendiste un final: después no se puede rendir Recu ni Regu. Si te equivocaste, cambiá ese llamado a "No rendí".';
+
 export async function guardarFinales(materiaId: string, periodo: string, llamados: LlamadoCargado[]) {
   if (llamados.filter((l) => l.tipo === 'recuperatorio' || l.tipo === 'regularizacion').length > 1) {
     throw new Error('Recu o Regu: se usa uno solo por cursada.');
@@ -295,8 +311,13 @@ export async function guardarFinales(materiaId: string, periodo: string, llamado
     nota: l.tipo && l.tipo !== 'final' ? null : l.nota,
     porcentaje: l.tipo && l.tipo !== 'final' ? null : l.porcentaje,
   }));
+  // Después de rendir un final ya no se rinde Recu ni Regu (en este semestre ni en los anteriores).
+  const fueraDeOrden = (otros: { periodo: string | null; llamado: number | null; tipo?: string | null }[]) => {
+    if (recuReguDespuesDeFinal([...otros.filter((o) => o.periodo !== periodo), ...filas])) throw new Error(ERROR_REGU_TRAS_FINAL);
+  };
   if (MODO_DEMO) {
     await esperar(200);
+    fueraDeOrden(db.finales.filter((f) => f.materia_id === materiaId && !f.cursada_anterior));
     // Igual que el índice de la base: Recu o Regu, uno solo por cursada.
     const otro = db.finales.some((f) => f.materia_id === materiaId && f.periodo !== periodo && !f.cursada_anterior && (f.tipo === 'recuperatorio' || f.tipo === 'regularizacion'));
     if (otro && filas.some((f) => f.tipo !== 'final')) throw new Error('Ya usaste el Recu o la Regu en otro semestre de esta cursada. Se usa uno solo.');
@@ -314,6 +335,11 @@ export async function guardarFinales(materiaId: string, periodo: string, llamado
       Object.assign(e, { estado: 'firmada', nota_final: null, nota_desde_final: false });
     }
     return;
+  }
+  {
+    const r = await supabase.from('examenes_finales').select('periodo, llamado, tipo').eq('materia_id', materiaId).eq('cursada_anterior', false);
+    lanzar(r.error);
+    fueraDeOrden((r.data ?? []) as { periodo: string | null; llamado: number | null; tipo: string | null }[]);
   }
   // Antes de borrar: si el Recu o la Regu ya se usó en otro semestre, el
   // insert fallaría y se perderían los finales de este semestre.
@@ -452,7 +478,11 @@ export async function cargarFirmas(materiaIds: string[]): Promise<Map<string, Da
   }
   const mapa = new Map<string, DatosFirma>();
   for (const id of materiaIds) {
-    const evaluacionesDb = evals.filter((e) => e.materia_id === id);
+    // Toda cátedra toma al menos dos parciales: si faltan, aparecen pendientes.
+    const evaluacionesDb = conParcialesMinimos(evals.filter((e) => e.materia_id === id), (nombre, orden) => ({
+      id: idPredefinido(orden), usuario_id: '', materia_id: id, nombre, componente: 'teoria' as const, ponderacion: 1,
+      porcentaje: null, puntaje_obtenido: null, puntaje_total: null, rendida: false, fecha: null, orden, created_at: '',
+    }));
     // Regularización (ocupa el parcial faltado), recuperatorio (reemplaza el
     // parcial más bajo) y pesos automáticos.
     const reg = aplicarRegularizacion(evaluacionesDb.map(aEvaluacion));
