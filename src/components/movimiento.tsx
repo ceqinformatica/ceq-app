@@ -125,3 +125,31 @@ export function NumeroAnimado({ valor, decimales = 0, estilo, sufijo = '', child
     </Text>
   );
 }
+
+/**
+ * Para ventanas flotantes (Modal con animationType="none"): el velo se
+ * funde y la ventana entra por su cuenta, en vez de deslizar todo junto.
+ * `montado` sigue en true mientras corre la salida, para que se vea cerrar.
+ * `progreso` va de 0 (cerrada) a 1 (abierta).
+ */
+export function useEntradaFlotante(visible: boolean) {
+  const r = useReducido();
+  const progreso = useRef(new Animated.Value(0)).current;
+  const [montado, setMontado] = useState(visible);
+  useEffect(() => {
+    const nativo = Platform.OS !== 'web';
+    if (visible) {
+      setMontado(true);
+      if (r) { progreso.setValue(1); return; }
+      const a = Animated.spring(progreso, { toValue: 1, speed: 16, bounciness: 4, useNativeDriver: nativo });
+      a.start();
+      return () => a.stop();
+    }
+    if (r) { progreso.setValue(0); setMontado(false); return; }
+    let vivo = true;
+    const a = Animated.timing(progreso, { toValue: 0, duration: 170, easing: Easing.in(Easing.quad), useNativeDriver: nativo });
+    a.start(({ finished }) => { if (finished && vivo) setMontado(false); });
+    return () => { vivo = false; a.stop(); };
+  }, [visible, r, progreso]);
+  return { montado, progreso };
+}

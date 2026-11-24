@@ -4,17 +4,34 @@
  */
 import type { ColorVentana, FrecuenciaVentana, VentanaDb } from './tipos-db';
 
-/** Paleta fija (no cambia con el tema): fondo y color del texto. */
+/**
+ * Valor guardado para "Según el tema del usuario": cada estudiante la ve
+ * clara u oscura, como tenga la app. Se guarda como 'blanco' (el valor que
+ * ya aceptaba la base), así no hace falta cambiar la base de datos.
+ */
+export const COLOR_TEMA = 'blanco';
+
+/** Colores fijos (no cambian con el tema): fondo y color del texto. */
 export const PALETA_VENTANA: Record<string, { fondo: string; texto: string; nombre: string }> = {
   celeste: { fondo: '#1879B4', texto: '#FFFFFF', nombre: 'Celeste' },
   marino: { fondo: '#0E4A73', texto: '#FFFFFF', nombre: 'Marino' },
   rojo: { fondo: '#B23A3A', texto: '#FFFFFF', nombre: 'Rojo' },
   amarillo: { fondo: '#F4C542', texto: '#1F2A33', nombre: 'Amarillo' },
   gris: { fondo: '#4A5866', texto: '#FFFFFF', nombre: 'Gris' },
-  blanco: { fondo: '#FFFFFF', texto: '#0F5F94', nombre: 'Blanco' },
 };
 
+/** Colores de la ventana "según el tema" en cada modo (los mismos de las tarjetas de la app). */
+export const TEMA_VENTANA = {
+  claro: { fondo: '#FFFFFF', texto: '#17233A', suave: '#55657E', boton: '#1B4B9B', textoBoton: '#FFFFFF', burbuja: '#DCE8F8', icono: '#1B4B9B', velo: 'rgba(15, 35, 70, 0.45)' },
+  oscuro: { fondo: '#16223A', texto: '#E4EAF3', suave: '#A3B0C6', boton: '#24519E', textoBoton: '#FFFFFF', burbuja: '#1A2D52', icono: '#9DBFF2', velo: 'rgba(0, 0, 0, 0.6)' },
+} as const;
+
+export type ColoresDeVentana = { fondo: string; texto: string; suave: string; boton: string; textoBoton: string; burbuja: string; icono: string; velo: string };
+
 export const esColorPropio = (c: string) => /^#[0-9A-Fa-f]{6}$/.test(c);
+export const esColorTema = (c: string) => c === COLOR_TEMA;
+/** ¿Es un valor de color que la base acepta? */
+export const colorValido = (c: string) => esColorTema(c) || esColorPropio(c) || Boolean(PALETA_VENTANA[c]);
 
 /** Luminancia relativa (WCAG) de un #RRGGBB. */
 function luminancia(hex: string): number {
@@ -25,18 +42,32 @@ function luminancia(hex: string): number {
   return 0.2126 * canal(1) + 0.7152 * canal(3) + 0.0722 * canal(5);
 }
 
-/** Fondo y texto de una ventana. Con un color propio, el texto es blanco o casi negro según contraste. */
-export function coloresVentana(color: ColorVentana): { fondo: string; texto: string } {
+/** Con un color de fondo y su texto: el botón va del color del texto, el texto del botón del color del fondo. */
+function deColorFijo(fondo: string, texto: string, oscuro: boolean): ColoresDeVentana {
+  const textoClaro = texto === '#FFFFFF';
+  return {
+    fondo, texto, suave: texto, boton: texto, textoBoton: fondo, icono: texto,
+    burbuja: textoClaro ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.08)',
+    velo: TEMA_VENTANA[oscuro ? 'oscuro' : 'claro'].velo,
+  };
+}
+
+/**
+ * Colores de una ventana. "Según el tema" sigue el modo claro u oscuro de
+ * quien la ve; con un color propio, el texto es blanco o casi negro según contraste.
+ */
+export function coloresVentana(color: ColorVentana, oscuro = false): ColoresDeVentana {
+  if (esColorTema(color)) return { ...TEMA_VENTANA[oscuro ? 'oscuro' : 'claro'] };
   const p = PALETA_VENTANA[color];
-  if (p) return { fondo: p.fondo, texto: p.texto };
+  if (p) return deColorFijo(p.fondo, p.texto, oscuro);
   if (esColorPropio(color)) {
     const l = luminancia(color);
     // Contraste contra blanco (1.05/(l+0.05)) vs. contra #1F2A33 (l≈0.022).
     const blanco = 1.05 / (l + 0.05);
-    const oscuro = (l + 0.05) / (0.022 + 0.05);
-    return { fondo: color, texto: blanco >= oscuro ? '#FFFFFF' : '#1F2A33' };
+    const negro = (l + 0.05) / (0.022 + 0.05);
+    return deColorFijo(color, blanco >= negro ? '#FFFFFF' : '#1F2A33', oscuro);
   }
-  return { fondo: PALETA_VENTANA.celeste.fondo, texto: PALETA_VENTANA.celeste.texto };
+  return { ...TEMA_VENTANA[oscuro ? 'oscuro' : 'claro'] };
 }
 
 /** Cuándo vio cada ventana este usuario: id → { version (updated_at), dia (AAAA-MM-DD) }. */
@@ -112,6 +143,6 @@ export function validarVentana(f: FormularioVentana): string | null {
   if (bt.length > LIMITE_BOTON_VENTANA) return `El botón puede tener hasta ${LIMITE_BOTON_VENTANA} letras.`;
   if (bd && !destinoValido(bd)) return 'El botón tiene que llevar a una pantalla de la app o a un enlace https://';
   if (!f.cerrable && !bt) return 'Si no se puede cerrar, poné un botón: es la única forma de salir.';
-  if (!PALETA_VENTANA[f.color] && !esColorPropio(f.color)) return 'El color tiene que ser de la lista o un código como #1879B4.';
+  if (!colorValido(f.color)) return 'El color tiene que ser de la lista o un código como #1879B4.';
   return null;
 }

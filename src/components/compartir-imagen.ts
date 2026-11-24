@@ -10,9 +10,14 @@ export const puedeCompartirImagen = true;
  * Saca una imagen PNG de la vista (que tiene que tener collapsable={false})
  * y abre el menú de compartir del teléfono (WhatsApp, Instagram, Galería…).
  */
-export async function compartirVistaComoImagen(ref: RefObject<ComponentRef<typeof View> | null>, titulo: string): Promise<void> {
+export async function compartirVistaComoImagen(
+  ref: RefObject<ComponentRef<typeof View> | null>,
+  titulo: string,
+  /** Tamaño final en píxeles (misma proporción que la vista, para que no se estire). */
+  tamano?: { width: number; height: number },
+): Promise<void> {
   if (!ref.current) throw new Error('No se pudo armar la imagen. Probá de nuevo.');
   if (!(await Sharing.isAvailableAsync())) throw new Error('Tu teléfono no permite compartir desde la app.');
-  const uri = await captureRef(ref, { format: 'png', quality: 1, result: 'tmpfile' });
+  const uri = await captureRef(ref, { format: 'png', quality: 1, result: 'tmpfile', ...tamano });
   await Sharing.shareAsync(uri, { mimeType: 'image/png', UTI: 'public.png', dialogTitle: titulo });
 }

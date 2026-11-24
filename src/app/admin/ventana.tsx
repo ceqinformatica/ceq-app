@@ -14,7 +14,7 @@ import { borrarVentana, cargarVentanasAdmin, guardarVentana, subirImagenVentana 
 import { textoError } from '../../lib/errores';
 import { leerFechaHora, partesDe } from '../../lib/programacion';
 import type { Carrera, FormaVentana, FrecuenciaVentana, VentanaDb } from '../../lib/tipos-db';
-import { coloresVentana, esColorPropio, LIMITE_BOTON_VENTANA, LIMITE_CUERPO_VENTANA, LIMITE_TITULO_VENTANA, PALETA_VENTANA, validarVentana } from '../../lib/ventanas';
+import { COLOR_TEMA, colorValido, coloresVentana, esColorPropio, esColorTema, LIMITE_BOTON_VENTANA, LIMITE_CUERPO_VENTANA, LIMITE_TITULO_VENTANA, PALETA_VENTANA, validarVentana } from '../../lib/ventanas';
 import { colores, espacio, fondos, radio } from '../../tema';
 
 const volver = () => (router.canGoBack() ? router.back() : router.replace('/admin/ventanas'));
@@ -31,7 +31,7 @@ const DURACIONES = [
 
 /** Crear o editar una ventana flotante, con vista previa en vivo. */
 export default function EditarVentana() {
-  useTema();
+  const { oscuro } = useTema();
   const { id } = useLocalSearchParams<{ id?: string }>();
   const editando = Boolean(id);
   const [cargando, setCargando] = useState(editando);
@@ -44,7 +44,9 @@ export default function EditarVentana() {
   const [botonTexto, setBotonTexto] = useState('');
   const [destino, setDestino] = useState('');
   const [web, setWeb] = useState(false);
-  const [color, setColor] = useState('celeste');
+  const [color, setColor] = useState<string>(COLOR_TEMA);
+  // La vista previa se puede ver en modo claro u oscuro (las ventanas "según el tema" cambian).
+  const [previaOscuro, setPreviaOscuro] = useState<boolean | null>(null);
   const [hex, setHex] = useState('');
   const [forma, setForma] = useState<FormaVentana>('centro');
   const [alineacion, setAlineacion] = useState<'izquierda' | 'centro'>('centro');
@@ -190,9 +192,12 @@ export default function EditarVentana() {
 
   const dibujo = {
     titulo, cuerpo, imagen_url: /^https:\/\/\S+$/.test(imagen.trim()) ? imagen.trim() : null, icono: icono || null,
-    boton_texto: botonTexto.trim() || null, boton_destino: destino || null, color: esColorPropio(colorFinal) || PALETA_VENTANA[colorFinal] ? colorFinal : 'celeste',
+    boton_texto: botonTexto.trim() || null, boton_destino: destino || null, color: colorValido(colorFinal) ? colorFinal : COLOR_TEMA,
     forma, alineacion, cerrable,
   };
+
+  const verOscuro = previaOscuro ?? oscuro;
+  const cPrevia = coloresVentana(dibujo.color, verOscuro);
 
   const contenido = (
     <>
@@ -241,8 +246,24 @@ export default function EditarVentana() {
         </>
       ) : null}
 
-      <Seccion>Aspecto</Seccion>
-      <Text style={s.etiqueta}>Color</Text>
+      <Seccion>Colores</Seccion>
+      <Pressable
+        onPress={() => setColor(COLOR_TEMA)}
+        accessibilityRole="radio"
+        accessibilityState={{ checked: esColorTema(color) }}
+        style={{ flexDirection: 'row', alignItems: 'center', gap: espacio.m, padding: espacio.m, borderRadius: radio.l, marginBottom: espacio.m, backgroundColor: fondos.superficieBlanca, borderWidth: esColorTema(color) ? 2 : 1, borderColor: esColorTema(color) ? colores.marino : colores.linea }}
+      >
+        <View style={{ width: 40, height: 40, borderRadius: 20, overflow: 'hidden', flexDirection: 'row', borderWidth: 1, borderColor: colores.linea }}>
+          <View style={{ flex: 1, backgroundColor: coloresVentana(COLOR_TEMA, false).fondo }} />
+          <View style={{ flex: 1, backgroundColor: coloresVentana(COLOR_TEMA, true).fondo }} />
+        </View>
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Text style={[s.filaTitulo, { color: colores.texto }]}>Según el tema del usuario</Text>
+          <Text style={s.filaDetalle}>Clara para quien usa el modo claro y oscura para quien usa el modo oscuro. Recomendado.</Text>
+        </View>
+        <Ionicons name={esColorTema(color) ? 'radio-button-on' : 'radio-button-off'} size={22} color={esColorTema(color) ? colores.marino : colores.textoSuave} />
+      </Pressable>
+      <Text style={s.etiqueta}>O un color fijo (se ve igual en los dos modos)</Text>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: espacio.s, marginBottom: espacio.m }}>
         {Object.entries(PALETA_VENTANA).map(([k, p]) => (
           <Pressable key={k} onPress={() => setColor(k)} accessibilityRole="button" accessibilityLabel={`Color ${p.nombre}`} accessibilityState={{ selected: color === k }} style={{ alignItems: 'center', gap: 4, width: 58 }}>
@@ -312,8 +333,12 @@ export default function EditarVentana() {
   const vistaPrevia = (
     <View>
       <Seccion>Vista previa</Seccion>
-      <View style={{ backgroundColor: 'rgba(14, 58, 85, 0.55)', borderRadius: radio.xl, padding: forma === 'centro' ? espacio.l : 0, paddingTop: forma === 'centro' ? espacio.xl : espacio.xxxl * 2, minHeight: 320, justifyContent: forma === 'abajo' ? 'flex-end' : 'center', alignItems: 'center', overflow: 'hidden' }}>
-        <TarjetaVentana v={{ ...dibujo, forma: forma === 'pantalla' ? 'centro' : forma }} anchoMaximo={forma === 'centro' ? 360 : 2000} />
+      <Segmentado opciones={[{ valor: 'claro', texto: 'Modo claro' }, { valor: 'oscuro', texto: 'Modo oscuro' }]} valor={verOscuro ? 'oscuro' : 'claro'} onCambio={(x) => setPreviaOscuro(x === 'oscuro')} />
+      <View style={{ height: espacio.s }} />
+      <View style={{ backgroundColor: verOscuro ? '#101A2E' : '#EEF4FC', borderRadius: radio.xl, overflow: 'hidden' }}>
+        <View style={{ backgroundColor: cPrevia.velo, padding: forma === 'centro' ? espacio.l : 0, paddingTop: forma === 'centro' ? espacio.xl : espacio.xxxl * 2, minHeight: 320, justifyContent: forma === 'abajo' ? 'flex-end' : 'center', alignItems: 'center' }}>
+          <TarjetaVentana v={{ ...dibujo, forma: forma === 'pantalla' ? 'centro' : forma }} anchoMaximo={forma === 'centro' ? 360 : 2000} oscuro={verOscuro} />
+        </View>
       </View>
       <Boton texto="Ver como estudiante" icono="phone-portrait-outline" variante="secundario" compacto onPress={() => setPrevia(true)} estilo={{ marginTop: espacio.m }} />
       <Mensaje texto={error} />
@@ -332,10 +357,10 @@ export default function EditarVentana() {
       <BarraSuperior titulo={editando ? 'Editar ventana' : 'Nueva ventana'} onVolver={volver} />
       <Columnas izquierda={contenido} derecha={vistaPrevia} proporcion={1.2} />
       <Modal visible={previa} transparent animationType="fade" onRequestClose={() => setPrevia(false)} statusBarTranslucent supportedOrientations={['portrait', 'landscape']}>
-        <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(14, 58, 85, 0.55)' }]} />
+        <View style={[StyleSheet.absoluteFill, { backgroundColor: coloresVentana(dibujo.color, oscuro).velo }]} />
         <Pressable style={StyleSheet.absoluteFill} onPress={() => setPrevia(false)} accessibilityLabel="Cerrar vista previa" />
         <View pointerEvents="box-none" style={{ flex: 1, justifyContent: forma === 'abajo' ? 'flex-end' : 'center', alignItems: 'center', padding: forma === 'centro' ? espacio.xl : 0 }}>
-          <View style={{ width: '100%', alignItems: 'center', flex: forma === 'pantalla' ? 1 : undefined, backgroundColor: forma === 'centro' ? 'transparent' : coloresVentana(dibujo.color).fondo }}>
+          <View style={{ width: '100%', alignItems: 'center', flex: forma === 'pantalla' ? 1 : undefined, backgroundColor: forma === 'centro' ? 'transparent' : coloresVentana(dibujo.color, oscuro).fondo }}>
             <TarjetaVentana v={dibujo} anchoMaximo={forma === 'centro' ? 440 : 640} onCerrar={() => setPrevia(false)} onBoton={() => setPrevia(false)} />
           </View>
         </View>

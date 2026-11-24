@@ -3,7 +3,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import { router } from 'expo-router';
 import { useMemo, useRef, useState } from 'react';
 import { Platform, Pressable, Text, View } from 'react-native';
-import { nombreSemestre, nota as fmtNota } from '../components/academico';
+import { nombreNivel, nota as fmtNota } from '../components/academico';
 import { BarraSuperior, Boton, Campo, Cargando, Dato, EstadoVacio, Hoja, Insignia, Mensaje, Pantalla, s, Seccion, Tarjeta } from '../components/ui';
 import { useSesion } from '../context/SesionProvider';
 import { cargarMalla, cargarParaImportar, importarExtracto } from '../datos/academico';
@@ -354,7 +354,7 @@ function ElegirMateria({ visible, nombreExtracto, materias, ocupadas, onCerrar, 
   return (
     <Hoja visible={visible} titulo="Elegir materia" onCerrar={() => { setBusqueda(''); onCerrar(); }}>
       <Text style={[s.cuerpo, { marginBottom: espacio.m }]}>En el extracto figura como “{nombreExtracto}”.</Text>
-      <Campo etiqueta="Buscar" value={busqueda} onChangeText={setBusqueda} placeholder="Nombre de la materia" />
+      <Campo etiqueta="Buscar" value={busqueda} onChangeText={setBusqueda} placeholder="Nombre de la materia" limpiable />
       {lista.map((m) => (
         <Pressable
           key={m.id}
@@ -363,7 +363,7 @@ function ElegirMateria({ visible, nombreExtracto, materias, ocupadas, onCerrar, 
           style={({ pressed }) => [est.opcion, pressed && { backgroundColor: fondos.tarjeta }]}
         >
           <Text style={[s.filaTitulo, { flex: 1 }]} numberOfLines={2}>{m.nombre}</Text>
-          <Text style={s.filaDetalle}>{m.grupo_optativa_id ? 'Optativa' : nombreSemestre(m.semestre)}</Text>
+          <Text style={s.filaDetalle}>{m.grupo_optativa_id ? 'Optativa' : nombreNivel(m.semestre)}</Text>
         </Pressable>
       ))}
       {lista.length === 0 && <Text style={[s.filaDetalle, { marginVertical: espacio.m }]}>No hay materias con ese nombre.</Text>}

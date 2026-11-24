@@ -48,6 +48,8 @@ export interface Estadisticas {
   /** Cuántas materias de cada nota (2 a 5) aprobó. */
   distribucion: { nota: number; cantidad: number }[];
   porNivel: DatosNivel[];
+  /** Optativas: las que exige el plan, cuántas aprobó y su promedio. null si el plan no tiene. */
+  optativas: { aprobadas: number; total: number; promedio: number | null } | null;
   porPeriodo: DatosPeriodo[];
   finalesRendidos: number;
   finalesAprobados: number;
@@ -138,6 +140,17 @@ export function calcularEstadisticas(
       promedio: promedio(ms.map((m) => notas.get(m.id)).filter((n): n is number => n != null)),
     }));
 
+  // Las optativas van aparte, debajo de los niveles: cuenta las que exige el
+  // plan y promedia todas las que aprobó (aunque pase del mínimo).
+  const deOptativas = materias.filter((m) => m.grupoOptativaId);
+  const optativas = optExigidas > 0 || deOptativas.length > 0
+    ? {
+      aprobadas: optAprobadas,
+      total: optExigidas,
+      promedio: promedio(deOptativas.map((m) => notas.get(m.id)).filter((n): n is number => n != null)),
+    }
+    : null;
+
   // Evolución por semestre: solo los finales con periodo cargado.
   const delPlan = new Set(materias.filter((m) => !esSeminario(m.nombre)).map((m) => m.id));
   const propios = intentos.filter((i) => delPlan.has(i.materiaId) && (i.tipo ?? 'final') === 'final');
@@ -179,6 +192,7 @@ export function calcularEstadisticas(
     nivelesPendientes,
     distribucion,
     porNivel,
+    optativas,
     porPeriodo,
     finalesRendidos: propios.length,
     finalesAprobados,

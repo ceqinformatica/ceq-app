@@ -20,7 +20,7 @@ import { Pressable, Text, View } from 'react-native';
 import { cargarFinales, guardarFinales, guardarFirma } from '../datos/academico';
 import { VolverACursar } from './volver-a-cursar';
 import { aplazosDeLaCursada, firmaVencida, LLAMADOS_POR_MATERIA, llamadosUsados, notaDelLlamado, periodoDe, recuReguDespuesDeFinal, type LlamadoCargado } from '../lib/finales';
-import { calificacionFinal, CONCEPTO, finalNecesario, type Nota } from '../lib/reglamento-fcq';
+import { calificacionFinal, CONCEPTO, FINAL_MINIMO, finalesNecesarios, finalNecesario, type Nota } from '../lib/reglamento-fcq';
 import type { ExamenFinalDb } from '../lib/tipos-db';
 import { colores, espacio, fondos, fuentes } from '../tema';
 import { pct } from './academico';
@@ -59,8 +59,10 @@ function anterior(p: string): string {
 
 const nombrePeriodo = (p: string) => `${p.split('-')[1]}.º semestre ${p.split('-')[0]}`;
 
-export function TarjetaFinales({ materiaId, firma: firmaGuardadaEnMateria, aprobada, onGuardado, semestreOpuesto, anioPlan }: {
+export function TarjetaFinales({ materiaId, firma: firmaGuardadaEnMateria, aprobada, onGuardado, semestreOpuesto, anioPlan, sinResumenFirma }: {
   materiaId: string;
+  /** La firma (y el campo para cargarla) ya está arriba, en la tabla de notas. */
+  sinResumenFirma?: boolean;
   /** Cursa en el semestre opuesto: sin Recu y con los llamados que le quedan. */
   semestreOpuesto?: boolean;
   anioPlan?: number | null;
@@ -225,7 +227,7 @@ export function TarjetaFinales({ materiaId, firma: firmaGuardadaEnMateria, aprob
   return (
     <Tarjeta>
       {/* Firma: con ella la nota del final sale sola. */}
-      {firma == null ? (
+      {sinResumenFirma ? null : firma == null ? (
         <View style={{ marginBottom: espacio.m }}>
           <View style={{ flexDirection: 'row', gap: espacio.s, alignItems: 'flex-end' }}>
             <Campo etiqueta="Firma (%)" value={firmaTxt} onChangeText={setFirmaTxt} keyboardType="decimal-pad" placeholder="Ej. 72" estilo={{ flex: 1, marginBottom: 0 }} />
@@ -376,6 +378,97 @@ export function TarjetaFinales({ materiaId, firma: firmaGuardadaEnMateria, aprob
         )
       )}
     </Tarjeta>
+  );
+}
+
+/**
+ * Cuánto necesita en el final para sacar 1, 2, 3, 4 o 5, con su firma
+ * (Art. 57: 0,4 × firma + 0,6 × final, y el final tiene que llegar a 60 %).
+ * Con `estimada`, la firma sale de lo que lleva cargado y todavía puede cambiar.
+ */
+export function TarjetaNotaNecesaria({ firma, estimada, aviso, sinDatos, onGuardarFirma }: {
+  firma: number | null;
+  estimada?: boolean;
+  /** Por ejemplo, que con lo que lleva todavía no firma. */
+  aviso?: string;
+  /** Texto cuando todavía no hay con qué calcular. */
+  sinDatos?: string;
+  /** Firmada sin promedio guardado: deja escribir con cuánto firmó. */
+  onGuardarFirma?: (firma: number) => Promise<void>;
+}) {
+  const [firmaTxt, setFirmaTxt] = useState('');
+  const [guardando, setGuardando] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const tabla = firma != null ? finalesNecesarios(firma) : [];
+  const paraDos = tabla[0]?.necesario ?? null;
+
+  const guardar = async () => {
+    const f = num(firmaTxt);
+    if (!onGuardarFirma || f == null || !Number.isFinite(f) || f < 0 || f > 100) return;
+    setGuardando(true);
+    setError(null);
+    try {
+      await onGuardarFirma(Math.round(f + 1e-9));
+      setFirmaTxt('');
+    } catch (e) {
+      setError(textoError(e, 'No se pudo guardar la firma.'));
+    } finally {
+      setGuardando(false);
+    }
+  };
+
+  return (
+    <Tarjeta>
+      {firma == null ? (
+        onGuardarFirma ? (
+          <>
+            <View style={{ flexDirection: 'row', gap: espacio.s, alignItems: 'flex-end' }}>
+              <Campo etiqueta="¿Con cuánto firmaste? (%)" value={firmaTxt} onChangeText={setFirmaTxt} keyboardType="decimal-pad" placeholder="Ej. 72" estilo={{ flex: 1, marginBottom: 0 }} />
+              <Boton texto="Guardar" compacto onPress={guardar} deshabilitado={!firmaValida(firmaTxt)} cargando={guardando} />
+            </View>
+            <Text style={[s.filaDetalle, { marginTop: 6 }]}>Con tu firma te decimos cuánto necesitás en el final para cada nota.</Text>
+            {error && <Mensaje texto={error} />}
+          </>
+        ) : (
+          <Text style={s.filaDetalle}>{sinDatos ?? 'Todavía no hay datos para calcularlo.'}</Text>
+        )
+      ) : (
+        <>
+          <Text style={{ fontFamily: fuentes.semibold, fontSize: 16, color: colores.marino }}>
+            {estimada ? `Con lo que llevás: ${pct(firma)}` : `Tu firma: ${pct(firma)}`}
+          </Text>
+          <Text style={[s.filaDetalle, { marginBottom: espacio.s }]}>
+            {estimada
+              ? 'Es tu promedio de ahora; cambia con cada parcial que cargues.'
+              : 'Tu nota final es 40 % de la firma y 60 % del final.'}
+          </Text>
+          {aviso && <Mensaje tipo="info" texto={aviso} />}
+          <FilaNota nota={1} texto={paraDos == null ? 'Con cualquier nota' : `Menos de ${pct2(paraDos)}`} apagada />
+          {tabla.map(({ nota, necesario }) => (
+            <FilaNota key={nota} nota={nota} texto={necesario == null ? 'No alcanza' : `${pct2(necesario)} o más`} apagada={necesario == null} />
+          ))}
+          <Text style={[s.filaDetalle, { marginTop: espacio.s }]}>
+            El final tiene que llegar al {FINAL_MINIMO} % para contar; con menos es aplazo.
+          </Text>
+        </>
+      )}
+    </Tarjeta>
+  );
+}
+
+function FilaNota({ nota, texto, apagada }: { nota: Nota; texto: string; apagada?: boolean }) {
+  return (
+    <View
+      style={{ flexDirection: 'row', alignItems: 'center', gap: espacio.m, paddingVertical: espacio.s, borderBottomWidth: nota === 5 ? 0 : 1, borderBottomColor: colores.lineaSuave }}
+      accessible
+      accessibilityLabel={`Para sacar ${nota}, ${CONCEPTO[nota]}: ${texto} en el final`}
+    >
+      <View style={{ width: 30, height: 30, borderRadius: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: nota >= 2 ? fondos.verdeFondo : fondos.rojoFondo }}>
+        <Text style={{ fontFamily: fuentes.bold, fontSize: 15, color: nota >= 2 ? colores.verde : colores.rojo }}>{nota}</Text>
+      </View>
+      <Text style={[s.filaDetalle, { flex: 1 }]}>{CONCEPTO[nota]}</Text>
+      <Text style={{ fontFamily: fuentes.semibold, fontSize: 15, color: apagada ? colores.textoSuave : colores.texto }}>{texto}</Text>
+    </View>
   );
 }
 

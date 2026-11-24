@@ -9,7 +9,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTema } from '../context/TemaProvider';
 import { useDisposicion } from './disposicion';
-import { Aparecer, NumeroAnimado, PressableAnimado, useAparecer, usePresion, vibrar } from './movimiento';
+import { Aparecer, NumeroAnimado, PressableAnimado, useAparecer, useEntradaFlotante, usePresion, vibrar } from './movimiento';
 import { colores, crearEstilos, espacio, fondos, fuentes, radio, sombras, texto } from '../tema';
 
 /**
@@ -88,8 +88,6 @@ export function Pantalla({ children, scroll = true, estilo, cabecera, refrescand
   const refresh = onRefrescar ? (
     <RefreshControl refreshing={Boolean(refrescando)} onRefresh={onRefrescar} tintColor={colores.marino} colors={[colores.marino]} />
   ) : undefined;
-  // Entrada suave de cada pantalla (se salta con "Reducir movimiento").
-  const { opacity, translateY } = useAparecer(0, 12);
   const cuerpo = scroll ? (
     <ScrollView
       keyboardShouldPersistTaps="handled"
@@ -111,9 +109,10 @@ export function Pantalla({ children, scroll = true, estilo, cabecera, refrescand
     <SafeAreaView style={[s.pantalla, marca && { backgroundColor: fondos.franja }]} edges={marca ? ['left', 'right'] : ['top', 'left', 'right']}>
       {barra}
       {/* Con barra fija, el contenido va en una hoja de esquinas redondeadas que recorta lo que se desplaza por debajo. */}
-      <Animated.View style={[{ flex: 1, opacity, transform: [{ translateY }] }, marca && s.hojaContenido]}>
+      {/* Sin fundido de la pantalla entera: mientras entra, una pantalla semitransparente dejaba ver la anterior detrás. */}
+      <View style={[{ flex: 1, backgroundColor: fondos.fondo }, marca && s.hojaContenido]}>
         {cuerpo}
-      </Animated.View>
+      </View>
     </SafeAreaView>
     </EvitaTeclado>
   );
@@ -400,20 +399,40 @@ export function BotonFlotante({ icono = 'add', etiqueta, onPress }: { icono?: No
   );
 }
 
-export function Campo({ etiqueta, ayuda, estilo, ...props }: TextInputProps & { etiqueta: string; ayuda?: string; estilo?: ViewStyle }) {
+export function Campo({ etiqueta, ayuda, estilo, limpiable, ...props }: TextInputProps & {
+  etiqueta: string;
+  ayuda?: string;
+  estilo?: ViewStyle;
+  /** Buscadores: una X a la derecha borra todo lo escrito de una vez. */
+  limpiable?: boolean;
+}) {
   const [foco, setFoco] = useState(false);
+  const conX = !!limpiable && !!props.value && !props.multiline;
   return (
     <View style={[{ marginBottom: espacio.m }, estilo]}>
       <Text style={s.etiqueta}>{etiqueta}</Text>
-      <TextInput
-        accessibilityLabel={etiqueta}
-        accessibilityHint={ayuda}
-        placeholderTextColor={colores.textoTenue}
-        style={[s.campo, foco && { borderColor: colores.marino, borderWidth: 1.5 }, props.multiline && { minHeight: 110, paddingTop: espacio.m, textAlignVertical: 'top' }]}
-        {...props}
-        onFocus={(e) => { setFoco(true); props.onFocus?.(e); }}
-        onBlur={(e) => { setFoco(false); props.onBlur?.(e); }}
-      />
+      <View>
+        <TextInput
+          accessibilityLabel={etiqueta}
+          accessibilityHint={ayuda}
+          placeholderTextColor={colores.textoTenue}
+          style={[s.campo, foco && { borderColor: colores.marino, borderWidth: 1.5 }, props.multiline && { minHeight: 110, paddingTop: espacio.m, textAlignVertical: 'top' }, limpiable && { paddingRight: 44 }]}
+          {...props}
+          onFocus={(e) => { setFoco(true); props.onFocus?.(e); }}
+          onBlur={(e) => { setFoco(false); props.onBlur?.(e); }}
+        />
+        {conX && (
+          <Pressable
+            onPress={() => props.onChangeText?.('')}
+            accessibilityRole="button"
+            accessibilityLabel="Borrar búsqueda"
+            hitSlop={8}
+            style={({ pressed }) => [s.campoBorrar, pressed && { opacity: 0.6 }]}
+          >
+            <Ionicons name="close-circle" size={22} color={colores.textoTenue} />
+          </Pressable>
+        )}
+      </View>
       {ayuda ? <Text style={[s.filaDetalle, { marginTop: espacio.xs }]}>{ayuda}</Text> : null}
     </View>
   );
@@ -584,11 +603,22 @@ export function Hoja({ visible, titulo, onCerrar, children }: { visible: boolean
   const estiloHoja: ViewStyle = centrada
     ? { width: '92%', maxWidth: 640, alignSelf: 'center', borderRadius: radio.xl, flexShrink: 1, maxHeight: Math.max(320, height - insets.top - insets.bottom - espacio.xl * 2), paddingBottom: espacio.l }
     : { paddingBottom: insets.bottom + espacio.l };
+  // El velo se funde y la hoja sube sola (con animationType="slide" subía también el velo oscuro, como una cortina).
+  const { montado, progreso } = useEntradaFlotante(visible);
+  // Mientras baja, se sigue viendo lo último que tenía (quien la usa suele vaciar su estado al cerrar).
+  const ultimo = useRef({ titulo, children });
+  if (visible) ultimo.current = { titulo, children };
+  const mostrado = visible ? { titulo, children } : ultimo.current;
+  const opacidad = progreso.interpolate({ inputRange: [0, 1], outputRange: [0, 1], extrapolate: 'clamp' });
+  const movimiento = centrada
+    ? { opacity: opacidad, transform: [{ scale: progreso.interpolate({ inputRange: [0, 1], outputRange: [0.94, 1] }) }] }
+    : { transform: [{ translateY: progreso.interpolate({ inputRange: [0, 1], outputRange: [height, 0] }) }] };
+  if (!montado) return null;
   return (
     <Modal
-      visible={visible}
+      visible
       transparent
-      animationType={centrada ? 'fade' : 'slide'}
+      animationType="none"
       onRequestClose={onCerrar}
       statusBarTranslucent
       navigationBarTranslucent
@@ -596,17 +626,19 @@ export function Hoja({ visible, titulo, onCerrar, children }: { visible: boolean
     >
       <EvitaTeclado estilo={centrada ? { justifyContent: 'center', paddingTop: insets.top, paddingBottom: insets.bottom } : { justifyContent: 'flex-end' }}>
         {/* El velo cubre toda la pantalla, también los costados de la hoja. */}
-        <Pressable style={[StyleSheet.absoluteFill, s.veloFondo]} onPress={onCerrar} accessibilityLabel="Cerrar" />
-        <View style={[s.hoja, estiloHoja]}>
+        <Animated.View style={[StyleSheet.absoluteFill, s.veloFondo, { opacity: opacidad }]}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={onCerrar} accessibilityLabel="Cerrar" />
+        </Animated.View>
+        <Animated.View style={[s.hoja, estiloHoja, movimiento]} pointerEvents={visible ? 'auto' : 'none'}>
           {!centrada && <View style={s.hojaAsa} />}
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: espacio.l, paddingTop: centrada ? espacio.m : 0 }}>
-            <Text style={[s.barraTitulo, { textAlign: 'left' }]}>{titulo}</Text>
+            <Text style={[s.barraTitulo, { textAlign: 'left' }]}>{mostrado.titulo}</Text>
             <BotonIcono icono="close" etiqueta="Cerrar" onPress={onCerrar} tamano={20} />
           </View>
           <ScrollView keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive" showsVerticalScrollIndicator={false} style={{ flexShrink: 1 }}>
-            {children}
+            {mostrado.children}
           </ScrollView>
-        </View>
+        </Animated.View>
       </EvitaTeclado>
     </Modal>
   );
@@ -684,6 +716,7 @@ export const s = crearEstilos(() => ({
     backgroundColor: fondos.superficieBlanca, borderWidth: 1, borderColor: colores.linea, borderRadius: radio.m,
     paddingHorizontal: espacio.m + 2, minHeight: 50, fontSize: 16, fontFamily: fuentes.regular, color: colores.texto,
   },
+  campoBorrar: { position: 'absolute', right: 0, top: 0, bottom: 0, width: 44, alignItems: 'center', justifyContent: 'center' },
   opcion: {
     flexDirection: 'row', alignItems: 'center', gap: espacio.m, borderWidth: 1, borderColor: colores.lineaSuave, borderRadius: radio.l,
     padding: espacio.m + 2, marginBottom: espacio.s, backgroundColor: fondos.superficieBlanca,

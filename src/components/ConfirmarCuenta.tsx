@@ -3,10 +3,12 @@ import { useEffect, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { useSesion } from '../context/SesionProvider';
 import { db as demo, MODO_DEMO } from '../datos/demo';
-import { confirmarConClave, confirmarConGoogle, salir } from '../lib/auth';
+import { confirmarConClave, confirmarConProveedor, salir } from '../lib/auth';
+import type { Proveedor } from '../lib/acceso';
+import { BotonProveedor } from './BotonProveedor';
 import { biometriaActiva, biometriaDisponible, verificarIdentidad } from '../lib/biometria';
 import { metodosDeCuenta } from '../lib/recuperacion';
-import { colores, crearEstilos, espacio, fondos, fuentes, radio, sombras } from '../tema';
+import { colores, crearEstilos, espacio, fondos, fuentes } from '../tema';
 import { Boton, Campo, Mensaje, s } from './ui';
 
 /**
@@ -16,11 +18,11 @@ import { Boton, Campo, Mensaje, s } from './ui';
  */
 export function ConfirmarCuenta({ onConfirmado, onCancelar }: { onConfirmado: () => void; onCancelar: () => void }) {
   const { sesion } = useSesion();
-  const metodos = MODO_DEMO ? { google: false, clave: true, correo: demo.correo } : metodosDeCuenta(sesion?.user);
+  const metodos = MODO_DEMO ? { google: false, microsoft: false, clave: true, correo: demo.correo } : metodosDeCuenta(sesion?.user);
   const [huella, setHuella] = useState<string | null>(null);
   const [clave, setClave] = useState('');
   const [verClave, setVerClave] = useState(false);
-  const [cargando, setCargando] = useState<'huella' | 'google' | 'clave' | null>(null);
+  const [cargando, setCargando] = useState<'huella' | Proveedor | 'clave' | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // La huella sirve solo si la persona ya la usa para abrir la app.
@@ -30,7 +32,7 @@ export function ConfirmarCuenta({ onConfirmado, onCancelar }: { onConfirmado: ()
       .catch(() => setHuella(null));
   }, []);
 
-  const intentar = async (tipo: 'huella' | 'google' | 'clave', accion: () => Promise<string | null>) => {
+  const intentar = async (tipo: 'huella' | Proveedor | 'clave', accion: () => Promise<string | null>) => {
     setCargando(tipo);
     setError(null);
     const r = await accion().catch(() => 'No se pudo confirmar. Probá de nuevo.');
@@ -41,7 +43,8 @@ export function ConfirmarCuenta({ onConfirmado, onCancelar }: { onConfirmado: ()
 
   const conHuella = () =>
     intentar('huella', async () => ((await verificarIdentidad('Confirmá para crear un PIN nuevo')) ? null : 'cancelado'));
-  const conGoogle = () => intentar('google', confirmarConGoogle);
+  const conProveedor = (p: Proveedor) => intentar(p, () => confirmarConProveedor(p));
+  const conOtraCuenta = metodos.google || metodos.microsoft;
   const conClave = () =>
     intentar('clave', async () => {
       if (MODO_DEMO) {
@@ -51,7 +54,7 @@ export function ConfirmarCuenta({ onConfirmado, onCancelar }: { onConfirmado: ()
       return confirmarConClave(metodos.correo ?? '', clave);
     });
 
-  const ninguno = !huella && !metodos.google && !metodos.clave;
+  const ninguno = !huella && !conOtraCuenta && !metodos.clave;
 
   return (
     <View>
@@ -73,22 +76,15 @@ export function ConfirmarCuenta({ onConfirmado, onCancelar }: { onConfirmado: ()
         />
       )}
 
-      {metodos.google && (
-        <Pressable
-          onPress={conGoogle}
-          disabled={cargando != null}
-          accessibilityRole="button"
-          accessibilityLabel="Confirmar con Google"
-          style={({ pressed }) => [est.google, pressed && { backgroundColor: fondos.tarjeta }, cargando != null && { opacity: 0.6 }]}
-        >
-          <Ionicons name="logo-google" size={20} color={colores.marino} />
-          <Text style={est.googleTexto}>{cargando === 'google' ? 'Abriendo Google…' : 'Confirmar con Google'}</Text>
-        </Pressable>
+      {(['google', 'microsoft'] as const).map((p) =>
+        metodos[p] ? (
+          <BotonProveedor key={p} proveedor={p} accion="Confirmar" onPress={() => conProveedor(p)} cargando={cargando === p} deshabilitado={cargando != null} />
+        ) : null,
       )}
 
       {metodos.clave && (
-        <View style={{ marginTop: huella || metodos.google ? espacio.l : 0 }}>
-          {(huella || metodos.google) && <Text style={[s.filaDetalle, { textAlign: 'center', marginBottom: espacio.m }]}>o con la contraseña de tu cuenta</Text>}
+        <View style={{ marginTop: huella || conOtraCuenta ? espacio.l : 0 }}>
+          {(huella || conOtraCuenta) && <Text style={[s.filaDetalle, { textAlign: 'center', marginBottom: espacio.m }]}>o con la contraseña de tu cuenta</Text>}
           <Text style={[s.filaDetalle, { marginBottom: espacio.s }]} numberOfLines={1}>
             Cuenta: <Text style={{ fontFamily: fuentes.semibold, color: colores.marino }}>{metodos.correo}</Text>
           </Text>
@@ -126,10 +122,5 @@ export function ConfirmarCuenta({ onConfirmado, onCancelar }: { onConfirmado: ()
 const est = crearEstilos(() => ({
   icono: { alignSelf: 'center', width: 56, height: 56, borderRadius: 28, backgroundColor: fondos.tarjeta, alignItems: 'center', justifyContent: 'center', marginBottom: espacio.m },
   titulo: { fontFamily: fuentes.bold, fontSize: 20, color: colores.marino, textAlign: 'center', textTransform: 'uppercase', letterSpacing: 0.6 },
-  google: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: espacio.m, minHeight: 52, borderRadius: radio.m, marginTop: espacio.s,
-    backgroundColor: fondos.superficieBlanca, borderWidth: 1, borderColor: colores.linea, ...sombras.suave,
-  },
-  googleTexto: { fontFamily: fuentes.semibold, fontSize: 15, color: colores.marino },
   ojo: { position: 'absolute', right: 14, top: 38 },
 }));

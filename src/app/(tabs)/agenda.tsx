@@ -1,11 +1,11 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useLocalSearchParams } from 'expo-router';
-import { type ComponentRef, useEffect, useMemo, useRef, useState } from 'react';
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { HorarioOficial } from '../../components/clases-oficiales';
-import { compartirVistaComoImagen, puedeCompartirImagen } from '../../components/compartir-imagen';
+import { CompartirHorario } from '../../components/ImagenHorario';
 import { CampoFechaHora, hoy } from '../../components/fecha';
-import { CabeceraMarca, Boton, BotonIcono, Campo, Cargando, Chip, EstadoVacio, Fila, Hoja, Insignia, logoCeq, Mensaje, Pantalla, s, Segmentado, Tarjeta } from '../../components/ui';
+import { CabeceraMarca, Boton, BotonIcono, Campo, Cargando, Chip, EstadoVacio, Fila, Hoja, Insignia, Mensaje, Pantalla, s, Segmentado, Tarjeta } from '../../components/ui';
 import { useSesion } from '../../context/SesionProvider';
 import {
   actualizarClase, borrarClase, borrarEvento, cargarAgenda, crearClases, crearEvento, cuentaRegresiva, DIAS, DIAS_CORTOS, diaSemanaHoy, diasHasta, hora, horaDe,
@@ -18,10 +18,9 @@ import type { EstadoMateriaDb, EventoDb, HorarioDb, TipoEvento } from '../../lib
 import { colores, crearEstilos, espacio, fondos, fuentes, radio, sombras } from '../../tema';
 import { useTema } from '../../context/TemaProvider';
 import { textoError } from '../../lib/errores';
-import { textoSemestre } from '../../lib/carnet';
 import { hoyPy } from '../../lib/calendario';
 import { detalleFinSemestre, isoDesdeTexto, semestreTerminado, textoDesdeIso } from '../../lib/fin-semestre';
-import { clasesPorDia, infoTipoClase, nombreConTipo, TIPOS_CLASE, type TipoClase } from '../../lib/tipo-clase';
+import { infoTipoClase, nombreConTipo, TIPOS_CLASE, type TipoClase } from '../../lib/tipo-clase';
 
 /** Tonos para distinguir materias en el horario: celestes y grises del CEQ (sin verdes ni naranjas). */
 const TONOS = ['#0F5F94', '#2A8FCC', '#3F5168', '#1677B0', '#4F7FA0', '#55687A', '#2C6E8F'];
@@ -396,7 +395,7 @@ function ElegirCursando({ datos, primeraVez, onListo, onSaltar }: {
           ? 'Primero marcá las materias que estás cursando. Después, al cargar clases o fechas, solo te van a aparecer esas.'
           : 'Marcá las otras materias que estás cursando.'}
       </Text>
-      <Campo etiqueta="Buscar" value={busqueda} onChangeText={setBusqueda} placeholder="Nombre de la materia" />
+      <Campo etiqueta="Buscar" value={busqueda} onChangeText={setBusqueda} placeholder="Nombre de la materia" limpiable />
       {!q && niveles.length > 1 && (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: espacio.s, paddingBottom: espacio.m }}>
           {niveles.map((n) => <Chip key={n} texto={n === 0 ? 'Optativas' : `${n}º nivel`} elegido={nivel === n} onPress={() => setNivel(n)} />)}
@@ -566,19 +565,17 @@ function FormClase({ visible, clase, diaInicial, datos, recordatoriosApagados, o
 
 /** La semana entera en una grilla: cada clase es un bloque en su día y su hora. */
 const ALTO_HORA = 46;
-function GrillaSemana({ clases, nombre, onElegir, onDia, paraImagen }: {
+function GrillaSemana({ clases, nombre, onElegir, onDia }: {
   clases: HorarioDb[]; nombre: (h: HorarioDb) => string; onElegir?: (h: HorarioDb) => void; onDia?: (n: number) => void;
-  /** En la imagen que se comparte no se marca "hoy" ni se puede tocar nada. */
-  paraImagen?: boolean;
 }) {
   const conDomingo = clases.some((c) => c.dia_semana === 7);
   const dias = conDomingo ? [1, 2, 3, 4, 5, 6, 7] : [1, 2, 3, 4, 5, 6];
   const { desde, hasta } = rangoSemana(clases);
   const horas = Array.from({ length: (hasta - desde) / 60 }, (_, i) => desde + i * 60);
   const alto = ((hasta - desde) / 60) * ALTO_HORA;
-  const hoy = paraImagen ? 0 : diaSemanaHoy();
+  const hoy = diaSemanaHoy();
   return (
-    <View style={[est.grilla, paraImagen && est.grillaPlana]} accessibilityLabel="Horario de la semana">
+    <View style={est.grilla} accessibilityLabel="Horario de la semana">
       <View style={{ flexDirection: 'row' }}>
         <View style={{ width: 34 }} />
         {dias.map((d) => (
@@ -627,79 +624,6 @@ function GrillaSemana({ clases, nombre, onElegir, onDia, paraImagen }: {
         ))}
       </View>
     </View>
-  );
-}
-
-/**
- * Vista previa del horario como imagen (grilla + lista con tipo y aula),
- * para mandarlo por WhatsApp o subirlo a una historia.
- */
-function CompartirHorario({ visible, clases, nombre, onCerrar }: {
-  visible: boolean; clases: HorarioDb[]; nombre: (h: HorarioDb) => string; onCerrar: () => void;
-}) {
-  const ref = useRef<ComponentRef<typeof View>>(null);
-  const [enviando, setEnviando] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  useEffect(() => {
-    if (visible) setError(null);
-  }, [visible]);
-
-  const compartir = async () => {
-    setEnviando(true);
-    setError(null);
-    try {
-      await compartirVistaComoImagen(ref, 'Compartir mi horario');
-    } catch (e) {
-      setError(textoError(e, 'No se pudo compartir la imagen.'));
-    } finally {
-      setEnviando(false);
-    }
-  };
-
-  return (
-    <Hoja visible={visible} titulo="Compartir horario" onCerrar={onCerrar}>
-      <View ref={ref} collapsable={false} style={est.imagen}>
-        <View style={est.imagenCabecera}>
-          <View style={est.imagenLogo}>
-            <Image source={logoCeq} style={{ width: 22, height: 22 }} accessibilityLabel="Logo del CEQ" />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={est.imagenTitulo}>Mi horario</Text>
-            <Text style={est.imagenSub}>{textoSemestre(new Date().toISOString())} · Portal CEQ</Text>
-          </View>
-        </View>
-        <GrillaSemana clases={clases} nombre={nombre} paraImagen />
-        <View style={{ marginTop: espacio.m, gap: espacio.s }}>
-          {clasesPorDia(clases).map(({ dia, clases: delDia }) => (
-            <View key={dia}>
-              <Text style={est.imagenDia}>{DIAS[dia - 1]}</Text>
-              {delDia.map((c) => {
-                const tipo = infoTipoClase(c.tipo_clase);
-                return (
-                  <View key={c.id} style={est.imagenFila}>
-                    <Text style={est.imagenHora}>{hora(c.hora_inicio)}–{hora(c.hora_fin)}</Text>
-                    <Text style={est.imagenClase}>
-                      {nombre(c)}
-                      {tipo ? <Text style={est.imagenDetalle}>{` · ${tipo.texto}`}</Text> : null}
-                      {c.aula ? <Text style={est.imagenDetalle}>{` · ${c.aula}`}</Text> : null}
-                    </Text>
-                  </View>
-                );
-              })}
-            </View>
-          ))}
-        </View>
-      </View>
-      <Mensaje texto={error} />
-      {puedeCompartirImagen ? (
-        <Boton texto="Compartir imagen" icono="share-social-outline" onPress={compartir} cargando={enviando} estilo={{ marginTop: espacio.m }} />
-      ) : (
-        <View style={{ marginTop: espacio.m }}>
-          <Mensaje tipo="info" texto="Para compartir la imagen, abrí tu horario desde la app del teléfono." />
-        </View>
-      )}
-      <View style={{ height: espacio.l }} />
-    </Hoja>
   );
 }
 
@@ -841,7 +765,6 @@ const est = crearEstilos(() => ({
   fecha: { width: 54, height: 58, borderRadius: radio.m, backgroundColor: fondos.tarjeta, alignItems: 'center', justifyContent: 'center' },
   fechaDia: { fontFamily: fuentes.bold, fontSize: 21, color: colores.marino, lineHeight: 24 },
   grilla: { backgroundColor: fondos.superficieBlanca, borderRadius: radio.l, paddingVertical: espacio.s, paddingRight: espacio.s, ...sombras.suave },
-  grillaPlana: { shadowOpacity: 0, elevation: 0, borderWidth: StyleSheet.hairlineWidth, borderColor: colores.borde },
   grillaCabecera: { flex: 1, alignItems: 'center', paddingBottom: espacio.s },
   grillaDia: { fontFamily: fuentes.semibold, fontSize: 12, color: colores.marino, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8, overflow: 'hidden' },
   grillaHora: { position: 'absolute', right: 6, fontFamily: fuentes.regular, fontSize: 10, color: colores.textoSuave },
@@ -851,16 +774,5 @@ const est = crearEstilos(() => ({
   bloqueTipo: { fontFamily: fuentes.bold, fontSize: 9, lineHeight: 12, letterSpacing: 0.3, color: colores.blanco, opacity: 0.9, textTransform: 'uppercase' },
   bloqueNombre: { fontFamily: fuentes.semibold, fontSize: 10, lineHeight: 13, color: colores.blanco },
   bloqueAula: { fontFamily: fuentes.regular, fontSize: 9, lineHeight: 12, color: colores.blanco, opacity: 0.9 },
-  // Sin bordes redondeados: las esquinas transparentes se ven negras en algunas apps.
-  imagen: { backgroundColor: fondos.fondo, padding: espacio.m, borderWidth: StyleSheet.hairlineWidth, borderColor: colores.borde },
-  imagenCabecera: { flexDirection: 'row', alignItems: 'center', gap: espacio.s, marginBottom: espacio.m },
-  imagenLogo: { width: 34, height: 34, borderRadius: 17, backgroundColor: fondos.blanco, alignItems: 'center', justifyContent: 'center', borderWidth: StyleSheet.hairlineWidth, borderColor: colores.borde },
-  imagenTitulo: { fontFamily: fuentes.bold, fontSize: 20, color: colores.marino },
-  imagenSub: { fontFamily: fuentes.medium, fontSize: 12, color: colores.textoSuave, marginTop: 1 },
-  imagenDia: { fontFamily: fuentes.bold, fontSize: 12, letterSpacing: 0.6, color: colores.marino, textTransform: 'uppercase', marginBottom: 2 },
-  imagenFila: { flexDirection: 'row', gap: espacio.s, paddingVertical: 2 },
-  imagenHora: { width: 84, fontFamily: fuentes.semibold, fontSize: 12.5, color: colores.texto },
-  imagenClase: { flex: 1, fontFamily: fuentes.semibold, fontSize: 12.5, color: colores.texto },
-  imagenDetalle: { fontFamily: fuentes.regular, color: colores.textoSuave },
   fechaMes: { fontFamily: fuentes.semibold, fontSize: 11, color: colores.textoSuave, letterSpacing: 0.8 },
 }));

@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import { useMemo, useRef } from 'react';
 import { ScrollView, Text, View, type ScrollViewInstance } from 'react-native';
-import { nombreSemestre } from '../components/academico';
+import { nombreNivel } from '../components/academico';
 import { AnilloProgreso, BarraProgreso } from '../components/graficos';
 import { AvisoSinConexion, BarraSuperior, Boton, Cargando, Dato, EstadoVacio, Pantalla, s, Seccion, Tarjeta } from '../components/ui';
 import { useSesion } from '../context/SesionProvider';
@@ -194,7 +194,7 @@ export default function Estadisticas() {
         {e.porNivel.map((n, i) => (
           <View key={n.nivel} style={[est.filaNivel, i === 0 && { borderTopWidth: 0, paddingTop: 0 }]}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' }}>
-              <Text style={[s.filaTitulo, { color: colores.marino }]}>{nombreSemestre(n.nivel)}</Text>
+              <Text style={[s.filaTitulo, { color: colores.marino }]}>{nombreNivel(n.nivel)}</Text>
               <Text style={s.filaDetalle}>
                 {n.aprobadas}/{n.total} aprobadas{n.promedio != null ? ' · promedio ' : ''}
                 {n.promedio != null && <Text style={{ fontFamily: fuentes.semibold, color: colorNota(n.promedio) }}>{prom2(n.promedio)}</Text>}
@@ -203,6 +203,22 @@ export default function Estadisticas() {
             <BarraProgreso valor={(n.aprobadas / Math.max(1, n.total)) * 100} color={n.aprobadas === n.total ? colores.verde : colores.marino} />
           </View>
         ))}
+        {e.optativas && (
+          <View style={[est.filaNivel, e.porNivel.length === 0 && { borderTopWidth: 0, paddingTop: 0 }]}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' }}>
+              <Text style={[s.filaTitulo, { color: colores.marino }]}>Optativas</Text>
+              <Text style={s.filaDetalle}>
+                {e.optativas.total > 0 ? `${e.optativas.aprobadas}/${e.optativas.total} aprobadas` : 'Sin mínimo en tu plan'}
+                {e.optativas.promedio != null ? ' · promedio ' : ''}
+                {e.optativas.promedio != null && <Text style={{ fontFamily: fuentes.semibold, color: colorNota(e.optativas.promedio) }}>{prom2(e.optativas.promedio)}</Text>}
+              </Text>
+            </View>
+            {e.optativas.total > 0 && <BarraProgreso
+              valor={e.optativas.total > 0 ? (e.optativas.aprobadas / e.optativas.total) * 100 : 0}
+              color={e.optativas.total > 0 && e.optativas.aprobadas >= e.optativas.total ? colores.verde : colores.marino}
+            />}
+          </View>
+        )}
       </Tarjeta>
 
       <Text style={[s.filaDetalle, { marginTop: espacio.s, marginBottom: espacio.l }]}>

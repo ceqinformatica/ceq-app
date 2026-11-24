@@ -8,7 +8,10 @@ import { PressableAnimado, useAparecer, usePresion, vibrar } from './movimiento'
 
 export type EstadoVisual = EstadoMateria | 'bloqueada';
 
-export const nombreSemestre = (n: number) => `${n}º semestre`;
+const ORDINALES = ['Primer', 'Segundo', 'Tercer', 'Cuarto', 'Quinto', 'Sexto', 'Séptimo', 'Octavo', 'Noveno', 'Décimo', 'Undécimo', 'Duodécimo'];
+
+/** La malla de la FCQ se ordena por niveles: "Primer nivel", "Segundo nivel"… */
+export const nombreNivel = (n: number) => `${ORDINALES[n - 1] ?? `${n}.º`} nivel`;
 
 /** Formatea un porcentaje con coma decimal: 72,5 %. */
 export const pct = (n: number | null | undefined) => (n == null ? '—' : `${Number.isInteger(n) ? n : n.toFixed(1).replace('.', ',')} %`);

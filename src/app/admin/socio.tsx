@@ -137,7 +137,7 @@ export default function EditarSocio() {
         </Tarjeta>
       ) : (
         <>
-          <Campo etiqueta="Buscar al estudiante" value={busqueda} onChangeText={setBusqueda} placeholder="Nombre, C.I. o correo" autoCapitalize="none" autoCorrect={false} ayuda="Tiene que haber entrado a la app al menos una vez." />
+          <Campo etiqueta="Buscar al estudiante" value={busqueda} onChangeText={setBusqueda} placeholder="Nombre, C.I. o correo" autoCapitalize="none" autoCorrect={false} limpiable ayuda="Tiene que haber entrado a la app al menos una vez." />
           {buscando && <Text style={s.filaDetalle}>Buscando…</Text>}
           {resultados && !buscando && (
             <Tarjeta estilo={{ paddingVertical: espacio.xs }}>
