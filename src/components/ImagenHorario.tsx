@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { type ComponentRef, type Ref, useEffect, useMemo, useRef, useState } from 'react';
-import { Image, Pressable, ScrollView, Text, View } from 'react-native';
+import { Image, PixelRatio, Pressable, ScrollView, Text, View, type TextProps } from 'react-native';
 import { compartirVistaComoImagen, puedeCompartirImagen } from './compartir-imagen';
 import { Boton, Campo, Hoja, logoCeq, Mensaje, Segmentado } from './ui';
 import { useTema } from '../context/TemaProvider';
@@ -93,7 +93,6 @@ export function CompartirHorario({ visible, clases, nombre, onCerrar }: {
         {anchoImagen > 0 ? (
           <View style={est.marco}>
             <ImagenHorario
-              refVista={ref}
               ancho={anchoImagen}
               clases={clases}
               nombre={nombre}
@@ -105,6 +104,22 @@ export function CompartirHorario({ visible, clases, nombre, onCerrar }: {
           </View>
         ) : null}
       </View>
+
+      {/* Copia fuera de la pantalla al tamaño exacto de salida (1080 px de ancho): la vista previa es más chica y escalada se vería borrosa. */}
+      {visible && puedeCompartirImagen ? (
+        <View style={{ position: 'absolute', left: -10000, top: 0 }} pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+          <ImagenHorario
+            refVista={ref}
+            ancho={SALIDA.width / PixelRatio.get()}
+            clases={clases}
+            nombre={nombre}
+            titulo={textoImagen(titulo, TITULO_PREDETERMINADO)}
+            subtitulo={textoImagen(subtitulo, '')}
+            modo={modo}
+            paleta={paletaPorId(paleta)}
+          />
+        </View>
+      ) : null}
 
       <Text style={est.seccion}>Textos</Text>
       <Campo etiqueta="Título" value={titulo} onChangeText={setTitulo} placeholder={TITULO_PREDETERMINADO} maxLength={40} />
@@ -194,30 +209,30 @@ export function ImagenHorario({ refVista, ancho, clases, nombre, titulo, subtitu
         <View style={{ width: u(24), height: u(24), borderRadius: u(12), backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' }}>
           <Image source={logoCeq} style={{ width: u(16), height: u(16) }} accessibilityLabel="Logo del CEQ" />
         </View>
-        <Text style={{ fontFamily: fuentes.bold, fontSize: u(9.5), letterSpacing: u(1.6), color: f.textoSuave }}>PORTAL CEQ</Text>
+        <T style={{ fontFamily: fuentes.bold, fontSize: u(9.5), letterSpacing: u(1.6), color: f.textoSuave }}>PORTAL CEQ</T>
       </View>
-      <Text style={{ fontFamily: fuentes.bold, fontSize: u(27), lineHeight: u(32), letterSpacing: u(-0.4), color: f.texto, marginTop: u(12) }} numberOfLines={2}>
+      <T style={{ fontFamily: fuentes.bold, fontSize: u(27), lineHeight: u(32), letterSpacing: u(-0.4), color: f.texto, marginTop: u(12) }} numberOfLines={2}>
         {titulo}
-      </Text>
+      </T>
       {subtitulo ? (
-        <Text style={{ fontFamily: fuentes.medium, fontSize: u(13), lineHeight: u(17), color: f.textoSuave, marginTop: u(2) }} numberOfLines={1}>{subtitulo}</Text>
+        <T style={{ fontFamily: fuentes.medium, fontSize: u(13), lineHeight: u(17), color: f.textoSuave, marginTop: u(2) }} numberOfLines={1}>{subtitulo}</T>
       ) : null}
 
       <View style={{ flex: 1, marginTop: u(14), backgroundColor: f.tarjeta, borderRadius: u(16), paddingTop: u(10), paddingBottom: u(10), paddingLeft: u(4), paddingRight: u(12) }}>
         <View style={{ flexDirection: 'row', height: u(18) }}>
           <View style={{ width: u(24) }} />
           {dias.map((d) => (
-            <Text key={d} style={{ flex: 1, textAlign: 'center', fontFamily: fuentes.bold, fontSize: u(9.5), letterSpacing: u(0.6), color: f.texto }}>
+            <T key={d} style={{ flex: 1, textAlign: 'center', fontFamily: fuentes.bold, fontSize: u(9.5), letterSpacing: u(0.6), color: f.texto }}>
               {DIAS_CORTOS[d - 1].toUpperCase()}
-            </Text>
+            </T>
           ))}
         </View>
         <View style={{ flex: 1, flexDirection: 'row' }} onLayout={(e) => setAltoGrilla(e.nativeEvent.layout.height / k)}>
           <View style={{ width: u(24) }}>
             {marcas.map((h, i) => (
-              <Text key={h} style={{ position: 'absolute', right: u(5), top: u(i * altoHora - 5), fontFamily: fuentes.medium, fontSize: u(8.5), color: f.textoSuave }}>
+              <T key={h} style={{ position: 'absolute', right: u(5), top: u(i * altoHora - 5), fontFamily: fuentes.medium, fontSize: u(8.5), color: f.textoSuave }}>
                 {String(h / 60).padStart(2, '0')}
-              </Text>
+              </T>
             ))}
           </View>
           {dias.map((d) => (
@@ -247,12 +262,12 @@ export function ImagenHorario({ refVista, ancho, clases, nombre, titulo, subtitu
                     }}
                   >
                     <View style={{ flex: 1, backgroundColor: tono, borderRadius: u(7), paddingHorizontal: u(4), paddingVertical: u(3), overflow: 'hidden' }}>
-                      {conTipo ? <Text style={[txt(u, 7.5, fuentes.bold, tinta), { opacity: 0.85, letterSpacing: u(0.4) }]} numberOfLines={1}>{tipo!.corto.toUpperCase()}</Text> : null}
-                      <Text style={txt(u, 9, fuentes.semibold, tinta)} numberOfLines={lineasNombre}>
+                      {conTipo ? <T style={[txt(u, 7.5, fuentes.bold, tinta), { opacity: 0.85, letterSpacing: u(0.4) }]} numberOfLines={1}>{tipo!.corto.toUpperCase()}</T> : null}
+                      <T style={txt(u, 9, fuentes.semibold, tinta)} numberOfLines={lineasNombre}>
                         {tipo && !conTipo ? `${tipo.corto} · ` : ''}{abreviar(nombre(c), largo)}
-                      </Text>
-                      {conAula ? <Text style={[txt(u, 7.5, fuentes.medium, tinta), { opacity: 0.85 }]} numberOfLines={1}>{c.aula}</Text> : null}
-                      {conHora ? <Text style={[txt(u, 7.5, fuentes.medium, tinta), { opacity: 0.85 }]} numberOfLines={1}>{hora(c.hora_inicio)}</Text> : null}
+                      </T>
+                      {conAula ? <T style={[txt(u, 7.5, fuentes.medium, tinta), { opacity: 0.85 }]} numberOfLines={1}>{c.aula}</T> : null}
+                      {conHora ? <T style={[txt(u, 7.5, fuentes.medium, tinta), { opacity: 0.85 }]} numberOfLines={1}>{hora(c.hora_inicio)}</T> : null}
                     </View>
                   </View>
                 );
@@ -264,20 +279,28 @@ export function ImagenHorario({ refVista, ancho, clases, nombre, titulo, subtitu
 
       {leyenda.length > 0 ? (
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginTop: u(12), rowGap: u(6) }}>
-          {leyenda.slice(0, 10).map((m) => (
+          {(leyenda.length > 10 ? leyenda.slice(0, 9) : leyenda).map((m) => (
             <View key={m.clave} style={{ width: '50%', flexDirection: 'row', alignItems: 'center', gap: u(6), paddingRight: u(6) }}>
               <View style={{ width: u(10), height: u(10), borderRadius: u(3), backgroundColor: colorDe.get(m.clave) }} />
-              <Text style={{ flex: 1, fontFamily: fuentes.semibold, fontSize: u(10), color: f.texto }} numberOfLines={1}>{m.nombre}</Text>
+              <T style={{ flex: 1, fontFamily: fuentes.semibold, fontSize: u(10), color: f.texto }} numberOfLines={1}>{m.nombre}</T>
             </View>
           ))}
+          {leyenda.length > 10 ? (
+            <T style={{ width: '50%', fontFamily: fuentes.medium, fontSize: u(10), color: f.textoSuave, paddingLeft: u(16) }}>+{leyenda.length - 9} más</T>
+          ) : null}
         </View>
       ) : null}
 
-      <Text style={{ marginTop: u(12), fontFamily: fuentes.medium, fontSize: u(8.5), color: f.textoSuave, textAlign: 'center', letterSpacing: u(0.3) }}>
+      <T style={{ marginTop: u(12), fontFamily: fuentes.medium, fontSize: u(8.5), color: f.textoSuave, textAlign: 'center', letterSpacing: u(0.3) }}>
         Hecho con la app Portal CEQ
-      </Text>
+      </T>
     </View>
   );
+}
+
+/** El texto de la imagen no crece con la letra grande del sistema: el diseño es fijo. */
+function T(props: TextProps) {
+  return <Text allowFontScaling={false} {...props} />;
 }
 
 const txt = (u: (n: number) => number, tamano: number, fuente: string, color: string) => ({
