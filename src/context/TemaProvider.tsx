@@ -68,6 +68,8 @@ export function TemaProvider({ inicial = 'sistema', children }: { inicial?: Pref
   const esquema: Esquema = soloClaro ? 'claro' : elegido;
   // Entrar o salir del acceso cambia el tema sin el fundido (si no, se vería un velo oscuro al abrir la app).
   const sinVelo = useRef(false);
+  const elegidoRef = useRef(elegido);
+  elegidoRef.current = elegido;
 
   // Transición al cambiar de tema: un velo del color de fondo anterior se
   // desvanece sobre la app ya dibujada con el tema nuevo (fundido suave).
@@ -116,7 +118,8 @@ export function TemaProvider({ inicial = 'sistema', children }: { inicial?: Pref
 
   const fijarSoloClaro = useCallback((activo: boolean) => {
     setSoloClaro((antes) => {
-      if (antes !== activo) sinVelo.current = true;
+      // Solo si de verdad cambia el tema que se ve (con tema claro elegido, no cambia nada).
+      if (antes !== activo && elegidoRef.current !== 'claro') sinVelo.current = true;
       return activo;
     });
   }, []);
