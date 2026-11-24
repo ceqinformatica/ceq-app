@@ -45,7 +45,7 @@ export default function SociosAdmin() {
           El carnet tiene costo: da de alta solo a quien ya pagó. También se habilita cuando aprobás la foto que manda el estudiante en Validar carnets.
         </Text>
         <Boton texto="Verificar un carnet" icono="qr-code" variante="secundario" onPress={() => router.push('/verificar')} compacto estilo={{ marginBottom: espacio.m }} />
-        <Campo etiqueta="Buscar" value={busqueda} onChangeText={setBusqueda} placeholder="Nombre o C.I." autoCorrect={false} />
+        <Campo etiqueta="Buscar" value={busqueda} onChangeText={setBusqueda} placeholder="Nombre o C.I." autoCorrect={false} limpiable />
         <Segmentado<Filtro>
           opciones={[
             { valor: 'todos', texto: `Todos (${datos?.length ?? 0})` },

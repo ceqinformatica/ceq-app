@@ -23,7 +23,7 @@ export default function TramitesAdmin() {
         <Text style={[s.filaDetalle, { marginBottom: espacio.m }]}>
           Lo que edites acá lo ven todos los estudiantes al instante. Revisá fechas y aranceles al empezar cada semestre.
         </Text>
-        <Campo etiqueta="Buscar" value={busqueda} onChangeText={setBusqueda} placeholder="Nombre o palabra" autoCorrect={false} />
+        <Campo etiqueta="Buscar" value={busqueda} onChangeText={setBusqueda} placeholder="Nombre o palabra" autoCorrect={false} limpiable />
         {cargando && !datos ? (
           <Cargando />
         ) : !datos?.length ? (

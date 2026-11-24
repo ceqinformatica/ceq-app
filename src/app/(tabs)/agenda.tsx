@@ -397,7 +397,7 @@ function ElegirCursando({ datos, primeraVez, onListo, onSaltar }: {
           ? 'Primero marcá las materias que estás cursando. Después, al cargar clases o fechas, solo te van a aparecer esas.'
           : 'Marcá las otras materias que estás cursando.'}
       </Text>
-      <Campo etiqueta="Buscar" value={busqueda} onChangeText={setBusqueda} placeholder="Nombre de la materia" />
+      <Campo etiqueta="Buscar" value={busqueda} onChangeText={setBusqueda} placeholder="Nombre de la materia" limpiable />
       {!q && niveles.length > 1 && (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: espacio.s, paddingBottom: espacio.m }}>
           {niveles.map((n) => <Chip key={n} texto={n === 0 ? 'Optativas' : `${n}º nivel`} elegido={nivel === n} onPress={() => setNivel(n)} />)}

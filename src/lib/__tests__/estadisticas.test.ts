@@ -114,3 +114,12 @@ test('una nota de aprobación fuera de 2 a 5 no entra en ningún promedio', () =
   assert.equal(e.promedio, 4);
   assert.equal(e.distribucion.reduce((s, d) => s + d.cantidad, 0), 1);
 });
+
+test('optativas debajo de los niveles', () => {
+  const sinOpt = calcularEstadisticas(materias, grupos, estados, intentos);
+  assert.deepEqual(sinOpt.optativas, { aprobadas: 0, total: 1, promedio: null });
+  const conOpt = calcularEstadisticas(materias, grupos, new Map([...estados, ['o1', { estado: 'aprobada', notaFinal: 4 }], ['o2', { estado: 'aprobada', notaFinal: 5 }]]), intentos);
+  // Exige 1: cuenta 1 de 1, pero el promedio usa las dos aprobadas.
+  assert.deepEqual(conOpt.optativas, { aprobadas: 1, total: 1, promedio: 4.5 });
+  assert.equal(calcularEstadisticas(materias.filter((m) => !m.grupoOptativaId), [], estados, intentos).optativas, null);
+});
