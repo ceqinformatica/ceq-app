@@ -51,7 +51,9 @@ export default function DetalleMateria() {
     // Aprobada sin finales cargados (por ejemplo, marcada en bloque): se ve su nota.
     setSoloNota(e === 'aprobada' && sinFinalesCargados);
     setNotaTxt(actual?.notaFinal != null ? String(actual.notaFinal) : '');
-  }, [actual?.estado, actual?.notaFinal, seminario, sinFinalesCargados]);
+    // Solo al cambiar el estado guardado: cargar un aplazo en Finales no tiene que sacarla de ahí.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [actual?.estado, actual?.notaFinal, seminario]);
 
   const cambiarVista = (v: VistaMateria) => {
     setVista(v);
@@ -191,7 +193,7 @@ export default function DetalleMateria() {
       {vista === 'finales' && !soloNota && (
         <>
           <TarjetaFinales key={versionFinales} materiaId={materia.id} semestreOpuesto={actual?.semestreOpuesto} anioPlan={malla?.plan?.anio} firma={firmaGuardada} aprobada={actual?.estado === 'aprobada'} onGuardado={() => recargar()} />
-          <Boton texto="La aprobé y no tengo los finales: cargar solo la nota" variante="fantasma" compacto onPress={() => elegirSoloNota(true)} />
+          {sinFinalesCargados && <Boton texto="La aprobé y no tengo los finales: cargar solo la nota" variante="fantasma" compacto onPress={() => elegirSoloNota(true)} />}
         </>
       )}
       {vista === 'finales' && soloNota && (
@@ -274,7 +276,9 @@ export default function DetalleMateria() {
             firma={firmaGuardada ?? (firmaEstimada?.id === materia.id ? firmaEstimada.valor : null)}
             estimada={firmaGuardada == null}
             aviso={firmaGuardada == null && firmaEstimada?.id === materia.id ? firmaEstimada.aviso : undefined}
-            onGuardarFirma={async (f) => {
+            sinDatos={firmaEstimada?.id !== materia.id ? 'Calculando…' : 'No pudimos calcularlo ahora. Revisá tu conexión y volvé a entrar.'}
+            // Sin firma guardada ni parciales cargados: deja escribir con cuánto firmó.
+            onGuardarFirma={firmaGuardada == null && (firmaEstimada?.id !== materia.id || firmaEstimada.error) ? undefined : async (f) => {
               await guardarFirma(materia.id, f);
               recargar();
             }}
