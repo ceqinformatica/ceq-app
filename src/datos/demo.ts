@@ -62,8 +62,8 @@ const ev = (id: string, materia_id: string, nombre: string, componente: 'teoria'
   id, usuario_id: UID_DEMO, materia_id, nombre, componente, ponderacion, porcentaje, puntaje_obtenido: null, puntaje_total: null, rendida, fecha, orden: 0, created_at: ahora.toISOString(),
 });
 
-const hor = (id: string, materia_id: string, dia: number, ini: string, fin: string, aula: string): HorarioDb => ({
-  id, usuario_id: UID_DEMO, materia_id, titulo: null, dia_semana: dia, hora_inicio: ini, hora_fin: fin, aula, aviso_minutos: dia === 1 ? 15 : null, avisado_el: null,
+const hor = (id: string, materia_id: string, dia: number, ini: string, fin: string, aula: string, tipo_clase: HorarioDb['tipo_clase'] = 'teoria'): HorarioDb => ({
+  id, usuario_id: UID_DEMO, materia_id, titulo: null, dia_semana: dia, hora_inicio: ini, hora_fin: fin, aula, tipo_clase, aviso_minutos: dia === 1 ? 15 : null, avisado_el: null,
 });
 
 export const db = {
@@ -110,9 +110,9 @@ export const db = {
   ] as AsistenciaDb[],
   horario: [
     hor('h1', 'qa1', 1, '07:30:00', '09:30:00', 'Aula 12'), hor('h2', 'fq1', 1, '10:00:00', '12:00:00', 'Aula Magna'),
-    hor('h3', 'bq', 2, '08:00:00', '10:00:00', 'Aula 7'), hor('h4', 'qa1', 3, '13:30:00', '17:30:00', 'Lab. Analítica'),
-    hor('h5', 'fq1', 4, '07:30:00', '09:30:00', 'Aula 12'), hor('h6', 'bq', 4, '14:00:00', '18:00:00', 'Lab. Bioquímica'),
-    hor('h7', 'qa1', 5, '07:30:00', '09:30:00', 'Aula 12'), hor('h8', 'bq', 5, '10:00:00', '12:00:00', 'Aula 7'),
+    hor('h3', 'bq', 2, '08:00:00', '10:00:00', 'Aula 7'), hor('h4', 'qa1', 3, '13:30:00', '17:30:00', 'Lab. Analítica', 'laboratorio'),
+    hor('h5', 'fq1', 4, '07:30:00', '09:30:00', 'Aula 12', 'rp'), hor('h6', 'bq', 4, '14:00:00', '18:00:00', 'Lab. Bioquímica', 'laboratorio'),
+    hor('h7', 'qa1', 5, '07:30:00', '09:30:00', 'Aula 12'), hor('h8', 'bq', 5, '10:00:00', '12:00:00', 'Aula 7', 'rp'),
   ] as HorarioDb[],
   eventos: [
     { id: 'ev1', usuario_id: UID_DEMO, materia_id: 'fq1', plan_id: null, tipo: 'examen', titulo: 'Segundo parcial', fecha: enDias(3), aviso_minutos: 1440, notificado: false, created_at: ahora.toISOString() },

@@ -74,7 +74,7 @@ export async function cargarAgenda(planId: string | null | undefined): Promise<A
   };
 }
 
-export type NuevaClase = Pick<HorarioDb, 'materia_id' | 'titulo' | 'dia_semana' | 'hora_inicio' | 'hora_fin' | 'aula' | 'aviso_minutos'>;
+export type NuevaClase = Pick<HorarioDb, 'materia_id' | 'titulo' | 'dia_semana' | 'hora_inicio' | 'hora_fin' | 'aula' | 'tipo_clase' | 'aviso_minutos'>;
 
 /** Agrega la misma clase en uno o varios días (p. ej. lunes y miércoles). */
 export async function crearClases(clases: NuevaClase[]) {
