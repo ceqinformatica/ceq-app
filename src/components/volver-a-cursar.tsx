@@ -21,8 +21,12 @@ import { colores, espacio, fondos, fuentes, radio } from '../tema';
 import { Boton, Mensaje, s } from './ui';
 import { vibrar } from './movimiento';
 
-/** Art. 23: las materias del plan 2018 no se ofrecen en semestre opuesto. */
-export const sinOpuestoEnPlan = (anioPlan: number | null | undefined) => anioPlan === 2018;
+/**
+ * El Art. 23 dejaba fuera del semestre opuesto a las materias del plan 2018,
+ * pero según Josie una resolución posterior lo abre automáticamente para
+ * cualquiera que se inscriba: no se oculta para ningún plan.
+ */
+export const sinOpuestoEnPlan = (_anioPlan: number | null | undefined) => false;
 
 type Modo = 'normal' | 'opuesto';
 
@@ -94,7 +98,7 @@ export function VolverACursar({ materiaId, aprobada, anioPlan, motivo, onHecho }
       />
       {modo === 'opuesto' && (
         <>
-          <Text style={[s.filaDetalle, { marginBottom: espacio.s }]}>Necesitás tener las prácticas aprobadas y la asistencia cumplida (Art. 7 c). La materia se abre a pedido: se inscribe con un formulario en Mesa de Entrada.</Text>
+          <Text style={[s.filaDetalle, { marginBottom: espacio.s }]}>Necesitás tener las prácticas aprobadas y la asistencia cumplida (Art. 7 c). Se abre si alguien se inscribe: la inscripción se hace con un formulario en Mesa de Entrada.</Text>
           <Pressable accessibilityRole="link" onPress={() => router.push('/tramite/clave:semestre-opuesto')} hitSlop={8} style={{ alignSelf: 'flex-start', paddingVertical: 6 }}>
             <Text style={[s.filaDetalle, { color: colores.marino, textDecorationLine: 'underline' }]}>Ver el trámite de semestre opuesto</Text>
           </Pressable>
