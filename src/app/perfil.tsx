@@ -8,6 +8,7 @@ import { eliminarCuenta, salir } from '../lib/auth';
 import { registrarEsteCelular, type EstadoRegistro } from '../lib/notificaciones';
 import { activarBiometria, biometriaActiva, biometriaDisponible, desactivarBiometria } from '../lib/biometria';
 import { pinActivo } from '../lib/pinGuardado';
+import { metodosDeCuenta } from '../lib/recuperacion';
 import { supabase } from '../lib/supabase';
 import { colores, espacio, fondos, fuentes } from '../tema';
 import { useTema } from '../context/TemaProvider';
@@ -26,6 +27,8 @@ export default function Perfil() {
   const [error, setError] = useState<string | null>(null);
   const [push, setPush] = useState<EstadoRegistro | null>(null);
   const [borrando, setBorrando] = useState(false);
+  // Solo las cuentas creadas con correo tienen contraseña propia (las de Google usan la de Google).
+  const conClave = MODO_DEMO || metodosDeCuenta(sesion?.user).clave;
 
   const borrarDeVerdad = async () => {
     setBorrando(true);
@@ -235,9 +238,12 @@ export default function Perfil() {
               thumbColor={colores.blanco}
             />
           }
-          ultima={!conPin}
+          ultima={!conPin && !conClave}
         />
-        {conPin && <Fila simple icono="create-outline" titulo="Cambiar PIN" onPress={() => router.push('/pin?modo=cambiar')} ultima />}
+        {conPin && <Fila simple icono="create-outline" titulo="Cambiar PIN" onPress={() => router.push('/pin?modo=cambiar')} ultima={!conClave} />}
+        {conClave && (
+          <Fila simple icono="key-outline" titulo="Cambiar contraseña" detalle="La de tu cuenta con correo." onPress={() => router.push('/auth/restablecer?modo=cambiar')} ultima />
+        )}
       </Tarjeta>
 
       <Mensaje texto={error} />

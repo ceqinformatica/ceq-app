@@ -5,16 +5,23 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSesion } from '../context/SesionProvider';
 import { salir } from '../lib/auth';
 import { biometriaActiva, biometriaDisponible } from '../lib/biometria';
-import { esperaPin, largoPin } from '../lib/pinGuardado';
-import { colores, espacio, fondos, fuentes } from '../tema';
+import { problemaPin } from '../lib/pin';
+import { esperaPin, largoPin, reiniciarIntentosPin } from '../lib/pinGuardado';
+import { colores, espacio, fondos, fuentes, radio } from '../tema';
+import { ConfirmarCuenta } from './ConfirmarCuenta';
 import { Hexagono } from './graficos';
 import { TecladoPin } from './TecladoPin';
 import { Boton, logoCeq, Mensaje } from './ui';
 
 interface Metodos { bio: boolean; nombreBio: string; largo: number | null }
 
+/** 'pin': pantalla normal. 'recuperar': "¿Olvidaste tu PIN?". 'nuevo'/'confirmar': elegir el PIN nuevo. */
+type Vista = 'pin' | 'recuperar' | 'nuevo' | 'confirmar';
+
 export function Bloqueo() {
-  const { desbloquear, desbloquearConPin } = useSesion();
+  const { desbloquear, desbloquearConPin, abrirConPinNuevo } = useSesion();
+  const [vista, setVista] = useState<Vista>('pin');
+  const [pinNuevo, setPinNuevo] = useState('');
   const insets = useSafeAreaInsets();
   const [metodos, setMetodos] = useState<Metodos | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -70,17 +77,110 @@ export function Bloqueo() {
       setError(
         r.quedanAntesDeEsperar > 0
           ? `PIN incorrecto. ${r.quedanAntesDeEsperar === 1 ? 'Queda 1 intento' : `Quedan ${r.quedanAntesDeEsperar} intentos`} antes de tener que esperar.`
-          : `PIN incorrecto. Después de ${r.quedanAntesDeSalir} ${r.quedanAntesDeSalir === 1 ? 'intento más' : 'intentos más'} se cierra la sesión.`,
+          : `PIN incorrecto. Después de ${r.quedanAntesDeSalir} ${r.quedanAntesDeSalir === 1 ? 'intento más' : 'intentos más'} vas a tener que confirmar tu cuenta para crear uno nuevo.`,
       );
     } else {
       setError('No se pudo comprobar el PIN. Probá de nuevo o cerrá sesión y volvé a entrar.');
     }
   };
 
+  const reintentar = (msg: string | null) => {
+    setError(msg);
+    setIntento((n) => n + 1);
+  };
+
+  // Después de confirmar la cuenta: los fallos anteriores ya no cuentan.
+  const cuentaConfirmada = async () => {
+    await reiniciarIntentosPin().catch(() => {});
+    setBloqueoTotal(false);
+    setEspera(0);
+    setPinNuevo('');
+    reintentar(null);
+    setVista('nuevo');
+  };
+
+  const conPinNuevo = (pin: string) => {
+    const problema = problemaPin(pin);
+    if (problema) return reintentar(problema);
+    setPinNuevo(pin);
+    reintentar(null);
+    setVista('confirmar');
+  };
+
+  const conConfirmacion = async (pin: string) => {
+    if (pin !== pinNuevo) {
+      setPinNuevo('');
+      setVista('nuevo');
+      return reintentar('Los PIN no coinciden. Empezá de nuevo.');
+    }
+    setComprobando(true);
+    const err = await abrirConPinNuevo(pin);
+    setComprobando(false);
+    if (err) reintentar(err);
+  };
+
+  const sinPin = async () => {
+    const err = await abrirConPinNuevo(null);
+    if (err) setError(err);
+  };
+
+  if (vista === 'recuperar') {
+    return (
+      <View style={{ flex: 1, backgroundColor: fondos.celesteMarca }}>
+        <ScrollView
+          contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingTop: insets.top + espacio.l, paddingBottom: insets.bottom + espacio.l, paddingHorizontal: espacio.l }}
+          keyboardShouldPersistTaps="handled"
+          bounces={false}
+        >
+          <View style={{ width: '100%', maxWidth: 440, alignSelf: 'center', backgroundColor: fondos.fondo, borderRadius: radio.xl, padding: espacio.xl }}>
+            <ConfirmarCuenta onConfirmado={cuentaConfirmada} onCancelar={() => { setError(null); setVista('pin'); }} />
+          </View>
+        </ScrollView>
+      </View>
+    );
+  }
+
+  if (vista === 'nuevo' || vista === 'confirmar') {
+    return (
+      <View style={{ flex: 1, backgroundColor: fondos.celesteMarca }}>
+        <ScrollView
+          contentContainerStyle={{ flexGrow: 1, paddingTop: insets.top + espacio.l, paddingBottom: insets.bottom + espacio.l, paddingHorizontal: espacio.xl }}
+          bounces={false}
+        >
+          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', width: '100%', maxWidth: 420, alignSelf: 'center' }}>
+            <Ionicons name="checkmark-circle" size={44} color={colores.blanco} />
+            <Text style={{ fontFamily: fuentes.bold, fontSize: 22, color: colores.blanco, marginTop: espacio.m, textTransform: 'uppercase', letterSpacing: 1, textAlign: 'center' }} accessibilityRole="header">
+              {vista === 'nuevo' ? 'Elegí un PIN nuevo' : 'Confirmá el PIN'}
+            </Text>
+            <Text style={{ fontFamily: fuentes.regular, fontSize: 15, color: '#FFFFFF', marginTop: espacio.s, marginBottom: espacio.xl, textAlign: 'center' }} accessibilityLiveRegion="polite">
+              {vista === 'nuevo' ? 'Ya confirmamos que sos vos. Escribí de 4 a 6 números y tocá ✓.' : 'Escribilo otra vez para confirmar.'}
+            </Text>
+            <TecladoPin
+              key={vista}
+              sobreMarca
+              largo={vista === 'confirmar' ? pinNuevo.length : null}
+              reinicio={intento}
+              deshabilitado={comprobando}
+              onCompleto={vista === 'nuevo' ? conPinNuevo : conConfirmacion}
+            />
+          </View>
+          <View style={{ width: '100%', maxWidth: 420, alignSelf: 'center', marginTop: espacio.l }}>
+            <Mensaje texto={error} />
+            <Pressable onPress={sinPin} accessibilityRole="button" style={{ alignSelf: 'center', padding: espacio.m, marginTop: espacio.s }}>
+              <Text style={{ fontFamily: fuentes.semibold, fontSize: 14, color: '#FFFFFF', textAlign: 'center' }}>
+                {metodos?.bio ? `Seguir solo con la ${metodos.nombreBio}` : 'Seguir sin PIN'}
+              </Text>
+            </Pressable>
+          </View>
+        </ScrollView>
+      </View>
+    );
+  }
+
   const conPinActivo = metodos?.largo != null;
   const iconoBio = metodos?.nombreBio === 'reconocimiento facial' ? 'scan-outline' : 'finger-print';
   const subtitulo = bloqueoTotal
-    ? `Hubo demasiados intentos con un PIN incorrecto. ${metodos?.bio ? `Usá tu ${metodos.nombreBio} o cerrá` : 'Cerrá'} sesión y volvé a entrar con tu cuenta para crear uno nuevo.`
+    ? `Hubo demasiados intentos con un PIN incorrecto. ${metodos?.bio ? `Usá tu ${metodos.nombreBio} o confirmá` : 'Confirmá'} tu cuenta para crear uno nuevo.`
     : conPinActivo
       ? metodos?.bio
         ? `Escribí tu PIN o usá tu ${metodos.nombreBio}.`
@@ -132,10 +232,14 @@ export function Bloqueo() {
         <View style={{ width: '100%', maxWidth: 420, alignSelf: 'center', marginTop: espacio.l }}>
           <Mensaje texto={error} />
           {metodos && !conPinActivo && <Boton texto="Desbloquear" variante="claro" onPress={conBiometria} />}
+          {conPinActivo && bloqueoTotal && <Boton texto="Crear un PIN nuevo" variante="claro" onPress={() => { setError(null); setVista('recuperar'); }} />}
+          {conPinActivo && !bloqueoTotal && (
+            <Pressable onPress={() => { setError(null); setVista('recuperar'); }} accessibilityRole="button" style={{ alignSelf: 'center', padding: espacio.m }}>
+              <Text style={{ fontFamily: fuentes.bold, fontSize: 15, color: '#FFFFFF', textAlign: 'center', textDecorationLine: 'underline' }}>¿Olvidaste tu PIN?</Text>
+            </Pressable>
+          )}
           <Pressable onPress={salir} accessibilityRole="button" style={{ alignSelf: 'center', padding: espacio.m, marginTop: espacio.s }}>
-            <Text style={{ fontFamily: fuentes.semibold, fontSize: 14, color: '#FFFFFF', textAlign: 'center' }}>
-              {conPinActivo && !bloqueoTotal ? '¿Olvidaste el PIN? Cerrar sesión' : 'Cerrar sesión'}
-            </Text>
+            <Text style={{ fontFamily: fuentes.semibold, fontSize: 14, color: '#FFFFFF', textAlign: 'center' }}>Cerrar sesión</Text>
           </Pressable>
         </View>
       </ScrollView>

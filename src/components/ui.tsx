@@ -88,26 +88,32 @@ export function Pantalla({ children, scroll = true, estilo, cabecera, refrescand
   const refresh = onRefrescar ? (
     <RefreshControl refreshing={Boolean(refrescando)} onRefresh={onRefrescar} tintColor={colores.marino} colors={[colores.marino]} />
   ) : undefined;
+  // Entrada suave de cada pantalla (se salta con "Reducir movimiento").
+  const { opacity, translateY } = useAparecer(0, 12);
+  const cuerpo = scroll ? (
+    <ScrollView
+      keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="interactive"
+      refreshControl={refresh}
+      showsVerticalScrollIndicator={false}
+    >
+      {cabecera}
+      {contenido}
+    </ScrollView>
+  ) : (
+    <>
+      {cabecera}
+      {contenido}
+    </>
+  );
   return (
     <EvitaTeclado estilo={s.pantalla}>
-    <SafeAreaView style={s.pantalla} edges={marca ? ['left', 'right'] : ['top', 'left', 'right']}>
+    <SafeAreaView style={[s.pantalla, marca && { backgroundColor: fondos.franja }]} edges={marca ? ['left', 'right'] : ['top', 'left', 'right']}>
       {barra}
-      {scroll ? (
-        <ScrollView
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="interactive"
-          refreshControl={refresh}
-          showsVerticalScrollIndicator={false}
-        >
-          {cabecera}
-          {contenido}
-        </ScrollView>
-      ) : (
-        <>
-          {cabecera}
-          {contenido}
-        </>
-      )}
+      {/* Con barra fija, el contenido va en una hoja de esquinas redondeadas que recorta lo que se desplaza por debajo. */}
+      <Animated.View style={[{ flex: 1, opacity, transform: [{ translateY }] }, marca && s.hojaContenido]}>
+        {cuerpo}
+      </Animated.View>
     </SafeAreaView>
     </EvitaTeclado>
   );
@@ -158,7 +164,7 @@ export function CabeceraMarca({ titulo, sub, children, compacta, sinConexion }: 
   const { anchoMaximo } = useDisposicion();
   const ancho = anchoMaximo ? { width: '100%' as const, maxWidth: anchoMaximo, alignSelf: 'center' as const } : null;
   return (
-    <View style={s.cabecera}>
+    <View>
       <View style={[s.cabeceraCuerpo, { paddingBottom: compacta ? espacio.xl + espacio.s : espacio.xxl + espacio.m }]}>
         <View style={s.cabeceraBurbuja} pointerEvents="none" />
         <View style={ancho}>
@@ -635,7 +641,8 @@ export const s = crearEstilos(() => ({
   cabeceraMarcaSub: { fontFamily: fuentes.medium, fontSize: 12.5, color: colores.marinoOscuro, flexShrink: 1 },
   cabeceraAcciones: { flexDirection: 'row', alignItems: 'center', backgroundColor: fondos.superficieBlanca, borderRadius: 999, paddingHorizontal: 4, paddingVertical: 2, ...sombras.suave },
   cabeceraSeparador: { width: StyleSheet.hairlineWidth, alignSelf: 'stretch', marginVertical: 8, backgroundColor: colores.linea },
-  cabeceraCuerpo: { backgroundColor: fondos.fondo, borderTopLeftRadius: radio.xl + 6, borderTopRightRadius: radio.xl + 6, paddingHorizontal: espacio.l, paddingTop: espacio.m, overflow: 'hidden' },
+  cabeceraCuerpo: { paddingHorizontal: espacio.l, paddingTop: espacio.m, overflow: 'hidden' },
+  hojaContenido: { backgroundColor: fondos.fondo, borderTopLeftRadius: radio.xl + 6, borderTopRightRadius: radio.xl + 6, overflow: 'hidden' },
   cabeceraBurbuja: { position: 'absolute', left: -70, top: -40, width: 150, height: 170, borderRadius: 85, backgroundColor: fondos.burbuja },
   cabeceraTitulo: { fontFamily: fuentes.bold, fontSize: 32, lineHeight: 38, color: colores.marinoOscuro, letterSpacing: -0.5 },
   cabeceraSub: { ...texto.cuerpo, color: colores.marinoOscuro, marginTop: 2 },
