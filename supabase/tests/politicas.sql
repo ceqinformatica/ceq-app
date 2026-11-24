@@ -513,10 +513,11 @@ select pg_temp.como('00000000-0000-0000-0000-0000000000ad');
 insert into public.socios (ci, nombre, vigente_hasta) values ('5300222', 'Carla Duarte', '2025-12-31');
 select pg_temp.como('00000000-0000-0000-0000-0000000000c2');
 select pg_temp.debe_fallar('carnet vencido no se valida', $$select public.solicitar_carnet('Carla Vencida', '5300222', null, '2020-12-31', '00000000-0000-0000-0000-0000000000c2/f.jpg')$$);
-select pg_temp.debe_fallar('vencimiento imposible (más de 3 años)', $$select public.solicitar_carnet('Carla', '5300222', null, (current_date + 1200), '00000000-0000-0000-0000-0000000000c2/f.jpg')$$);
+select pg_temp.debe_fallar('vencimiento imposible (más de 6 años)', $$select public.solicitar_carnet('Carla', '5300222', null, (current_date + 2600), '00000000-0000-0000-0000-0000000000c2/f.jpg')$$);
 select pg_temp.debe_fallar('la foto tiene que ser suya', $$select public.solicitar_carnet('Carla', '5300222', null, (current_date + 300), '00000000-0000-0000-0000-00000000000a/f.jpg')$$);
 select pg_temp.debe_fallar('no escribe la tabla a mano', $$insert into public.solicitudes_carnet (nombre, ci, vigente_hasta, foto_path) values ('x', '1234', current_date + 10, 'x')$$);
-select public.solicitar_carnet('Carla Duarte', '5.300.222', null, (current_date + 300), '00000000-0000-0000-0000-0000000000c2/f1.jpg');
+-- Otro diseño de carnet, que dura más de 3 años: se acepta.
+select public.solicitar_carnet('Carla Duarte', '5.300.222', null, (current_date + 1500), '00000000-0000-0000-0000-0000000000c2/f1.jpg');
 select public.solicitar_carnet('Carla Duarte', '5300222', 'CEQ-0777', (current_date + 400), '00000000-0000-0000-0000-0000000000c2/f2.jpg');
 select pg_temp.debe_ser('una sola pendiente (la segunda la reemplaza)', (select count(*) from public.solicitudes_carnet), 1);
 select pg_temp.debe_fallar('no se aprueba a sí misma', $$select public.aprobar_solicitud_carnet(id, created_at) from public.solicitudes_carnet$$);

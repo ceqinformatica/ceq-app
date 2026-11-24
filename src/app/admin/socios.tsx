@@ -42,7 +42,7 @@ export default function SociosAdmin() {
       <Pantalla refrescando={refrescando} onRefrescar={recargar}>
         <BarraSuperior titulo="Socios y carnets" onVolver={volver} />
         <Text style={[s.filaDetalle, { marginBottom: espacio.m }]}>
-          El carnet tiene costo y dura 3 años: da de alta solo a quien ya pagó. También se habilita cuando aprobás la foto que manda el estudiante en Validar carnets.
+          El carnet tiene costo: da de alta solo a quien ya pagó. También se habilita cuando aprobás la foto que manda el estudiante en Validar carnets.
         </Text>
         <Boton texto="Verificar un carnet" icono="qr-code" variante="secundario" onPress={() => router.push('/verificar')} compacto estilo={{ marginBottom: espacio.m }} />
         <Campo etiqueta="Buscar" value={busqueda} onChangeText={setBusqueda} placeholder="Nombre o C.I." autoCorrect={false} />

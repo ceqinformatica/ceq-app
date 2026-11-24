@@ -7,7 +7,9 @@ import { Image, Platform, StyleSheet, Text, View } from 'react-native';
 import { BarraSuperior, Boton, Campo, Chip, Mensaje, Pantalla, s, Seccion, Tarjeta } from '../components/ui';
 import { useSesion } from '../context/SesionProvider';
 import { enviarSolicitud } from '../datos/socios';
-import { opcionesSemestre, problemaVencimiento } from '../lib/carnet';
+import { fechaCorta, isoDeTexto, opcionesSemestre, problemaVencimiento } from '../lib/carnet';
+import { leerVencimiento } from '../lib/leer-vencimiento';
+import { CampoFechaHora } from '../components/fecha';
 import { colores, crearEstilos, espacio, fondos, radio } from '../tema';
 import { useTema } from '../context/TemaProvider';
 import { textoError } from '../lib/errores';
@@ -15,6 +17,24 @@ import { textoError } from '../lib/errores';
 const volver = () => (router.canGoBack() ? router.back() : router.replace('/carnet'));
 
 type Foto = { uri: string; tipo?: string };
+
+/** Lo que la app leyó en la foto: la fecha, o nada si no encontró ninguna. */
+type Lectura = { estado: 'leyendo' } | { estado: 'leida'; leido: string; iso: string } | { estado: 'sin_fecha' } | null;
+
+/**
+ * Lee el texto de la foto con el reconocedor del celular (sin internet).
+ * En la web, o si el módulo no está, devuelve null y se elige a mano.
+ */
+async function textoDeFoto(uri: string): Promise<string[] | null> {
+  if (Platform.OS === 'web') return null;
+  try {
+    const m = await import('expo-text-extractor');
+    if (!m.isSupported) return null;
+    return await m.extractTextFromImage(uri);
+  } catch {
+    return null;
+  }
+}
 
 /**
  * El estudiante que ya pagó y tiene el carnet físico le saca una foto,
@@ -31,6 +51,8 @@ export default function ValidarCarnet() {
   const [nombre, setNombre] = useState(perfil?.nombre ?? '');
   const [ci, setCi] = useState(perfil?.ci ?? '');
   const [vence, setVence] = useState('');
+  const [otraFecha, setOtraFecha] = useState('');
+  const [lectura, setLectura] = useState<Lectura>(null);
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [listo, setListo] = useState(false);
@@ -44,6 +66,28 @@ export default function ValidarCarnet() {
   const semestres = opcionesSemestre();
   const venceIso = vence || null;
   const problemaFecha = vence ? problemaVencimiento(venceIso) : null;
+
+  // Si saca otra foto mientras se lee la anterior, la lectura vieja se descarta.
+  const lecturaActual = useRef(0);
+
+  async function leerFoto(uri: string) {
+    const n = ++lecturaActual.current;
+    setLectura({ estado: 'leyendo' });
+    const lineas = await textoDeFoto(uri);
+    if (n !== lecturaActual.current) return;
+    if (!lineas) return setLectura(null);
+    const r = leerVencimiento(lineas);
+    if (!r) return setLectura({ estado: 'sin_fecha' });
+    setLectura({ estado: 'leida', leido: r.leido, iso: r.iso });
+    setVence(r.iso);
+    setOtraFecha(semestres.some((o) => o.valor === r.iso) ? '' : fechaCorta(r.iso));
+  }
+
+  function elegirOtraFecha(texto: string) {
+    lecturaActual.current++;
+    setOtraFecha(texto);
+    setVence(isoDeTexto(texto) ?? '');
+  }
 
   async function abrirCamara() {
     setError(null);
@@ -61,6 +105,7 @@ export default function ValidarCarnet() {
       if (f?.uri) {
         setFoto({ uri: f.uri, tipo: 'image/jpeg' });
         setCamaraAbierta(false);
+        void leerFoto(f.uri);
       }
     } catch {
       setError('No se pudo sacar la foto. Probá de nuevo o elegila de la galería.');
@@ -75,6 +120,7 @@ export default function ValidarCarnet() {
     if (a.size && a.size > 8 * 1024 * 1024) return setError('La foto pesa más de 8 MB. Elegí una más liviana.');
     setFoto({ uri: a.uri, tipo: a.mimeType });
     setCamaraAbierta(false);
+    void leerFoto(a.uri);
   }
 
   async function enviar() {
@@ -83,7 +129,7 @@ export default function ValidarCarnet() {
     if (nombre.trim().length < 3) return setError('Escribí tu nombre completo.');
     if (ci.replace(/\D/g, '').length < 4) return setError('Revisá tu número de cédula.');
     const p = problemaVencimiento(venceIso);
-    if (p || !venceIso) return setError(p ?? 'Elegí el semestre de vencimiento.');
+    if (p || !venceIso) return setError(p ?? 'Elegí el vencimiento que figura en tu carnet.');
     setEnviando(true);
     try {
       await enviarSolicitud({ nombre, ci, numero_socio: '', vigente_hasta: venceIso }, foto);
@@ -115,7 +161,7 @@ export default function ValidarCarnet() {
     <Pantalla>
       <BarraSuperior titulo="Validar mi carnet" onVolver={volver} />
       <Text style={[s.filaDetalle, { marginBottom: espacio.m }]}>
-        Si ya pagaste y tenés el carnet físico del CEQ, sacale una foto. El carnet dura 3 años (6 semestres): si no está vencido, el CEQ te habilita el digital.
+        Si ya pagaste y tenés el carnet físico del CEQ, sacale una foto: la app lee el vencimiento. Si no está vencido, el CEQ te habilita el digital.
       </Text>
 
       <Seccion>1. Foto del carnet</Seccion>
@@ -145,11 +191,26 @@ export default function ValidarCarnet() {
       )}
 
       <Seccion>2. Datos del carnet</Seccion>
+      {lectura?.estado === 'leyendo' && <Mensaje tipo="info" texto="Leyendo el vencimiento de la foto…" />}
+      {lectura?.estado === 'leida' && (
+        <Mensaje tipo="info" texto={`Leímos en tu carnet: «${lectura.leido}» (${fechaCorta(lectura.iso)}). Revisá que sea el vencimiento; si no, corregilo abajo.`} />
+      )}
+      {lectura?.estado === 'sin_fecha' && <Mensaje tipo="info" texto="No pudimos leer el vencimiento en la foto. Elegilo abajo." />}
       <Text style={[s.etiqueta, { marginBottom: espacio.s }]}>Vence</Text>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: espacio.s, marginBottom: espacio.xs }} accessibilityRole="radiogroup">
-        {semestres.map((o) => <Chip key={o.valor} texto={o.texto} elegido={vence === o.valor} onPress={() => setVence(o.valor)} />)}
+        {semestres.map((o) => (
+          <Chip key={o.valor} texto={o.texto} elegido={vence === o.valor && !otraFecha} onPress={() => { lecturaActual.current++; setVence(o.valor); setOtraFecha(''); }} />
+        ))}
       </View>
-      <Text style={[s.filaDetalle, { marginBottom: espacio.m }]}>El semestre de vencimiento que figura en tu carnet.</Text>
+      <CampoFechaHora
+        etiqueta="Otra fecha"
+        modo="date"
+        valor={otraFecha}
+        onCambio={elegirOtraFecha}
+        placeholder="Si tu carnet vence en un día exacto"
+        opcional
+        ayuda="Hay varios diseños de carnet: vale el vencimiento que figura en el tuyo."
+      />
       {problemaFecha && <Mensaje texto={problemaFecha} />}
       <Campo etiqueta="Nombre completo" value={nombre} onChangeText={setNombre} placeholder="Como figura en el carnet" maxLength={80} />
       <Campo etiqueta="Cédula" value={ci} onChangeText={setCi} placeholder="Ej.: 4.555.666" keyboardType="number-pad" maxLength={14} />
