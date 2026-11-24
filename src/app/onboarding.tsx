@@ -54,7 +54,7 @@ export default function Onboarding() {
   };
 
   return (
-    <Pantalla cabecera={<CabeceraMarca titulo="Contanos qué estudiás" sub="Con esto armamos tu malla y tu progreso" compacta />}>
+    <Pantalla cabecera={<CabeceraMarca titulo="Contanos qué estudiás" sub="Con esto armamos tu malla y tu progreso" compacta sinPerfil />}>
       <View style={{ flexDirection: 'row', gap: 6, marginTop: espacio.l, marginBottom: espacio.s }} accessibilityLabel={`Paso ${paso} de 3`}>
         {[1, 2, 3].map((n) => (
           <View key={n} style={{ flex: 1, height: 4, borderRadius: 2, backgroundColor: n <= paso ? fondos.marino : fondos.linea }} />
