@@ -169,7 +169,7 @@ export const db = {
   ventanas: [
     {
       id: 'vt1', titulo: '¡Salieron las fechas de finales!', cuerpo: 'Ya podés ver cuándo rendís cada materia y agregarlas a tu agenda con un toque.', imagen_url: null, icono: 'school',
-      boton_texto: 'Ver mis fechas', boton_destino: '/finales-fechas', color: 'celeste', forma: 'centro', alineacion: 'centro', donde: 'inicio', frecuencia: 'una_vez', cerrable: true,
+      boton_texto: 'Ver mis fechas', boton_destino: '/finales-fechas', color: 'blanco', forma: 'centro', alineacion: 'centro', donde: 'inicio', frecuencia: 'una_vez', cerrable: true,
       carrera_id: null, desde: enDias(-1), hasta: enDias(20), activa: process.env.EXPO_PUBLIC_DEMO_VENTANA === '1', prioridad: 10, creada_por: null, created_at: enDias(-1), updated_at: enDias(-1),
     },
   ] as VentanaDb[],

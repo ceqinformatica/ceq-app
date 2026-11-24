@@ -9,7 +9,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTema } from '../context/TemaProvider';
 import { useDisposicion } from './disposicion';
-import { Aparecer, NumeroAnimado, PressableAnimado, useAparecer, usePresion, vibrar } from './movimiento';
+import { Aparecer, NumeroAnimado, PressableAnimado, useAparecer, useEntradaFlotante, usePresion, vibrar } from './movimiento';
 import { colores, crearEstilos, espacio, fondos, fuentes, radio, sombras, texto } from '../tema';
 
 /**
@@ -88,8 +88,6 @@ export function Pantalla({ children, scroll = true, estilo, cabecera, refrescand
   const refresh = onRefrescar ? (
     <RefreshControl refreshing={Boolean(refrescando)} onRefresh={onRefrescar} tintColor={colores.marino} colors={[colores.marino]} />
   ) : undefined;
-  // Entrada suave de cada pantalla (se salta con "Reducir movimiento").
-  const { opacity, translateY } = useAparecer(0, 12);
   const cuerpo = scroll ? (
     <ScrollView
       keyboardShouldPersistTaps="handled"
@@ -111,9 +109,10 @@ export function Pantalla({ children, scroll = true, estilo, cabecera, refrescand
     <SafeAreaView style={[s.pantalla, marca && { backgroundColor: fondos.franja }]} edges={marca ? ['left', 'right'] : ['top', 'left', 'right']}>
       {barra}
       {/* Con barra fija, el contenido va en una hoja de esquinas redondeadas que recorta lo que se desplaza por debajo. */}
-      <Animated.View style={[{ flex: 1, opacity, transform: [{ translateY }] }, marca && s.hojaContenido]}>
+      {/* Sin fundido de la pantalla entera: mientras entra, una pantalla semitransparente dejaba ver la anterior detrás. */}
+      <View style={[{ flex: 1, backgroundColor: fondos.fondo }, marca && s.hojaContenido]}>
         {cuerpo}
-      </Animated.View>
+      </View>
     </SafeAreaView>
     </EvitaTeclado>
   );
@@ -584,11 +583,18 @@ export function Hoja({ visible, titulo, onCerrar, children }: { visible: boolean
   const estiloHoja: ViewStyle = centrada
     ? { width: '92%', maxWidth: 640, alignSelf: 'center', borderRadius: radio.xl, flexShrink: 1, maxHeight: Math.max(320, height - insets.top - insets.bottom - espacio.xl * 2), paddingBottom: espacio.l }
     : { paddingBottom: insets.bottom + espacio.l };
+  // El velo se funde y la hoja sube sola (con animationType="slide" subía también el velo oscuro, como una cortina).
+  const { montado, progreso } = useEntradaFlotante(visible);
+  const opacidad = progreso.interpolate({ inputRange: [0, 1], outputRange: [0, 1], extrapolate: 'clamp' });
+  const movimiento = centrada
+    ? { opacity: opacidad, transform: [{ scale: progreso.interpolate({ inputRange: [0, 1], outputRange: [0.94, 1] }) }] }
+    : { transform: [{ translateY: progreso.interpolate({ inputRange: [0, 1], outputRange: [Math.min(height, 700), 0] }) }] };
+  if (!montado) return null;
   return (
     <Modal
-      visible={visible}
+      visible
       transparent
-      animationType={centrada ? 'fade' : 'slide'}
+      animationType="none"
       onRequestClose={onCerrar}
       statusBarTranslucent
       navigationBarTranslucent
@@ -596,8 +602,10 @@ export function Hoja({ visible, titulo, onCerrar, children }: { visible: boolean
     >
       <EvitaTeclado estilo={centrada ? { justifyContent: 'center', paddingTop: insets.top, paddingBottom: insets.bottom } : { justifyContent: 'flex-end' }}>
         {/* El velo cubre toda la pantalla, también los costados de la hoja. */}
-        <Pressable style={[StyleSheet.absoluteFill, s.veloFondo]} onPress={onCerrar} accessibilityLabel="Cerrar" />
-        <View style={[s.hoja, estiloHoja]}>
+        <Animated.View style={[StyleSheet.absoluteFill, s.veloFondo, { opacity: opacidad }]}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={onCerrar} accessibilityLabel="Cerrar" />
+        </Animated.View>
+        <Animated.View style={[s.hoja, estiloHoja, movimiento]}>
           {!centrada && <View style={s.hojaAsa} />}
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: espacio.l, paddingTop: centrada ? espacio.m : 0 }}>
             <Text style={[s.barraTitulo, { textAlign: 'left' }]}>{titulo}</Text>
@@ -606,7 +614,7 @@ export function Hoja({ visible, titulo, onCerrar, children }: { visible: boolean
           <ScrollView keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive" showsVerticalScrollIndicator={false} style={{ flexShrink: 1 }}>
             {children}
           </ScrollView>
-        </View>
+        </Animated.View>
       </EvitaTeclado>
     </Modal>
   );
