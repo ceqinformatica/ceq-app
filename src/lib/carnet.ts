@@ -10,10 +10,17 @@
 export const PREFIJO_QR = 'CEQ1:';
 
 export const AVISO_CARNET_PAGO =
-  'El carnet de socio del CEQ (físico y virtual) tiene un costo y dura 3 años (6 semestres). Si ya tenés el carnet físico, sacale una foto acá y el CEQ te habilita el digital.';
+  'El carnet de socio del CEQ (físico y virtual) tiene un costo. Si ya tenés el carnet físico, sacale una foto acá: la app lee el vencimiento y el CEQ te habilita el digital.';
 
-/** El carnet dura 3 años (6 semestres). */
+/** Duración habitual de un carnet nuevo (3 años, 6 semestres): la que ofrece el alta. */
 export const ANIOS_VIGENCIA = 3;
+
+/**
+ * Hay varios diseños de carnet vigentes con duraciones distintas: vale el
+ * vencimiento impreso en cada uno. Solo se descarta lo imposible (más de
+ * 6 años desde hoy), igual que en la base.
+ */
+export const ANIOS_MAXIMO_CARNET = 6;
 
 /** Suma años a una fecha AAAA-MM-DD (el 29/02 pasa al 28/02). */
 export function sumarAnios(iso: string, anios: number) {
@@ -36,13 +43,11 @@ export function isoDeTexto(t: string): string | null {
  * Devuelve el problema, o null si se puede enviar.
  */
 export function problemaVencimiento(vence: string | null, ahora = new Date()): string | null {
-  if (!vence) return 'Elegí el semestre de vencimiento que figura en tu carnet.';
+  if (!vence) return 'Elegí el vencimiento que figura en tu carnet.';
   const hoy = hoyPy(ahora);
   if (vence < hoy) return 'Tu carnet está vencido. Renovalo en la sede del CEQ para tener el carnet digital.';
-  // Igual que la base: hasta 3 años y 1 mes desde hoy.
-  const [y, m, d] = sumarAnios(hoy, ANIOS_VIGENCIA).split('-').map(Number);
-  const limite = new Date(Date.UTC(y, m, Math.min(d, new Date(Date.UTC(y, m + 1, 0)).getUTCDate()))).toISOString().slice(0, 10);
-  if (vence > limite) return 'Ese vencimiento no es posible: el carnet dura 3 años.';
+  // Igual que la base: hasta 6 años desde hoy.
+  if (vence > sumarAnios(hoy, ANIOS_MAXIMO_CARNET)) return 'Ese vencimiento no parece correcto. Revisá la fecha que figura en tu carnet.';
   return null;
 }
 
@@ -117,8 +122,8 @@ export function sumarSemestres({ semestre, anio }: Semestre, n: number): Semestr
 export const SEMESTRES_VIGENCIA = ANIOS_VIGENCIA * 2;
 
 /**
- * Semestres en que puede vencer un carnet que hoy está vigente: desde el
- * actual hasta el último que entra en 3 años (el mismo límite que la base).
+ * Semestres para elegir rápido el vencimiento: el actual y los 6
+ * siguientes. Para otra fecha está el selector de fecha.
  */
 export function opcionesSemestre(ahora = new Date()): { texto: string; valor: string }[] {
   const actual = semestreDe(hoyPy(ahora));

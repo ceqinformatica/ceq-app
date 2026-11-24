@@ -189,7 +189,7 @@ export function SinCarnet({ uid }: { uid: string }) {
         <Text style={s.filaTitulo}>¿Todavía no lo tenés?</Text>
         {[
           'Pasá por la sede del CEQ en el horario de atención.',
-          'Pagá la cuota de socio y llevá tu cédula. El carnet dura 3 años (6 semestres).',
+          'Pagá la cuota de socio y llevá tu cédula.',
           'Con el carnet físico en mano, sacale una foto acá y el CEQ te habilita el digital.',
         ].map((t, i) => (
           <View key={t} style={{ flexDirection: 'row', gap: espacio.s, marginTop: espacio.s }}>

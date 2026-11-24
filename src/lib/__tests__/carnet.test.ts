@@ -53,8 +53,9 @@ test('vencimiento del carnet físico al validarlo', () => {
   assert.match(problemaVencimiento('2026-11-21', ahora) ?? '', /vencido/);
   assert.equal(problemaVencimiento('2026-11-22', ahora), null);
   assert.equal(problemaVencimiento('2029-11-22', ahora), null);
-  assert.equal(problemaVencimiento('2029-12-22', ahora), null, 'margen de un mes como en la base');
-  assert.match(problemaVencimiento('2030-01-15', ahora) ?? '', /3 años/);
+  assert.equal(problemaVencimiento('2030-07-31', ahora), null, 'hay diseños de carnet con otra duración: vale la fecha impresa');
+  assert.equal(problemaVencimiento('2032-11-22', ahora), null, 'hasta 6 años, como la base');
+  assert.match(problemaVencimiento('2032-11-23', ahora) ?? '', /no parece correcto/);
   assert.equal(isoDeTexto('5/3/2028'), '2028-03-05');
   assert.equal(isoDeTexto('31/02/2028'), null);
 });
@@ -70,9 +71,10 @@ test('el carnet vence por semestre', () => {
   assert.deepEqual(sumarSemestres({ semestre: 2, anio: 2026 }, 5), { semestre: 1, anio: 2029 });
   const ops = opcionesSemestre(new Date('2026-11-22T15:00:00Z'));
   assert.equal(ops[0].texto, '2.º semestre 2026');
-  assert.equal(ops.at(-1)!.texto, '1.er semestre 2029', 'el 2.º de 2029 pasa el límite de 3 años y 1 mes de la base');
+  assert.equal(ops.length, 7, 'el actual y los 6 siguientes');
+  assert.equal(ops.at(-1)!.texto, '2.º semestre 2029');
   for (const o of ops) assert.equal(problemaVencimiento(o.valor, new Date('2026-11-22T15:00:00Z')), null);
   const marzo = opcionesSemestre(new Date('2027-03-10T15:00:00Z'));
   assert.equal(marzo[0].texto, '1.er semestre 2027');
-  assert.equal(marzo.at(-1)!.texto, '2.º semestre 2029');
+  assert.equal(marzo.at(-1)!.texto, '1.er semestre 2030');
 });
