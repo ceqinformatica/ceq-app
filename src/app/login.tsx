@@ -1,6 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useEffect, useState, type ReactNode } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { BackHandler, Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BotonProveedor } from '../components/BotonProveedor';
 import { Aparecer } from '../components/movimiento';
@@ -64,6 +64,17 @@ export default function Login() {
     setInfo(null);
     setVerClave(false);
   };
+
+  // Botón Atrás de Android: vuelve a la pantalla anterior del acceso en vez de cerrar la app.
+  useEffect(() => {
+    if (modo == null || modo === 'portada') return;
+    const destino: ModoAcceso = modo === 'recuperar' ? 'entrar' : 'portada';
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      cambiarModo(destino);
+      return true;
+    });
+    return () => sub.remove();
+  }, [modo]);
 
   const problema = problemaRegistro({ nombre, apellido, correoOk: correoValido(correo), clave, repetida }, CLAVE_MINIMA);
 
@@ -226,8 +237,17 @@ export default function Login() {
           />
           {ojo}
         </View>
-        <Campo etiqueta="Verificar contraseña" value={repetida} onChangeText={setRepetida} secureTextEntry={!verClave} autoComplete="new-password" textContentType="newPassword" />
-        <Boton texto="Crear cuenta" cargando={cargando === 'correo'} deshabilitado={problema != null || ocupado} onPress={crearCuenta} />
+        <Campo
+          etiqueta="Verificar contraseña"
+          value={repetida}
+          onChangeText={setRepetida}
+          secureTextEntry={!verClave}
+          autoComplete="new-password"
+          textContentType="newPassword"
+          ayuda={repetida && repetida !== clave ? 'Las dos contraseñas no coinciden.' : undefined}
+        />
+        {/* Activo aunque falten datos: al tocarlo dice qué falta. */}
+        <Boton texto="Crear cuenta" cargando={cargando === 'correo'} deshabilitado={ocupado} onPress={crearCuenta} />
         {mensajes}
         {otrasCuentas}
       </>

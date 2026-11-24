@@ -133,7 +133,8 @@ export function Bloqueo() {
           bounces={false}
         >
           <View style={{ width: '100%', maxWidth: 440, alignSelf: 'center' }}>
-            <Text style={est.titulo} accessibilityRole="header">Recuperá tu acceso</Text>
+            {/* ConfirmarCuenta trae su propio encabezado ("¿Olvidaste tu PIN?"), como en la maqueta. */}
+            <Text style={est.titulo}>Recuperá tu acceso</Text>
             <Text style={[est.sub, { marginBottom: espacio.l }]}>Confirmá tu identidad para elegir un nuevo PIN.</Text>
             <ConfirmarCuenta onConfirmado={cuentaConfirmada} onCancelar={() => { setError(null); setVista('pin'); }} />
           </View>

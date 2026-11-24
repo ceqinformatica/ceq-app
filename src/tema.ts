@@ -111,7 +111,7 @@ const tintaOscura: Paleta = {
   celesteMarca: '#8CCDF2',
   franja: '#14233F',
   burbuja: '#122038',
-  cabeceraAcceso: '#14233F',
+  cabeceraAcceso: '#1A2D52',
   regla: '#3A5A85',
 };
 
