@@ -1,6 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
-import { Image, Pressable, ScrollView, Text, View, type ViewStyle } from 'react-native';
+import { Pressable, ScrollView, Text, View, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSesion } from '../context/SesionProvider';
 import { salir } from '../lib/auth';
@@ -10,7 +10,8 @@ import { esperaPin, largoPin, reiniciarIntentosPin } from '../lib/pinGuardado';
 import { colores, crearEstilos, espacio, fondos, fuentes } from '../tema';
 import { ConfirmarCuenta } from './ConfirmarCuenta';
 import { TecladoPin } from './TecladoPin';
-import { Boton, logoCeq, Mensaje } from './ui';
+import { LogoAcceso } from './LogoAcceso';
+import { Boton, Mensaje } from './ui';
 
 interface Metodos { bio: boolean; nombreBio: string; largo: number | null }
 
@@ -184,6 +185,22 @@ export function Bloqueo() {
         : 'Escribí tu PIN para entrar.'
       : 'Usá tu huella o tu rostro para entrar.';
 
+  const pie = (
+        <View style={est.abajo}>
+          <Mensaje texto={error} />
+          {metodos && !conPinActivo && <Boton texto="Desbloquear" onPress={conBiometria} />}
+          {conPinActivo && bloqueoTotal && <Boton texto="Crear un PIN nuevo" onPress={() => { setError(null); setVista('recuperar'); }} />}
+          {conPinActivo && !bloqueoTotal && (
+            <Pressable onPress={() => { setError(null); setVista('recuperar'); }} accessibilityRole="button" style={{ alignSelf: 'center', padding: espacio.m }}>
+              <Text style={[est.enlace, { fontFamily: fuentes.bold, fontSize: 15, textDecorationLine: 'underline' }]}>¿Olvidaste tu PIN?</Text>
+            </Pressable>
+          )}
+          <Pressable onPress={salir} accessibilityRole="button" style={{ alignSelf: 'center', padding: espacio.m, marginTop: espacio.xs }}>
+            <Text style={est.enlace}>Cerrar sesión</Text>
+          </Pressable>
+        </View>
+  );
+
   return (
     <Fondo>
       <ScrollView
@@ -191,11 +208,9 @@ export function Bloqueo() {
         bounces={false}
       >
         <View style={est.centro}>
-          <Image
-            source={logoCeq}
-            style={{ width: conPinActivo ? 64 : 92, height: conPinActivo ? 64 : 92, marginBottom: espacio.m }}
-            accessibilityLabel="Logo del CEQ"
-          />
+          <View style={{ marginBottom: espacio.m }}>
+            <LogoAcceso tamano={conPinActivo ? 64 : 92} />
+          </View>
           <Text style={est.titulo} accessibilityRole="header">Desbloqueá tu portal</Text>
           <Text style={[est.sub, { marginBottom: espacio.l }]}>{subtitulo}</Text>
 
@@ -226,21 +241,10 @@ export function Bloqueo() {
               <Ionicons name={iconoBio} size={40} color={colores.marino} />
             </Pressable>
           )}
+          {!conPinActivo && pie}
         </View>
 
-        <View style={est.abajo}>
-          <Mensaje texto={error} />
-          {metodos && !conPinActivo && <Boton texto="Desbloquear" onPress={conBiometria} />}
-          {conPinActivo && bloqueoTotal && <Boton texto="Crear un PIN nuevo" onPress={() => { setError(null); setVista('recuperar'); }} />}
-          {conPinActivo && !bloqueoTotal && (
-            <Pressable onPress={() => { setError(null); setVista('recuperar'); }} accessibilityRole="button" style={{ alignSelf: 'center', padding: espacio.m }}>
-              <Text style={[est.enlace, { fontFamily: fuentes.bold, fontSize: 15, textDecorationLine: 'underline' }]}>¿Olvidaste tu PIN?</Text>
-            </Pressable>
-          )}
-          <Pressable onPress={salir} accessibilityRole="button" style={{ alignSelf: 'center', padding: espacio.m, marginTop: espacio.xs }}>
-            <Text style={est.enlace}>Cerrar sesión</Text>
-          </Pressable>
-        </View>
+        {conPinActivo && pie}
       </ScrollView>
     </Fondo>
   );

@@ -1,10 +1,11 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useEffect, useState, type ReactNode } from 'react';
-import { Image, Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BotonProveedor } from '../components/BotonProveedor';
 import { Aparecer } from '../components/movimiento';
-import { Boton, Campo, EvitaTeclado, logoCeq, Mensaje, s } from '../components/ui';
+import { LogoAcceso } from '../components/LogoAcceso';
+import { Boton, Campo, EvitaTeclado, Mensaje, s } from '../components/ui';
 import { problemaRegistro, type ModoAcceso, type Proveedor } from '../lib/acceso';
 import { leerModoInicial } from '../lib/accesoGuardado';
 import { entrarConCorreo, entrarConGoogle, entrarConMicrosoft, pedirRecuperarClave, proveedoresDisponibles, registrarseConCorreo } from '../lib/auth';
@@ -98,7 +99,7 @@ export default function Login() {
           <View style={[est.portada, { paddingTop: insets.top + espacio.xxl }]}>
             <Regla estilo={{ top: '30%' }} />
             <Aparecer estilo={{ alignItems: 'center' }}>
-              <Image source={logoCeq} style={{ width: 112, height: 112 }} accessibilityLabel="Logo del CEQ" />
+              <LogoAcceso tamano={112} />
               <Text style={est.marca} accessibilityRole="header">Portal CEQ</Text>
               <Text style={est.nombre}>Centro de Estudiantes de Química</Text>
               <Text style={est.lema}>Tu vida académica en la FCQ, en un solo lugar.</Text>
