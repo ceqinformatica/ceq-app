@@ -1,6 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { Animated, BackHandler, Easing, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Animated, BackHandler, Easing, Keyboard, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BotonProveedor } from '../components/BotonProveedor';
 import { movimientoReducido } from '../components/movimiento';
@@ -34,6 +34,8 @@ export default function Login() {
   const [saliente, setSaliente] = useState<ModoAcceso | null>(null);
   const avance = useRef(new Animated.Value(1)).current;
   const sentido = useRef(1);
+  // true mientras se desliza: un segundo toque no corta la animación a la mitad.
+  const animando = useRef(false);
   const { height: alto } = useWindowDimensions();
   const [nombre, setNombre] = useState('');
   const [apellido, setApellido] = useState('');
@@ -65,12 +67,14 @@ export default function Login() {
   };
 
   const cambiarModo = (m: ModoAcceso) => {
-    if (m === modo) return;
+    if (m === modo || animando.current) return;
+    Keyboard.dismiss();
     if (movimientoReducido()) {
       setSaliente(null);
       avance.setValue(1);
     } else {
       sentido.current = NIVEL[m] >= NIVEL[modo] ? 1 : -1;
+      animando.current = true;
       setSaliente(modo);
       avance.stopAnimation();
       avance.setValue(0);
@@ -79,7 +83,10 @@ export default function Login() {
         duration: 460,
         easing: Easing.bezier(0.4, 0, 0.2, 1),
         useNativeDriver: Platform.OS !== 'web',
-      }).start(({ finished }) => finished && setSaliente(null));
+      }).start(() => {
+        animando.current = false;
+        setSaliente(null);
+      });
     }
     setModo(m);
     setError(null);
@@ -308,10 +315,10 @@ export default function Login() {
           return (
             <Animated.View
               key={m}
-              pointerEvents={entra ? 'auto' : 'none'}
+              aria-hidden={!entra}
               importantForAccessibility={entra ? 'auto' : 'no-hide-descendants'}
               accessibilityElementsHidden={!entra}
-              style={[StyleSheet.absoluteFill, capas.length > 1 && { transform: [{ translateY: desplazamiento(entra) }] }]}
+              style={[StyleSheet.absoluteFill, { pointerEvents: entra ? 'auto' : 'none' }, capas.length > 1 && { transform: [{ translateY: desplazamiento(entra) }] }]}
             >
               {pantalla(m)}
             </Animated.View>
