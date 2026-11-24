@@ -22,7 +22,20 @@ export async function cargarTramites(): Promise<TramiteDb[]> {
 }
 
 /** Para el estudiante: un oculto no se muestra (RLS hace lo mismo en Supabase, salvo al admin). */
+/** Id de un trámite, o su clave con el prefijo "clave:" (ej. "clave:semestre-opuesto"). */
 export async function cargarTramite(id: string, incluirOcultos = false): Promise<TramiteDb | null> {
+  if (id.startsWith('clave:')) {
+    const clave = id.slice(6);
+    if (MODO_DEMO) {
+      await esperar(100);
+      return db.tramites.find((t) => t.clave === clave && (incluirOcultos || t.publicado)) ?? null;
+    }
+    let q = supabase.from('tramites').select('*').eq('clave', clave);
+    if (!incluirOcultos) q = q.eq('publicado', true);
+    const { data, error } = await q.maybeSingle();
+    lanzar(error);
+    return data;
+  }
   if (MODO_DEMO) {
     await esperar(100);
     return db.tramites.find((t) => t.id === id && (incluirOcultos || t.publicado)) ?? null;

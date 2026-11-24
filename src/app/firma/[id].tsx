@@ -21,6 +21,7 @@ import { colores, coloresSemaforo, espacio, fondos, fuentes, radio, texto } from
 import { vibrar } from '../../components/movimiento';
 import { useTema } from '../../context/TemaProvider';
 import { textoError } from '../../lib/errores';
+import { VolverACursar } from '../../components/volver-a-cursar';
 import { ASISTENCIA_CUMPLIDA, ASISTENCIA_VACIA, esAsistenciaContada, esAsistenciaCumplida, esPredefinida } from '../../lib/firma-carga';
 
 const ICONO_TIPO: Record<TipoEvaluacion, 'document-text-outline' | 'create-outline' | 'flask-outline' | 'refresh-outline' | 'swap-horizontal-outline'> = {
@@ -57,7 +58,11 @@ async function cargar(planId: string, materiaId: string) {
   const firmas = await cargarFirmas([materiaId]);
   const regla = reglaDe(malla.reglas, materiaId);
   const estado = malla.estados.get(materiaId);
-  return { materia, regla: regla ?? REGLA_POR_DEFECTO, reglaOficial: Boolean(regla), firmaGuardada: estado?.promedioFirma ?? null, ...firmas.get(materiaId)! };
+  return {
+    materia, regla: regla ?? REGLA_POR_DEFECTO, reglaOficial: Boolean(regla), firmaGuardada: estado?.promedioFirma ?? null,
+    semestreOpuesto: estado?.semestreOpuesto ?? false, recienRecursada: estado?.puedeDeshacerRecursada ?? false, anioPlan: malla.plan?.anio ?? null,
+    ...firmas.get(materiaId)!,
+  };
 }
 
 export default function CalculadoraFirma() {
@@ -113,6 +118,10 @@ export default function CalculadoraFirma() {
   const sinFaltaDeAsistencia = [resultado.asistencia, resultado.asistenciaLab].every(
     (a) => a == null || a.porcentaje == null || a.porcentaje >= a.minimo,
   );
+
+  // Ya rindió todo y no le alcanza para la firma: puede volver a cursar (normal u opuesto, Art. 7 c).
+  const sinFirmaPosible = !resultado.firma && !datos.evaluacionesDb.some((e) => !e.rendida && !esRecuperatorio(e) && !esRegularizacion(e))
+    && (resultado.teoria.imposible || (resultado.laboratorio?.imposible ?? false));
 
   const guardarMiFirma = async () => {
     if (promedio == null) return;
@@ -171,6 +180,9 @@ export default function CalculadoraFirma() {
         )}
       </View>
 
+      {datos.semestreOpuesto && (
+        <Mensaje tipo="info" texto="Cursás esta materia en el semestre opuesto: solo parciales y finales, sin recuperatorio. Tu laboratorio y tu asistencia siguen valiendo." />
+      )}
       <Tarjeta>
         <BloqueComponente titulo={combinado ? 'Nota final (teoría + laboratorio)' : 'Teoría'} r={resultado.teoria} />
         {resultado.laboratorio && <View style={{ height: 1, backgroundColor: fondos.lineaSuave, marginVertical: espacio.m }} />}
@@ -250,7 +262,7 @@ export default function CalculadoraFirma() {
         )}
       </Tarjeta>
       {/* Art. 46 a): para optar al recuperatorio hay que haber cumplido la asistencia. */}
-      {!combinado && !datos.recuperado && !tieneRecuperatorio && !pendientesTeoria && puedeRecuperar(resultado.teoria) && sinFaltaDeAsistencia && (
+      {!combinado && !datos.semestreOpuesto && !datos.recuperado && !tieneRecuperatorio && !pendientesTeoria && puedeRecuperar(resultado.teoria) && sinFaltaDeAsistencia && (
         <Mensaje tipo="info" texto={`Tu promedio teórico está entre ${RECUPERACION_DESDE} y ${regla.minimoTeoria} %: podés rendir el recuperatorio en el 1.er llamado de finales (ese llamado queda usado). Si sacás ${RECUPERACION_MINIMO} % o más, reemplaza tu parcial más bajo. Cargalo como "Recuperatorio".`} />
       )}
       {regularizado && (
@@ -261,6 +273,15 @@ export default function CalculadoraFirma() {
       )}
       {datos.recuperado && (
         <Mensaje tipo="exito" texto="Recuperación aplicada: reemplazó tu parcial más bajo. Ahora necesitás un promedio de firma de 50 % o más." />
+      )}
+
+      {sinFirmaPosible && !datos.recienRecursada && (
+        <>
+          <Seccion>Volver a cursar</Seccion>
+          <Tarjeta>
+            <VolverACursar materiaId={materia.id} anioPlan={datos.anioPlan} motivo="Con estas notas ya no llegás a la firma." onHecho={recargar} />
+          </Tarjeta>
+        </>
       )}
 
       <Seccion>Asistencia</Seccion>
@@ -286,6 +307,7 @@ export default function CalculadoraFirma() {
           recargar();
         }}
         materiaId={materia.id}
+        sinRecuperatorio={datos.semestreOpuesto}
       />
 
       <Hoja visible={clasesEnAgenda > 0} titulo="¿Terminaron tus clases?" onCerrar={() => setClasesEnAgenda(0)}>
@@ -460,8 +482,10 @@ function FilaContador({ texto: t, ayuda, valor, onCambio, max }: { texto: string
   );
 }
 
-function FormEvaluacion({ visible, evaluacion, materiaId, onCerrar, onGuardado }: {
+function FormEvaluacion({ visible, evaluacion, materiaId, onCerrar, onGuardado, sinRecuperatorio }: {
   visible: boolean; evaluacion: EvaluacionDb | null; materiaId: string; onCerrar: () => void; onGuardado: () => void;
+  /** Semestre opuesto: no hay examen de recuperación (Art. 23). */
+  sinRecuperatorio?: boolean;
 }) {
   const [nombre, setNombre] = useState('');
   const [tipo, setTipo] = useState<TipoEvaluacion>('parcial');
@@ -539,7 +563,7 @@ function FormEvaluacion({ visible, evaluacion, materiaId, onCerrar, onGuardado }
     <Hoja visible={visible} titulo={evaluacion && !esPredefinida(evaluacion) ? 'Editar evaluación' : evaluacion ? evaluacion.nombre : 'Nueva evaluación'} onCerrar={onCerrar}>
       <Text style={[s.etiqueta, { marginBottom: espacio.s }]}>Tipo</Text>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: espacio.s, marginBottom: espacio.m }}>
-        {TIPOS.map((t) => (
+        {TIPOS.filter((t) => !sinRecuperatorio || t.valor !== 'recuperatorio' || tipo === 'recuperatorio').map((t) => (
           <Chip
             key={t.valor}
             texto={t.texto}

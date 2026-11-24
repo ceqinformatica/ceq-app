@@ -17,8 +17,9 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
-import { cargarFinales, guardarFinales, guardarFirma, recursarMateria } from '../datos/academico';
-import { aplazosDeLaCursada, firmaVencida, notaDelLlamado, periodoDe, recuReguDespuesDeFinal, type LlamadoCargado } from '../lib/finales';
+import { cargarFinales, guardarFinales, guardarFirma } from '../datos/academico';
+import { VolverACursar } from './volver-a-cursar';
+import { aplazosDeLaCursada, firmaVencida, LLAMADOS_POR_MATERIA, llamadosUsados, notaDelLlamado, periodoDe, recuReguDespuesDeFinal, type LlamadoCargado } from '../lib/finales';
 import { calificacionFinal, CONCEPTO, finalNecesario, type Nota } from '../lib/reglamento-fcq';
 import type { ExamenFinalDb } from '../lib/tipos-db';
 import { colores, espacio, fondos, fuentes } from '../tema';
@@ -58,8 +59,11 @@ function anterior(p: string): string {
 
 const nombrePeriodo = (p: string) => `${p.split('-')[1]}.º semestre ${p.split('-')[0]}`;
 
-export function TarjetaFinales({ materiaId, firma: firmaGuardadaEnMateria, aprobada, onGuardado }: {
+export function TarjetaFinales({ materiaId, firma: firmaGuardadaEnMateria, aprobada, onGuardado, semestreOpuesto, anioPlan }: {
   materiaId: string;
+  /** Cursa en el semestre opuesto: sin Recu y con los llamados que le quedan. */
+  semestreOpuesto?: boolean;
+  anioPlan?: number | null;
   /** Promedio de firma guardado (0 a 100), o null. */
   firma: number | null;
   /** Ya aprobada: no se ofrece volver a cursar. */
@@ -81,7 +85,7 @@ export function TarjetaFinales({ materiaId, firma: firmaGuardadaEnMateria, aprob
   const [conNota, setConNota] = useState<Record<number, boolean>>({});
   const [firmaTxt, setFirmaTxt] = useState('');
   const [guardando, setGuardando] = useState(false);
-  const [confirmarRecursar, setConfirmarRecursar] = useState(false);
+  const [verRecursar, setVerRecursar] = useState(false);
   const [eligiendoPeriodo, setEligiendoPeriodo] = useState(false);
   const [msg, setMsg] = useState<{ texto: string; tipo: 'error' | 'exito' } | null>(null);
 
@@ -133,7 +137,7 @@ export function TarjetaFinales({ materiaId, firma: firmaGuardadaEnMateria, aprob
 
   useEffect(() => {
     setMsg(null);
-    setConfirmarRecursar(false);
+    setVerRecursar(false);
   }, [periodo]);
 
   const filas = LLAMADOS.map((ll) => {
@@ -148,6 +152,9 @@ export function TarjetaFinales({ materiaId, firma: firmaGuardadaEnMateria, aprob
   // Un final marcado pero sin nota todavía no se puede guardar.
   const falta = filas.some((f) => f.tipo === 'final' && f.v == null);
   const todoValidoSinOrden = filas.every((f) => f.valido) && !falta;
+  // En el semestre opuesto los 3 llamados son los mismos de la materia: no se pasa de 3 en la cursada.
+  const usadosEnTotal = llamadosUsados((finales ?? []).filter((f) => f.periodo !== periodo)) + filas.filter((f) => f.tipo !== 'no').length;
+  const pasaDeLlamados = !!semestreOpuesto && usadosEnTotal > LLAMADOS_POR_MATERIA;
   // Después de aprobar no se rinde de nuevo: avisa si cargó un llamado posterior.
   const primeraAprobada = filas.find((f) => f.nota != null && f.nota >= 2)?.llamado ?? null;
   const despuesDeAprobar = primeraAprobada != null && filas.some((f) => f.llamado > primeraAprobada && f.tipo !== 'no');
@@ -163,7 +170,7 @@ export function TarjetaFinales({ materiaId, firma: firmaGuardadaEnMateria, aprob
   // anterior) ya no se rinde Recu ni Regu: al final se llega con la firma.
   const finalEnPeriodoAnterior = (finales ?? []).some((f) => f.periodo != null && f.periodo < periodo && (f.tipo ?? 'final') === 'final');
   const finalAntesDe = (ll: number) => finalEnPeriodoAnterior || filas.some((f) => f.llamado < ll && f.tipo === 'final');
-  const opcionesDe = (ll: 1 | 2 | 3) => TIPOS_DEL_LLAMADO[ll].filter((t) => !esRecuORegu(t)
+  const opcionesDe = (ll: 1 | 2 | 3) => TIPOS_DEL_LLAMADO[ll].filter((t) => (t !== 'recu' || !semestreOpuesto || tipos[ll] === t)).filter((t) => !esRecuORegu(t)
     || tipos[ll] === t
     || (!recuReguEnOtroPeriodo && !finalAntesDe(ll) && !filas.some((f) => f.llamado !== ll && esRecuORegu(f.tipo))));
   // Si marcó la Regu y después puso un final en un llamado anterior: no se puede guardar.
@@ -194,23 +201,6 @@ export function TarjetaFinales({ materiaId, firma: firmaGuardadaEnMateria, aprob
     } catch (e) {
       setMsg({ tipo: 'error', texto: textoError(e, 'No se pudo guardar.') });
     } finally {
-      setGuardando(false);
-    }
-  };
-
-  const recursar = async () => {
-    if (!confirmarRecursar) {
-      setConfirmarRecursar(true);
-      return;
-    }
-    setGuardando(true);
-    setMsg(null);
-    try {
-      await recursarMateria(materiaId);
-      setFirmaNueva(null);
-      onGuardado(null);
-    } catch (e) {
-      setMsg({ tipo: 'error', texto: textoError(e, 'No se pudo marcar para volver a cursar.') });
       setGuardando(false);
     }
   };
@@ -326,7 +316,10 @@ export function TarjetaFinales({ materiaId, firma: firmaGuardadaEnMateria, aprob
               }}
             />
           )}
-          {f.llamado === 1 && !recuReguEnOtroPeriodo && !finalEnPeriodoAnterior && f.tipo !== 'final' && !filas.some((x) => esRecuORegu(x.tipo)) && (
+          {f.llamado === 1 && semestreOpuesto && (
+            <Text style={[s.filaDetalle, { marginTop: espacio.s }]}>Semestre opuesto: no hay recuperatorio y usás los llamados que te quedan (son 3 por materia).</Text>
+          )}
+          {f.llamado === 1 && !semestreOpuesto && !recuReguEnOtroPeriodo && !finalEnPeriodoAnterior && f.tipo !== 'final' && !filas.some((x) => esRecuORegu(x.tipo)) && (
             <Text style={[s.filaDetalle, { marginTop: espacio.s }]}>Recu o Regu, uno solo por cursada. Regu: si faltaste a un parcial; la podés rendir en el 1.er o en el 2.º llamado. Recu: si rendiste todos los parciales y no llegaste a la firma; solo en el 1.er llamado.</Text>
           )}
           {recuReguEnOtroPeriodo && f.llamado === 1 && (
@@ -344,8 +337,9 @@ export function TarjetaFinales({ materiaId, firma: firmaGuardadaEnMateria, aprob
       {fueraDeOrden && (
         <Mensaje texto={`Ya rendiste un final antes del ${fueraDeOrden.llamado}.º llamado${fueraDeOrden.periodo !== periodo ? ` del ${nombrePeriodo(fueraDeOrden.periodo ?? periodo)}` : ''}: después de un final no se puede rendir ${fueraDeOrden.tipo === 'recuperatorio' ? 'el Recu' : 'la Regu'}. Si te equivocaste, cambiá ese llamado a "No rendí".`} />
       )}
+      {pasaDeLlamados && <Mensaje texto={`En el semestre opuesto usás los mismos 3 llamados de la materia, y ya cargaste ${usadosEnTotal}. Dejá en "No rendí" los que no rendiste.`} />}
       {despuesDeAprobar && <Mensaje tipo="info" texto="Marcaste un llamado después del que aprobaste. ¿Seguro que lo rendiste?" />}
-      <Boton texto="Guardar finales" icono="checkmark" onPress={guardar} cargando={guardando} deshabilitado={!todoValidoSinOrden || fueraDeOrden != null || finales == null} />
+      <Boton texto="Guardar finales" icono="checkmark" onPress={guardar} cargando={guardando} deshabilitado={!todoValidoSinOrden || fueraDeOrden != null || pasaDeLlamados || finales == null} />
       {msg && <Mensaje texto={msg.texto} tipo={msg.tipo} />}
 
       {anteriores.length > 0 && (
@@ -354,21 +348,32 @@ export function TarjetaFinales({ materiaId, firma: firmaGuardadaEnMateria, aprob
         </Text>
       )}
 
-      {/* Volver a cursar: solo cuando ya usó sus oportunidades (3 aplazos) o se venció la firma. */}
+      {/* Volver a cursar: obligatorio con 3 aplazos o la firma vencida (Art. 62);
+          con algún aplazo se puede elegir antes, por ejemplo en el semestre opuesto. */}
       {!aprobada && (cursada.debeRecursar || vencida) && (
         <View style={{ marginTop: espacio.m }}>
-          <Mensaje
-            tipo="error"
-            texto={cursada.debeRecursar
+          <VolverACursar
+            materiaId={materiaId}
+            anioPlan={anioPlan}
+            motivo={cursada.debeRecursar
               ? `Usaste tus ${cursada.aplazos} oportunidades sin aprobar: tenés que volver a cursar la materia.`
               : 'Pasaron dos periodos sin aprobar y tu firma venció: tenés que volver a cursar la materia.'}
+            onHecho={() => {
+              setFirmaNueva(null);
+              onGuardado(null);
+            }}
           />
-          {confirmarRecursar && (
-            <Text style={[s.filaDetalle, { marginBottom: espacio.s }]}>Se borran tus parciales y tu firma; el laboratorio se conserva y tus finales quedan en el historial. Si te equivocás, lo podés deshacer desde la materia mientras no cargues nada nuevo.</Text>
-          )}
-          <Boton texto={confirmarRecursar ? 'Sí, volver a cursar' : 'Volver a cursar la materia'} icono="refresh" variante={confirmarRecursar ? 'peligro' : 'primario'} onPress={recursar} cargando={guardando} />
-          {confirmarRecursar && <Enlace texto="Cancelar" onPress={() => setConfirmarRecursar(false)} />}
         </View>
+      )}
+      {!aprobada && !cursada.debeRecursar && !vencida && cursada.aplazos > 0 && (
+        verRecursar ? (
+          <View style={{ marginTop: espacio.m }}>
+            <VolverACursar materiaId={materiaId} anioPlan={anioPlan} onHecho={() => { setFirmaNueva(null); onGuardado(null); }} />
+            <Enlace texto="Cerrar" onPress={() => setVerRecursar(false)} />
+          </View>
+        ) : (
+          <Enlace texto="¿Preferís volver a cursarla (semestre normal u opuesto)?" onPress={() => setVerRecursar(true)} />
+        )
       )}
     </Tarjeta>
   );

@@ -79,3 +79,20 @@ test('si cargó primero el segundo parcial, falta el primero (sin duplicar)', ()
   const r = conParcialesMinimos<E>([{ id: 'b', nombre: 'Segundo parcial', componente: 'teoria', rendida: true }], crear);
   assert.deepEqual(r.map((e) => e.nombre), ['Segundo parcial', 'Primer parcial']);
 });
+
+test('semestre opuesto: solo si quedan llamados y no llegó al Art. 62', async () => {
+  const { semestreOpuesto } = await import('../finales.ts');
+  const f = (llamado: number, nota: number | null, tipo = 'final', periodo = '2026-1') => ({ llamado, nota, tipo, periodo, cursada_anterior: false });
+  // Sin firma y sin llamados usados: puede, con los 3.
+  assert.deepEqual(semestreOpuesto({ finales: [], periodoActual: '2026-2' }), { puede: true, motivo: null, llamadosRestantes: 3 });
+  // Un aplazo: le quedan 2.
+  assert.equal(semestreOpuesto({ finales: [f(1, 1)], periodoActual: '2026-2' }).llamadosRestantes, 2);
+  // Regu + 2 aplazos: usó los 3 llamados.
+  assert.equal(semestreOpuesto({ finales: [f(1, null, 'regularizacion'), f(2, 1), f(3, 1)], periodoActual: '2026-1' }).motivo, 'llamados');
+  // Tres aplazos: Art. 62.
+  assert.equal(semestreOpuesto({ finales: [f(1, 1), f(2, 1), f(3, 1)], periodoActual: '2026-1' }).motivo, 'aplazos');
+  // Los de una cursada anterior no cuentan.
+  assert.ok(semestreOpuesto({ finales: [{ ...f(1, 1), cursada_anterior: true }, { ...f(2, 1), cursada_anterior: true }, { ...f(3, 1), cursada_anterior: true }], periodoActual: '2026-2' }).puede);
+  // Plan sin opuesto.
+  assert.equal(semestreOpuesto({ finales: [], sinOpuestoEnPlan: true }).motivo, 'plan');
+});

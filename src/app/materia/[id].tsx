@@ -66,7 +66,7 @@ export default function DetalleMateria() {
       await guardarEstadoMateria(id, estado, notaNum);
       const estados = new Map(malla.estados);
       if (estado === 'pendiente') estados.delete(id);
-      else estados.set(id, { estado, notaFinal: estado === 'aprobada' ? notaNum : null, promedioFirma: actual?.promedioFirma ?? null, periodo: actual?.periodo ?? null });
+      else estados.set(id, { estado, notaFinal: estado === 'aprobada' ? notaNum : null, promedioFirma: actual?.promedioFirma ?? null, periodo: actual?.periodo ?? null, semestreOpuesto: actual?.semestreOpuesto });
       setDatos({ ...malla, estados });
       // Se borraron finales aprobados: recarga para que el promedio quede al día.
       if (finalesAprobados.length) {
@@ -151,7 +151,7 @@ export default function DetalleMateria() {
       {msg && <Mensaje texto={msg.texto} tipo={msg.tipo} />}
       {actual?.puedeDeshacerRecursada && estado === 'cursando' && (
         <Tarjeta estilo={{ marginTop: espacio.m }}>
-          <Text style={s.cuerpo}>Marcaste que volvés a cursar esta materia.</Text>
+          <Text style={s.cuerpo}>Marcaste que volvés a cursar esta materia{actual.semestreOpuesto ? ' en el semestre opuesto' : ''}.</Text>
           <Text style={[s.filaDetalle, { marginTop: 4 }]}>
             {confirmarDeshacer
               ? '¿Seguro? La materia vuelve a como estaba antes, con tu firma, tus parciales y tus finales.'
@@ -189,7 +189,7 @@ export default function DetalleMateria() {
       {(actual?.estado === 'firmada' || actual?.estado === 'aprobada') && !seminario && (
         <>
           <Seccion estilo={{ marginTop: espacio.xl }}>Finales</Seccion>
-          <TarjetaFinales key={versionFinales} materiaId={materia.id} firma={actual.promedioFirma ?? null} aprobada={actual.estado === 'aprobada'} onGuardado={() => recargar()} />
+          <TarjetaFinales key={versionFinales} materiaId={materia.id} semestreOpuesto={actual.semestreOpuesto} anioPlan={malla?.plan?.anio} firma={actual.promedioFirma ?? null} aprobada={actual.estado === 'aprobada'} onGuardado={() => recargar()} />
         </>
       )}
 
