@@ -2,12 +2,14 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Text, View } from 'react-native';
-import { nombreEstadoMateria, nombreSemestre, pct, SelectorEstado } from '../../components/academico';
-import { TarjetaFinales } from '../../components/finales';
+import { nombreEstadoMateria, nombreNivel, pct, SelectorEstado } from '../../components/academico';
+import { TarjetaFinales, TarjetaNotaNecesaria } from '../../components/finales';
 import { esSeminario } from '../../lib/finales';
 import { AvisoSinConexion, BarraSuperior, Boton, Campo, Cargando, EstadoVacio, Fila, Insignia, Mensaje, Pantalla, s, Seccion, Tarjeta } from '../../components/ui';
 import { useSesion } from '../../context/SesionProvider';
-import { cargarMalla, deshacerRecursada, guardarEstadoMateria } from '../../datos/academico';
+import { aAsistencia, cargarFirmas, cargarMalla, deshacerRecursada, guardarEstadoMateria, guardarFirma, REGLA_POR_DEFECTO, reglaDe, tieneLab } from '../../datos/academico';
+import { evaluarFirma, promedioFirma } from '../../lib/firma';
+import { promedioGeneralFcq } from '../../lib/reglamento-fcq';
 import { usarDatos } from '../../datos/usarDatos';
 import { cumpleRequisito, requisitosFaltantes, seDesbloquean, type EstadoMateria } from '../../lib/progreso';
 import { colores, coloresEstado, espacio, fondos, fuentes, texto } from '../../tema';
@@ -33,6 +35,10 @@ export default function DetalleMateria() {
   // Cambia cuando se borran finales desde acá: la tarjeta de finales se vuelve a cargar.
   const [versionFinales, setVersionFinales] = useState(0);
   const [msg, setMsg] = useState<{ texto: string; tipo: 'error' | 'exito' } | null>(null);
+  // Con firma: los finales van plegados debajo de la tabla de notas.
+  const [verFinales, setVerFinales] = useState(false);
+  // Cursando: la firma que lleva hasta ahora, para la tabla de notas del final.
+  const [firmaEstimada, setFirmaEstimada] = useState<{ id: string; valor: number | null; aviso?: string; error?: boolean } | null>(null);
 
   useEffect(() => {
     setEstado(actual?.estado ?? 'pendiente');
@@ -49,6 +55,44 @@ export default function DetalleMateria() {
   }, [malla, id]);
 
   const seminario = materia ? esSeminario(materia.nombre) : false;
+  const cursandoGuardado = actual?.estado === 'cursando' && !seminario;
+
+  useEffect(() => {
+    if (!cursandoGuardado || !malla || !id) return;
+    let vivo = true;
+    cargarFirmas([id])
+      .then((firmas) => {
+        const f = firmas.get(id);
+        if (!vivo || !f) return;
+        const regla = reglaDe(malla.reglas, id) ?? REGLA_POR_DEFECTO;
+        const r = evaluarFirma({
+          regla,
+          recuperado: f.recuperado,
+          tieneLaboratorio: tieneLab(f.evaluacionesDb),
+          evaluaciones: f.evaluaciones,
+          asistencia: aAsistencia(f.asistencia),
+          asistenciaLab: aAsistencia(f.asistenciaLab),
+        });
+        // Laboratorio combinado con la teoría: la calculadora tampoco saca un promedio de firma.
+        if (tieneLab(f.evaluacionesDb) && regla.modoLaboratorio === 'combinado') {
+          setFirmaEstimada({ id, valor: null });
+          return;
+        }
+        // Con todo cargado, la firma; si falta algo, el promedio de lo que lleva.
+        const parcial = promedioGeneralFcq(r.teoria.actual, r.laboratorio?.actual ?? null);
+        const debajo = [r.teoria, r.laboratorio].filter((c) => c != null && c.actual != null && c.actual < c.minimo) as { minimo: number }[];
+        const aviso = r.teoria.imposible || r.laboratorio?.imposible
+          ? 'Con lo que llevás ya no llegás a la firma. Fijate en "Calcular mi firma" si te corresponde el Recu o la Regu.'
+          : debajo.length
+            ? `Con lo que llevás todavía no llegás a la firma (teoría ${r.teoria.minimo} %${r.laboratorio ? `, laboratorio ${r.laboratorio.minimo} %` : ''}). La tabla es para cuando firmes.`
+            : undefined;
+        setFirmaEstimada({ id, valor: promedioFirma(r, { recuperado: f.recuperado }) ?? (parcial == null ? null : Math.round(parcial + 1e-9)), aviso });
+      })
+      .catch(() => vivo && setFirmaEstimada({ id, valor: null, error: true }));
+    return () => {
+      vivo = false;
+    };
+  }, [cursandoGuardado, malla, id]);
   const notaNum = seminario || notaTxt.trim() === '' ? null : Number(notaTxt.replace(',', '.'));
   const notaValida = notaNum == null || (Number.isFinite(notaNum) && notaNum >= 1 && notaNum <= 5);
   // Deja de estar aprobada con un final aprobado cargado: ese final se borra al guardar.
@@ -99,7 +143,7 @@ export default function DetalleMateria() {
 
   return (
     <Pantalla>
-      <BarraSuperior titulo={nombreSemestre(materia.semestre)} onVolver={volver} />
+      <BarraSuperior titulo={nombreNivel(materia.semestre)} onVolver={volver} />
       <AvisoSinConexion texto={sinConexion && malla ? error : null} />
 
       <Tarjeta>
@@ -186,10 +230,42 @@ export default function DetalleMateria() {
         </Tarjeta>
       )}
 
-      {(actual?.estado === 'firmada' || actual?.estado === 'aprobada') && !seminario && (
+      {/* Cursando o con firma: en vez de los finales, cuánto necesita en el final para cada nota. */}
+      {cursandoGuardado && (
+        <>
+          <Seccion estilo={{ marginTop: espacio.xl }}>¿Cuánto necesitás en el final?</Seccion>
+          <TarjetaNotaNecesaria
+            firma={firmaEstimada?.id === materia.id ? firmaEstimada.valor : null}
+            estimada
+            aviso={firmaEstimada?.id === materia.id ? firmaEstimada.aviso : undefined}
+            sinDatos={firmaEstimada?.id !== materia.id ? 'Calculando…' : firmaEstimada.error ? 'No pudimos calcularlo ahora. Revisá tu conexión y volvé a entrar.' : 'Cargá tus parciales en "Calcular mi firma" y acá vas a ver cuánto necesitás en el final para sacar cada nota.'}
+          />
+        </>
+      )}
+      {actual?.estado === 'firmada' && !seminario && (
+        <>
+          <Seccion estilo={{ marginTop: espacio.xl }}>¿Cuánto necesitás en el final?</Seccion>
+          <TarjetaNotaNecesaria
+            firma={actual.promedioFirma ?? null}
+            onGuardarFirma={async (f) => {
+              await guardarFirma(materia.id, f);
+              recargar();
+            }}
+          />
+          {verFinales || malla?.intentos.some((i) => i.materiaId === materia.id) ? (
+            <>
+              <Seccion estilo={{ marginTop: espacio.l }}>Finales que rendiste</Seccion>
+              <TarjetaFinales key={versionFinales} materiaId={materia.id} semestreOpuesto={actual.semestreOpuesto} anioPlan={malla?.plan?.anio} firma={actual.promedioFirma ?? null} sinResumenFirma onGuardado={() => recargar()} />
+            </>
+          ) : (
+            <Boton texto="Cargar un final que rendiste" variante="fantasma" icono="add" compacto onPress={() => setVerFinales(true)} estilo={{ alignSelf: 'flex-start' }} />
+          )}
+        </>
+      )}
+      {actual?.estado === 'aprobada' && !seminario && (
         <>
           <Seccion estilo={{ marginTop: espacio.xl }}>Finales</Seccion>
-          <TarjetaFinales key={versionFinales} materiaId={materia.id} semestreOpuesto={actual.semestreOpuesto} anioPlan={malla?.plan?.anio} firma={actual.promedioFirma ?? null} aprobada={actual.estado === 'aprobada'} onGuardado={() => recargar()} />
+          <TarjetaFinales key={versionFinales} materiaId={materia.id} semestreOpuesto={actual.semestreOpuesto} anioPlan={malla?.plan?.anio} firma={actual.promedioFirma ?? null} aprobada onGuardado={() => recargar()} />
         </>
       )}
 

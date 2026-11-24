@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { evaluarFirma, promedioFirma, type Evaluacion } from '../firma.ts';
 import {
-  REGLA_FCQ, aplicarRecuperatorio, calificacionFinal, finalNecesario, notaDesdeRendimiento, promedioGeneralFcq, puedeRecuperar, teoriaTrasRecuperar,
+  REGLA_FCQ, aplicarRecuperatorio, calificacionFinal, finalNecesario, finalesNecesarios, notaDesdeRendimiento, promedioGeneralFcq, puedeRecuperar, teoriaTrasRecuperar,
 } from '../reglamento-fcq.ts';
 
 const ev = (o: Partial<Evaluacion>): Evaluacion => ({ nombre: 'x', componente: 'teoria', ponderacion: 50, rendida: true, ...o });
@@ -108,4 +108,16 @@ test('tras recuperar alcanza con PG ≥ 50', () => {
 test('el rendimiento mostrado no se redondea hacia arriba', () => {
   assert.equal(calificacionFinal(50, 65.83).rendimiento, 59.49);
   assert.equal(calificacionFinal(60, 60).rendimiento, 60);
+});
+
+test('final necesario para cada nota (2 a 5)', () => {
+  const t = finalesNecesarios(72);
+  assert.deepEqual(t.map((x) => x.nota), [2, 3, 4, 5]);
+  // 2: (59,5 − 28,8) / 0,6 = 51,17 → el final igual tiene que llegar a 60 %.
+  assert.equal(t[0].necesario, 60);
+  assert.equal(t[1].necesario, 69.5); // (70,5 − 28,8) / 0,6
+  assert.equal(t[2].necesario, 86.17); // (80,5 − 28,8) / 0,6 = 86,166…
+  assert.equal(t[3].necesario, null); // (90,5 − 28,8) / 0,6 > 100
+  // Cada porcentaje da justo esa nota.
+  for (const { nota, necesario } of t) if (necesario != null) assert.equal(calificacionFinal(72, necesario).nota, nota);
 });

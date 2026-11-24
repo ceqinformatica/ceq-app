@@ -400,20 +400,40 @@ export function BotonFlotante({ icono = 'add', etiqueta, onPress }: { icono?: No
   );
 }
 
-export function Campo({ etiqueta, ayuda, estilo, ...props }: TextInputProps & { etiqueta: string; ayuda?: string; estilo?: ViewStyle }) {
+export function Campo({ etiqueta, ayuda, estilo, limpiable, ...props }: TextInputProps & {
+  etiqueta: string;
+  ayuda?: string;
+  estilo?: ViewStyle;
+  /** Buscadores: una X a la derecha borra todo lo escrito de una vez. */
+  limpiable?: boolean;
+}) {
   const [foco, setFoco] = useState(false);
+  const conX = !!limpiable && !!props.value && !props.multiline;
   return (
     <View style={[{ marginBottom: espacio.m }, estilo]}>
       <Text style={s.etiqueta}>{etiqueta}</Text>
-      <TextInput
-        accessibilityLabel={etiqueta}
-        accessibilityHint={ayuda}
-        placeholderTextColor={colores.textoTenue}
-        style={[s.campo, foco && { borderColor: colores.marino, borderWidth: 1.5 }, props.multiline && { minHeight: 110, paddingTop: espacio.m, textAlignVertical: 'top' }]}
-        {...props}
-        onFocus={(e) => { setFoco(true); props.onFocus?.(e); }}
-        onBlur={(e) => { setFoco(false); props.onBlur?.(e); }}
-      />
+      <View>
+        <TextInput
+          accessibilityLabel={etiqueta}
+          accessibilityHint={ayuda}
+          placeholderTextColor={colores.textoTenue}
+          style={[s.campo, foco && { borderColor: colores.marino, borderWidth: 1.5 }, props.multiline && { minHeight: 110, paddingTop: espacio.m, textAlignVertical: 'top' }, limpiable && { paddingRight: 44 }]}
+          {...props}
+          onFocus={(e) => { setFoco(true); props.onFocus?.(e); }}
+          onBlur={(e) => { setFoco(false); props.onBlur?.(e); }}
+        />
+        {conX && (
+          <Pressable
+            onPress={() => props.onChangeText?.('')}
+            accessibilityRole="button"
+            accessibilityLabel="Borrar búsqueda"
+            hitSlop={8}
+            style={({ pressed }) => [s.campoBorrar, pressed && { opacity: 0.6 }]}
+          >
+            <Ionicons name="close-circle" size={22} color={colores.textoTenue} />
+          </Pressable>
+        )}
+      </View>
       {ayuda ? <Text style={[s.filaDetalle, { marginTop: espacio.xs }]}>{ayuda}</Text> : null}
     </View>
   );
@@ -684,6 +704,7 @@ export const s = crearEstilos(() => ({
     backgroundColor: fondos.superficieBlanca, borderWidth: 1, borderColor: colores.linea, borderRadius: radio.m,
     paddingHorizontal: espacio.m + 2, minHeight: 50, fontSize: 16, fontFamily: fuentes.regular, color: colores.texto,
   },
+  campoBorrar: { position: 'absolute', right: 0, top: 0, bottom: 0, width: 44, alignItems: 'center', justifyContent: 'center' },
   opcion: {
     flexDirection: 'row', alignItems: 'center', gap: espacio.m, borderWidth: 1, borderColor: colores.lineaSuave, borderRadius: radio.l,
     padding: espacio.m + 2, marginBottom: espacio.s, backgroundColor: fondos.superficieBlanca,

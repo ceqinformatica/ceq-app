@@ -30,6 +30,7 @@ export default function Tramites() {
         placeholder="Ej.: certificado, final, beca"
         returnKeyType="search"
         autoCorrect={false}
+        limpiable
       />
       {categorias.length > 1 && (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: espacio.s, paddingBottom: espacio.m }}>

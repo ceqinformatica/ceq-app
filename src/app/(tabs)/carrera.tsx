@@ -2,7 +2,7 @@ import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { FichaMateria, nombreSemestre, nota, type EstadoVisual } from '../../components/academico';
+import { FichaMateria, nombreNivel, nota, type EstadoVisual } from '../../components/academico';
 import { useDisposicion } from '../../components/disposicion';
 import { AnilloProgreso, BarraProgreso } from '../../components/graficos';
 import { Boton, BotonIcono, CabeceraMarca, Campo, Cargando, Chip, Dato, EstadoVacio, Fila, Mensaje, Pantalla, s, Tarjeta } from '../../components/ui';
@@ -15,11 +15,12 @@ import { colores, crearEstilos, espacio, fondos, fuentes, radio, sombras } from 
 import { useTema } from '../../context/TemaProvider';
 import { textoError } from '../../lib/errores';
 
-type Filtro = 'todas' | 'disponibles' | 'cursando' | 'aprobadas' | 'optativas';
+type Filtro = 'todas' | 'disponibles' | 'cursando' | 'firmadas' | 'aprobadas' | 'optativas';
 const FILTROS: { valor: Filtro; texto: string }[] = [
   { valor: 'todas', texto: 'Todas' },
   { valor: 'disponibles', texto: 'Puedo cursar' },
   { valor: 'cursando', texto: 'Cursando' },
+  { valor: 'firmadas', texto: 'Con firma' },
   { valor: 'aprobadas', texto: 'Aprobadas' },
   { valor: 'optativas', texto: 'Optativas' },
 ];
@@ -177,6 +178,7 @@ export default function Carrera() {
         (filtro === 'optativas' && optativa) ||
         (filtro === 'disponibles' && estado === 'pendiente') ||
         (filtro === 'cursando' && estado === 'cursando') ||
+        (filtro === 'firmadas' && estado === 'firmada') ||
         (filtro === 'aprobadas' && estado === 'aprobada');
       if (!pasa) continue;
       const clave = optativa ? OPTATIVAS : m.semestre;
@@ -296,7 +298,7 @@ export default function Carrera() {
                 onChangeText={setBusqueda}
                 autoCorrect={false}
                 returnKeyType="search"
-                clearButtonMode="while-editing"
+                limpiable
               />
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: espacio.s, marginBottom: espacio.s }}>
                 {FILTROS.map((f) => (
@@ -320,13 +322,13 @@ export default function Carrera() {
             return (
               <View key={sem} style={{ marginBottom: espacio.s }}>
                 <View style={est.semestre}>
-                  <Text style={est.semestreTitulo} accessibilityRole="header" accessibilityLabel={`${sem === OPTATIVAS ? 'Optativas' : nombreSemestre(sem)}, ${aprobadas} de ${materias.length} aprobadas`}>
-                    {sem === OPTATIVAS ? 'Optativas' : nombreSemestre(sem)}
+                  <Text style={est.semestreTitulo} accessibilityRole="header" accessibilityLabel={`${sem === OPTATIVAS ? 'Optativas' : nombreNivel(sem)}, ${aprobadas} de ${materias.length} aprobadas`}>
+                    {sem === OPTATIVAS ? 'Optativas' : nombreNivel(sem)}
                   </Text>
                   <View style={est.semestreLinea} />
                   {seleccion && obligSem.length > 0 ? (
                     <Pressable onPress={() => semestreCompleto(sem)} accessibilityRole="button" hitSlop={8}>
-                      <Text style={s.enlace}>{semCompleto ? 'Quitar' : 'Todo el semestre'}</Text>
+                      <Text style={s.enlace}>{semCompleto ? 'Quitar' : 'Todo el nivel'}</Text>
                     </Pressable>
                   ) : null}
                 </View>

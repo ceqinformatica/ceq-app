@@ -175,7 +175,16 @@ export function calificacionFinal(pg: number, examenFinal: number): Calificacion
 export function finalNecesario(pg: number, objetivo: Nota = 2): number | null {
   const umbral = { 1: 0, 2: 59.5, 3: 70.5, 4: 80.5, 5: 90.5 }[objetivo];
   const ef = Math.max(FINAL_MINIMO, (umbral - 0.4 * pg) / 0.6);
-  return ef > 100 ? null : Math.ceil(ef * 100) / 100;
+  // El 1e-9 evita que el ruido del punto flotante suba un centésimo (69,5000001 → 69,51).
+  return ef > 100 + 1e-9 ? null : Math.ceil(ef * 100 - 1e-9) / 100;
+}
+
+/**
+ * Cuánto necesita en el final para cada nota (2 a 5), con su firma.
+ * `necesario` es null si con esa firma no alcanza ni con 100 %.
+ */
+export function finalesNecesarios(pg: number): { nota: Exclude<Nota, 1>; necesario: number | null }[] {
+  return ([2, 3, 4, 5] as const).map((nota) => ({ nota, necesario: finalNecesario(pg, nota) }));
 }
 
 function redondear(n: number, dec = 2) {

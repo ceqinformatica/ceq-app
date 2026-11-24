@@ -425,7 +425,7 @@ function EditorFecha({ fila, materias, onListo, onCerrar }: { fila: Fila | null;
         </View>
       ) : (
         <>
-          <Campo etiqueta="Buscar materia" value={busca} onChangeText={setBusca} placeholder="Ej.: orgánica" autoCapitalize="none" />
+          <Campo etiqueta="Buscar materia" value={busca} onChangeText={setBusca} placeholder="Ej.: orgánica" autoCapitalize="none" limpiable />
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: espacio.s, marginBottom: espacio.m, marginTop: -espacio.s }}>
             {opciones.map((m) => <Chip key={m} texto={m} onPress={() => setMateria(m)} />)}
             {!opciones.length && <Text style={s.filaDetalle}>No hay materias con ese nombre en la carrera.</Text>}
