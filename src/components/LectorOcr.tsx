@@ -17,6 +17,7 @@ const WebView = WebViewOriginal as unknown as ComponentType<{
   domStorageEnabled?: boolean;
   onMessage?: (e: WebViewMessageEvent) => void;
   onError?: () => void;
+  onShouldStartLoadWithRequest?: (r: { url: string }) => boolean;
   style?: ViewStyle;
   containerStyle?: ViewStyle;
 }>;
@@ -46,14 +47,19 @@ export function useLectorOcr(): { leer: (bytes: Uint8Array, progreso?: (p: Progr
     if (p.reloj) clearTimeout(p.reloj);
     p.reloj = setTimeout(() => {
       p.mal(new Error('El lector de texto tardó demasiado. Revisá la conexión y probá de nuevo.'));
-      terminar();
+      // Solo se corta si sigue siendo el pedido en curso.
+      if (pedido.current === p) terminar();
     }, ESPERA_MAXIMA_MS);
   }, [terminar]);
 
   const leer = useCallback(
     (bytes: Uint8Array, progreso?: (p: ProgresoOcr) => void) =>
       new Promise<PaginaOcr[]>((ok, mal) => {
-        pedido.current?.mal(new Error('Se empezó a leer otro PDF.'));
+        const anterior = pedido.current;
+        if (anterior) {
+          if (anterior.reloj) clearTimeout(anterior.reloj);
+          anterior.mal(new Error('Se empezó a leer otro PDF.'));
+        }
         pedido.current = { bytes, ok, mal, progreso };
         rearmar();
         setActivo((n) => n + 1);
@@ -94,6 +100,8 @@ export function useLectorOcr(): { leer: (bytes: Uint8Array, progreso?: (p: Progr
       javaScriptEnabled
       domStorageEnabled
       onMessage={alMensaje}
+      // No navega a ningún lado: solo la página del lector.
+      onShouldStartLoadWithRequest={(r) => r.url === 'about:blank' || r.url.startsWith('https://ceq-app.local/')}
       onError={() => {
         pedido.current?.mal(new Error('No se pudo abrir el lector de texto.'));
         terminar();

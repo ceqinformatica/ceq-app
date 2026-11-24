@@ -287,6 +287,7 @@ export function leerHorarioFinales(texto: string, materias: string[], referencia
     if (llamados.length === 1 && !fechas.length) {
       seccion = llamados[0].n;
       columnas = 0;
+      horaGeneral = null;
       pendiente = null;
       previo = '';
       continue;

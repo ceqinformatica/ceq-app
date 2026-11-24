@@ -182,3 +182,31 @@ test('ayudantes del horario de clases', () => {
   assert.equal(tipoEn('Física II (RP)', null), 'rp');
   assert.equal(tipoEn('Química', 'Lab. 2'), 'laboratorio');
 });
+
+test('horario de clases: la última fila de cada tabla no se pierde al empezar la siguiente', () => {
+  const filas: FilaDoc[] = [
+    fila(0, ['PRIMER NIVEL', 100]),
+    fila(20, ['HORA', 0], ['LUNES', 100], ['MARTES', 200], ['MIÉRCOLES', 300]),
+    fila(40, ['07:00 - 08:30', 0], ['Química General', 100]),
+    fila(60, ['08:30 - 10:00', 0], ['Física I', 200]),
+    fila(90, ['SEGUNDO NIVEL', 100]),
+    fila(110, ['HORA', 0], ['LUNES', 100], ['MARTES', 200], ['MIÉRCOLES', 300]),
+    fila(130, ['07:00 - 08:30', 0], ['Física II', 300]),
+    fila(150, ['08:30 - 10:00', 0], ['Química Inorgánica', 100]),
+    fila(170, ['HORA', 0], ['LUNES', 100], ['MARTES', 200], ['MIÉRCOLES', 300]),
+  ];
+  const r = leerHorarioClases(filas, B2018);
+  assert.deepEqual(r.clases.map((c) => `${c.nivel} ${c.dia} ${c.inicio} ${c.materia}`), [
+    '1 1 07:00 Química General',
+    '1 2 08:30 Física I',
+    '2 1 08:30 Química Inorgánica',
+    '2 3 07:00 Física II',
+  ]);
+});
+
+test('nivelEn no confunde el semestre del año con el nivel', () => {
+  assert.equal(nivelEn('HORARIO DE CLASES SEGUNDO SEMESTRE 2027 - PRIMER NIVEL'), 1);
+  assert.equal(nivelEn('Horario de clases · Primer semestre 2027'), null);
+  assert.equal(nivelEn('Quinto semestre'), 5);
+  assert.equal(nivelEn('3er. curso'), 3);
+});

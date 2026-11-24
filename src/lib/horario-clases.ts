@@ -101,11 +101,16 @@ const ROMANO: Record<string, number> = { i: 1, ii: 2, iii: 3, iv: 4, v: 5, vi: 6
 /** Nivel que nombra un renglón de título: "PRIMER NIVEL", "3er. Nivel", "NIVEL IV", "5.º semestre". */
 export function nivelEn(texto: string): number | null {
   const n = normalizar(texto);
-  let m = /\b(primer|primero|segundo|tercer|tercero|cuarto|quinto|sexto|septimo|setimo|octavo|noveno|decimo)\s+(?:nivel|semestre|curso)\b/.exec(n);
+  // Primero "nivel" o "curso"; "semestre" solo si no es el semestre del año ("segundo semestre 2027").
+  return nivelCon(n, 'nivel|curso') ?? nivelCon(n.replace(/\b(?:\S+\s+){1,2}semestre\s*(?:del?\s*)?(?:ano\s*)?20\d\d\b/g, ' '), 'semestre');
+}
+
+function nivelCon(n: string, palabra: string): number | null {
+  let m = new RegExp(`\\b(primer|primero|segundo|tercer|tercero|cuarto|quinto|sexto|septimo|setimo|octavo|noveno|decimo)\\s+(?:${palabra})\\b`).exec(n);
   if (m) return ORDINALES[m[1]];
-  m = /\b(\d{1,2})\s*\.?\s*(?:er|ero|do|ro|to|vo|no|mo|o|°|º)?\s*\.?\s*(?:nivel|semestre|curso)\b/.exec(n);
+  m = new RegExp(`\\b(\\d{1,2})\\s*\\.?\\s*(?:er|ero|do|ro|to|vo|no|mo|o|°|º)?\\s*\\.?\\s*(?:${palabra})\\b`).exec(n);
   if (m && Number(m[1]) >= 1 && Number(m[1]) <= 10) return Number(m[1]);
-  m = /\b(?:nivel|semestre|curso)\s*:?\s*(\d{1,2}|i{1,3}|iv|v|vi{0,3}|ix|x)\b/.exec(n);
+  m = new RegExp(`\\b(?:${palabra})\\s*:?\\s*(\\d{1,2}|i{1,3}|iv|v|vi{0,3}|ix|x)\\b`).exec(n);
   if (m) return ROMANO[m[1]] ?? (Number(m[1]) >= 1 && Number(m[1]) <= 10 ? Number(m[1]) : null);
   return null;
 }
@@ -227,12 +232,15 @@ export function leerHorarioClases(filas: FilaDoc[], materias: string[]): { clase
     const cab = encabezado(f);
     if (cab) {
       cerrarAbierta(null);
+      if (ultimaFila) volcar(ultimaFila.inicio, ultimaFila.fin, ultimaFila.porDia);
       cols = cab;
       ultimaFila = null;
       continue;
     }
     if (esTitulo(f)) {
       cerrarAbierta(null);
+      // La última fila de la tabla anterior se guarda antes de cambiar de nivel.
+      if (ultimaFila) volcar(ultimaFila.inicio, ultimaFila.fin, ultimaFila.porDia);
       nivel = nivelEn(texto) ?? nivel;
       seccion = seccionEn(texto) ?? (nivelEn(texto) != null ? null : seccion);
       cols = null;

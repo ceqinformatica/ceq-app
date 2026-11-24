@@ -50,6 +50,7 @@ window.onerror = (msg) => enviar({ tipo: 'error', mensaje: String(msg) });
 
 let pdfjs = null;
 let partes = [];
+const origenOpaco = (() => { try { return location.origin === 'null' || !window.indexedDB; } catch (e) { return true; } })();
 const PSM = new URLSearchParams(location.search).get('psm') || '11';
 
 async function cargarPdfjs() {
@@ -135,6 +136,8 @@ async function leer(bytes) {
       corePath: '${URLS_OCR.core}',
       langPath: '${URLS_OCR.idioma}',
       workerBlobURL: true,
+      // En el iframe aislado de la web no hay IndexedDB: sin caché del idioma.
+      cacheMethod: origenOpaco ? 'none' : 'write',
     });
     await worker.setParameters({ preserve_interword_spaces: '1', tessedit_pageseg_mode: PSM });
     const paginas = [];
@@ -177,7 +180,7 @@ window.recibirOcr = (m) => {
   if (m.tipo === 'bytes') { leer(m.bytes); return; }
   if (m.tipo === 'leer') { const b = aBytes(partes.join('')); partes = []; leer(b); }
 };
-window.addEventListener('message', (e) => { if (e.data && e.data.ocrCeqApp) window.recibirOcr(e.data.ocrCeqApp); });
+window.addEventListener('message', (e) => { if (e.source === window.parent && e.data && e.data.ocrCeqApp) window.recibirOcr(e.data.ocrCeqApp); });
 enviar({ tipo: 'lista' });
 </script>
 </body></html>`;

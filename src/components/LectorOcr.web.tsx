@@ -23,7 +23,8 @@ export function useLectorOcr(): { leer: (bytes: Uint8Array, progreso?: (p: Progr
     if (p.reloj) clearTimeout(p.reloj);
     p.reloj = setTimeout(() => {
       p.mal(new Error('El lector de texto tardó demasiado. Revisá la conexión y probá de nuevo.'));
-      terminar();
+      // Solo se corta si sigue siendo el pedido en curso.
+      if (pedido.current === p) terminar();
     }, ESPERA_MAXIMA_MS);
   }, [terminar]);
 
@@ -46,7 +47,11 @@ export function useLectorOcr(): { leer: (bytes: Uint8Array, progreso?: (p: Progr
   const leer = useCallback(
     (bytes: Uint8Array, progreso?: (p: ProgresoOcr) => void) =>
       new Promise<PaginaOcr[]>((ok, mal) => {
-        pedido.current?.mal(new Error('Se empezó a leer otro PDF.'));
+        const anterior = pedido.current;
+        if (anterior) {
+          if (anterior.reloj) clearTimeout(anterior.reloj);
+          anterior.mal(new Error('Se empezó a leer otro PDF.'));
+        }
         pedido.current = { bytes, ok, mal, progreso };
         rearmar();
         setActivo((n) => n + 1);
@@ -59,6 +64,8 @@ export function useLectorOcr(): { leer: (bytes: Uint8Array, progreso?: (p: Progr
         key: activo,
         ref: marco,
         srcDoc: HTML_OCR,
+        // Origen opaco: los scripts del CDN no pueden leer la página ni la sesión guardada.
+        sandbox: 'allow-scripts',
         title: 'Lector de texto',
         'aria-hidden': true,
         style: { position: 'absolute', width: 1, height: 1, opacity: 0, border: 0, pointerEvents: 'none' },
