@@ -210,7 +210,7 @@ export default function Agenda() {
         {claseElegida && (
           <Detalle
             filas={[
-              ...(infoTipoClase(claseElegida.tipo_clase) ? [[infoTipoClase(claseElegida.tipo_clase)!.icono, infoTipoClase(claseElegida.tipo_clase)!.texto] as [string, string]] : []),
+              ...((tipo) => (tipo ? [[tipo.icono, tipo.texto] as [string, string]] : []))(infoTipoClase(claseElegida.tipo_clase)),
               ['calendar-outline', DIAS[claseElegida.dia_semana - 1]],
               ['time-outline', `${hora(claseElegida.hora_inicio)} a ${hora(claseElegida.hora_fin)}`],
               ...(claseElegida.aula ? [['location-outline', claseElegida.aula] as [string, string]] : []),
@@ -802,7 +802,8 @@ const est = crearEstilos(() => ({
   bloqueTipo: { fontFamily: fuentes.bold, fontSize: 9, lineHeight: 12, letterSpacing: 0.3, color: colores.blanco, opacity: 0.9, textTransform: 'uppercase' },
   bloqueNombre: { fontFamily: fuentes.semibold, fontSize: 10, lineHeight: 13, color: colores.blanco },
   bloqueAula: { fontFamily: fuentes.regular, fontSize: 9, lineHeight: 12, color: colores.blanco, opacity: 0.9 },
-  imagen: { backgroundColor: fondos.fondo, borderRadius: radio.l, padding: espacio.m, borderWidth: StyleSheet.hairlineWidth, borderColor: colores.borde },
+  // Sin bordes redondeados: las esquinas transparentes se ven negras en algunas apps.
+  imagen: { backgroundColor: fondos.fondo, padding: espacio.m, borderWidth: StyleSheet.hairlineWidth, borderColor: colores.borde },
   imagenCabecera: { flexDirection: 'row', alignItems: 'center', gap: espacio.s, marginBottom: espacio.m },
   imagenLogo: { width: 34, height: 34, borderRadius: 17, backgroundColor: fondos.blanco, alignItems: 'center', justifyContent: 'center', borderWidth: StyleSheet.hairlineWidth, borderColor: colores.borde },
   imagenTitulo: { fontFamily: fuentes.bold, fontSize: 20, color: colores.marino },

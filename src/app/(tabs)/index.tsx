@@ -123,7 +123,7 @@ export default function Inicio() {
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: espacio.s, paddingBottom: espacio.s, paddingRight: espacio.l }} style={{ marginHorizontal: -espacio.l, paddingLeft: espacio.l }}>
           {datos.clasesHoy.map((h, i) => (
             <Aparecer key={h.id} retraso={250 + i * 90} distancia={10} estilo={est.clase}>
-              <Text style={est.claseHora}>{hora(h.hora_inicio)} – {hora(h.hora_fin)}{infoTipoClase(h.tipo_clase) ? ` · ${infoTipoClase(h.tipo_clase)!.texto}` : ''}</Text>
+              <Text style={est.claseHora}>{hora(h.hora_inicio)} – {hora(h.hora_fin)}{((t) => (t ? ` · ${t.texto}` : ''))(infoTipoClase(h.tipo_clase))}</Text>
               <Text style={est.claseNombre} numberOfLines={2}>{h.titulo || (h.materia_id && datos.nombres.get(h.materia_id)) || 'Clase'}</Text>
               {h.aula ? (
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 'auto' }}>
