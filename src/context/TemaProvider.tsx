@@ -14,6 +14,8 @@ type ValorTema = {
   oscuro: boolean;
   preferencia: PreferenciaTema;
   cambiarPreferencia: (p: PreferenciaTema) => void;
+  /** Las pantallas de acceso y bloqueo van siempre en claro (como la maqueta aprobada). */
+  fijarSoloClaro: (activo: boolean) => void;
 };
 
 const TemaContexto = createContext<ValorTema>({
@@ -21,6 +23,7 @@ const TemaContexto = createContext<ValorTema>({
   oscuro: false,
   preferencia: 'sistema',
   cambiarPreferencia: () => {},
+  fijarSoloClaro: () => {},
 });
 
 function esPreferencia(v: unknown): v is PreferenciaTema {
@@ -60,7 +63,12 @@ export function TemaProvider({ inicial = 'sistema', children }: { inicial?: Pref
     }
   }, [preferencia]);
 
-  const esquema: Esquema = preferencia === 'sistema' ? (sistema === 'dark' ? 'oscuro' : 'claro') : preferencia;
+  const [soloClaro, setSoloClaro] = useState(false);
+  const elegido: Esquema = preferencia === 'sistema' ? (sistema === 'dark' ? 'oscuro' : 'claro') : preferencia;
+  const esquema: Esquema = soloClaro ? 'claro' : elegido;
+  // Entrar o salir del acceso cambia el tema sin el fundido (si no, se vería un velo oscuro al abrir la app).
+  const previoSoloClaro = useRef(soloClaro);
+  const cambioAcceso = previoSoloClaro.current !== soloClaro;
 
   // Transición al cambiar de tema: un velo del color de fondo anterior se
   // desvanece sobre la app ya dibujada con el tema nuevo (fundido suave).
@@ -68,7 +76,7 @@ export function TemaProvider({ inicial = 'sistema', children }: { inicial?: Pref
   const velo = useRef(new Animated.Value(0)).current;
   const [colorVelo, setColorVelo] = useState<string | null>(null);
   // En el primer cuadro con el tema nuevo el efecto todavía no corrió: el velo ya tiene que taparlo.
-  const cambiando = anterior.current != null && anterior.current.esquema !== esquema;
+  const cambiando = !cambioAcceso && anterior.current != null && anterior.current.esquema !== esquema;
   if (cambiando) velo.setValue(1);
   const colorMostrado = colorVelo ?? (cambiando ? anterior.current!.fondo : null);
 
@@ -78,6 +86,14 @@ export function TemaProvider({ inicial = 'sistema', children }: { inicial?: Pref
   useEffect(() => {
     const previo = anterior.current;
     anterior.current = { esquema, fondo: fondos.fondo };
+    const porAcceso = previoSoloClaro.current !== soloClaro;
+    previoSoloClaro.current = soloClaro;
+    if (porAcceso) {
+      // Si había un fundido en curso, se corta para que el velo no quede tapando el acceso.
+      velo.setValue(0);
+      setColorVelo(null);
+      return;
+    }
     if (!previo || previo.esquema === esquema) return;
     let vivo = true;
     setColorVelo(previo.fondo);
@@ -91,7 +107,7 @@ export function TemaProvider({ inicial = 'sistema', children }: { inicial?: Pref
           .start(({ finished }) => { if (finished && vivo) setColorVelo(null); });
       });
     return () => { vivo = false; };
-  }, [esquema, velo]);
+  }, [esquema, soloClaro, velo]);
 
   useEffect(() => {
     // Color de la ventana detrás de la app (se ve al rotar o abrir el teclado).
@@ -103,7 +119,12 @@ export function TemaProvider({ inicial = 'sistema', children }: { inicial?: Pref
     AsyncStorage.setItem(CLAVE, p).catch(() => {});
   }, []);
 
-  const valor = useMemo(() => ({ esquema, oscuro: esquema === 'oscuro', preferencia, cambiarPreferencia }), [esquema, preferencia, cambiarPreferencia]);
+  const fijarSoloClaro = useCallback((activo: boolean) => setSoloClaro(activo), []);
+
+  const valor = useMemo(
+    () => ({ esquema, oscuro: esquema === 'oscuro', preferencia, cambiarPreferencia, fijarSoloClaro }),
+    [esquema, preferencia, cambiarPreferencia, fijarSoloClaro],
+  );
   return (
     <TemaContexto.Provider value={valor}>
       <View style={{ flex: 1 }}>
