@@ -38,7 +38,7 @@ begin
   select count(*) into usados from public.examenes_finales
    where usuario_id = u and materia_id = p_materia and not cursada_anterior and llamado is not null and tipo = 'final';
   if usados >= 3 then
-    raise exception 'Ya usaste los tres llamados: tenés que volver a cursar en el semestre normal (Art. 62)';
+    raise exception 'Ya rendiste los tres finales: tenés que volver a cursar en el semestre normal (Art. 62)';
   end if;
 
   respaldo := jsonb_build_object(

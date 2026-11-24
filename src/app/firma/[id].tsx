@@ -124,7 +124,7 @@ export default function CalculadoraFirma() {
   const sinFirmaPosible = (datos.estadoMateria === 'cursando' || datos.estadoMateria === 'pendiente')
     && !resultado.firma && !datos.evaluacionesDb.some((e) => !e.rendida && !esRecuperatorio(e) && !esRegularizacion(e))
     && (resultado.teoria.imposible || (resultado.laboratorio?.imposible ?? false))
-    && !(!datos.semestreOpuesto && !datos.recuperado && !tieneRecuperatorio && puedeRecuperar(resultado.teoria));
+    && !(!combinado && !datos.semestreOpuesto && !datos.recuperado && !tieneRecuperatorio && puedeRecuperar(resultado.teoria) && sinFaltaDeAsistencia);
 
   const guardarMiFirma = async () => {
     if (promedio == null) return;
