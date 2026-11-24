@@ -67,9 +67,14 @@ export default function ValidarCarnet() {
   const venceIso = vence || null;
   const problemaFecha = vence ? problemaVencimiento(venceIso) : null;
 
+  // Si saca otra foto mientras se lee la anterior, la lectura vieja se descarta.
+  const lecturaActual = useRef(0);
+
   async function leerFoto(uri: string) {
+    const n = ++lecturaActual.current;
     setLectura({ estado: 'leyendo' });
     const lineas = await textoDeFoto(uri);
+    if (n !== lecturaActual.current) return;
     if (!lineas) return setLectura(null);
     const r = leerVencimiento(lineas);
     if (!r) return setLectura({ estado: 'sin_fecha' });
@@ -79,6 +84,7 @@ export default function ValidarCarnet() {
   }
 
   function elegirOtraFecha(texto: string) {
+    lecturaActual.current++;
     setOtraFecha(texto);
     setVence(isoDeTexto(texto) ?? '');
   }
@@ -193,7 +199,7 @@ export default function ValidarCarnet() {
       <Text style={[s.etiqueta, { marginBottom: espacio.s }]}>Vence</Text>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: espacio.s, marginBottom: espacio.xs }} accessibilityRole="radiogroup">
         {semestres.map((o) => (
-          <Chip key={o.valor} texto={o.texto} elegido={vence === o.valor && !otraFecha} onPress={() => { setVence(o.valor); setOtraFecha(''); }} />
+          <Chip key={o.valor} texto={o.texto} elegido={vence === o.valor && !otraFecha} onPress={() => { lecturaActual.current++; setVence(o.valor); setOtraFecha(''); }} />
         ))}
       </View>
       <CampoFechaHora

@@ -22,10 +22,11 @@ export interface Vencimiento {
 
 const MESES: Record<string, number> = {
   ene: 1, feb: 2, mar: 3, abr: 4, may: 5, jun: 6, jul: 7, ago: 8, sep: 9, set: 9, oct: 10, nov: 11, dic: 12,
-  jan: 1, apr: 4, aug: 8, dec: 12,
 };
 
-const CLAVE = /venc|vence|v[aá]lid|hasta|vigen|expir|exp\b|caduc|v[aá]lido/i;
+const NOMBRES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'setiembre', 'octubre', 'noviembre', 'diciembre'];
+
+const CLAVE = /venc|v[aá]lid|vigen|expir|\bexp\b|caduc/i;
 
 const dos = (n: number) => String(n).padStart(2, '0');
 const anio4 = (a: number) => (a < 100 ? 2000 + a : a);
@@ -70,7 +71,10 @@ function fechasEn(linea: string): { iso: string; leido: string }[] {
   }
   // diciembre 2027, dic. 2027, dic/27
   for (const m of t.matchAll(/\b([a-záéíóú]{3,10})\.?\s*(?:de(?:l)?\s+|[/\-]\s*)?(\d{4}|\d{2})\b/gi)) {
-    const mes = MESES[m[1].slice(0, 3).toLowerCase()];
+    // El nombre del mes, no cualquier palabra que empiece igual ("Decano").
+    const palabra = m[1].toLowerCase();
+    const mes = MESES[palabra.slice(0, 3)];
+    if (mes && palabra.length > 3 && !NOMBRES.some((n) => n.startsWith(palabra))) continue;
     if (mes) anotar(m, iso(anio4(Number(m[2])), mes));
     else continue;
   }

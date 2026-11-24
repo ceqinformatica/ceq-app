@@ -65,3 +65,9 @@ test('devuelve lo leído para mostrarlo', () => {
   assert.equal(r?.leido, '2.º semestre 2027');
   assert.equal(r?.conPalabraClave, true);
 });
+
+test('palabras que empiezan como un mes o "hasta" suelto no cuentan', () => {
+  assert.equal(v('Decano 2024'), null);
+  assert.equal(v('Marcos Benítez', 'Socio desde 2024'), null);
+  assert.equal(v('Válido hasta septiembre 2027'), '2027-09-30');
+});
