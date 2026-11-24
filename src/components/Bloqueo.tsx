@@ -77,7 +77,7 @@ export function Bloqueo() {
       setError(
         r.quedanAntesDeEsperar > 0
           ? `PIN incorrecto. ${r.quedanAntesDeEsperar === 1 ? 'Queda 1 intento' : `Quedan ${r.quedanAntesDeEsperar} intentos`} antes de tener que esperar.`
-          : `PIN incorrecto. Después de ${r.quedanAntesDeSalir} ${r.quedanAntesDeSalir === 1 ? 'intento más' : 'intentos más'} se cierra la sesión.`,
+          : `PIN incorrecto. Después de ${r.quedanAntesDeSalir} ${r.quedanAntesDeSalir === 1 ? 'intento más' : 'intentos más'} vas a tener que confirmar tu cuenta para crear uno nuevo.`,
       );
     } else {
       setError('No se pudo comprobar el PIN. Probá de nuevo o cerrá sesión y volvé a entrar.');

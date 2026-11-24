@@ -5,7 +5,7 @@ import { supabase } from './supabase';
 import { olvidarEsteCelular } from './notificaciones';
 import { desactivarBiometria } from './biometria';
 import { borrarPin } from './pinGuardado';
-import { traducirErrorClave } from './recuperacion';
+import { resultadoGoogle, traducirErrorClave } from './recuperacion';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -147,22 +147,33 @@ export async function confirmarConClave(correo: string, clave: string): Promise<
 }
 
 /**
- * Como entrarConGoogle(), pero distingue "entró" de "cerró la ventana":
- * solo cuenta como confirmado si Supabase avisó un inicio de sesión nuevo.
+ * Como entrarConGoogle(), pero distingue "entró" de "cerró la ventana" y
+ * exige que sea la MISMA cuenta de la sesión. Si eligió otra cuenta de Google,
+ * Supabase ya cambió la sesión: se cierra como un cierre de sesión normal
+ * (borra el celular, la caché y el PIN) y se devuelve el error.
  */
 export async function confirmarConGoogle(): Promise<string | 'cancelado' | null> {
-  const antes = (await supabase.auth.getSession()).data.session?.access_token ?? null;
-  let entro = false;
+  const actual = (await supabase.auth.getSession()).data.session;
+  const uidAntes = actual?.user.id ?? null;
+  const tokenAntes = actual?.access_token ?? null;
+  let resultado: 'misma' | 'otra' | null = null;
   const { data: sub } = supabase.auth.onAuthStateChange((evento, sesion) => {
-    if (evento === 'SIGNED_IN' && sesion && sesion.access_token !== antes) entro = true;
+    const r = resultadoGoogle(uidAntes, tokenAntes, evento, sesion);
+    // Si en algún momento entró otra cuenta, eso manda aunque después llegue otro aviso.
+    if (r && resultado !== 'otra') resultado = r;
   });
+  let error: string | null;
   try {
-    const error = await entrarConGoogle();
-    if (error) return error;
-    return entro ? null : 'cancelado';
+    error = await entrarConGoogle();
   } finally {
     sub.subscription.unsubscribe();
   }
+  if (resultado === 'otra') {
+    await salir();
+    return 'Esa cuenta de Google no es la de esta sesión. Cerramos la sesión por seguridad: entrá de nuevo con tu cuenta.';
+  }
+  if (error) return error;
+  return resultado === 'misma' ? null : 'cancelado';
 }
 
 export async function salir() {

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { correoValido, metodosDeCuenta, problemaClaveNueva, traducirErrorClave } from '../recuperacion.ts';
+import { correoValido, resultadoGoogle, metodosDeCuenta, problemaClaveNueva, traducirErrorClave } from '../recuperacion.ts';
 
 test('cuenta de Google sola: confirma con Google, no con contraseña', () => {
   const m = metodosDeCuenta({ email: 'a@gmail.com', app_metadata: { provider: 'google', providers: ['google'] } });
@@ -47,4 +47,14 @@ test('traduce los errores de Supabase', () => {
   assert.match(traducirErrorClave('Invalid login credentials'), /no es correcta/);
   assert.match(traducirErrorClave('TypeError: Failed to fetch'), /conexión/);
   assert.match(traducirErrorClave(null), /Probá de nuevo/);
+});
+
+test('confirmar con Google exige la misma cuenta', () => {
+  const ses = (id: string, t: string) => ({ access_token: t, user: { id } });
+  assert.equal(resultadoGoogle('u1', 't0', 'SIGNED_IN', ses('u1', 't1')), 'misma');
+  assert.equal(resultadoGoogle('u1', 't0', 'SIGNED_IN', ses('u2', 't1')), 'otra');
+  assert.equal(resultadoGoogle(null, null, 'SIGNED_IN', ses('u2', 't1')), 'otra');
+  assert.equal(resultadoGoogle('u1', 't0', 'SIGNED_IN', ses('u1', 't0')), null);
+  assert.equal(resultadoGoogle('u1', 't0', 'TOKEN_REFRESHED', ses('u1', 't1')), null);
+  assert.equal(resultadoGoogle('u1', 't0', 'SIGNED_IN', null), null);
 });

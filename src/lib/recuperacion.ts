@@ -30,6 +30,21 @@ export function metodosDeCuenta(usuario: UsuarioCuenta | null | undefined): Meto
   return { google: proveedores.has('google'), clave: proveedores.has('email') && correo != null, correo };
 }
 
+/**
+ * Cómo tomar un aviso de Supabase mientras se confirma con Google:
+ * 'misma' si entró de nuevo la cuenta de la sesión, 'otra' si eligió otra
+ * cuenta de Google, o null si el aviso no es un inicio de sesión nuevo.
+ */
+export function resultadoGoogle(
+  uidAntes: string | null,
+  tokenAntes: string | null,
+  evento: string,
+  sesion: { access_token: string; user: { id: string } } | null,
+): 'misma' | 'otra' | null {
+  if (evento !== 'SIGNED_IN' || !sesion || sesion.access_token === tokenAntes) return null;
+  return uidAntes != null && sesion.user.id === uidAntes ? 'misma' : 'otra';
+}
+
 /** Motivo por el que la contraseña nueva no sirve, o null si está bien. */
 export function problemaClaveNueva(clave: string, repetida: string): string | null {
   if (clave.length < CLAVE_MINIMA) return `La contraseña tiene que tener al menos ${CLAVE_MINIMA} caracteres.`;
