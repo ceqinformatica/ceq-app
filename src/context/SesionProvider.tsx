@@ -110,7 +110,7 @@ export function SesionProvider({ children }: { children: ReactNode }) {
         borrarPin().catch(() => {});
       }
       // Desde que hubo una cuenta en este celular, al cerrar sesión se ve "Iniciar sesión" (no "Crear cuenta").
-      if (nueva && !MODO_DEMO) marcarYaEntro();
+      if (nueva && !MODO_DEMO && (evento === 'SIGNED_IN' || evento === 'INITIAL_SESSION')) marcarYaEntro();
       setSesion(nueva);
       if (!nueva) setBloqueado(false);
       cargarPerfil(nueva?.user.id);

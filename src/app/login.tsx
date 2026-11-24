@@ -71,7 +71,7 @@ export default function Login() {
     if (r.resultado === 'ya-existe') {
       setModo('entrar');
       setClave('');
-      setInfo('Ese correo ya tiene una cuenta. Iniciá sesión con tu contraseña.');
+      setInfo('Ese correo ya tiene una cuenta. Iniciá sesión con tu contraseña, o con Google o Microsoft si la creaste así.');
     }
   };
 

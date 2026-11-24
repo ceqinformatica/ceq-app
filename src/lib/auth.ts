@@ -256,11 +256,12 @@ export async function eliminarCuenta(): Promise<string | null> {
   if (error) return 'No se pudo borrar la cuenta. Probá de nuevo o escribí a informatica@ceq-una.com.';
   await desactivarBiometria().catch(() => {});
   await borrarPin().catch(() => {});
-  // Sin cuenta, la próxima vez se vuelve a ver "Crear cuenta".
-  await olvidarYaEntro();
   await cerrarGoogleNativo();
   // El usuario ya no existe en el servidor: se cierra la sesión solo en este celular.
   await supabase.auth.signOut({ scope: 'local' });
+  // Sin cuenta, la próxima vez se vuelve a ver "Crear cuenta" (después del signOut,
+  // para que ningún aviso de sesión lo vuelva a marcar).
+  await olvidarYaEntro();
   return null;
 }
 
