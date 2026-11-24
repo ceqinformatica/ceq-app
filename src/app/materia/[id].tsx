@@ -2,7 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Text, View } from 'react-native';
-import { nombreEstadoMateria, nombreNivel, pct, SelectorEstado } from '../../components/academico';
+import { nombreEstadoMateria, nombreNivel, SelectorEstado, type VistaMateria } from '../../components/academico';
 import { TarjetaFinales, TarjetaNotaNecesaria } from '../../components/finales';
 import { esSeminario } from '../../lib/finales';
 import { AvisoSinConexion, BarraSuperior, Boton, Campo, Cargando, EstadoVacio, Fila, Insignia, Mensaje, Pantalla, s, Seccion, Tarjeta } from '../../components/ui';
@@ -35,15 +35,37 @@ export default function DetalleMateria() {
   // Cambia cuando se borran finales desde acá: la tarjeta de finales se vuelve a cargar.
   const [versionFinales, setVersionFinales] = useState(0);
   const [msg, setMsg] = useState<{ texto: string; tipo: 'error' | 'exito' } | null>(null);
-  // Con firma: los finales van plegados debajo de la tabla de notas.
-  const [verFinales, setVerFinales] = useState(false);
-  // Cursando: la firma que lleva hasta ahora, para la tabla de notas del final.
+  // Qué pestaña se ve: Pendiente, Cursando, Firma o Finales (no se guarda sola).
+  const [vista, setVista] = useState<VistaMateria>('pendiente');
+  // En Finales: aprobada sin cargar los finales, solo con la nota.
+  const [soloNota, setSoloNota] = useState(false);
+  // Firma sin promedio guardado: la que lleva según sus parciales.
   const [firmaEstimada, setFirmaEstimada] = useState<{ id: string; valor: number | null; aviso?: string; error?: boolean } | null>(null);
 
+  const seminario = materia ? esSeminario(materia.nombre) : false;
+  const sinFinalesCargados = !(malla?.intentos ?? []).some((i) => i.materiaId === id);
   useEffect(() => {
-    setEstado(actual?.estado ?? 'pendiente');
+    const e = actual?.estado ?? 'pendiente';
+    setEstado(e);
+    setVista(e === 'aprobada' && !seminario ? 'finales' : e);
+    // Aprobada sin finales cargados (por ejemplo, marcada en bloque): se ve su nota.
+    setSoloNota(e === 'aprobada' && sinFinalesCargados);
     setNotaTxt(actual?.notaFinal != null ? String(actual.notaFinal) : '');
-  }, [actual?.estado, actual?.notaFinal]);
+  }, [actual?.estado, actual?.notaFinal, seminario, sinFinalesCargados]);
+
+  const cambiarVista = (v: VistaMateria) => {
+    setVista(v);
+    setMsg(null);
+    if (v === 'finales') {
+      // Finales no cambia el estado: se aprueba al cargar un final aprobado.
+      setEstado(actual?.estado ?? 'pendiente');
+      setSoloNota((actual?.estado === 'aprobada') && sinFinalesCargados);
+    } else setEstado(v);
+  };
+  const elegirSoloNota = (si: boolean) => {
+    setSoloNota(si);
+    setEstado(si ? 'aprobada' : actual?.estado ?? 'pendiente');
+  };
 
   const info = useMemo(() => {
     if (!malla || !id) return null;
@@ -54,11 +76,11 @@ export default function DetalleMateria() {
     return { requisitos, habilita, faltan, nombre };
   }, [malla, id]);
 
-  const seminario = materia ? esSeminario(materia.nombre) : false;
-  const cursandoGuardado = actual?.estado === 'cursando' && !seminario;
+  const firmaGuardada = actual?.promedioFirma ?? null;
+  const estimar = vista === 'firmada' && !seminario && firmaGuardada == null;
 
   useEffect(() => {
-    if (!cursandoGuardado || !malla || !id) return;
+    if (!estimar || !malla || !id) return;
     let vivo = true;
     cargarFirmas([id])
       .then((firmas) => {
@@ -92,7 +114,7 @@ export default function DetalleMateria() {
     return () => {
       vivo = false;
     };
-  }, [cursandoGuardado, malla, id]);
+  }, [estimar, malla, id]);
   const notaNum = seminario || notaTxt.trim() === '' ? null : Number(notaTxt.replace(',', '.'));
   const notaValida = notaNum == null || (Number.isFinite(notaNum) && notaNum >= 1 && notaNum <= 5);
   // Deja de estar aprobada con un final aprobado cargado: ese final se borra al guardar.
@@ -159,41 +181,54 @@ export default function DetalleMateria() {
       </Tarjeta>
 
       <Seccion>¿Cómo vas con esta materia?</Seccion>
-      <SelectorEstado valor={estado} onCambio={setEstado} sinFirma={seminario} bloqueada={info.faltan > 0 && (actual?.estado ?? 'pendiente') === 'pendiente'} />
+      <SelectorEstado valor={vista} onCambio={cambiarVista} sinFirma={seminario} bloqueada={info.faltan > 0 && (actual?.estado ?? 'pendiente') === 'pendiente'} />
       {seminario && <Mensaje tipo="info" texto="Los seminarios no llevan nota: se aprueban o no. No tienen firma ni final y no cuentan para tu promedio." />}
       {info.faltan > 0 && (actual?.estado ?? 'pendiente') === 'pendiente' && (
         <Mensaje tipo="info" texto={`Te ${info.faltan === 1 ? 'falta 1 requisito' : `faltan ${info.faltan} requisitos`} para cursarla.`} />
       )}
-      {estado === 'aprobada' && !seminario && (
-        <Campo
-          etiqueta="Nota final (1 a 5)"
-          value={notaTxt}
-          onChangeText={setNotaTxt}
-          keyboardType="decimal-pad"
-          maxLength={4}
-          placeholder="Ej. 4"
-          estilo={{ marginTop: espacio.m }}
-        />
+
+      {/* Finales: se cargan los finales; con uno aprobado la materia queda aprobada sola. */}
+      {vista === 'finales' && !soloNota && (
+        <>
+          <TarjetaFinales key={versionFinales} materiaId={materia.id} semestreOpuesto={actual?.semestreOpuesto} anioPlan={malla?.plan?.anio} firma={firmaGuardada} aprobada={actual?.estado === 'aprobada'} onGuardado={() => recargar()} />
+          <Boton texto="La aprobé y no tengo los finales: cargar solo la nota" variante="fantasma" compacto onPress={() => elegirSoloNota(true)} />
+        </>
       )}
-      {!notaValida && <Mensaje texto="La nota va de 1 a 5." />}
-      {finalesAprobados.length > 0 && (
-        <Mensaje
-          tipo="info"
-          texto={`Al guardar se borra ${finalesAprobados.length === 1 ? `el final aprobado que cargaste (nota ${finalesAprobados[0].nota})` : 'los finales aprobados que cargaste'} y deja de contar en tu promedio. Los aplazos se conservan.`}
-        />
+      {vista === 'finales' && soloNota && (
+        <>
+          <Campo
+            etiqueta="Nota final (1 a 5)"
+            value={notaTxt}
+            onChangeText={setNotaTxt}
+            keyboardType="decimal-pad"
+            maxLength={4}
+            placeholder="Ej. 4"
+            estilo={{ marginTop: espacio.m }}
+          />
+          {!notaValida && <Mensaje texto="La nota va de 1 a 5." />}
+          <Boton texto="Guardar" icono="checkmark" onPress={guardar} cargando={guardando} deshabilitado={!cambio || !notaValida} />
+          <Boton texto="Cargar los finales" variante="fantasma" compacto icono="create-outline" onPress={() => elegirSoloNota(false)} />
+        </>
       )}
-      <Boton texto="Guardar" icono="checkmark" onPress={guardar} cargando={guardando} deshabilitado={!cambio || !notaValida} estilo={{ marginTop: espacio.m }} />
-      {(estado === 'firmada' || estado === 'aprobada') && actual?.promedioFirma != null && (
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: espacio.s, marginTop: espacio.m }}>
-          <Ionicons name="ribbon" size={18} color={colores.marino} />
-          <Text style={[s.cuerpo, { fontFamily: fuentes.semibold, color: colores.marino }]}>Tu firma: {pct(actual.promedioFirma)}</Text>
-        </View>
-      )}
-      {(estado === 'cursando' || estado === 'firmada') && !seminario && (
-        <Boton texto={estado === 'firmada' ? 'Ver mi firma' : 'Calcular mi firma'} variante="secundario" icono="calculator-outline" onPress={() => router.push(`/firma/${materia.id}`)} />
+
+      {vista !== 'finales' && (
+        <>
+          {finalesAprobados.length > 0 && (
+            <Mensaje
+              tipo="info"
+              texto={`Al guardar se borra ${finalesAprobados.length === 1 ? `el final aprobado que cargaste (nota ${finalesAprobados[0].nota})` : 'los finales aprobados que cargaste'} y deja de contar en tu promedio. Los aplazos se conservan.`}
+            />
+          )}
+          {cambio && <Boton texto="Guardar" icono="checkmark" onPress={guardar} cargando={guardando} estilo={{ marginTop: espacio.m }} />}
+        </>
       )}
       {msg && <Mensaje texto={msg.texto} tipo={msg.tipo} />}
-      {actual?.puedeDeshacerRecursada && estado === 'cursando' && (
+
+      {/* Cursando: la calculadora de la firma. */}
+      {vista === 'cursando' && !seminario && (
+        <Boton texto="Calcular mi firma" variante="secundario" icono="calculator-outline" onPress={() => router.push(`/firma/${materia.id}`)} />
+      )}
+      {actual?.puedeDeshacerRecursada && vista === 'cursando' && (
         <Tarjeta estilo={{ marginTop: espacio.m }}>
           <Text style={s.cuerpo}>Marcaste que volvés a cursar esta materia{actual.semestreOpuesto ? ' en el semestre opuesto' : ''}.</Text>
           <Text style={[s.filaDetalle, { marginTop: 4 }]}>
@@ -230,45 +265,26 @@ export default function DetalleMateria() {
         </Tarjeta>
       )}
 
-      {/* Cursando o con firma: en vez de los finales, cuánto necesita en el final para cada nota. */}
-      {cursandoGuardado && (
+
+      {/* Firma: una aproximación de cuánto necesita en el final para cada nota. */}
+      {vista === 'firmada' && !seminario && (
         <>
-          <Seccion estilo={{ marginTop: espacio.xl }}>¿Cuánto necesitás en el final?</Seccion>
+          <Seccion estilo={{ marginTop: espacio.l }}>¿Cuánto necesitás en el final?</Seccion>
           <TarjetaNotaNecesaria
-            firma={firmaEstimada?.id === materia.id ? firmaEstimada.valor : null}
-            estimada
-            aviso={firmaEstimada?.id === materia.id ? firmaEstimada.aviso : undefined}
-            sinDatos={firmaEstimada?.id !== materia.id ? 'Calculando…' : firmaEstimada.error ? 'No pudimos calcularlo ahora. Revisá tu conexión y volvé a entrar.' : 'Cargá tus parciales en "Calcular mi firma" y acá vas a ver cuánto necesitás en el final para sacar cada nota.'}
-          />
-        </>
-      )}
-      {actual?.estado === 'firmada' && !seminario && (
-        <>
-          <Seccion estilo={{ marginTop: espacio.xl }}>¿Cuánto necesitás en el final?</Seccion>
-          <TarjetaNotaNecesaria
-            firma={actual.promedioFirma ?? null}
+            firma={firmaGuardada ?? (firmaEstimada?.id === materia.id ? firmaEstimada.valor : null)}
+            estimada={firmaGuardada == null}
+            aviso={firmaGuardada == null && firmaEstimada?.id === materia.id ? firmaEstimada.aviso : undefined}
             onGuardarFirma={async (f) => {
               await guardarFirma(materia.id, f);
               recargar();
             }}
           />
-          {verFinales || malla?.intentos.some((i) => i.materiaId === materia.id) ? (
-            <>
-              <Seccion estilo={{ marginTop: espacio.l }}>Finales que rendiste</Seccion>
-              <TarjetaFinales key={versionFinales} materiaId={materia.id} semestreOpuesto={actual.semestreOpuesto} anioPlan={malla?.plan?.anio} firma={actual.promedioFirma ?? null} sinResumenFirma onGuardado={() => recargar()} />
-            </>
-          ) : (
-            <Boton texto="Cargar un final que rendiste" variante="fantasma" icono="add" compacto onPress={() => setVerFinales(true)} estilo={{ alignSelf: 'flex-start' }} />
-          )}
-        </>
-      )}
-      {actual?.estado === 'aprobada' && !seminario && (
-        <>
-          <Seccion estilo={{ marginTop: espacio.xl }}>Finales</Seccion>
-          <TarjetaFinales key={versionFinales} materiaId={materia.id} semestreOpuesto={actual.semestreOpuesto} anioPlan={malla?.plan?.anio} firma={actual.promedioFirma ?? null} aprobada onGuardado={() => recargar()} />
+          <Boton texto="Ver mi firma" variante="secundario" icono="calculator-outline" onPress={() => router.push(`/firma/${materia.id}`)} />
         </>
       )}
 
+      {(vista === 'pendiente' || vista === 'cursando' || seminario) && (
+        <>
       <Seccion estilo={{ marginTop: espacio.xl }}>Prerrequisitos</Seccion>
       <Tarjeta estilo={{ paddingVertical: espacio.xs }}>
         {info.requisitos.length === 0 ? (
@@ -304,6 +320,9 @@ export default function DetalleMateria() {
               />
             ))}
           </Tarjeta>
+        </>
+      )}
+
         </>
       )}
 
