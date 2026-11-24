@@ -631,6 +631,30 @@ select pg_temp.como(null);
 select pg_temp.debe_fallar('anon no ve ventanas', 'select * from public.ventanas');
 reset role;
 
+-- Fin del semestre -----------------------------------------------------
+-- Beto elige el sábado 05/12/2026 como último día de clases.
+select pg_temp.como('00000000-0000-0000-0000-00000000000b');
+select pg_temp.debe_ser('Beto elige su fin de semestre',
+  pg_temp.filas($q$update public.perfiles set fin_clases = '2026-12-05' where id = '00000000-0000-0000-0000-00000000000b'$q$), 1);
+select pg_temp.debe_fallar('Beto no ejecuta el vaciado', 'select public.vaciar_horarios_terminados()');
+reset role;
+select pg_temp.como('00000000-0000-0000-0000-00000000000a');
+select pg_temp.debe_ser('Ana no cambia el fin de semestre de Beto',
+  pg_temp.filas($q$update public.perfiles set fin_clases = '2030-01-01' where id = '00000000-0000-0000-0000-00000000000b'$q$), 0);
+reset role;
+select pg_temp.debe_ser('después del fin de semestre no se avisan clases',
+  public.encolar_recordatorios_clases(pg_temp.py('2026-12-07 07:30')), 0);
+create temp table clases_beto as
+  select count(*) as n from public.horario where usuario_id = '00000000-0000-0000-0000-00000000000b';
+select pg_temp.debe_ser('Beto tiene clases antes del vaciado', (select case when n > 0 then 1 else 0 end from clases_beto), 1);
+select pg_temp.debe_ser('el último día de clases todavía no se vacía',
+  public.vaciar_horarios_terminados(pg_temp.py('2026-12-05 23:59')), 0);
+select pg_temp.debe_ser('al día siguiente se borra todo su horario',
+  public.vaciar_horarios_terminados(pg_temp.py('2026-12-06 00:10')), (select n from clases_beto));
+select pg_temp.debe_ser('y la fecha queda en blanco para el próximo semestre',
+  (select count(*) from public.perfiles where fin_clases is not null), 0);
+drop table clases_beto;
+
 -- Todas las tablas públicas tienen RLS ------------------------------
 select pg_temp.debe_ser('tablas sin RLS',
   (select count(*) from pg_class c join pg_namespace n on n.oid = c.relnamespace

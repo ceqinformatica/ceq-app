@@ -39,6 +39,8 @@ export type Perfil = {
   id: string; nombre: string | null; ci: string | null; carrera_id: string | null; plan_id: string | null;
   anio_ingreso: number | null; rol: RolUsuario; avatar_url: string | null; created_at: string; updated_at: string;
   notif_avisos?: boolean; notif_recordatorios?: boolean;
+  /** Último día de clases del semestre (AAAA-MM-DD); después se vacía el horario. */
+  fin_clases?: string | null;
 }
 export type MateriaEstudianteDb = {
   usuario_id: string; materia_id: string; estado: EstadoMateriaDb; nota_final: number | null; fecha: string | null;

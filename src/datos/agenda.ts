@@ -3,6 +3,8 @@ import type { EstadoMateriaDb, EventoDb, HorarioDb, TipoEvento } from '../lib/ti
 import { periodoDe } from '../lib/finales';
 import { db, esperar, idDemo, MODO_DEMO, UID_DEMO } from './demo';
 import { lanzar } from '../lib/errores';
+import { hoyPy } from '../lib/calendario';
+import { semestreTerminado } from '../lib/fin-semestre';
 
 export interface Agenda {
   horario: HorarioDb[];
@@ -28,7 +30,7 @@ export interface MateriaAgenda {
  * Horario semanal y fechas de hoy en adelante. Las fechas son solo las que
  * carga cada estudiante, porque dependen de su situación académica.
  */
-export async function cargarAgenda(planId: string | null | undefined): Promise<Agenda> {
+export async function cargarAgenda(planId: string | null | undefined, finClases?: string | null): Promise<Agenda> {
   const desde = new Date();
   desde.setHours(0, 0, 0, 0);
   let horario: HorarioDb[];
@@ -58,6 +60,8 @@ export async function cargarAgenda(planId: string | null | undefined): Promise<A
     estados = (rS.data ?? []) as typeof estados;
   }
   eventos.sort((a, b) => a.fecha.localeCompare(b.fecha));
+  // Pasado el fin del semestre el horario queda vacío (la base lo borra de noche).
+  if (semestreTerminado(finClases, hoyPy())) horario = [];
   horario.sort((a, b) => a.dia_semana - b.dia_semana || a.hora_inicio.localeCompare(b.hora_inicio));
   const materias = [...filas]
     .sort((a, b) => a.semestre - b.semestre || a.orden - b.orden)
@@ -93,6 +97,24 @@ export async function actualizarClase(id: string, cambios: NuevaClase) {
     return;
   }
   const { error } = await supabase.from('horario').update(cambios).eq('id', id);
+  lanzar(error);
+}
+
+/** Cuántas clases de esta materia hay en tu horario. */
+export async function contarClasesDe(materiaId: string): Promise<number> {
+  if (MODO_DEMO) return db.horario.filter((h) => h.materia_id === materiaId).length;
+  const { count, error } = await supabase.from('horario').select('id', { count: 'exact', head: true }).eq('materia_id', materiaId);
+  lanzar(error);
+  return count ?? 0;
+}
+
+/** Saca de tu horario todas las clases de una materia (las fechas de exámenes quedan). */
+export async function quitarMateriaDelHorario(materiaId: string) {
+  if (MODO_DEMO) {
+    db.horario = db.horario.filter((h) => h.materia_id !== materiaId);
+    return;
+  }
+  const { error } = await supabase.from('horario').delete().eq('materia_id', materiaId);
   lanzar(error);
 }
 

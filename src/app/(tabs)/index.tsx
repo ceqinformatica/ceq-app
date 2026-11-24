@@ -23,10 +23,10 @@ import { infoTipoClase } from '../../lib/tipo-clase';
 const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 const DIAS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
 
-async function cargar(planId: string | null | undefined, carreraId: string | null | undefined) {
+async function cargar(planId: string | null | undefined, carreraId: string | null | undefined, finClases?: string | null) {
   const [malla, agenda, avisos, calendario] = await Promise.all([
     planId ? cargarMalla(planId, carreraId) : Promise.resolve(null),
-    cargarAgenda(planId),
+    cargarAgenda(planId, finClases),
     cargarAvisos(2),
     // El calendario es un extra: si falla, el inicio igual se muestra.
     cargarCalendario().catch(() => [] as EventoCalendario[]),
@@ -51,7 +51,7 @@ async function cargar(planId: string | null | undefined, carreraId: string | nul
 export default function Inicio() {
   useTema();
   const { perfil } = useSesion();
-  const { datos, cargando, error, refrescando, recargar, sinConexion } = usarDatos(() => cargar(perfil?.plan_id, perfil?.carrera_id), [perfil?.plan_id, perfil?.carrera_id], { cache: `inicio:${perfil?.plan_id}` });
+  const { datos, cargando, error, refrescando, recargar, sinConexion } = usarDatos(() => cargar(perfil?.plan_id, perfil?.carrera_id, perfil?.fin_clases), [perfil?.plan_id, perfil?.carrera_id, perfil?.fin_clases], { cache: `inicio:${perfil?.plan_id}` });
   const primerNombre = perfil?.nombre?.split(' ')[0];
   const f = new Date();
   const fecha = `${DIAS[f.getDay()]} ${f.getDate()} de ${MESES[f.getMonth()]}`;

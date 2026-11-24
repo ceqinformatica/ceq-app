@@ -29,7 +29,7 @@ interface SesionCtx {
    */
   abrirConPinNuevo: (pinNuevo: string | null) => Promise<string | null>;
   recargarPerfil: () => Promise<void>;
-  actualizarPerfil: (cambios: Partial<Pick<Perfil, 'nombre' | 'ci' | 'carrera_id' | 'plan_id' | 'anio_ingreso' | 'notif_avisos' | 'notif_recordatorios'>>) => Promise<string | null>;
+  actualizarPerfil: (cambios: Partial<Pick<Perfil, 'nombre' | 'ci' | 'carrera_id' | 'plan_id' | 'anio_ingreso' | 'notif_avisos' | 'notif_recordatorios' | 'fin_clases'>>) => Promise<string | null>;
 }
 
 const Ctx = createContext<SesionCtx | null>(null);

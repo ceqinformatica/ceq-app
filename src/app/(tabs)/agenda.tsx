@@ -20,6 +20,8 @@ import { colores, crearEstilos, espacio, fondos, fuentes, radio, sombras } from 
 import { useTema } from '../../context/TemaProvider';
 import { textoError } from '../../lib/errores';
 import { textoSemestre } from '../../lib/carnet';
+import { hoyPy } from '../../lib/calendario';
+import { detalleFinSemestre, isoDesdeTexto, semestreTerminado, textoDesdeIso } from '../../lib/fin-semestre';
 import { clasesPorDia, infoTipoClase, nombreConTipo, TIPOS_CLASE, type TipoClase } from '../../lib/tipo-clase';
 
 /** Tonos para distinguir materias en el horario: celestes y grises del CEQ (sin verdes ni naranjas). */
@@ -35,7 +37,7 @@ const TIPOS: { valor: TipoEvento; texto: string; icono: 'school' | 'document-tex
 export default function Agenda() {
   useTema();
   const { perfil, sesion } = useSesion();
-  const { datos, setDatos, cargando, error, refrescando, recargar, sinConexion } = usarDatos(() => cargarAgenda(perfil?.plan_id), [perfil?.plan_id], { cache: `agenda:${perfil?.plan_id}` });
+  const { datos, setDatos, cargando, error, refrescando, recargar, sinConexion } = usarDatos(() => cargarAgenda(perfil?.plan_id, perfil?.fin_clases), [perfil?.plan_id, perfil?.fin_clases], { cache: `agenda:${perfil?.plan_id}` });
   const [vista, setVista] = useState<'horario' | 'fechas'>('horario');
   const [dia, setDia] = useState(diaSemanaHoy() === 7 ? 1 : diaSemanaHoy());
   const [modoHorario, setModoHorario] = useState<'semana' | 'dia'>('semana');
@@ -43,6 +45,7 @@ export default function Agenda() {
   const [editando, setEditando] = useState<HorarioDb | null>(null);
   const [nuevoEvento, setNuevoEvento] = useState(false);
   const [compartiendo, setCompartiendo] = useState(false);
+  const [editandoFin, setEditandoFin] = useState(false);
   const { nueva } = useLocalSearchParams<{ nueva?: string }>();
 
   // Desde Inicio: "Agregar fecha" abre directo el formulario.
@@ -159,6 +162,15 @@ export default function Agenda() {
             </>
             )}
             <HorarioOficial carreraId={perfil?.carrera_id} />
+            <Tarjeta estilo={{ marginTop: espacio.m }}>
+              <Fila
+                icono="flag-outline"
+                titulo="Fin del semestre"
+                detalle={detalleFinSemestre(perfil?.fin_clases, hoyPy())}
+                onPress={() => setEditandoFin(true)}
+                ultima
+              />
+            </Tarjeta>
           </>
         ) : (
           <>
@@ -203,6 +215,7 @@ export default function Agenda() {
         onCerrar={() => { setNuevaClase(false); setEditando(null); }}
         onListo={() => { setNuevaClase(false); setEditando(null); recargar(); }}
       />
+      <FormFinSemestre visible={editandoFin} onCerrar={() => setEditandoFin(false)} />
       <CompartirHorario visible={compartiendo} clases={datos?.horario ?? []} nombre={nombreClase} onCerrar={() => setCompartiendo(false)} />
       <FormEvento visible={nuevoEvento} uid={sesion?.user.id ?? ''} datos={datos} onCursando={marcarCursando} onCerrar={() => setNuevoEvento(false)} onListo={() => { setNuevoEvento(false); recargar(); }} />
 
@@ -686,6 +699,58 @@ function CompartirHorario({ visible, clases, nombre, onCerrar }: {
           <Mensaje tipo="info" texto="Para compartir la imagen, abrí tu horario desde la app del teléfono." />
         </View>
       )}
+      <View style={{ height: espacio.l }} />
+    </Hoja>
+  );
+}
+
+/**
+ * Último día de clases del semestre: al día siguiente se vacía el horario
+ * (lo hace la base de noche) y no llegan más avisos de clase.
+ */
+function FormFinSemestre({ visible, onCerrar }: { visible: boolean; onCerrar: () => void }) {
+  const { perfil, actualizarPerfil } = useSesion();
+  const [fecha, setFecha] = useState('');
+  const [guardando, setGuardando] = useState<'guardar' | 'quitar' | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const hoyIso = hoyPy();
+  const guardada = perfil?.fin_clases ?? null;
+  // Una fecha ya pasada no se propone de nuevo, pero se puede quitar.
+  const actual = guardada && !semestreTerminado(guardada, hoyIso) ? guardada : null;
+
+  useEffect(() => {
+    if (visible) { setFecha(actual ? textoDesdeIso(actual) : ''); setError(null); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible]);
+
+  const iso = isoDesdeTexto(fecha);
+  const guardar = async (valor: string | null, cual: 'guardar' | 'quitar') => {
+    setGuardando(cual);
+    setError(null);
+    const err = await actualizarPerfil({ fin_clases: valor });
+    setGuardando(null);
+    if (err) setError(err);
+    else onCerrar();
+  };
+
+  return (
+    <Hoja visible={visible} titulo="Fin del semestre" onCerrar={onCerrar}>
+      <Text style={[s.cuerpo, { marginBottom: espacio.m }]}>
+        Establecé la fecha en la que terminan tus clases. Al concluir el semestre ya no va a quedar nada agendado en tu horario y
+        tampoco te van a llegar notificaciones innecesarias de clases.
+      </Text>
+      <CampoFechaHora etiqueta="Último día de clases" modo="date" valor={fecha} onCambio={setFecha} minimo={hoy()} />
+      <Mensaje tipo="info" texto="Tus fechas de parciales y finales no se borran. El semestre que viene cargás tus clases nuevas y, si querés, otra fecha de fin." />
+      <View style={{ height: espacio.m }} />
+      <Mensaje texto={error} />
+      <Boton
+        texto="Guardar fecha"
+        icono="checkmark"
+        onPress={() => guardar(iso, 'guardar')}
+        cargando={guardando === 'guardar'}
+        deshabilitado={!iso || iso < hoyIso || iso === actual}
+      />
+      {guardada ? <Boton texto="Quitar la fecha" variante="fantasma" onPress={() => guardar(null, 'quitar')} cargando={guardando === 'quitar'} /> : null}
       <View style={{ height: espacio.l }} />
     </Hoja>
   );
