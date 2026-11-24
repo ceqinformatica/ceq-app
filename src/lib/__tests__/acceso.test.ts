@@ -1,11 +1,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { modoInicial, proveedoresVisibles, resultadoRegistro } from '../acceso.ts';
+import { modoInicial, problemaRegistro, proveedoresVisibles, resultadoRegistro } from '../acceso.ts';
 
-test('la primera vez se ve Crear cuenta', () => {
-  assert.equal(modoInicial(null), 'registro');
-  assert.equal(modoInicial(undefined), 'registro');
-  assert.equal(modoInicial(''), 'registro');
+test('la primera vez se ve la portada', () => {
+  assert.equal(modoInicial(null), 'portada');
+  assert.equal(modoInicial(undefined), 'portada');
+  assert.equal(modoInicial(''), 'portada');
 });
 
 test('si ya se entró en este celular, se ve Iniciar sesión', () => {
@@ -29,4 +29,13 @@ test('Microsoft aparece solo cuando está habilitado en Supabase', () => {
   assert.deepEqual(proveedoresVisibles({ external: { google: true, azure: true } }), ['google', 'microsoft']);
   assert.deepEqual(proveedoresVisibles({ external: { google: true, azure: false } }), ['google']);
   assert.deepEqual(proveedoresVisibles(null), ['google']);
+});
+
+test('valida los datos de Creá tu cuenta', () => {
+  const ok = { nombre: 'Ana', apellido: 'Pérez', correoOk: true, clave: 'clave123', repetida: 'clave123' };
+  assert.equal(problemaRegistro(ok, 6), null);
+  assert.match(problemaRegistro({ ...ok, apellido: ' ' }, 6)!, /apellido/);
+  assert.match(problemaRegistro({ ...ok, correoOk: false }, 6)!, /correo/);
+  assert.match(problemaRegistro({ ...ok, clave: 'abc', repetida: 'abc' }, 6)!, /al menos 6/);
+  assert.match(problemaRegistro({ ...ok, repetida: 'clave124' }, 6)!, /no coinciden/);
 });

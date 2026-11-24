@@ -5,17 +5,27 @@
  */
 
 /** Pantallas de acceso. */
-export type ModoAcceso = 'registro' | 'entrar' | 'recuperar';
+export type ModoAcceso = 'portada' | 'registro' | 'entrar' | 'recuperar';
 
 /** Clave en el celular: "1" si alguna vez se entró con una cuenta en este dispositivo. */
 export const CLAVE_YA_ENTRO = 'ceq.acceso.yaEntro';
 
 /**
- * La primera vez se ve "Crear cuenta". Si en este celular ya se entró
- * alguna vez (y después se cerró sesión), se ve "Iniciar sesión".
+ * La primera vez se ve la portada (Iniciar sesión / Crear cuenta). Si en este
+ * celular ya se entró alguna vez (y después se cerró sesión), se va directo
+ * a "Iniciar sesión".
  */
-export function modoInicial(guardado: string | null | undefined): 'registro' | 'entrar' {
-  return guardado === '1' ? 'entrar' : 'registro';
+export function modoInicial(guardado: string | null | undefined): 'portada' | 'entrar' {
+  return guardado === '1' ? 'entrar' : 'portada';
+}
+
+/** Problema con los datos de "Creá tu cuenta", o null si están bien. */
+export function problemaRegistro(d: { nombre: string; apellido: string; correoOk: boolean; clave: string; repetida: string }, minimo: number): string | null {
+  if (!d.nombre.trim() || !d.apellido.trim()) return 'Escribí tu nombre y tu apellido.';
+  if (!d.correoOk) return 'Revisá el correo.';
+  if (d.clave.length < minimo) return `La contraseña tiene que tener al menos ${minimo} caracteres.`;
+  if (d.clave !== d.repetida) return 'Las dos contraseñas no coinciden.';
+  return null;
 }
 
 /** Lo que devuelve Supabase al crear una cuenta con correo (solo lo que importa). */
@@ -39,6 +49,9 @@ export function resultadoRegistro(r: RespuestaRegistro): 'adentro' | 'confirmar'
 
 /** Nombre visible de cada forma de entrar con otra cuenta. */
 export const NOMBRE_PROVEEDOR = { google: 'Google', microsoft: 'Microsoft' } as const;
+
+/** Texto del botón de cada proveedor (Microsoft aclara Outlook, que es lo que conoce la gente). */
+export const ETIQUETA_PROVEEDOR = { google: 'Google', microsoft: 'Microsoft (Outlook)' } as const;
 export type Proveedor = keyof typeof NOMBRE_PROVEEDOR;
 
 /**

@@ -64,6 +64,10 @@ const claro = {
   // Franja superior de las pantallas (barra "Portal CEQ") y burbuja decorativa del título
   franja: '#C8DBF0',
   burbuja: '#DDEAF8',
+
+  // Pantallas de acceso (portada, iniciar sesión, crear cuenta): cabecera celeste claro y marcas de regla
+  cabeceraAcceso: '#C6E3F7',
+  regla: '#8FBAD7',
 };
 
 type Paleta = { [K in keyof typeof claro]: string };
@@ -107,6 +111,8 @@ const tintaOscura: Paleta = {
   celesteMarca: '#8CCDF2',
   franja: '#14233F',
   burbuja: '#122038',
+  cabeceraAcceso: '#14233F',
+  regla: '#3A5A85',
 };
 
 /** Fondos del tema oscuro: el marino sigue siendo marino (botones, cabeceras). */

@@ -12,10 +12,10 @@ export async function olvidarYaEntro(): Promise<void> {
 }
 
 /** Qué pantalla de acceso mostrar primero en este celular. */
-export async function leerModoInicial(): Promise<'registro' | 'entrar'> {
+export async function leerModoInicial(): Promise<'portada' | 'entrar'> {
   try {
     return modoInicial(await AsyncStorage.getItem(CLAVE_YA_ENTRO));
   } catch {
-    return 'registro';
+    return 'portada';
   }
 }

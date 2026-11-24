@@ -1,6 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Pressable, Text } from 'react-native';
-import { NOMBRE_PROVEEDOR, type Proveedor } from '../lib/acceso';
+import { ETIQUETA_PROVEEDOR, NOMBRE_PROVEEDOR, type Proveedor } from '../lib/acceso';
 import { colores, crearEstilos, espacio, fondos, fuentes, radio, sombras } from '../tema';
 
 const ICONO = { google: 'logo-google', microsoft: 'logo-microsoft' } as const;
@@ -16,7 +16,7 @@ export function BotonProveedor({
   onPress: () => void;
 }) {
   const nombre = NOMBRE_PROVEEDOR[proveedor];
-  const texto = `${accion} con ${nombre}`;
+  const texto = `${accion} con ${accion === 'Continuar' ? ETIQUETA_PROVEEDOR[proveedor] : nombre}`;
   return (
     <Pressable
       onPress={onPress}
@@ -34,7 +34,7 @@ export function BotonProveedor({
 
 const est = crearEstilos(() => ({
   boton: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: espacio.m, minHeight: 52, borderRadius: radio.m, marginTop: espacio.s,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: espacio.m, minHeight: 50, borderRadius: radio.m, marginTop: espacio.s,
     backgroundColor: fondos.superficieBlanca, borderWidth: 1, borderColor: colores.linea, ...sombras.suave,
   },
   texto: { fontFamily: fuentes.semibold, fontSize: 15.5, color: colores.marino },
