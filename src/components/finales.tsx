@@ -386,9 +386,11 @@ export function TarjetaFinales({ materiaId, firma: firmaGuardadaEnMateria, aprob
  * (Art. 57: 0,4 × firma + 0,6 × final, y el final tiene que llegar a 60 %).
  * Con `estimada`, la firma sale de lo que lleva cargado y todavía puede cambiar.
  */
-export function TarjetaNotaNecesaria({ firma, estimada, sinDatos, onGuardarFirma }: {
+export function TarjetaNotaNecesaria({ firma, estimada, aviso, sinDatos, onGuardarFirma }: {
   firma: number | null;
   estimada?: boolean;
+  /** Por ejemplo, que con lo que lleva todavía no firma. */
+  aviso?: string;
   /** Texto cuando todavía no hay con qué calcular. */
   sinDatos?: string;
   /** Firmada sin promedio guardado: deja escribir con cuánto firmó. */
@@ -407,6 +409,7 @@ export function TarjetaNotaNecesaria({ firma, estimada, sinDatos, onGuardarFirma
     setError(null);
     try {
       await onGuardarFirma(Math.round(f + 1e-9));
+      setFirmaTxt('');
     } catch (e) {
       setError(textoError(e, 'No se pudo guardar la firma.'));
     } finally {
@@ -439,6 +442,7 @@ export function TarjetaNotaNecesaria({ firma, estimada, sinDatos, onGuardarFirma
               ? 'Es tu promedio de ahora; cambia con cada parcial que cargues.'
               : 'Tu nota final es 40 % de la firma y 60 % del final.'}
           </Text>
+          {aviso && <Mensaje tipo="info" texto={aviso} />}
           <FilaNota nota={1} texto={paraDos == null ? 'Con cualquier nota' : `Menos de ${pct2(paraDos)}`} apagada />
           {tabla.map(({ nota, necesario }) => (
             <FilaNota key={nota} nota={nota} texto={necesario == null ? 'No alcanza' : `${pct2(necesario)} o más`} apagada={necesario == null} />

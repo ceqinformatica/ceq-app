@@ -38,7 +38,7 @@ export default function DetalleMateria() {
   // Con firma: los finales van plegados debajo de la tabla de notas.
   const [verFinales, setVerFinales] = useState(false);
   // Cursando: la firma que lleva hasta ahora, para la tabla de notas del final.
-  const [firmaEstimada, setFirmaEstimada] = useState<{ id: string; valor: number | null } | null>(null);
+  const [firmaEstimada, setFirmaEstimada] = useState<{ id: string; valor: number | null; aviso?: string; error?: boolean } | null>(null);
 
   useEffect(() => {
     setEstado(actual?.estado ?? 'pendiente');
@@ -64,19 +64,31 @@ export default function DetalleMateria() {
       .then((firmas) => {
         const f = firmas.get(id);
         if (!vivo || !f) return;
+        const regla = reglaDe(malla.reglas, id) ?? REGLA_POR_DEFECTO;
         const r = evaluarFirma({
-          regla: reglaDe(malla.reglas, id) ?? REGLA_POR_DEFECTO,
+          regla,
           recuperado: f.recuperado,
           tieneLaboratorio: tieneLab(f.evaluacionesDb),
           evaluaciones: f.evaluaciones,
           asistencia: aAsistencia(f.asistencia),
           asistenciaLab: aAsistencia(f.asistenciaLab),
         });
+        // Laboratorio combinado con la teoría: la calculadora tampoco saca un promedio de firma.
+        if (tieneLab(f.evaluacionesDb) && regla.modoLaboratorio === 'combinado') {
+          setFirmaEstimada({ id, valor: null });
+          return;
+        }
         // Con todo cargado, la firma; si falta algo, el promedio de lo que lleva.
         const parcial = promedioGeneralFcq(r.teoria.actual, r.laboratorio?.actual ?? null);
-        setFirmaEstimada({ id, valor: promedioFirma(r, { recuperado: f.recuperado }) ?? (parcial == null ? null : Math.round(parcial + 1e-9)) });
+        const debajo = [r.teoria, r.laboratorio].filter((c) => c != null && c.actual != null && c.actual < c.minimo) as { minimo: number }[];
+        const aviso = r.teoria.imposible || r.laboratorio?.imposible
+          ? 'Con lo que llevás ya no llegás a la firma. Fijate en "Calcular mi firma" si te corresponde el Recu o la Regu.'
+          : debajo.length
+            ? `Con lo que llevás todavía no llegás a la firma (teoría ${r.teoria.minimo} %${r.laboratorio ? `, laboratorio ${r.laboratorio.minimo} %` : ''}). La tabla es para cuando firmes.`
+            : undefined;
+        setFirmaEstimada({ id, valor: promedioFirma(r, { recuperado: f.recuperado }) ?? (parcial == null ? null : Math.round(parcial + 1e-9)), aviso });
       })
-      .catch(() => vivo && setFirmaEstimada({ id, valor: null }));
+      .catch(() => vivo && setFirmaEstimada({ id, valor: null, error: true }));
     return () => {
       vivo = false;
     };
@@ -225,7 +237,8 @@ export default function DetalleMateria() {
           <TarjetaNotaNecesaria
             firma={firmaEstimada?.id === materia.id ? firmaEstimada.valor : null}
             estimada
-            sinDatos={firmaEstimada?.id === materia.id ? 'Cargá tus parciales en "Calcular mi firma" y acá vas a ver cuánto necesitás en el final para sacar cada nota.' : 'Calculando…'}
+            aviso={firmaEstimada?.id === materia.id ? firmaEstimada.aviso : undefined}
+            sinDatos={firmaEstimada?.id !== materia.id ? 'Calculando…' : firmaEstimada.error ? 'No pudimos calcularlo ahora. Revisá tu conexión y volvé a entrar.' : 'Cargá tus parciales en "Calcular mi firma" y acá vas a ver cuánto necesitás en el final para sacar cada nota.'}
           />
         </>
       )}

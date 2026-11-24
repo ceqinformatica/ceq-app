@@ -213,10 +213,10 @@ export default function Estadisticas() {
                 {e.optativas.promedio != null && <Text style={{ fontFamily: fuentes.semibold, color: colorNota(e.optativas.promedio) }}>{prom2(e.optativas.promedio)}</Text>}
               </Text>
             </View>
-            <BarraProgreso
+            {e.optativas.total > 0 && <BarraProgreso
               valor={e.optativas.total > 0 ? (e.optativas.aprobadas / e.optativas.total) * 100 : 0}
               color={e.optativas.total > 0 && e.optativas.aprobadas >= e.optativas.total ? colores.verde : colores.marino}
-            />
+            />}
           </View>
         )}
       </Tarjeta>

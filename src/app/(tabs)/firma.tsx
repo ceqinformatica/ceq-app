@@ -97,7 +97,7 @@ export default function Firma() {
                 <Grilla>{firmadas.map(({ materia, promedioFirma }) => {
                   const necesario = promedioFirma != null ? finalNecesario(promedioFirma) : null;
                   return (
-                    <Tarjeta key={materia.id} onPress={() => router.push(`/firma/${materia.id}`)} etiqueta={`${materia.nombre}: con firma${promedioFirma != null ? ` de ${pct(promedioFirma)}` : ''}`}>
+                    <Tarjeta key={materia.id} onPress={() => router.push(`/materia/${materia.id}`)} etiqueta={`${materia.nombre}: con firma${promedioFirma != null ? ` de ${pct(promedioFirma)}` : ''}`}>
                       <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: espacio.s }}>
                         <View style={{ flex: 1 }}>
                           <Text style={[s.filaTitulo, { fontSize: 17, color: colores.texto }]}>{materia.nombre}</Text>
