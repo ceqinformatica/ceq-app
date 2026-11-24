@@ -2,7 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Text, View } from 'react-native';
-import { nombreSemestre, pct, SelectorEstado } from '../../components/academico';
+import { nombreEstadoMateria, nombreSemestre, pct, SelectorEstado } from '../../components/academico';
 import { TarjetaFinales } from '../../components/finales';
 import { esSeminario } from '../../lib/finales';
 import { AvisoSinConexion, BarraSuperior, Boton, Campo, Cargando, EstadoVacio, Fila, Insignia, Mensaje, Pantalla, s, Seccion, Tarjeta } from '../../components/ui';
@@ -49,6 +49,10 @@ export default function DetalleMateria() {
   const seminario = materia ? esSeminario(materia.nombre) : false;
   const notaNum = seminario || notaTxt.trim() === '' ? null : Number(notaTxt.replace(',', '.'));
   const notaValida = notaNum == null || (Number.isFinite(notaNum) && notaNum >= 1 && notaNum <= 5);
+  // Deja de estar aprobada con un final aprobado cargado: ese final se borra al guardar.
+  const finalesAprobados = actual?.estado === 'aprobada' && estado !== 'aprobada'
+    ? (malla?.intentos ?? []).filter((i) => i.materiaId === id && i.nota >= 2)
+    : [];
   const cambio = estado !== (actual?.estado ?? 'pendiente') || (estado === 'aprobada' && notaNum !== (actual?.notaFinal ?? null));
 
   const guardar = async () => {
@@ -60,8 +64,10 @@ export default function DetalleMateria() {
       await guardarEstadoMateria(id, estado, notaNum);
       const estados = new Map(malla.estados);
       if (estado === 'pendiente') estados.delete(id);
-      else estados.set(id, { estado, notaFinal: estado === 'aprobada' ? notaNum : null, promedioFirma: actual?.promedioFirma ?? null });
+      else estados.set(id, { estado, notaFinal: estado === 'aprobada' ? notaNum : null, promedioFirma: actual?.promedioFirma ?? null, periodo: actual?.periodo ?? null });
       setDatos({ ...malla, estados });
+      // Se borraron finales aprobados: recarga para que el promedio quede al día.
+      if (finalesAprobados.length) recargar();
       vibrar('exito');
       setMsg({ tipo: 'exito', texto: nuevos.length ? `Guardado. Ahora podés cursar: ${nuevos.join(', ')}.` : 'Guardado.' });
     } catch (e) {
@@ -83,7 +89,8 @@ export default function DetalleMateria() {
 
   // La insignia muestra lo guardado, no lo que se está eligiendo abajo.
   const guardado = actual?.estado ?? 'pendiente';
-  const c = coloresEstado[guardado === 'pendiente' && info.faltan ? 'bloqueada' : guardado];
+  const claveEstado = guardado === 'pendiente' && info.faltan ? 'bloqueada' : guardado;
+  const c = coloresEstado[claveEstado];
 
   return (
     <Pantalla>
@@ -92,7 +99,7 @@ export default function DetalleMateria() {
 
       <Tarjeta>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: espacio.s, marginBottom: espacio.s, flexWrap: 'wrap' }}>
-          <Insignia texto={c.nombre} color={c.texto} fondo={c.fondo} icono={c.icono as never} />
+          <Insignia texto={nombreEstadoMateria(claveEstado, c.nombre)} color={c.texto} fondo={c.fondo} icono={c.icono as never} />
           {materia.grupo_optativa_id && <Insignia texto="Optativa" />}
           {materia.tiene_laboratorio && <Insignia texto="Con laboratorio" icono="flask" />}
         </View>
@@ -120,6 +127,12 @@ export default function DetalleMateria() {
         />
       )}
       {!notaValida && <Mensaje texto="La nota va de 1 a 5." />}
+      {finalesAprobados.length > 0 && (
+        <Mensaje
+          tipo="info"
+          texto={`Al guardar se borra ${finalesAprobados.length === 1 ? `el final aprobado que cargaste (nota ${finalesAprobados[0].nota})` : 'los finales aprobados que cargaste'} y deja de contar en tu promedio. Los aplazos se conservan.`}
+        />
+      )}
       <Boton texto="Guardar" icono="checkmark" onPress={guardar} cargando={guardando} deshabilitado={!cambio || !notaValida} estilo={{ marginTop: espacio.m }} />
       {(estado === 'firmada' || estado === 'aprobada') && actual?.promedioFirma != null && (
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: espacio.s, marginTop: espacio.m }}>

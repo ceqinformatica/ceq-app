@@ -18,7 +18,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { cargarFinales, guardarFinales, guardarFirma, recursarMateria } from '../datos/academico';
-import { aplazosDeLaCursada, firmaVencida, notaDelLlamado, periodoDe, type LlamadoCargado } from '../lib/finales';
+import { aplazosDeLaCursada, firmaVencida, notaDelLlamado, periodoDe, recuReguDespuesDeFinal, type LlamadoCargado } from '../lib/finales';
 import { calificacionFinal, CONCEPTO, finalNecesario, type Nota } from '../lib/reglamento-fcq';
 import type { ExamenFinalDb } from '../lib/tipos-db';
 import { colores, espacio, fondos, fuentes } from '../tema';
@@ -147,7 +147,7 @@ export function TarjetaFinales({ materiaId, firma: firmaGuardadaEnMateria, aprob
   });
   // Un final marcado pero sin nota todavía no se puede guardar.
   const falta = filas.some((f) => f.tipo === 'final' && f.v == null);
-  const todoValido = filas.every((f) => f.valido) && !falta;
+  const todoValidoSinOrden = filas.every((f) => f.valido) && !falta;
   // Después de aprobar no se rinde de nuevo: avisa si cargó un llamado posterior.
   const primeraAprobada = filas.find((f) => f.nota != null && f.nota >= 2)?.llamado ?? null;
   const despuesDeAprobar = primeraAprobada != null && filas.some((f) => f.llamado > primeraAprobada && f.tipo !== 'no');
@@ -159,8 +159,18 @@ export function TarjetaFinales({ materiaId, firma: firmaGuardadaEnMateria, aprob
   // Recu o Regu: uno solo por cursada. Si ya se usó en otro semestre, no se
   // ofrece ninguno; si se marcó en otro llamado de este, tampoco.
   const recuReguEnOtroPeriodo = (finales ?? []).find((f) => f.periodo !== periodo && (f.tipo === 'recuperatorio' || f.tipo === 'regularizacion'));
+  // Después de rendir un final (en un llamado anterior o en un semestre
+  // anterior) ya no se rinde Recu ni Regu: al final se llega con la firma.
+  const finalEnPeriodoAnterior = (finales ?? []).some((f) => f.periodo != null && f.periodo < periodo && (f.tipo ?? 'final') === 'final');
+  const finalAntesDe = (ll: number) => finalEnPeriodoAnterior || filas.some((f) => f.llamado < ll && f.tipo === 'final');
   const opcionesDe = (ll: 1 | 2 | 3) => TIPOS_DEL_LLAMADO[ll].filter((t) => !esRecuORegu(t)
-    || (!recuReguEnOtroPeriodo && !filas.some((f) => f.llamado !== ll && esRecuORegu(f.tipo))));
+    || tipos[ll] === t
+    || (!recuReguEnOtroPeriodo && !finalAntesDe(ll) && !filas.some((f) => f.llamado !== ll && esRecuORegu(f.tipo))));
+  // Si marcó la Regu y después puso un final en un llamado anterior: no se puede guardar.
+  const fueraDeOrden = recuReguDespuesDeFinal([
+    ...(finales ?? []).filter((f) => f.periodo !== periodo),
+    ...filas.filter((f) => f.tipo !== 'no').map((f) => ({ periodo, llamado: f.llamado, tipo: f.tipo === 'final' ? 'final' : A_DB[f.tipo as 'recu' | 'regu'] })),
+  ]);
 
   const cambiarTipo = (ll: number, t: Tipo) => {
     setTipos({ ...tipos, [ll]: t });
@@ -316,14 +326,14 @@ export function TarjetaFinales({ materiaId, firma: firmaGuardadaEnMateria, aprob
               }}
             />
           )}
-          {f.llamado === 1 && !recuReguEnOtroPeriodo && !filas.some((x) => esRecuORegu(x.tipo)) && (
-            <Text style={[s.filaDetalle, { marginTop: espacio.s }]}>Recu o Regu, uno solo: Regu si faltaste a un parcial (1.º o 2.º llamado); Recu si rendiste todos los parciales y no llegaste a la firma (solo 1.er llamado).</Text>
+          {f.llamado === 1 && !recuReguEnOtroPeriodo && !finalEnPeriodoAnterior && f.tipo !== 'final' && !filas.some((x) => esRecuORegu(x.tipo)) && (
+            <Text style={[s.filaDetalle, { marginTop: espacio.s }]}>Recu o Regu, uno solo por cursada. Regu: si faltaste a un parcial; la podés rendir en el 1.er o en el 2.º llamado. Recu: si rendiste todos los parciales y no llegaste a la firma; solo en el 1.er llamado.</Text>
           )}
           {recuReguEnOtroPeriodo && f.llamado === 1 && (
             <Text style={[s.filaDetalle, { marginTop: espacio.s }]}>Ya usaste {recuReguEnOtroPeriodo.tipo === 'recuperatorio' ? 'el Recu' : 'la Regu'}{recuReguEnOtroPeriodo.periodo ? ` en el ${nombrePeriodo(recuReguEnOtroPeriodo.periodo)}` : ''}. Solo se puede uno por cursada.</Text>
           )}
           {f.tipo === 'regu' && (
-            <Text style={[s.filaDetalle, { marginTop: espacio.s }]}>Regularización: rendiste el parcial al que faltaste. Este llamado queda usado y no lleva nota. Cargá la nota en la calculadora de firma.</Text>
+            <Text style={[s.filaDetalle, { marginTop: espacio.s }]}>Regularización: rendiste el parcial al que faltaste (se puede en el 1.er o en el 2.º llamado). Este llamado queda usado y no lleva nota. Cargá la nota en la calculadora de firma.</Text>
           )}
           {f.tipo === 'recu' && (
             <Text style={[s.filaDetalle, { marginTop: espacio.s }]}>Recuperatorio: rendiste para levantar tu promedio de teoría. Este llamado queda usado y no lleva nota. Cargá la nota en la calculadora de firma.</Text>
@@ -331,8 +341,11 @@ export function TarjetaFinales({ materiaId, firma: firmaGuardadaEnMateria, aprob
         </View>
       ))}
 
+      {fueraDeOrden && (
+        <Mensaje texto={`Ya rendiste un final antes del ${fueraDeOrden.llamado}.º llamado${fueraDeOrden.periodo !== periodo ? ` del ${nombrePeriodo(fueraDeOrden.periodo ?? periodo)}` : ''}: después de un final no se puede rendir ${fueraDeOrden.tipo === 'recuperatorio' ? 'el Recu' : 'la Regu'}. Si te equivocaste, cambiá ese llamado a "No rendí".`} />
+      )}
       {despuesDeAprobar && <Mensaje tipo="info" texto="Marcaste un llamado después del que aprobaste. ¿Seguro que lo rendiste?" />}
-      <Boton texto="Guardar finales" icono="checkmark" onPress={guardar} cargando={guardando} deshabilitado={!todoValido || finales == null} />
+      <Boton texto="Guardar finales" icono="checkmark" onPress={guardar} cargando={guardando} deshabilitado={!todoValidoSinOrden || fueraDeOrden != null || finales == null} />
       {msg && <Mensaje texto={msg.texto} tipo={msg.tipo} />}
 
       {anteriores.length > 0 && (

@@ -62,12 +62,14 @@ export function promedios(
   const todas: number[] = [];
   let aplazos = 0;
   for (const id of delPlan) {
-    const propios = intentos.filter((i) => i.materiaId === id && esFinal(i));
+    const e = estados.get(id);
+    // Un final aprobado solo cuenta si la materia sigue aprobada: si después
+    // la volvió a marcar como firmada (porque lo cargó por error), no entra.
+    const propios = intentos.filter((i) => i.materiaId === id && esFinal(i) && (i.nota < 2 || !e || e.estado === 'aprobada'));
     for (const i of propios) {
       todas.push(i.nota);
       if (i.nota < 2) aplazos++;
     }
-    const e = estados.get(id);
     const aprobada = notaAprobada(id, propios) ?? (e?.estado === 'aprobada' ? e.notaFinal ?? null : null);
     // Solo notas de aprobación válidas (2 a 5): una nota mal cargada no entra al promedio.
     if (aprobada != null && aprobada >= 2 && aprobada <= 5) {
@@ -161,4 +163,53 @@ export function periodoAlCambiar(antes: EstadoMateria | null, periodoAntes: stri
   // De firmada a aprobada (o al revés): se conserva el semestre de la firma.
   if (antes === 'firmada' || antes === 'aprobada') return periodoAntes;
   return hoy;
+}
+
+/** Periodo anterior: "2026-1" → "2025-2". */
+export function periodoAnterior(p: string): string {
+  const [a, n] = p.split('-').map(Number);
+  return n === 2 ? `${a}-1` : `${a - 1}-2`;
+}
+
+/** Periodo siguiente: "2025-2" → "2026-1". */
+export function periodoSiguiente(p: string): string {
+  const [a, n] = p.split('-').map(Number);
+  return n === 1 ? `${a}-2` : `${a + 1}-1`;
+}
+
+/**
+ * Semestres en que se pueden cargar finales, del más nuevo al más viejo:
+ * desde el semestre en que firmó hasta este (el siguiente al de la firma es
+ * el semestre opuesto), más los que ya tienen finales guardados. Si no se
+ * sabe cuándo firmó, este semestre y el anterior. Como mucho cuatro desde la
+ * firma, para no llenar la lista.
+ */
+export function periodosParaFinales(periodoFirma: string | null | undefined, actual: string, conFinales: string[] = []): string[] {
+  const lista = new Set<string>(conFinales);
+  if (periodoFirma && periodoFirma <= actual) {
+    let p = periodoFirma;
+    for (let i = 0; i < 4 && p <= actual; i++, p = periodoSiguiente(p)) lista.add(p);
+    lista.add(actual);
+  } else {
+    lista.add(actual);
+    lista.add(periodoAnterior(actual));
+  }
+  return [...lista].sort().reverse();
+}
+
+/**
+ * Recu o Regu después de haber rendido un final: no corresponde, porque al
+ * final se llega con la firma y la Regu o el Recu son para conseguirla.
+ * Recibe los llamados de la cursada actual (de todos los semestres) y
+ * devuelve el primero que está fuera de orden, o null.
+ */
+export function recuReguDespuesDeFinal<T extends { periodo: string | null; llamado: number | null; tipo?: string | null; nota?: number | null }>(llamados: T[]): T | null {
+  const orden = [...llamados].sort((a, b) => (a.periodo ?? '').localeCompare(b.periodo ?? '') || (a.llamado ?? 0) - (b.llamado ?? 0));
+  let rindioFinal = false;
+  for (const l of orden) {
+    const tipo = l.tipo ?? 'final';
+    if (tipo === 'final') rindioFinal = true;
+    else if (rindioFinal) return l;
+  }
+  return null;
 }

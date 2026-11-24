@@ -99,6 +99,9 @@ export function resumenFirma(r: ResultadoFirma): string {
 }
 
 /** Selector de estado de una materia (4 opciones con su color). */
+/** Al elegir el estado de una materia, "Firma" en vez de "Firmada" (pedido de Josie). */
+export const nombreEstadoMateria = (e: EstadoMateria | 'bloqueada', nombre: string) => (e === 'firmada' ? 'Firma' : nombre);
+
 export function SelectorEstado({ valor, onCambio, bloqueada, sinFirma }: {
   valor: EstadoMateria;
   onCambio: (e: EstadoMateria) => void;
@@ -120,11 +123,11 @@ export function SelectorEstado({ valor, onCambio, bloqueada, sinFirma }: {
             disabled={deshabilitado}
             accessibilityRole="radio"
             accessibilityState={{ checked: activo, disabled: deshabilitado }}
-            accessibilityLabel={c.nombre}
+            accessibilityLabel={nombreEstadoMateria(o, c.nombre)}
             style={[est.selectorOpcion, activo && { backgroundColor: c.fondo, borderColor: c.texto }, deshabilitado && { opacity: 0.4 }]}
           >
             <Ionicons name={c.icono as NombreIcono} size={20} color={activo ? c.texto : colores.textoTenue} />
-            <Text style={[est.selectorTexto, activo && { color: c.texto, fontFamily: fuentes.semibold }]}>{c.nombre}</Text>
+            <Text style={[est.selectorTexto, activo && { color: c.texto, fontFamily: fuentes.semibold }]}>{nombreEstadoMateria(o, c.nombre)}</Text>
           </Pressable>
         );
       })}

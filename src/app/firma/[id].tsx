@@ -1,7 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { pct, resumenFirma, semaforoVisible } from '../../components/academico';
 import { BarraProgreso } from '../../components/graficos';
 import {
@@ -20,6 +20,7 @@ import { colores, coloresSemaforo, espacio, fondos, fuentes, radio, texto } from
 import { vibrar } from '../../components/movimiento';
 import { useTema } from '../../context/TemaProvider';
 import { textoError } from '../../lib/errores';
+import { ASISTENCIA_CUMPLIDA, ASISTENCIA_VACIA, esAsistenciaContada, esAsistenciaCumplida, esPredefinida } from '../../lib/firma-carga';
 
 const ICONO_TIPO: Record<TipoEvaluacion, 'document-text-outline' | 'create-outline' | 'flask-outline' | 'refresh-outline' | 'swap-horizontal-outline'> = {
   parcial: 'document-text-outline',
@@ -184,7 +185,7 @@ export default function CalculadoraFirma() {
           tipo="info"
           texto={
             resultado.asistencia.porcentaje == null || (resultado.asistenciaLab != null && resultado.asistenciaLab.porcentaje == null)
-              ? 'Cargá tu asistencia abajo para poder guardar la firma.'
+              ? 'Marcá abajo que cumpliste la asistencia mínima para poder guardar la firma.'
               : 'Te falta la asistencia mínima para poder guardar la firma.'
           }
         />
@@ -210,7 +211,7 @@ export default function CalculadoraFirma() {
                 key={e.id}
                 icono={ICONO_TIPO[tipoEvaluacion(e)]}
                 titulo={e.nombre}
-                detalle={esRegularizacion(e) ? (regularizado ? 'Ocupó el lugar del parcial que faltaste' : MOTIVO_REGULARIZACION[datos.regularizacion.motivo ?? 'sin-nota']) : reemplazado ? 'Lo cubre tu regularización' : esRecuperatorio(e) ? (datos.recuperado ? 'Reemplazó tu parcial más bajo' : 'No cuenta: hace falta 60 % y un promedio teórico entre 30 y 50 %') : e.componente === 'laboratorio' ? `Pesa ${pct(Math.round(1000 / cantLab) / 10)} del laboratorio` : `Pesa ${pct(Math.round(1000 / cantTeoria) / 10)} del teórico`}
+                detalle={esPredefinida(e) ? 'Toda cátedra toma al menos dos parciales. Tocá para cargar tu nota' : esRegularizacion(e) ? (regularizado ? 'Ocupó el lugar del parcial que faltaste' : MOTIVO_REGULARIZACION[datos.regularizacion.motivo ?? 'sin-nota']) : reemplazado ? 'Lo cubre tu regularización' : esRecuperatorio(e) ? (datos.recuperado ? 'Reemplazó tu parcial más bajo' : 'No cuenta: hace falta 60 % y un promedio teórico entre 30 y 50 %') : e.componente === 'laboratorio' ? `Pesa ${pct(Math.round(1000 / cantLab) / 10)} del laboratorio` : `Pesa ${pct(Math.round(1000 / cantTeoria) / 10)} del teórico`}
                 derecha={
                   reemplazado ? (
                     <Insignia texto="Regularizado" color={colores.marino} fondo={fondos.grisFondo} />
@@ -249,6 +250,7 @@ export default function CalculadoraFirma() {
         valor={datos.asistencia}
         r={resultado.asistencia}
         onGuardado={(a) => actualizarAsistencia('teoria', a)}
+        ayuda="¿Recursás en el semestre opuesto? Ya cumpliste la asistencia en tu cursada anterior: marcala."
       />
       {resultado.asistenciaLab && (
         <TarjetaAsistencia titulo="Laboratorio" materiaId={materia.id} componente="laboratorio" valor={datos.asistenciaLab} r={resultado.asistenciaLab} onGuardado={(a) => actualizarAsistencia('laboratorio', a)} />
@@ -287,26 +289,35 @@ function BloqueComponente({ titulo, r }: { titulo: string; r: ResultadoComponent
   );
 }
 
-function TarjetaAsistencia({ titulo, materiaId, componente, valor, r, onGuardado }: {
-  titulo: string; materiaId: string; componente: ComponenteDb; valor: AsistenciaDb | null; r: ResultadoAsistencia; onGuardado: (a: AsistenciaDb) => void;
+function TarjetaAsistencia({ titulo, materiaId, componente, valor, r, onGuardado, ayuda }: {
+  titulo: string; materiaId: string; componente: ComponenteDb; valor: AsistenciaDb | null; r: ResultadoAsistencia; onGuardado: (a: AsistenciaDb) => void; ayuda?: string;
 }) {
-  const [dictadas, setDictadas] = useState(valor?.clases_dictadas ?? 0);
-  const [asistidas, setAsistidas] = useState(valor?.clases_asistidas ?? 0);
-  const [totales, setTotales] = useState(valor?.clases_totales ?? 0);
+  // Casilla "Cumplí la asistencia mínima" por defecto; contar las clases es opcional.
+  const [contando, setContando] = useState(esAsistenciaContada(valor));
+  const contada = esAsistenciaContada(valor);
+  const [dictadas, setDictadas] = useState(contada ? valor!.clases_dictadas : 0);
+  const [asistidas, setAsistidas] = useState(contada ? valor!.clases_asistidas : 0);
+  const [totales, setTotales] = useState(contada ? valor!.clases_totales ?? 0 : 0);
+  // Solo se guarda lo que el estudiante tocó (al pasar de la casilla a contar no se borra nada).
+  const [tocado, setTocado] = useState(false);
+  const [guardandoCasilla, setGuardandoCasilla] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const temporizador = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cumplida = esAsistenciaCumplida(valor);
 
-  // Guarda solo, medio segundo después del último toque.
+  const guardar = async (a: { clases_dictadas: number; clases_asistidas: number; clases_totales: number | null }) => {
+    await guardarAsistencia(materiaId, componente, a);
+    setError(null);
+    onGuardado({ usuario_id: valor?.usuario_id ?? '', materia_id: materiaId, componente, ...a });
+  };
+
+  // Contador: guarda solo, medio segundo después del último toque.
   useEffect(() => {
-    const igual = dictadas === (valor?.clases_dictadas ?? 0) && asistidas === (valor?.clases_asistidas ?? 0) && totales === (valor?.clases_totales ?? 0);
-    if (igual) return;
+    if (!contando || !tocado) return;
     if (temporizador.current) clearTimeout(temporizador.current);
     temporizador.current = setTimeout(async () => {
-      const a = { clases_dictadas: dictadas, clases_asistidas: Math.min(asistidas, dictadas), clases_totales: totales || null };
       try {
-        await guardarAsistencia(materiaId, componente, a);
-        setError(null);
-        onGuardado({ usuario_id: valor?.usuario_id ?? '', materia_id: materiaId, componente, ...a });
+        await guardar({ clases_dictadas: dictadas, clases_asistidas: Math.min(asistidas, dictadas), clases_totales: totales || null });
       } catch (e) {
         setError(textoError(e, 'No se pudo guardar.'));
       }
@@ -315,32 +326,83 @@ function TarjetaAsistencia({ titulo, materiaId, componente, valor, r, onGuardado
       if (temporizador.current) clearTimeout(temporizador.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dictadas, asistidas, totales]);
+  }, [dictadas, asistidas, totales, contando, tocado]);
+
+  const marcar = async () => {
+    vibrar();
+    setGuardandoCasilla(true);
+    try {
+      await guardar(cumplida ? { ...ASISTENCIA_VACIA } : { ...ASISTENCIA_CUMPLIDA });
+    } catch (e) {
+      setError(textoError(e, 'No se pudo guardar.'));
+    } finally {
+      setGuardandoCasilla(false);
+    }
+  };
+
+  const cambiar = (f: () => void) => {
+    setTocado(true);
+    f();
+  };
 
   const sem = coloresSemaforo[r.semaforo];
   return (
     <Tarjeta>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: espacio.m }}>
         <Text style={s.filaTitulo}>{titulo}</Text>
-        <Insignia texto={r.porcentaje == null ? 'Sin datos' : `${pct(r.porcentaje)} · mín. ${r.minimo} %`} color={sem.texto} fondo={sem.fondo} />
+        {contando ? (
+          <Insignia texto={r.porcentaje == null ? 'Sin datos' : `${pct(r.porcentaje)} · mín. ${r.minimo} %`} color={sem.texto} fondo={sem.fondo} />
+        ) : (
+          <Insignia texto={`Mínimo ${r.minimo} %`} color={colores.gris} fondo={fondos.grisFondo} />
+        )}
       </View>
-      <FilaContador texto="Clases dictadas" valor={dictadas} onCambio={(n) => { setDictadas(n); if (asistidas > n) setAsistidas(n); }} />
-      <FilaContador texto="Fuiste a" valor={asistidas} onCambio={setAsistidas} max={dictadas} />
-      <FilaContador texto="Total del semestre" ayuda="Opcional, para saber cuántas faltas te quedan" valor={totales} onCambio={setTotales} />
-      {r.faltasDisponibles != null && (
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: espacio.s, backgroundColor: sem.fondo, borderRadius: radio.m, padding: espacio.m, marginTop: espacio.s }}>
-          <Ionicons name={r.faltasDisponibles < 0 ? 'alert-circle' : 'calendar-clear'} size={18} color={sem.texto} />
-          <Text style={{ fontFamily: fuentes.semibold, fontSize: 14, color: sem.texto, flex: 1 }}>
-            {r.faltasDisponibles < 0
-              ? `Te pasaste por ${-r.faltasDisponibles} ${-r.faltasDisponibles === 1 ? 'falta' : 'faltas'}`
-              : r.faltasDisponibles === 0
-                ? 'No podés faltar más'
-                : `Podés faltar ${r.faltasDisponibles} ${r.faltasDisponibles === 1 ? 'clase' : 'clases'} más`}
-          </Text>
-        </View>
+      {!contando ? (
+        <>
+          <Pressable
+            accessibilityRole="checkbox"
+            accessibilityState={{ checked: cumplida, disabled: guardandoCasilla }}
+            disabled={guardandoCasilla}
+            onPress={marcar}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: espacio.m, paddingVertical: espacio.s }}
+          >
+            <View style={{ width: 26, height: 26, borderRadius: 8, borderWidth: 2, borderColor: cumplida ? colores.verde : colores.linea, backgroundColor: cumplida ? colores.verde : fondos.superficieBlanca, alignItems: 'center', justifyContent: 'center' }}>
+              {cumplida && <Ionicons name="checkmark" size={18} color={colores.blanco} />}
+            </View>
+            <Text style={[s.cuerpo, { flex: 1 }]}>Cumplí la asistencia mínima</Text>
+          </Pressable>
+          {ayuda ? <Text style={[s.filaDetalle, { marginTop: 4 }]}>{ayuda}</Text> : null}
+          <Enlace texto="Prefiero contar mis clases" onPress={() => setContando(true)} />
+        </>
+      ) : (
+        <>
+          <FilaContador texto="Clases dictadas" valor={dictadas} onCambio={(n) => cambiar(() => { setDictadas(n); if (asistidas > n) setAsistidas(n); })} />
+          <FilaContador texto="Fuiste a" valor={asistidas} onCambio={(n) => cambiar(() => setAsistidas(n))} max={dictadas} />
+          <FilaContador texto="Total del semestre" ayuda="Opcional, para saber cuántas faltas te quedan" valor={totales} onCambio={(n) => cambiar(() => setTotales(n))} />
+          {r.faltasDisponibles != null && (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: espacio.s, backgroundColor: sem.fondo, borderRadius: radio.m, padding: espacio.m, marginTop: espacio.s }}>
+              <Ionicons name={r.faltasDisponibles < 0 ? 'alert-circle' : 'calendar-clear'} size={18} color={sem.texto} />
+              <Text style={{ fontFamily: fuentes.semibold, fontSize: 14, color: sem.texto, flex: 1 }}>
+                {r.faltasDisponibles < 0
+                  ? `Te pasaste por ${-r.faltasDisponibles} ${-r.faltasDisponibles === 1 ? 'falta' : 'faltas'}`
+                  : r.faltasDisponibles === 0
+                    ? 'No podés faltar más'
+                    : `Podés faltar ${r.faltasDisponibles} ${r.faltasDisponibles === 1 ? 'clase' : 'clases'} más`}
+              </Text>
+            </View>
+          )}
+          <Enlace texto="Mejor marco solo que la cumplí" onPress={() => setContando(false)} />
+        </>
       )}
       <Mensaje texto={error} />
     </Tarjeta>
+  );
+}
+
+function Enlace({ texto: t, onPress }: { texto: string; onPress: () => void }) {
+  return (
+    <Pressable accessibilityRole="button" onPress={onPress} hitSlop={8} style={{ paddingVertical: 6, marginTop: 4, alignSelf: 'flex-start' }}>
+      <Text style={[s.filaDetalle, { color: colores.marino, textDecorationLine: 'underline' }]}>{t}</Text>
+    </Pressable>
   );
 }
 
@@ -409,7 +471,7 @@ function FormEvaluacion({ visible, evaluacion, materiaId, onCerrar, onGuardado }
       fecha: evaluacion?.fecha ?? null,
     };
     try {
-      await guardarEvaluacion(materiaId, datos, evaluacion?.id);
+      await guardarEvaluacion(materiaId, datos, evaluacion && !esPredefinida(evaluacion) ? evaluacion.id : undefined);
       onGuardado();
     } catch (e) {
       setError(textoError(e, 'No se pudo guardar.'));
@@ -432,7 +494,7 @@ function FormEvaluacion({ visible, evaluacion, materiaId, onCerrar, onGuardado }
   };
 
   return (
-    <Hoja visible={visible} titulo={evaluacion ? 'Editar evaluación' : 'Nueva evaluación'} onCerrar={onCerrar}>
+    <Hoja visible={visible} titulo={evaluacion && !esPredefinida(evaluacion) ? 'Editar evaluación' : evaluacion ? evaluacion.nombre : 'Nueva evaluación'} onCerrar={onCerrar}>
       <Text style={[s.etiqueta, { marginBottom: espacio.s }]}>Tipo</Text>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: espacio.s, marginBottom: espacio.m }}>
         {TIPOS.map((t) => (
@@ -468,7 +530,7 @@ function FormEvaluacion({ visible, evaluacion, materiaId, onCerrar, onGuardado }
       )}
       <Mensaje texto={error} />
       <Boton texto="Guardar" icono="checkmark" onPress={guardar} cargando={guardando} deshabilitado={!valido} />
-      {evaluacion && <Boton texto="Eliminar" variante="peligro" icono="trash-outline" onPress={borrar} deshabilitado={guardando} />}
+      {evaluacion && !esPredefinida(evaluacion) && <Boton texto="Eliminar" variante="peligro" icono="trash-outline" onPress={borrar} deshabilitado={guardando} />}
       <View style={{ height: espacio.l }} />
     </Hoja>
   );
