@@ -1,16 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { modoInicial, problemaRegistro, proveedoresVisibles, resultadoRegistro } from '../acceso.ts';
-
-test('la primera vez se ve la portada', () => {
-  assert.equal(modoInicial(null), 'portada');
-  assert.equal(modoInicial(undefined), 'portada');
-  assert.equal(modoInicial(''), 'portada');
-});
-
-test('si ya se entró en este celular, se ve Iniciar sesión', () => {
-  assert.equal(modoInicial('1'), 'entrar');
-});
+import { problemaRegistro, proveedoresVisibles, resultadoRegistro } from '../acceso.ts';
 
 test('cuenta creada con sesión: entra directo', () => {
   assert.equal(resultadoRegistro({ session: { access_token: 'x' }, user: { identities: [{}] } }), 'adentro');

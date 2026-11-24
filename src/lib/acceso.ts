@@ -7,18 +7,6 @@
 /** Pantallas de acceso. */
 export type ModoAcceso = 'portada' | 'registro' | 'entrar' | 'recuperar';
 
-/** Clave en el celular: "1" si alguna vez se entró con una cuenta en este dispositivo. */
-export const CLAVE_YA_ENTRO = 'ceq.acceso.yaEntro';
-
-/**
- * La primera vez se ve la portada (Iniciar sesión / Crear cuenta). Si en este
- * celular ya se entró alguna vez (y después se cerró sesión), se va directo
- * a "Iniciar sesión".
- */
-export function modoInicial(guardado: string | null | undefined): 'portada' | 'entrar' {
-  return guardado === '1' ? 'entrar' : 'portada';
-}
-
 /** Problema con los datos de "Creá tu cuenta", o null si están bien. */
 export function problemaRegistro(d: { nombre: string; apellido: string; correoOk: boolean; clave: string; repetida: string }, minimo: number): string | null {
   if (!d.nombre.trim() || !d.apellido.trim()) return 'Escribí tu nombre y tu apellido.';
