@@ -387,7 +387,6 @@ const est = crearEstilos(() => ({
   semestre: { flexDirection: 'row', alignItems: 'center', gap: espacio.m, marginTop: espacio.l, marginBottom: espacio.s },
   semestreTitulo: { fontFamily: fuentes.bold, fontSize: 18, color: colores.texto },
   semestreLinea: { flex: 1, height: StyleSheet.hairlineWidth * 2, backgroundColor: colores.linea },
-  icono: { width: 38, height: 38, borderRadius: 12, backgroundColor: fondos.tarjeta, alignItems: 'center', justifyContent: 'center' },
   barra: {
     position: 'absolute', left: espacio.l, right: espacio.l, bottom: espacio.l, flexDirection: 'row', alignItems: 'center', gap: espacio.m,
     backgroundColor: fondos.marino, borderRadius: radio.l, padding: espacio.s, paddingLeft: espacio.l, ...sombras.fuerte,

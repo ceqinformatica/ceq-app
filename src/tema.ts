@@ -129,12 +129,6 @@ const fondoOscuro: Paleta = {
   celesteMarca: '#1A4A92',
 };
 
-/** Degradado de las cabeceras (de arriba a la izquierda hacia abajo a la derecha). */
-export const degradadoMarca = {
-  get desde() { return esquema === 'oscuro' ? '#0F2A5C' : '#133E8C'; },
-  get hasta() { return esquema === 'oscuro' ? '#1C4C96' : '#2C6FCB'; },
-};
-
 export type Esquema = 'claro' | 'oscuro';
 let esquema: Esquema = 'claro';
 

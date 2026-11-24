@@ -72,8 +72,8 @@ export type NombreIcono = ComponentProps<typeof Ionicons>['name'];
 /* ------------------------------------------------------------------ */
 
 /**
- * Contenedor de cada pantalla. Con `cabecera` la banda marina ocupa el borde
- * superior (debajo de la barra de estado) y el contenido sube sobre ella.
+ * Contenedor de cada pantalla. Con una `CabeceraMarca`, la barra "Portal CEQ"
+ * queda fija arriba y el título se desplaza con el contenido.
  */
 export function Pantalla({ children, scroll = true, estilo, cabecera, refrescando, onRefrescar }: {
   children: ReactNode; scroll?: boolean; estilo?: ViewStyle; cabecera?: ReactNode;
@@ -90,7 +90,7 @@ export function Pantalla({ children, scroll = true, estilo, cabecera, refrescand
   ) : undefined;
   return (
     <EvitaTeclado estilo={s.pantalla}>
-    <SafeAreaView style={s.pantalla} edges={cabecera ? ['left', 'right'] : ['top', 'left', 'right']}>
+    <SafeAreaView style={s.pantalla} edges={marca ? ['left', 'right'] : ['top', 'left', 'right']}>
       {barra}
       {scroll ? (
         <ScrollView
@@ -113,11 +113,6 @@ export function Pantalla({ children, scroll = true, estilo, cabecera, refrescand
   );
 }
 
-/**
- * Cabecera azul del CEQ, con degradado y ondas: la firma visual de la app.
- * Sin `titulo` muestra la marca (logo y "Portal CEQ"), como en el inicio;
- * con `titulo`, el nombre de la pestaña.
- */
 /**
  * Barra superior "Portal CEQ": logo, nombre y botones (perfil y los de cada pantalla).
  * Pantalla la deja fija arriba cuando la pantalla usa CabeceraMarca.

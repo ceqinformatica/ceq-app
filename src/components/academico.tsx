@@ -98,21 +98,6 @@ export function resumenFirma(r: ResultadoFirma): string {
   return 'Seguí así.';
 }
 
-/** Leyenda de colores de la malla. */
-export function LeyendaMalla() {
-  const items: EstadoVisual[] = ['aprobada', 'firmada', 'cursando', 'pendiente', 'bloqueada'];
-  return (
-    <View style={est.leyenda}>
-      {items.map((e) => (
-        <View key={e} style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-          <View style={[est.leyendaPunto, { backgroundColor: coloresEstado[e].fondo, borderColor: coloresEstado[e].borde }]} />
-          <Text style={est.leyendaTexto}>{coloresEstado[e].nombre}</Text>
-        </View>
-      ))}
-    </View>
-  );
-}
-
 /** Selector de estado de una materia (4 opciones con su color). */
 export function SelectorEstado({ valor, onCambio, bloqueada, sinFirma }: {
   valor: EstadoMateria;
@@ -156,9 +141,6 @@ const est = crearEstilos(() => ({
   fichaPie: { marginTop: 'auto', flexDirection: 'row', alignItems: 'center', gap: 6, paddingTop: espacio.s, borderTopWidth: StyleSheet.hairlineWidth * 2, borderTopColor: colores.lineaSuave },
   fichaEstado: { flex: 1, fontFamily: fuentes.medium, fontSize: 12.5 },
   notaTexto: { fontFamily: fuentes.bold, fontSize: 12.5, color: colores.marino },
-  leyenda: { flexDirection: 'row', flexWrap: 'wrap', gap: espacio.m, marginBottom: espacio.m },
-  leyendaPunto: { width: 12, height: 12, borderRadius: 4, borderWidth: 1 },
-  leyendaTexto: { fontFamily: fuentes.regular, fontSize: 12, color: colores.textoSuave },
   selector: { flexDirection: 'row', gap: espacio.s },
   selectorOpcion: {
     flex: 1, alignItems: 'center', gap: 4, paddingVertical: espacio.m, borderRadius: radio.m, borderWidth: 1.5,

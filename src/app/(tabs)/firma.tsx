@@ -39,7 +39,6 @@ export default function Firma() {
   const planId = perfil?.plan_id ?? '';
   const { datos, cargando, error, refrescando, recargar, sinConexion } = usarDatos(() => cargar(planId, perfil?.carrera_id), [planId], { cache: `firmas:${planId}` });
 
-  const enRiesgo = datos?.filter((d) => d.semaforo === 'amarillo' || d.semaforo === 'rojo').length ?? 0;
 
   return (
     <Pantalla
