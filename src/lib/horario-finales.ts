@@ -71,20 +71,20 @@ const ABREVIATURAS: [RegExp, string][] = [
 const ROMANOS: Record<string, string> = { '1': 'i', '2': 'ii', '3': 'iii', '4': 'iv', '5': 'v', '6': 'vi' };
 
 /** Forma para comparar nombres: normalizada, sin abreviaturas ni puntos, números a romanos. */
-function clave(t: string): string {
+export function clave(t: string): string {
   let s = normalizar(t).replace(/\./g, ' ');
   for (const [re, por] of ABREVIATURAS) s = s.replace(re, por);
   s = s.replace(/\b([1-6])\b/g, (_, n: string) => ROMANOS[n]);
   return s.replace(/\b(de|del|la|las|el|los|y|e|en|a|al)\b/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
-interface Patron {
+export interface Patron {
   nombre: string;
   clave: string;
   palabras: string[];
 }
 
-function patrones(materias: string[]): Patron[] {
+export function patrones(materias: string[]): Patron[] {
   const vistos = new Map<string, Patron>();
   for (const nombre of materias) {
     const c = clave(nombre);
@@ -98,7 +98,7 @@ function patrones(materias: string[]): Patron[] {
 const escapar = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 /** Materias que aparecen en el texto (ya en forma clave), con su posición. */
-function materiasEn(texto: string, lista: Patron[]): { patron: Patron; desde: number; hasta: number }[] {
+export function materiasEn(texto: string, lista: Patron[]): { patron: Patron; desde: number; hasta: number }[] {
   const encontradas: { patron: Patron; desde: number; hasta: number }[] = [];
   const ocupado: [number, number][] = [];
   for (const p of lista) {
@@ -117,13 +117,44 @@ function materiasEn(texto: string, lista: Patron[]): { patron: Patron; desde: nu
 }
 
 /** La materia más parecida al texto, si se parece bastante (para nombres cortados o con errores). */
-function parecida(texto: string, lista: Patron[]): Patron | null {
+/** Distancia de edición, cortando en cuanto pasa del máximo. */
+function distancia(a: string, b: string, max: number): number {
+  if (Math.abs(a.length - b.length) > max) return max + 1;
+  let previa = Array.from({ length: b.length + 1 }, (_, j) => j);
+  for (let i = 1; i <= a.length; i++) {
+    const fila = [i];
+    let menor = i;
+    for (let j = 1; j <= b.length; j++) {
+      fila[j] = Math.min(previa[j] + 1, fila[j - 1] + 1, previa[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+      menor = Math.min(menor, fila[j]);
+    }
+    if (menor > max) return max + 1;
+    previa = fila;
+  }
+  return previa[b.length];
+}
+
+/**
+ * La palabra está en el texto, igual o con un error de lectura (OCR):
+ * una letra distinta en palabras de 5 o más letras, dos en las de 9 o más.
+ */
+function tienePalabra(palabras: Set<string>, w: string): boolean {
+  if (palabras.has(w)) return true;
+  // Palabra cortada por el borde de la celda o abreviada: "Gene" por "General".
+  for (const p of palabras) if (p.length >= 4 && w.length > p.length && w.startsWith(p)) return true;
+  const max = w.length >= 9 ? 2 : w.length >= 5 ? 1 : 0;
+  if (!max) return false;
+  for (const p of palabras) if (p.length >= 4 && distancia(p, w, max) <= max) return true;
+  return false;
+}
+
+export function parecida(texto: string, lista: Patron[]): Patron | null {
   const palabras = new Set(texto.split(' ').filter((w) => w.length > 1 && !/^\d/.test(w)));
   if (!palabras.size) return null;
   let mejor: Patron | null = null;
   let puntaje = 0;
   for (const p of lista) {
-    const comunes = p.palabras.filter((w) => palabras.has(w)).length;
+    const comunes = p.palabras.filter((w) => tienePalabra(palabras, w)).length;
     // Todas las palabras de la materia tienen que estar (salvo una, si son 4 o más).
     const faltan = p.palabras.length - comunes;
     if (faltan > (p.palabras.length >= 4 ? 1 : 0)) continue;
@@ -139,7 +170,7 @@ function parecida(texto: string, lista: Patron[]): Patron | null {
   return puntaje >= 0.5 ? mejor : null;
 }
 
-interface FechaEncontrada {
+export interface FechaEncontrada {
   fecha: string;
   pos: number;
 }
@@ -153,7 +184,7 @@ function anioPara(mes: number, dia: number, ref: Date): number {
   return (candidatos.find((c) => c >= desde) ?? candidatos[1]).getFullYear();
 }
 
-function valida(a: number, m: number, d: number): boolean {
+export function valida(a: number, m: number, d: number): boolean {
   if (m < 1 || m > 12 || d < 1 || d > 31) return false;
   const f = new Date(a, m - 1, d);
   return f.getMonth() === m - 1 && f.getDate() === d;
@@ -161,7 +192,7 @@ function valida(a: number, m: number, d: number): boolean {
 
 const dos = (n: number) => String(n).padStart(2, '0');
 
-function fechasEn(texto: string, ref: Date): FechaEncontrada[] {
+export function fechasEn(texto: string, ref: Date): FechaEncontrada[] {
   const out: FechaEncontrada[] = [];
   const numericas = /(?:^|[^\d:])(\d{1,2})[/-](\d{1,2})(?:[/-](\d{2,4}))?(?![\d:])/g;
   for (const m of texto.matchAll(numericas)) {
@@ -182,7 +213,7 @@ function fechasEn(texto: string, ref: Date): FechaEncontrada[] {
   return out.sort((a, b) => a.pos - b.pos);
 }
 
-function horasEn(texto: string): { hora: string; pos: number }[] {
+export function horasEn(texto: string): { hora: string; pos: number }[] {
   const out: { hora: string; pos: number }[] = [];
   const re = /(?:^|[^\d/.:-])([01]?\d|2[0-3])(?:\s*[:.h]\s*([0-5]\d))?(\s*(?:hs?|hrs?|horas)\b\.?)?(?![\d/])/g;
   for (const m of texto.matchAll(re)) {
@@ -207,8 +238,8 @@ function llamadosEn(texto: string): { n: number; pos: number }[] {
   return out;
 }
 
-function aulaEn(texto: string): string | null {
-  const m = /(?:\b|h)(aula|sala|lab(?:oratorio)?|anfiteatro|auditorio)\s*(?:n\s*)?([a-z0-9-]{1,6})\b/.exec(texto);
+export function aulaEn(texto: string): string | null {
+  const m = /(?:\b|h)(aula|sala|lab(?:oratorio)?|anfiteatro|auditorio)\.?\s*(?:n\s*)?([a-z0-9-]{1,6})\b/.exec(texto);
   if (!m) return null;
   const tipo = m[1].startsWith('lab') ? 'Lab.' : m[1][0].toUpperCase() + m[1].slice(1);
   return `${tipo} ${m[2].toUpperCase()}`;
@@ -227,13 +258,14 @@ export function leerHorarioFinales(texto: string, materias: string[], referencia
   let seccion = 1; // llamado de la sección actual
   let pendiente: Patron | null = null; // materia de un renglón sin fecha (nombre en dos renglones)
   let previo = ''; // texto del renglón anterior sin fechas
+  let horaGeneral: string | null = null; // "Hora: 08:00" del encabezado
 
   const agregar = (p: Patron | null, fechas: FechaEncontrada[], horas: { hora: string; pos: number }[], aula: string | null, origen: string) => {
     fechas.forEach((f, i) => {
       // Hora: la que está después de esta fecha (y antes de la siguiente), o la única del renglón.
       const siguiente = fechas[i + 1]?.pos ?? Infinity;
       const propia = horas.find((h) => h.pos > f.pos && h.pos < siguiente);
-      const hora = propia?.hora ?? (horas.length === 1 || new Set(horas.map((h) => h.hora)).size === 1 ? horas[0]?.hora ?? null : null);
+      const hora = propia?.hora ?? (horas.length === 1 || new Set(horas.map((h) => h.hora)).size === 1 ? horas[0]?.hora ?? null : null) ?? horaGeneral;
       const llamado = fechas.length > 1 ? Math.min(i + 1, 5) : seccion;
       filas.push({ materia: p?.nombre ?? null, llamado, fecha: f.fecha, hora, aula, origen });
     });
@@ -262,6 +294,11 @@ export function leerHorarioFinales(texto: string, materias: string[], referencia
     const encontradas = materiasEn(k, lista);
     const horas = horasEn(n);
     const aula = aulaEn(n);
+    if (!fechas.length && /\bhora\b/.test(n) && horas.length === 1) {
+      // "Hora: 08:00 hs" en el encabezado: vale para las fechas que no traen hora.
+      horaGeneral = horas[0].hora;
+      continue;
+    }
     if (!fechas.length) {
       // Renglón sin fechas: puede ser la primera mitad del nombre de una materia.
       pendiente = encontradas[encontradas.length - 1]?.patron ?? parecida(k, lista);
@@ -323,6 +360,16 @@ export function detectarCarrera(texto: string, carreras: { id: string; nombre: s
     if (id) return id;
   }
   return null;
+}
+
+/**
+ * Plan de estudios que nombra el encabezado: "PLAN 2018", "Plan de estudios
+ * 2026", "Proyecto Académico 2018". Devuelve el año o null.
+ */
+export function detectarPlan(texto: string): number | null {
+  const n = normalizar(texto.split('\n').slice(0, 25).join(' '));
+  const m = /\b(?:plan(?: de estudios?)?|proyecto academico|malla(?: curricular)?)\s*(?:n\s*)?:?\s*(20[0-4]\d)\b/.exec(n);
+  return m ? Number(m[1]) : null;
 }
 
 /** "2026-12-07" → "07/12/2026" (para los campos de fecha). */

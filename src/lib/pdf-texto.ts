@@ -14,6 +14,7 @@
  * imágenes) devuelve ''. Todo pasa en el teléfono, sin red.
  */
 import { unzlibSync, inflateSync } from 'fflate';
+import type { Celda, FilaDoc } from './ocr/documento.ts';
 
 type Matriz = [number, number, number, number, number, number];
 const IDENTIDAD: Matriz = [1, 0, 0, 1, 0, 0];
@@ -494,17 +495,14 @@ function paginas(objetos: Map<number, Objeto>): { obj: Objeto; recursos: string 
   return salida;
 }
 
-/**
- * Texto del PDF: líneas de cada página, con una línea vacía entre páginas.
- * '' si no hay texto (PDF escaneado, dañado o protegido).
- */
-export function textoDePdfGeneral(bytes: Uint8Array): string {
+/** Trozos de texto de cada página del PDF, en orden. [] si no hay texto. */
+function trozosPorPagina(bytes: Uint8Array): Trozo[][] {
   const pdf = latin1(bytes);
-  if (!pdf.startsWith('%PDF')) return '';
-  if (/\/Encrypt\s/.test(pdf)) return '';
+  if (!pdf.startsWith('%PDF')) return [];
+  if (/\/Encrypt\s/.test(pdf)) return [];
   const objetos = leerObjetos(pdf);
   const cacheFuentes = new Map<number, Fuente>();
-  const salida: string[] = [];
+  const salida: Trozo[][] = [];
   for (const p of paginas(objetos)) {
     const recursos = resolver(objetos, p.recursos);
     const fuentes = new Map<string, Fuente>();
@@ -519,8 +517,56 @@ export function textoDePdfGeneral(bytes: Uint8Array): string {
     const contenido = referencias(valor(p.obj.dicc, 'Contents'))
       .map((r) => objetos.get(r)?.flujo ?? '')
       .join('\n');
-    const lineas = armarLineas(trozosDePagina(contenido, fuentes));
-    if (lineas.length) salida.push(lineas.join('\n'));
+    salida.push(trozosDePagina(contenido, fuentes));
   }
-  return salida.join('\n\n');
+  return salida;
+}
+
+/**
+ * Texto del PDF: líneas de cada página, con una línea vacía entre páginas.
+ * '' si no hay texto (PDF escaneado, dañado o protegido).
+ */
+export function textoDePdfGeneral(bytes: Uint8Array): string {
+  return trozosPorPagina(bytes)
+    .map((t) => armarLineas(t))
+    .filter((l) => l.length)
+    .map((l) => l.join('\n'))
+    .join('\n\n');
+}
+
+/**
+ * Renglones del PDF con sus celdas y posiciones, como los del OCR
+ * (ocr/documento.ts), para leer tablas en las que hay celdas vacías.
+ * La x crece hacia la derecha igual que en el OCR.
+ */
+export function filasDePdfGeneral(bytes: Uint8Array): FilaDoc[] {
+  const filas: FilaDoc[] = [];
+  trozosPorPagina(bytes).forEach((trozos, pagina) => {
+    const ordenados = [...trozos].sort((a, b) => b.y - a.y || a.orden - b.orden);
+    const grupos: Trozo[][] = [];
+    for (const t of ordenados) {
+      const g = grupos[grupos.length - 1];
+      const tol = Math.max(1, Math.min(t.tam, g?.[0].tam ?? t.tam) / 3);
+      if (g && Math.abs(g[0].y - t.y) <= tol) g.push(t);
+      else grupos.push([t]);
+    }
+    for (const g of grupos) {
+      g.sort((a, b) => a.x - b.x || a.orden - b.orden);
+      const celdas: Celda[] = [];
+      for (const t of g) {
+        const texto = t.texto.replace(/\s+/g, ' ').trim();
+        if (!texto) continue;
+        const ultima = celdas[celdas.length - 1];
+        if (ultima && t.x - ultima.x1 <= t.tam * 1.5) {
+          ultima.texto += (t.x - ultima.x1 > t.tam * 0.18 ? ' ' : '') + texto;
+          ultima.x1 = Math.max(ultima.x1, t.fin);
+        } else {
+          celdas.push({ texto, x0: t.x, x1: t.fin });
+        }
+      }
+      // En el PDF la y crece hacia arriba: se invierte para que sea como en el OCR.
+      if (celdas.length) filas.push({ pagina, celdas, y: -g[0].y, alto: g[0].tam });
+    }
+  });
+  return filas;
 }
