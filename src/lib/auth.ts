@@ -7,7 +7,6 @@ import { desactivarBiometria } from './biometria';
 import { borrarPin } from './pinGuardado';
 import { resultadoGoogle, traducirErrorClave } from './recuperacion';
 import { NOMBRE_PROVEEDOR, proveedoresVisibles, resultadoRegistro, type Proveedor } from './acceso';
-import { olvidarYaEntro } from './accesoGuardado';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -259,9 +258,6 @@ export async function eliminarCuenta(): Promise<string | null> {
   await cerrarGoogleNativo();
   // El usuario ya no existe en el servidor: se cierra la sesión solo en este celular.
   await supabase.auth.signOut({ scope: 'local' });
-  // Sin cuenta, la próxima vez se vuelve a ver "Crear cuenta" (después del signOut,
-  // para que ningún aviso de sesión lo vuelva a marcar).
-  await olvidarYaEntro();
   return null;
 }
 

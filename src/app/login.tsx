@@ -1,13 +1,12 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useEffect, useState, type ReactNode } from 'react';
-import { BackHandler, Pressable, ScrollView, Text, View } from 'react-native';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { Animated, BackHandler, Easing, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BotonProveedor } from '../components/BotonProveedor';
-import { Aparecer } from '../components/movimiento';
+import { movimientoReducido } from '../components/movimiento';
 import { LogoAcceso } from '../components/LogoAcceso';
 import { Boton, Campo, EvitaTeclado, Mensaje, s } from '../components/ui';
 import { problemaRegistro, type ModoAcceso, type Proveedor } from '../lib/acceso';
-import { leerModoInicial } from '../lib/accesoGuardado';
 import { entrarConCorreo, entrarConGoogle, entrarConMicrosoft, pedirRecuperarClave, proveedoresDisponibles, registrarseConCorreo } from '../lib/auth';
 import { CLAVE_MINIMA, correoValido } from '../lib/recuperacion';
 import { supabaseConfigurado } from '../lib/supabase';
@@ -19,15 +18,23 @@ const ENTRAR_CON: Record<Proveedor, () => Promise<string | null>> = { google: en
 /** Radio de las curvas de las cabeceras celestes. */
 const CURVA = 44;
 
+/** Orden de las pantallas: avanzar desliza hacia arriba, volver desliza hacia abajo. */
+const NIVEL: Record<ModoAcceso, number> = { portada: 0, entrar: 1, registro: 1, recuperar: 2 };
+
 /**
- * Acceso. La primera vez en el celular se ve la portada (Iniciar sesión /
- * Crear cuenta). Desde que se entró una vez, después de cerrar sesión se va
- * directo a "Iniciar sesión". En cada formulario, abajo, Google y Microsoft.
+ * Acceso. Siempre empieza en la portada (Iniciar sesión / Crear cuenta). Al
+ * elegir, la portada sube y el formulario entra desde abajo, como una sola
+ * hoja que se desliza. En cada formulario, abajo, Google y Microsoft.
  */
 export default function Login() {
   useTema();
   const insets = useSafeAreaInsets();
-  const [modo, setModo] = useState<ModoAcceso | null>(null);
+  const [modo, setModo] = useState<ModoAcceso>('portada');
+  // Transición: la pantalla que se va y cuánto avanzó el deslizamiento (0 → 1).
+  const [saliente, setSaliente] = useState<ModoAcceso | null>(null);
+  const avance = useRef(new Animated.Value(1)).current;
+  const sentido = useRef(1);
+  const { height: alto } = useWindowDimensions();
   const [nombre, setNombre] = useState('');
   const [apellido, setApellido] = useState('');
   const [correo, setCorreo] = useState('');
@@ -41,7 +48,6 @@ export default function Login() {
 
   useEffect(() => {
     let activo = true;
-    leerModoInicial().then((m) => activo && setModo((actual) => actual ?? m));
     proveedoresDisponibles().then((p) => activo && setProveedores(p));
     return () => {
       activo = false;
@@ -59,6 +65,22 @@ export default function Login() {
   };
 
   const cambiarModo = (m: ModoAcceso) => {
+    if (m === modo) return;
+    if (movimientoReducido()) {
+      setSaliente(null);
+      avance.setValue(1);
+    } else {
+      sentido.current = NIVEL[m] >= NIVEL[modo] ? 1 : -1;
+      setSaliente(modo);
+      avance.stopAnimation();
+      avance.setValue(0);
+      Animated.timing(avance, {
+        toValue: 1,
+        duration: 460,
+        easing: Easing.bezier(0.4, 0, 0.2, 1),
+        useNativeDriver: Platform.OS !== 'web',
+      }).start(({ finished }) => finished && setSaliente(null));
+    }
     setModo(m);
     setError(null);
     setInfo(null);
@@ -67,7 +89,7 @@ export default function Login() {
 
   // Botón Atrás de Android: vuelve a la pantalla anterior del acceso en vez de cerrar la app.
   useEffect(() => {
-    if (modo == null || modo === 'portada') return;
+    if (modo === 'portada') return;
     const destino: ModoAcceso = modo === 'recuperar' ? 'entrar' : 'portada';
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
       cambiarModo(destino);
@@ -101,34 +123,32 @@ export default function Login() {
   const ocupado = cargando != null;
   const avisoConfig = !supabaseConfigurado && <Mensaje texto="Falta configurar Supabase. Copiá .env.example a .env y completá la URL y la clave pública." />;
 
-  if (modo === null) return <View style={{ flex: 1, backgroundColor: fondos.cabeceraAcceso }} />;
-
-  if (modo === 'portada') {
-    return (
+  const portada = () => (
       <View style={{ flex: 1, backgroundColor: fondos.superficieBlanca }}>
         <ScrollView contentContainerStyle={{ flexGrow: 1 }} bounces={false}>
           <View style={[est.portada, { paddingTop: insets.top + espacio.xxl }]}>
             <Regla estilo={{ top: '30%' }} />
-            <Aparecer estilo={{ alignItems: 'center' }}>
+            <View style={{ alignItems: 'center' }}>
               <LogoAcceso tamano={112} />
               <Text style={est.marca} accessibilityRole="header">Portal CEQ</Text>
               <Text style={est.nombre}>Centro de Estudiantes de Química</Text>
               <Text style={est.lema}>Tu vida académica en la FCQ, en un solo lugar.</Text>
-            </Aparecer>
+            </View>
           </View>
           <View style={{ backgroundColor: fondos.cabeceraAcceso, flexGrow: 1 }}>
             <View style={[est.pie, { paddingBottom: insets.bottom + espacio.xl }]}>
-              <Aparecer retraso={120} estilo={{ width: '100%', maxWidth: 440, alignSelf: 'center', gap: espacio.s }}>
+              <View style={{ width: '100%', maxWidth: 440, alignSelf: 'center', gap: espacio.s }}>
                 {avisoConfig}
                 <Boton texto="Iniciar sesión" onPress={() => cambiarModo('entrar')} />
                 <Boton texto="Crear cuenta" variante="secundario" onPress={() => cambiarModo('registro')} />
-              </Aparecer>
+              </View>
             </View>
           </View>
         </ScrollView>
       </View>
-    );
-  }
+  );
+
+  const formulario = (m: Exclude<ModoAcceso, 'portada'>) => {
 
   /** Google y Microsoft, debajo del formulario. */
   const otrasCuentas = (
@@ -166,7 +186,7 @@ export default function Login() {
   let volverA: ModoAcceso;
   let cuerpo: ReactNode;
 
-  if (modo === 'recuperar') {
+  if (m === 'recuperar') {
     titulo = 'Recuperá tu contraseña';
     sub = 'Te enviaremos un enlace al correo de tu cuenta.';
     volverA = 'entrar';
@@ -190,7 +210,7 @@ export default function Login() {
         {mensajes}
       </>
     );
-  } else if (modo === 'entrar') {
+  } else if (m === 'entrar') {
     titulo = 'Iniciar sesión';
     sub = 'Tu malla, tus firmas y tu agenda en la FCQ.';
     volverA = 'portada';
@@ -255,10 +275,7 @@ export default function Login() {
   }
 
   return (
-    <EvitaTeclado estilo={{ backgroundColor: fondos.superficieBlanca }}>
-      <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled" bounces={false}>
-        {/* key: al cambiar de pantalla, la nueva entra subiendo como en la maqueta. */}
-        <Aparecer key={modo} distancia={48} estilo={{ flexGrow: 1 }}>
+      <ScrollView style={{ flex: 1, backgroundColor: fondos.superficieBlanca }} contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled" bounces={false}>
           <View style={[est.cabecera, { paddingTop: insets.top + espacio.l }]}>
             <Regla estilo={{ top: insets.top + espacio.s }} corta />
             <Pressable onPress={() => cambiarModo(volverA)} accessibilityRole="button" accessibilityLabel="Volver" hitSlop={10} style={{ alignSelf: 'flex-start', paddingVertical: espacio.xs }}>
@@ -273,8 +290,34 @@ export default function Login() {
               {cuerpo}
             </View>
           </View>
-        </Aparecer>
       </ScrollView>
+  );
+  };
+
+  const pantalla = (m: ModoAcceso) => (m === 'portada' ? portada() : formulario(m));
+  const desplazamiento = (entra: boolean) =>
+    avance.interpolate({ inputRange: [0, 1], outputRange: entra ? [sentido.current * alto, 0] : [0, -sentido.current * alto] });
+  // Las dos pantallas van con su key: la que se va no se vuelve a montar al empezar a salir.
+  const capas = saliente && saliente !== modo ? [saliente, modo] : [modo];
+
+  return (
+    <EvitaTeclado estilo={{ backgroundColor: fondos.cabeceraAcceso }}>
+      <View style={{ flex: 1, overflow: 'hidden' }}>
+        {capas.map((m) => {
+          const entra = m === modo;
+          return (
+            <Animated.View
+              key={m}
+              pointerEvents={entra ? 'auto' : 'none'}
+              importantForAccessibility={entra ? 'auto' : 'no-hide-descendants'}
+              accessibilityElementsHidden={!entra}
+              style={[StyleSheet.absoluteFill, capas.length > 1 && { transform: [{ translateY: desplazamiento(entra) }] }]}
+            >
+              {pantalla(m)}
+            </Animated.View>
+          );
+        })}
+      </View>
     </EvitaTeclado>
   );
 }
