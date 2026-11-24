@@ -594,7 +594,6 @@ export const s = crearEstilos(() => ({
     overflow: 'hidden', marginBottom: espacio.xs,
   },
   cabeceraFila: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: espacio.m, gap: espacio.m },
-  logoPastilla: { width: 36, height: 36, borderRadius: 10, backgroundColor: fondos.blanco, alignItems: 'center', justifyContent: 'center' },
   cabeceraMarca: { fontFamily: fuentes.bold, fontSize: 22, color: colores.blanco, letterSpacing: 0.2 },
   cabeceraMarcaSub: { fontFamily: fuentes.medium, fontSize: 12, lineHeight: 15, color: colores.blanco, marginTop: 1 },
   cabeceraTitulo: { flex: 1, fontFamily: fuentes.bold, fontSize: 24, lineHeight: 30, color: colores.blanco },
@@ -674,7 +673,6 @@ export const s = crearEstilos(() => ({
   punto: { width: 6, height: 6, borderRadius: 3, backgroundColor: colores.marino, marginTop: 8 },
   seccion: { ...texto.etiqueta, color: colores.marino, marginBottom: espacio.s, marginTop: espacio.m },
   seccionFila: { flexDirection: 'row', alignItems: 'center', gap: espacio.s, marginBottom: espacio.m, marginTop: espacio.m },
-  seccionBarra: { width: 3.5, height: 18, backgroundColor: colores.marino, borderRadius: 2 },
   seccionTexto: { fontFamily: fuentes.bold, fontSize: 17, color: colores.texto },
 
   velo: { flex: 1, backgroundColor: 'rgba(14, 58, 85, 0.45)' },

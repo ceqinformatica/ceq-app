@@ -139,10 +139,9 @@ export default function Ceq() {
 
 /** Banner del CEQ con su lema, sobre la cabecera. */
 function BannerCeq() {
-  const [ancho, setAncho] = useState(0);
-  const alto = 128;
+  const [{ ancho, alto }, setTam] = useState({ ancho: 0, alto: 128 });
   return (
-    <View style={est.banner} onLayout={(e) => setAncho(Math.round(e.nativeEvent.layout.width))} accessibilityRole="header" accessibilityLabel="CEQ, Centro de Estudiantes FCQ - UNA. Juntos por una facultad mejor">
+    <View style={est.banner} onLayout={(e) => setTam({ ancho: Math.round(e.nativeEvent.layout.width), alto: Math.round(e.nativeEvent.layout.height) })} accessible accessibilityRole="header" accessibilityLabel="CEQ, Centro de Estudiantes FCQ - UNA. Juntos por una facultad mejor">
       {ancho > 0 && (
         <Svg width={ancho} height={alto} style={{ position: 'absolute', top: 0, left: 0 }} pointerEvents="none">
           <Path d={`M ${ancho * 0.72} ${alto} L ${ancho} ${alto * 0.38} L ${ancho} ${alto * 0.6} L ${ancho * 0.84} ${alto} Z`} fill="#3B82E8" />
@@ -268,7 +267,7 @@ function FormSugerencia({ visible, onCerrar }: { visible: boolean; onCerrar: () 
 }
 
 const est = crearEstilos(() => ({
-  banner: { height: 128, borderRadius: radio.l, backgroundColor: '#123172', padding: espacio.l, justifyContent: 'center', overflow: 'hidden', marginBottom: espacio.m },
+  banner: { minHeight: 128, borderRadius: radio.l, backgroundColor: '#123172', padding: espacio.l, justifyContent: 'center', overflow: 'hidden', marginBottom: espacio.m },
   bannerMarca: { fontFamily: fuentes.bold, fontSize: 40, lineHeight: 44, color: colores.blanco, letterSpacing: 1 },
   bannerSub: { fontFamily: fuentes.medium, fontSize: 12, lineHeight: 15, color: colores.blanco },
   bannerLema: { flex: 1, textAlign: 'right', paddingRight: espacio.xl, fontFamily: fuentes.semibold, fontStyle: 'italic', fontSize: 17, lineHeight: 22, color: colores.blanco, transform: [{ rotate: '-6deg' }] },

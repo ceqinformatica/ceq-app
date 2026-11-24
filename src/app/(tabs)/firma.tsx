@@ -109,7 +109,7 @@ function EstadoFirmas({ total, conFirma, enRiesgo }: { total: number; conFirma: 
   const bien = enRiesgo === 0;
   const color = bien ? colores.azul : colores.rojo;
   return (
-    <Tarjeta estilo={{ backgroundColor: bien ? fondos.cielo : fondos.rojoFondo, borderWidth: 1, borderColor: bien ? colores.celeste : colores.rojoFondo }}>
+    <Tarjeta estilo={{ backgroundColor: bien ? fondos.cielo : fondos.rojoFondo, borderWidth: 1, borderColor: bien ? colores.linea : colores.rojo }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: espacio.l }}>
         <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: fondos.superficieBlanca, alignItems: 'center', justifyContent: 'center' }}>
           <Ionicons name={bien ? 'checkmark-circle' : 'alert-circle'} size={44} color={color} />

@@ -88,7 +88,7 @@ export default function Perfil() {
   return (
     <Pantalla
       cabecera={
-        <CabeceraMarca titulo="Mi perfil" compacta derecha={<BotonIcono icono="close" etiqueta="Volver" claro onPress={volver} />}>
+        <CabeceraMarca titulo="Mi perfil" compacta derecha={<BotonIcono icono="close" etiqueta="Cerrar perfil" claro onPress={volver} />}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: espacio.l, marginTop: espacio.l }}>
             <View style={{ width: 68, height: 68, borderRadius: 34, backgroundColor: fondos.blanco, alignItems: 'center', justifyContent: 'center' }}>
               <Text style={{ fontFamily: fuentes.bold, fontSize: 28, color: colores.marinoFijo }}>{inicial}</Text>
