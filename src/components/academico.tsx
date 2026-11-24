@@ -105,18 +105,28 @@ export function resumenFirma(r: ResultadoFirma): string {
 /** Al elegir el estado de una materia, "Firma" en vez de "Firmada" (pedido de Josie). */
 export const nombreEstadoMateria = (e: EstadoMateria | 'bloqueada', nombre: string) => (e === 'firmada' ? 'Firma' : nombre);
 
+/**
+ * Lo que se ve de una materia: los estados y, en vez de "Aprobada", la
+ * pestaña "Finales" (ahí se cargan los finales; con uno aprobado la materia
+ * queda aprobada sola). Los seminarios no tienen firma ni final.
+ */
+export type VistaMateria = EstadoMateria | 'finales';
+
+const FINALES_VISTA = { get fondo() { return coloresEstado.aprobada.fondo; }, get texto() { return coloresEstado.aprobada.texto; }, nombre: 'Finales', icono: 'school' };
+
 export function SelectorEstado({ valor, onCambio, bloqueada, sinFirma }: {
-  valor: EstadoMateria;
-  onCambio: (e: EstadoMateria) => void;
+  valor: VistaMateria;
+  onCambio: (e: VistaMateria) => void;
   bloqueada?: boolean;
   /** Seminarios: no tienen firma ni final, solo cursando o aprobado. */
   sinFirma?: boolean;
 }) {
-  const opciones: EstadoMateria[] = sinFirma && valor !== 'firmada' ? ['pendiente', 'cursando', 'aprobada'] : ['pendiente', 'cursando', 'firmada', 'aprobada'];
+  const opciones: VistaMateria[] = sinFirma && valor !== 'firmada' ? ['pendiente', 'cursando', 'aprobada'] : ['pendiente', 'cursando', 'firmada', 'finales'];
   return (
     <View style={est.selector}>
       {opciones.map((o) => {
-        const c = coloresEstado[o];
+        const c = o === 'finales' ? FINALES_VISTA : coloresEstado[o];
+        const nombre = o === 'finales' ? 'Finales' : nombreEstadoMateria(o, c.nombre);
         const activo = o === valor;
         const deshabilitado = bloqueada && o !== 'pendiente' && !activo;
         return (
@@ -126,11 +136,11 @@ export function SelectorEstado({ valor, onCambio, bloqueada, sinFirma }: {
             disabled={deshabilitado}
             accessibilityRole="radio"
             accessibilityState={{ checked: activo, disabled: deshabilitado }}
-            accessibilityLabel={nombreEstadoMateria(o, c.nombre)}
+            accessibilityLabel={nombre}
             style={[est.selectorOpcion, activo && { backgroundColor: c.fondo, borderColor: c.texto }, deshabilitado && { opacity: 0.4 }]}
           >
             <Ionicons name={c.icono as NombreIcono} size={20} color={activo ? c.texto : colores.textoTenue} />
-            <Text style={[est.selectorTexto, activo && { color: c.texto, fontFamily: fuentes.semibold }]}>{nombreEstadoMateria(o, c.nombre)}</Text>
+            <Text style={[est.selectorTexto, activo && { color: c.texto, fontFamily: fuentes.semibold }]}>{nombre}</Text>
           </Pressable>
         );
       })}
@@ -147,7 +157,7 @@ const est = crearEstilos(() => ({
   fichaPie: { marginTop: 'auto', flexDirection: 'row', alignItems: 'center', gap: 6, paddingTop: espacio.s, borderTopWidth: StyleSheet.hairlineWidth * 2, borderTopColor: colores.lineaSuave },
   fichaEstado: { flex: 1, fontFamily: fuentes.medium, fontSize: 12.5 },
   notaTexto: { fontFamily: fuentes.bold, fontSize: 12.5, color: colores.marino },
-  selector: { flexDirection: 'row', gap: espacio.s },
+  selector: { flexDirection: 'row', gap: espacio.s, marginBottom: espacio.s },
   selectorOpcion: {
     flex: 1, alignItems: 'center', gap: 4, paddingVertical: espacio.m, borderRadius: radio.m, borderWidth: 1.5,
     borderColor: colores.lineaSuave, backgroundColor: fondos.superficieBlanca,

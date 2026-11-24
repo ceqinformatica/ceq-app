@@ -11,15 +11,18 @@ import { evaluarFirma } from '../../lib/firma';
 import { esSeminario } from '../../lib/progreso';
 import { colores, coloresEstado, coloresSemaforo, espacio, fondos, fuentes } from '../../tema';
 import { finalNecesario } from '../../lib/reglamento-fcq';
+import { periodoDe } from '../../lib/finales';
 import { useTema } from '../../context/TemaProvider';
 import { Grilla } from '../../components/disposicion';
 
 async function cargar(planId: string, carreraId?: string | null) {
   const malla = await cargarMalla(planId, carreraId);
-  // Las que cursa y las que ya firmó (siguen acá hasta que las marque aprobadas).
+  // Las que cursa y las que firmó este semestre: siguen acá hasta aprobarlas.
+  // Las firmas de semestres anteriores no, para no llenar la pantalla.
   // Los seminarios no tienen firma.
   const estadoDe = (id: string) => malla.estados.get(id)?.estado;
-  const materias = malla.materiasDb.filter((m) => (estadoDe(m.id) === 'cursando' || estadoDe(m.id) === 'firmada') && !esSeminario(m.nombre));
+  const deEsteSemestre = (id: string) => estadoDe(id) === 'firmada' && malla.estados.get(id)?.periodo === periodoDe();
+  const materias = malla.materiasDb.filter((m) => (estadoDe(m.id) === 'cursando' || deEsteSemestre(m.id)) && !esSeminario(m.nombre));
   const firmas = await cargarFirmas(materias.map((m) => m.id));
   return materias.map((m) => {
     const f = firmas.get(m.id)!;
@@ -42,9 +45,6 @@ export default function Firma() {
   const { perfil } = useSesion();
   const planId = perfil?.plan_id ?? '';
   const { datos, cargando, error, refrescando, recargar, sinConexion } = usarDatos(() => cargar(planId, perfil?.carrera_id), [planId], { cache: `firmas:${planId}` });
-  // Datos guardados en caché por una versión anterior no traen `firmada`.
-  const cursando = (datos ?? []).filter((d) => !d.firmada);
-  const firmadas = (datos ?? []).filter((d) => d.firmada);
 
 
   return (
@@ -70,57 +70,40 @@ export default function Firma() {
             />
           </Tarjeta>
         ) : (
-          <>
-            {cursando.length > 0 && <Grilla>{cursando.map(({ materia, resultado, semaforo, cargadas }) => {
-              const c = coloresSemaforo[semaforo];
-              return (
-                <Tarjeta key={materia.id} onPress={() => router.push(`/firma/${materia.id}`)} etiqueta={`${materia.nombre}: ${c.nombre}`}>
-                  <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: espacio.s }}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={[s.filaTitulo, { fontSize: 17, color: colores.texto }]}>{materia.nombre}</Text>
-                      <Text style={[s.filaDetalle, { marginTop: 2 }]}>{cargadas ? resumenFirma(resultado) : 'Todavía no cargaste evaluaciones.'}</Text>
-                    </View>
-                    <InsigniaSemaforo semaforo={semaforo} firma={resultado.firma} />
+          <Grilla>{(datos ?? []).map(({ materia, resultado, semaforo, cargadas, firmada, promedioFirma }) => {
+            const c = coloresSemaforo[semaforo];
+            const necesario = firmada && promedioFirma != null ? finalNecesario(promedioFirma) : null;
+            return (
+              <Tarjeta key={materia.id} onPress={() => router.push(`/firma/${materia.id}`)} etiqueta={`${materia.nombre}: ${firmada ? 'con firma' : c.nombre}`}>
+                <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: espacio.s }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[s.filaTitulo, { fontSize: 17, color: colores.texto }]}>{materia.nombre}</Text>
+                    <Text style={[s.filaDetalle, { marginTop: 2 }]}>
+                      {firmada
+                        ? promedioFirma == null
+                          ? 'Ya firmaste. Falta el final.'
+                          : `Firmaste con ${pct(promedioFirma)}.${necesario != null ? ` Para aprobar necesitás ${pct(necesario)} en el final.` : ''}`
+                        : cargadas ? resumenFirma(resultado) : 'Todavía no cargaste evaluaciones.'}
+                    </Text>
                   </View>
+                  {firmada
+                    ? <Insignia texto="Firma" icono="ribbon" color={coloresEstado.firmada.texto} fondo={coloresEstado.firmada.fondo} />
+                    : <InsigniaSemaforo semaforo={semaforo} firma={resultado.firma} />}
+                </View>
+                {cargadas > 0 || !firmada ? (
                   <View style={{ flexDirection: 'row', gap: espacio.l, marginTop: espacio.m }}>
                     <Medidor titulo="Teoría" valor={resultado.teoria.actual} minimo={resultado.teoria.minimo} />
                     {resultado.laboratorio && <Medidor titulo="Lab." valor={resultado.laboratorio.actual} minimo={resultado.laboratorio.minimo} />}
                     <Medidor titulo="Asistencia" valor={resultado.asistencia.porcentaje} minimo={resultado.asistencia.minimo} />
                   </View>
-                </Tarjeta>
-              );
-            })}</Grilla>}
-
-            {firmadas.length > 0 && (
-              <>
-                <Seccion icono="ribbon-outline">Con firma</Seccion>
-                <Grilla>{firmadas.map(({ materia, promedioFirma }) => {
-                  const necesario = promedioFirma != null ? finalNecesario(promedioFirma) : null;
-                  return (
-                    <Tarjeta key={materia.id} onPress={() => router.push(`/materia/${materia.id}`)} etiqueta={`${materia.nombre}: con firma${promedioFirma != null ? ` de ${pct(promedioFirma)}` : ''}`}>
-                      <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: espacio.s }}>
-                        <View style={{ flex: 1 }}>
-                          <Text style={[s.filaTitulo, { fontSize: 17, color: colores.texto }]}>{materia.nombre}</Text>
-                          <Text style={[s.filaDetalle, { marginTop: 2 }]}>
-                            {promedioFirma == null
-                              ? 'Ya firmaste. Falta el final.'
-                              : necesario == null
-                                ? `Firmaste con ${pct(promedioFirma)}.`
-                                : `Firmaste con ${pct(promedioFirma)}. Para aprobar necesitás ${pct(necesario)} en el final.`}
-                          </Text>
-                        </View>
-                        <Insignia texto="Firma" icono="ribbon" color={coloresEstado.firmada.texto} fondo={coloresEstado.firmada.fondo} />
-                      </View>
-                    </Tarjeta>
-                  );
-                })}</Grilla>
-              </>
-            )}
-          </>
+                ) : null}
+              </Tarjeta>
+            );
+          })}</Grilla>
         )}
       </View>
 
-      {cursando.length > 0 && (
+      {datos && datos.length > 0 && (
         <>
           <Seccion icono="information-circle-outline">Cómo se calcula</Seccion>
           <Tarjeta variante="celeste">
