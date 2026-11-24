@@ -184,7 +184,7 @@ function FilaEvento({ f, ultima, onAlternar, onEditar }: { f: Fila; ultima: bool
         <View style={{ flex: 1, minWidth: 0 }}>
           <Text style={[s.filaTitulo, { fontSize: 15 }]} numberOfLines={2}>{f.titulo}</Text>
           <Text style={s.filaDetalle}>
-            {rango(f.desde, f.hasta)} · {NOMBRE_CATEGORIA[f.categoria]}
+            {rango(f.desde, f.hasta)}{f.desde.slice(0, 4) === f.hasta.slice(0, 4) ? ` ${f.desde.slice(0, 4)}` : ''} · {NOMBRE_CATEGORIA[f.categoria]}
             {f.repetida ? ' · ya está cargada' : ''}
           </Text>
         </View>

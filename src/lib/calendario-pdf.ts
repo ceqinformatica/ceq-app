@@ -119,6 +119,8 @@ function limpiarTitulo(crudo: string): string {
     .trim();
   // Restos al final ("Del", "al", "-") y signos en los bordes.
   for (let i = 0; i < 4; i++) t = t.replace(/(?:^[\s:;,.–—-]+|[\s:;,–—-]+$|\s+(?:del?|al|a|hasta(?: el)?|desde(?: el)?|el|y|\d{1,2}|lunes|martes|mi[eé]rcoles|jueves|viernes|s[aá]bado|domingo)$)/i, '').trim();
+  // "1.*" o "1.?": así lee el OCR la a voladita de "1.ª".
+  t = t.replace(/\b(\d)\s?\.\s?[*?°º]\s/g, '$1.ª ');
   if (t) t = t[0].toUpperCase() + t.slice(1);
   return t.slice(0, 160);
 }

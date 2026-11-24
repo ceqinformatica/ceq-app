@@ -35,7 +35,7 @@ const nuevaClave = () => `k${++contador}`;
 /** "Horario de clases · 1.er periodo 2027" a partir del encabezado. */
 function tituloDeHorario(texto: string, ahora = new Date()): string {
   const n = normalizar(texto.slice(0, 1500));
-  const m = /\b(1|2|primer|segundo)\s*(?:er|do|o)?\.?\s*(periodo|semestre)\s*(?:academico\s*)?(?:de\s*)?(20\d\d)?/.exec(n);
+  const m = /\b(1|2|primer|segundo)\s*\.?\s*(?:er|do|o)?\.?\s*(periodo|semestre)\s*(?:academico\s*)?(?:de\s*|del\s*)?(20\d\d)?/.exec(n);
   const anio = m?.[3] ?? /\b(20[2-4]\d)\b/.exec(n)?.[1] ?? String(ahora.getFullYear());
   if (m) {
     const num = m[1] === '1' || m[1] === 'primer' ? '1.er' : '2.º';
