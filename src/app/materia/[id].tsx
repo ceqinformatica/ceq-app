@@ -30,6 +30,8 @@ export default function DetalleMateria() {
   const [notaTxt, setNotaTxt] = useState('');
   const [guardando, setGuardando] = useState(false);
   const [confirmarDeshacer, setConfirmarDeshacer] = useState(false);
+  // Cambia cuando se borran finales desde acá: la tarjeta de finales se vuelve a cargar.
+  const [versionFinales, setVersionFinales] = useState(0);
   const [msg, setMsg] = useState<{ texto: string; tipo: 'error' | 'exito' } | null>(null);
 
   useEffect(() => {
@@ -67,7 +69,10 @@ export default function DetalleMateria() {
       else estados.set(id, { estado, notaFinal: estado === 'aprobada' ? notaNum : null, promedioFirma: actual?.promedioFirma ?? null, periodo: actual?.periodo ?? null });
       setDatos({ ...malla, estados });
       // Se borraron finales aprobados: recarga para que el promedio quede al día.
-      if (finalesAprobados.length) recargar();
+      if (finalesAprobados.length) {
+        recargar();
+        setVersionFinales((v) => v + 1);
+      }
       vibrar('exito');
       setMsg({ tipo: 'exito', texto: nuevos.length ? `Guardado. Ahora podés cursar: ${nuevos.join(', ')}.` : 'Guardado.' });
     } catch (e) {
@@ -184,7 +189,7 @@ export default function DetalleMateria() {
       {(actual?.estado === 'firmada' || actual?.estado === 'aprobada') && !seminario && (
         <>
           <Seccion estilo={{ marginTop: espacio.xl }}>Finales</Seccion>
-          <TarjetaFinales key={`${actual.estado}-${actual.notaFinal ?? ''}`} materiaId={materia.id} firma={actual.promedioFirma ?? null} aprobada={actual.estado === 'aprobada'} onGuardado={() => recargar()} />
+          <TarjetaFinales key={versionFinales} materiaId={materia.id} firma={actual.promedioFirma ?? null} aprobada={actual.estado === 'aprobada'} onGuardado={() => recargar()} />
         </>
       )}
 
