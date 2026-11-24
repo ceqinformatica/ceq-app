@@ -6,6 +6,8 @@ import { olvidarEsteCelular } from './notificaciones';
 import { desactivarBiometria } from './biometria';
 import { borrarPin } from './pinGuardado';
 import { resultadoGoogle, traducirErrorClave } from './recuperacion';
+import { NOMBRE_PROVEEDOR, resultadoRegistro, type Proveedor } from './acceso';
+import { olvidarYaEntro } from './accesoGuardado';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -66,22 +68,37 @@ async function entrarConGoogleNativo(): Promise<string | null | 'usar-navegador'
   }
 }
 
-async function entrarConGoogleNavegador(): Promise<string | null> {
+const entrarConGoogleNavegador = () => entrarConNavegador('google');
+
+/**
+ * Iniciar sesión con una cuenta de Microsoft (Outlook, Hotmail, Live o una
+ * cuenta de trabajo o facultad). Se abre la página de Microsoft en el navegador.
+ */
+export const entrarConMicrosoft = () => entrarConNavegador('microsoft');
+
+async function entrarConNavegador(proveedor: Proveedor): Promise<string | null> {
   const redirectTo = urlRetorno();
   const { data, error } = await supabase.auth.signInWithOAuth({
-    provider: 'google',
-    options: { redirectTo, skipBrowserRedirect: true, queryParams: { prompt: 'select_account' } },
+    // En Supabase, Microsoft se llama "azure".
+    provider: proveedor === 'microsoft' ? 'azure' : 'google',
+    options: {
+      redirectTo,
+      skipBrowserRedirect: true,
+      // Microsoft necesita el permiso "email" para dar el correo de la cuenta.
+      scopes: proveedor === 'microsoft' ? 'email' : undefined,
+      queryParams: { prompt: 'select_account' },
+    },
   });
-  if (error || !data?.url) return error?.message ?? 'No se pudo abrir Google.';
+  if (error || !data?.url) return traducirErrorProveedor(error?.message, proveedor);
 
   const resultado = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
   if (resultado.type !== 'success') return resultado.type === 'cancel' || resultado.type === 'dismiss' ? null : 'Se interrumpió el inicio de sesión.';
 
   const { queryParams } = Linking.parse(resultado.url);
-  const errorGoogle = queryParams?.error_description ?? queryParams?.error;
-  if (errorGoogle) return String(errorGoogle);
+  const errorRetorno = queryParams?.error_description ?? queryParams?.error;
+  if (errorRetorno) return traducirErrorProveedor(String(errorRetorno), proveedor);
   const code = queryParams?.code;
-  if (typeof code !== 'string') return 'Google no devolvió el código de acceso.';
+  if (typeof code !== 'string') return `${NOMBRE_PROVEEDOR[proveedor]} no devolvió el código de acceso.`;
 
   return canjearCodigo(code);
 }
@@ -107,13 +124,27 @@ export async function entrarConCorreo(correo: string, clave: string): Promise<st
   return error ? traducirError(error.message) : null;
 }
 
-export async function registrarseConCorreo(correo: string, clave: string, nombre: string): Promise<string | null> {
-  const { error } = await supabase.auth.signUp({
+/**
+ * Crea la cuenta con correo y contraseña. Si Supabase no pide confirmar el
+ * correo, la persona queda adentro al instante ('adentro'); si lo pide, tiene
+ * que abrir el enlace del correo ('confirmar'). 'ya-existe' si ese correo ya
+ * tenía cuenta. O un mensaje de error.
+ */
+export async function registrarseConCorreo(
+  correo: string,
+  clave: string,
+  nombre: string,
+): Promise<{ resultado: 'adentro' | 'confirmar' | 'ya-existe' } | { error: string }> {
+  const { data, error } = await supabase.auth.signUp({
     email: correo.trim(),
     password: clave,
     options: { data: { full_name: nombre.trim() }, emailRedirectTo: urlRetorno() },
   });
-  return error ? traducirError(error.message) : null;
+  if (error) {
+    if (error.message.toLowerCase().includes('already registered')) return { resultado: 'ya-existe' };
+    return { error: traducirError(error.message) };
+  }
+  return { resultado: resultadoRegistro(data) };
 }
 
 /** Dirección del enlace del correo para elegir una contraseña nueva. */
@@ -147,12 +178,12 @@ export async function confirmarConClave(correo: string, clave: string): Promise<
 }
 
 /**
- * Como entrarConGoogle(), pero distingue "entró" de "cerró la ventana" y
- * exige que sea la MISMA cuenta de la sesión. Si eligió otra cuenta de Google,
- * Supabase ya cambió la sesión: se cierra como un cierre de sesión normal
- * (borra el celular, la caché y el PIN) y se devuelve el error.
+ * Como entrarConGoogle() o entrarConMicrosoft(), pero distingue "entró" de
+ * "cerró la ventana" y exige que sea la MISMA cuenta de la sesión. Si eligió
+ * otra cuenta, Supabase ya cambió la sesión: se cierra como un cierre de
+ * sesión normal (borra el celular, la caché y el PIN) y se devuelve el error.
  */
-export async function confirmarConGoogle(): Promise<string | 'cancelado' | null> {
+export async function confirmarConProveedor(proveedor: Proveedor): Promise<string | 'cancelado' | null> {
   const actual = (await supabase.auth.getSession()).data.session;
   const uidAntes = actual?.user.id ?? null;
   const tokenAntes = actual?.access_token ?? null;
@@ -164,17 +195,19 @@ export async function confirmarConGoogle(): Promise<string | 'cancelado' | null>
   });
   let error: string | null;
   try {
-    error = await entrarConGoogle();
+    error = await (proveedor === 'microsoft' ? entrarConMicrosoft() : entrarConGoogle());
   } finally {
     sub.subscription.unsubscribe();
   }
   if (resultado === 'otra') {
     await salir();
-    return 'Esa cuenta de Google no es la de esta sesión. Cerramos la sesión por seguridad: entrá de nuevo con tu cuenta.';
+    return `Esa cuenta de ${NOMBRE_PROVEEDOR[proveedor]} no es la de esta sesión. Cerramos la sesión por seguridad: entrá de nuevo con tu cuenta.`;
   }
   if (error) return error;
   return resultado === 'misma' ? null : 'cancelado';
 }
+
+export const confirmarConGoogle = () => confirmarConProveedor('google');
 
 export async function salir() {
   // Primero se borra el celular (después ya no hay sesión para hacerlo).
@@ -207,6 +240,8 @@ export async function eliminarCuenta(): Promise<string | null> {
   if (error) return 'No se pudo borrar la cuenta. Probá de nuevo o escribí a informatica@ceq-una.com.';
   await desactivarBiometria().catch(() => {});
   await borrarPin().catch(() => {});
+  // Sin cuenta, la próxima vez se vuelve a ver "Crear cuenta".
+  await olvidarYaEntro();
   await cerrarGoogleNativo();
   // El usuario ya no existe en el servidor: se cierra la sesión solo en este celular.
   await supabase.auth.signOut({ scope: 'local' });
@@ -220,4 +255,18 @@ function traducirError(msg: string): string {
   if (m.includes('already registered')) return 'Ese correo ya tiene una cuenta.';
   if (m.includes('password')) return 'La contraseña debe tener al menos 6 caracteres.';
   return msg;
+}
+
+/** Pasa a castellano lo que devuelven Google o Microsoft cuando algo sale mal. */
+function traducirErrorProveedor(msg: string | null | undefined, proveedor: Proveedor): string {
+  const nombre = NOMBRE_PROVEEDOR[proveedor];
+  const m = (msg ?? '').toLowerCase();
+  if (!m) return `No se pudo abrir ${nombre}.`;
+  if (m.includes('provider is not enabled') || m.includes('unsupported provider'))
+    return `Entrar con ${nombre} todavía no está habilitado. Usá otra opción por ahora.`;
+  if (m.includes('email') && (m.includes('missing') || m.includes('not') || m.includes('verified')))
+    return `Tu cuenta de ${nombre} no compartió un correo. Probá con otra opción.`;
+  if (m.includes('access_denied') || m.includes('cancel')) return `Cancelaste el acceso con ${nombre}.`;
+  if (m.includes('fetch') || m.includes('network')) return 'No hay conexión. Revisá tu internet y probá de nuevo.';
+  return msg ?? `No se pudo abrir ${nombre}.`;
 }

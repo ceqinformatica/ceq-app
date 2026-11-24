@@ -4,12 +4,12 @@ import { correoValido, resultadoGoogle, metodosDeCuenta, problemaClaveNueva, tra
 
 test('cuenta de Google sola: confirma con Google, no con contraseña', () => {
   const m = metodosDeCuenta({ email: 'a@gmail.com', app_metadata: { provider: 'google', providers: ['google'] } });
-  assert.deepEqual(m, { google: true, clave: false, correo: 'a@gmail.com' });
+  assert.deepEqual(m, { google: true, microsoft: false, clave: false, correo: 'a@gmail.com' });
 });
 
 test('cuenta con correo y contraseña', () => {
   const m = metodosDeCuenta({ email: 'b@ejemplo.com', app_metadata: { provider: 'email' }, identities: [{ provider: 'email' }] });
-  assert.deepEqual(m, { google: false, clave: true, correo: 'b@ejemplo.com' });
+  assert.deepEqual(m, { google: false, microsoft: false, clave: true, correo: 'b@ejemplo.com' });
 });
 
 test('cuenta con las dos formas de entrar', () => {
@@ -18,9 +18,14 @@ test('cuenta con las dos formas de entrar', () => {
   assert.equal(m.clave, true);
 });
 
+test('cuenta de Microsoft: confirma con Microsoft', () => {
+  const m = metodosDeCuenta({ email: 'd@outlook.com', app_metadata: { provider: 'azure', providers: ['azure'] } });
+  assert.deepEqual(m, { google: false, microsoft: true, clave: false, correo: 'd@outlook.com' });
+});
+
 test('sin correo no se puede confirmar con contraseña', () => {
   assert.equal(metodosDeCuenta({ email: '', app_metadata: { provider: 'email' } }).clave, false);
-  assert.deepEqual(metodosDeCuenta(null), { google: false, clave: false, correo: null });
+  assert.deepEqual(metodosDeCuenta(null), { google: false, microsoft: false, clave: false, correo: null });
 });
 
 test('valida la contraseña nueva', () => {

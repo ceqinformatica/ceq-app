@@ -15,6 +15,8 @@ export interface UsuarioCuenta {
 export interface MetodosCuenta {
   /** Entró alguna vez con Google: puede confirmar eligiendo su cuenta de Google. */
   google: boolean;
+  /** Entró alguna vez con Microsoft (en Supabase se llama "azure"). */
+  microsoft: boolean;
   /** Tiene contraseña propia (cuenta creada con correo): puede confirmar escribiéndola. */
   clave: boolean;
   correo: string | null;
@@ -27,7 +29,7 @@ export function metodosDeCuenta(usuario: UsuarioCuenta | null | undefined): Meto
   if (usuario?.app_metadata?.provider) proveedores.add(usuario.app_metadata.provider);
   for (const i of usuario?.identities ?? []) proveedores.add(i.provider);
   const correo = usuario?.email?.trim() || null;
-  return { google: proveedores.has('google'), clave: proveedores.has('email') && correo != null, correo };
+  return { google: proveedores.has('google'), microsoft: proveedores.has('azure'), clave: proveedores.has('email') && correo != null, correo };
 }
 
 /**

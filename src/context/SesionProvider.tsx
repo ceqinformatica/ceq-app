@@ -6,6 +6,7 @@ import { db as demo, MODO_DEMO, UID_DEMO } from '../datos/demo';
 import { esErrorDeRed, textoError } from '../lib/errores';
 import { biometriaActiva, verificarIdentidad } from '../lib/biometria';
 import { almacenSeguro } from '../lib/almacenSeguro';
+import { marcarYaEntro } from '../lib/accesoGuardado';
 import { borrarPin, comprobarPin, guardarPin, pinActivo, reiniciarIntentosPin, type ResultadoPin } from '../lib/pinGuardado';
 import { supabase } from '../lib/supabase';
 import type { Perfil } from '../lib/tipos-db';
@@ -108,6 +109,8 @@ export function SesionProvider({ children }: { children: ReactNode }) {
         // El PIN es de la cuenta que cerró sesión: la próxima no lo hereda.
         borrarPin().catch(() => {});
       }
+      // Desde que hubo una cuenta en este celular, al cerrar sesión se ve "Iniciar sesión" (no "Crear cuenta").
+      if (nueva && !MODO_DEMO) marcarYaEntro();
       setSesion(nueva);
       if (!nueva) setBloqueado(false);
       cargarPerfil(nueva?.user.id);
