@@ -80,6 +80,29 @@ export async function guardarFechaCalendario(id: string | null, f: FormularioFec
   lanzar(error);
 }
 
+/** Agrega varias fechas de una vez (las leídas del PDF del calendario). */
+export async function agregarFechasCalendario(fechas: FormularioFecha[]): Promise<void> {
+  if (!fechas.length) return;
+  const ahora = new Date().toISOString();
+  const filas = fechas.map((f) => ({
+    titulo: f.titulo.trim(),
+    categoria: f.categoria,
+    semestre: f.semestre,
+    desde: f.desde,
+    hasta: f.hasta,
+    anio: Number(f.desde.slice(0, 4)),
+    detalle: f.detalle.trim() || null,
+    updated_at: ahora,
+  }));
+  if (MODO_DEMO) {
+    await esperar();
+    for (const fila of filas) db.calendario.push({ ...fila, id: idDemo(), clave: null, created_at: ahora });
+    return;
+  }
+  const { error } = await supabase.from('calendario_academico').insert(filas);
+  lanzar(error);
+}
+
 export async function borrarFechaCalendario(id: string): Promise<void> {
   if (MODO_DEMO) {
     db.calendario = db.calendario.filter((c) => c.id !== id);

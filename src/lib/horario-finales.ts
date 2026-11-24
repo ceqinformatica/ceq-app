@@ -265,7 +265,8 @@ export function leerHorarioFinales(texto: string, materias: string[], referencia
       // Hora: la que está después de esta fecha (y antes de la siguiente), o la única del renglón.
       const siguiente = fechas[i + 1]?.pos ?? Infinity;
       const propia = horas.find((h) => h.pos > f.pos && h.pos < siguiente);
-      const hora = propia?.hora ?? (horas.length === 1 || new Set(horas.map((h) => h.hora)).size === 1 ? horas[0]?.hora ?? null : null) ?? horaGeneral;
+      const unica = horas.length === 1 || new Set(horas.map((h) => h.hora)).size === 1 ? horas[0]?.hora : undefined;
+      const hora = propia?.hora ?? unica ?? horaGeneral;
       const llamado = fechas.length > 1 ? Math.min(i + 1, 5) : seccion;
       filas.push({ materia: p?.nombre ?? null, llamado, fecha: f.fecha, hora, aula, origen });
     });

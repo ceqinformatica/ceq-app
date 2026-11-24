@@ -1,8 +1,8 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useLocalSearchParams } from 'expo-router';
-import * as WebBrowser from 'expo-web-browser';
 import { type ComponentRef, useEffect, useMemo, useRef, useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { HorarioOficial } from '../../components/clases-oficiales';
 import { compartirVistaComoImagen, puedeCompartirImagen } from '../../components/compartir-imagen';
 import { CampoFechaHora, hoy } from '../../components/fecha';
 import { CabeceraMarca, Boton, BotonIcono, Campo, Cargando, Chip, EstadoVacio, Fila, Hoja, Insignia, logoCeq, Mensaje, Pantalla, s, Segmentado, Tarjeta } from '../../components/ui';
@@ -12,7 +12,6 @@ import {
   partesFecha, type Agenda as DatosAgenda, type MateriaAgenda,
 } from '../../datos/agenda';
 import { guardarEstadosEnBloque } from '../../datos/academico';
-import { horarioOficialDe, PERIODO_HORARIOS_FCQ } from '../../datos/horario-oficial';
 import { usarDatos } from '../../datos/usarDatos';
 import { abreviar, acomodarDia, choquesCon, horaParaBase, minutos, OPCIONES_AVISO, rangoSemana, textoAviso, textoMinutos } from '../../lib/horario';
 import type { EstadoMateriaDb, EventoDb, HorarioDb, TipoEvento } from '../../lib/tipos-db';
@@ -161,7 +160,7 @@ export default function Agenda() {
             )}
             </>
             )}
-            <HorarioOficial carreraId={perfil?.carrera_id} />
+            <HorarioOficial carreraId={perfil?.carrera_id} datos={datos} onCargadas={recargar} />
             <Tarjeta estilo={{ marginTop: espacio.m }}>
               <Fila
                 icono="flag-outline"
@@ -753,21 +752,6 @@ function FormFinSemestre({ visible, onCerrar }: { visible: boolean; onCerrar: ()
       {guardada ? <Boton texto="Quitar la fecha" variante="fantasma" onPress={() => guardar(null, 'quitar')} cargando={guardando === 'quitar'} /> : null}
       <View style={{ height: espacio.l }} />
     </Hoja>
-  );
-}
-
-function HorarioOficial({ carreraId }: { carreraId: string | null | undefined }) {
-  const { url, deTuCarrera } = horarioOficialDe(carreraId);
-  return (
-    <Tarjeta estilo={{ marginTop: espacio.m }}>
-      <Fila
-        icono="document-text-outline"
-        titulo={deTuCarrera ? 'Horario oficial de tu carrera' : 'Horarios oficiales de la FCQ'}
-        detalle={`${PERIODO_HORARIOS_FCQ}. Abrilo y copiá tus clases con el botón Clase.`}
-        onPress={() => WebBrowser.openBrowserAsync(url)}
-        ultima
-      />
-    </Tarjeta>
   );
 }
 

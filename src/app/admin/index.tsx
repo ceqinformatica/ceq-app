@@ -53,6 +53,7 @@ export default function PanelAdmin() {
         <Fila icono="stats-chart-outline" titulo="Encuestas" detalle="Crear encuestas anónimas y ver resultados" onPress={() => router.push('/admin/encuestas')} />
         <Fila icono="school-outline" titulo="Horarios de finales" detalle={datos?.pendientes?.horarios_borrador ? `${datos.pendientes.horarios_borrador} en borrador` : 'Subir el PDF de cada carrera y repartir las fechas'} onPress={() => router.push('/admin/horarios-finales')} />
         <Fila icono="albums-outline" titulo="Ventanas flotantes" detalle={datos?.pendientes?.ventanas_activas ? `${datos.pendientes.ventanas_activas} visibles ahora` : 'Carteles que aparecen al abrir la app, a tu gusto'} onPress={() => router.push('/admin/ventanas')} />
+        <Fila icono="time-outline" titulo="Horarios de clases" detalle={datos?.pendientes?.clases_borrador ? `${datos.pendientes.clases_borrador} en borrador` : 'Subir el PDF de cada carrera para que carguen sus clases'} onPress={() => router.push('/admin/horarios-clases')} />
         <Fila icono="calendar-outline" titulo="Calendario académico" detalle="Fechas de inscripción, finales, aranceles y feriados" onPress={() => router.push('/admin/calendario')} />
         <Fila icono="document-text-outline" titulo="Guía de trámites" detalle="Editar pasos, requisitos, plazos y costos" onPress={() => router.push('/admin/tramites')} />
         <Fila

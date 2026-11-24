@@ -25,6 +25,7 @@ export async function cargarPendientes(): Promise<PendientesPanel | null> {
       carnets_pendientes: db.solicitudesCarnet.filter((x) => x.estado === 'pendiente').length,
       ventanas_activas: db.ventanas.filter((v) => v.activa).length,
       horarios_borrador: db.horariosFinales.filter((h) => !h.publicado).length,
+      clases_borrador: db.horariosClases.filter((h) => !h.publicado).length,
     };
   }
   const { data, error } = await supabase.rpc('pendientes_panel');
