@@ -230,6 +230,7 @@ export default function Perfil() {
               onValueChange={(v) => router.push(v ? '/pin?modo=crear' : '/pin?modo=quitar')}
               disabled={conPin == null}
               accessibilityLabel="PIN de la app"
+              {...pulgarWeb}
               trackColor={{ true: fondos.marino, false: colores.linea }}
               thumbColor={colores.blanco}
             />
