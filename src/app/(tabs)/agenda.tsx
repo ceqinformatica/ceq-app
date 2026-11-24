@@ -714,7 +714,9 @@ function FormFinSemestre({ visible, onCerrar }: { visible: boolean; onCerrar: ()
   const [guardando, setGuardando] = useState<'guardar' | 'quitar' | null>(null);
   const [error, setError] = useState<string | null>(null);
   const hoyIso = hoyPy();
-  const actual = perfil?.fin_clases && !semestreTerminado(perfil.fin_clases, hoyIso) ? perfil.fin_clases : null;
+  const guardada = perfil?.fin_clases ?? null;
+  // Una fecha ya pasada no se propone de nuevo, pero se puede quitar.
+  const actual = guardada && !semestreTerminado(guardada, hoyIso) ? guardada : null;
 
   useEffect(() => {
     if (visible) { setFecha(actual ? textoDesdeIso(actual) : ''); setError(null); }
@@ -748,7 +750,7 @@ function FormFinSemestre({ visible, onCerrar }: { visible: boolean; onCerrar: ()
         cargando={guardando === 'guardar'}
         deshabilitado={!iso || iso < hoyIso || iso === actual}
       />
-      {actual ? <Boton texto="Quitar la fecha" variante="fantasma" onPress={() => guardar(null, 'quitar')} cargando={guardando === 'quitar'} /> : null}
+      {guardada ? <Boton texto="Quitar la fecha" variante="fantasma" onPress={() => guardar(null, 'quitar')} cargando={guardando === 'quitar'} /> : null}
       <View style={{ height: espacio.l }} />
     </Hoja>
   );
