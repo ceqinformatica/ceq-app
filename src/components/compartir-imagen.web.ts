@@ -8,6 +8,6 @@ import type { View } from 'react-native';
  */
 export const puedeCompartirImagen = false;
 
-export async function compartirVistaComoImagen(_ref: RefObject<ComponentRef<typeof View> | null>, _titulo: string): Promise<void> {
+export async function compartirVistaComoImagen(_ref: RefObject<ComponentRef<typeof View> | null>, _titulo: string, _tamano?: { width: number; height: number }): Promise<void> {
   throw new Error('Para compartir la imagen, abrí tu horario desde la app del teléfono.');
 }
