@@ -62,7 +62,7 @@ export default function Agenda() {
   return (
     <View style={{ flex: 1, backgroundColor: fondos.fondo }}>
       <Pantalla
-        cabecera={<CabeceraMarca titulo="Agenda" sub={vista === 'horario' ? 'Tu semana de clases' : 'Tus exámenes, entregas y recordatorios'} compacta derecha={<BotonIcono icono="calendar-outline" etiqueta="Calendario de la facultad" claro onPress={() => router.push('/calendario')} />} sinConexion={sinConexion && datos ? error : null} />}
+        cabecera={<CabeceraMarca titulo="Agenda" sub={vista === 'horario' ? 'Tu semana de clases' : 'Tus exámenes, entregas y recordatorios'} compacta derecha={<BotonIcono icono="calendar-outline" etiqueta="Calendario de la facultad" plano onPress={() => router.push('/calendario')} />} sinConexion={sinConexion && datos ? error : null} />}
         refrescando={refrescando}
         onRefrescar={recargar}
       >

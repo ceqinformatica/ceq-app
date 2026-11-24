@@ -60,6 +60,10 @@ const claro = {
 
   // Celeste del CEQ: cabeceras y carnet (con texto blanco grande)
   celesteMarca: '#1E5BB0',
+
+  // Franja superior de las pantallas (barra "Portal CEQ") y burbuja decorativa del título
+  franja: '#C8DBF0',
+  burbuja: '#DDEAF8',
 };
 
 type Paleta = { [K in keyof typeof claro]: string };
@@ -101,6 +105,8 @@ const tintaOscura: Paleta = {
   borde: '#26344F',
   marinoFijo: '#1B4B9B',
   celesteMarca: '#8CCDF2',
+  franja: '#14233F',
+  burbuja: '#122038',
 };
 
 /** Fondos del tema oscuro: el marino sigue siendo marino (botones, cabeceras). */
@@ -121,12 +127,6 @@ const fondoOscuro: Paleta = {
   gris: '#4A5866',
   primario: '#24519E',
   celesteMarca: '#1A4A92',
-};
-
-/** Degradado de las cabeceras (de arriba a la izquierda hacia abajo a la derecha). */
-export const degradadoMarca = {
-  get desde() { return esquema === 'oscuro' ? '#0F2A5C' : '#133E8C'; },
-  get hasta() { return esquema === 'oscuro' ? '#1C4C96' : '#2C6FCB'; },
 };
 
 export type Esquema = 'claro' | 'oscuro';
@@ -227,7 +227,7 @@ export const coloresEstado = {
   aprobada: { get fondo() { return oscuro() ? '#173560' : '#E1ECFB'; }, get borde() { return oscuro() ? '#2E5A99' : '#A9C6EF'; }, get texto() { return oscuro() ? '#A8C8F5' : '#1B4B9B'; }, nombre: 'Aprobada', icono: 'checkmark-circle' },
   firmada: { get fondo() { return fondos.superficieBlanca; }, get borde() { return oscuro() ? '#4F84D2' : '#3B78D6'; }, get texto() { return oscuro() ? '#9DBFF2' : '#2563C4'; }, nombre: 'Firmada', icono: 'create' },
   cursando: { get fondo() { return oscuro() ? '#1A2436' : '#EEF2F7'; }, get borde() { return oscuro() ? '#8C9BAA' : '#3F5168'; }, get texto() { return oscuro() ? '#C9D3DC' : '#2E3F52'; }, nombre: 'Cursando', icono: 'time' },
-  pendiente: { get fondo() { return fondos.superficieBlanca; }, get borde() { return colores.linea; }, get texto() { return colores.marino; }, nombre: 'Por cursar', icono: 'ellipse-outline' },
+  pendiente: { get fondo() { return fondos.superficieBlanca; }, get borde() { return colores.linea; }, get texto() { return colores.marino; }, nombre: 'Pendiente', icono: 'ellipse-outline' },
   bloqueada: { get fondo() { return fondos.grisFondo; }, get borde() { return oscuro() ? '#2A3642' : '#D5DEE5'; }, get texto() { return colores.gris; }, nombre: 'Bloqueada', icono: 'lock-closed' },
 } as const;
 

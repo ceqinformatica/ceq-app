@@ -39,7 +39,6 @@ export default function Firma() {
   const planId = perfil?.plan_id ?? '';
   const { datos, cargando, error, refrescando, recargar, sinConexion } = usarDatos(() => cargar(planId, perfil?.carrera_id), [planId], { cache: `firmas:${planId}` });
 
-  const enRiesgo = datos?.filter((d) => d.semaforo === 'amarillo' || d.semaforo === 'rojo').length ?? 0;
 
   return (
     <Pantalla
@@ -49,8 +48,7 @@ export default function Firma() {
       refrescando={refrescando}
       onRefrescar={recargar}
     >
-      <View style={{ marginTop: -espacio.xxl }}>
-        {datos && datos.length > 0 && <EstadoFirmas total={datos.length} conFirma={datos.filter((d) => d.resultado.firma).length} enRiesgo={enRiesgo} />}
+      <View style={{ marginTop: -espacio.xl }}>
         {cargando && !datos ? (
           <Tarjeta><Cargando /></Tarjeta>
         ) : error && !datos ? (
@@ -68,10 +66,10 @@ export default function Firma() {
           <Grilla>{(datos ?? []).map(({ materia, resultado, semaforo, cargadas }) => {
             const c = coloresSemaforo[semaforo];
             return (
-              <Tarjeta key={materia.id} onPress={() => router.push(`/firma/${materia.id}`)} etiqueta={`${materia.nombre}: ${c.nombre}`} estilo={{ borderLeftWidth: 4, borderLeftColor: c.texto }}>
+              <Tarjeta key={materia.id} onPress={() => router.push(`/firma/${materia.id}`)} etiqueta={`${materia.nombre}: ${c.nombre}`}>
                 <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: espacio.s }}>
                   <View style={{ flex: 1 }}>
-                    <Text style={[s.filaTitulo, { fontSize: 16, color: colores.marino }]}>{materia.nombre}</Text>
+                    <Text style={[s.filaTitulo, { fontSize: 17, color: colores.texto }]}>{materia.nombre}</Text>
                     <Text style={[s.filaDetalle, { marginTop: 2 }]}>{cargadas ? resumenFirma(resultado) : 'Todavía no cargaste evaluaciones.'}</Text>
                   </View>
                   <InsigniaSemaforo semaforo={semaforo} firma={resultado.firma} />
@@ -101,26 +99,6 @@ export default function Firma() {
         </>
       )}
     </Pantalla>
-  );
-}
-
-/** Resumen arriba de todo: si vas bien con todas o cuántas hay que mirar. */
-function EstadoFirmas({ total, conFirma, enRiesgo }: { total: number; conFirma: number; enRiesgo: number }) {
-  const bien = enRiesgo === 0;
-  const color = bien ? colores.azul : colores.rojo;
-  return (
-    <Tarjeta estilo={{ backgroundColor: bien ? fondos.cielo : fondos.rojoFondo, borderWidth: 1, borderColor: bien ? colores.linea : colores.rojo }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: espacio.l }}>
-        <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: fondos.superficieBlanca, alignItems: 'center', justifyContent: 'center' }}>
-          <Ionicons name={bien ? 'checkmark-circle' : 'alert-circle'} size={44} color={color} />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={[s.filaTitulo, { fontSize: 15 }]}>Tu estado de firmas</Text>
-          <Text style={{ fontFamily: fuentes.bold, fontSize: 26, lineHeight: 31, color }}>{bien ? 'Vas bien' : `${enRiesgo} en riesgo`}</Text>
-          <Text style={s.filaDetalle}>{total} cursando · {conFirma} con la firma asegurada</Text>
-        </View>
-      </View>
-    </Tarjeta>
   );
 }
 

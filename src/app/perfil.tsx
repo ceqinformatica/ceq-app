@@ -1,7 +1,7 @@
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { Alert, Linking, Platform, Switch, Text, View } from 'react-native';
-import { Boton, BotonIcono, CabeceraMarca, Fila, Mensaje, Pantalla, s, Seccion, Segmentado, Tarjeta } from '../components/ui';
+import { Boton, BotonIcono, CabeceraMarca, Fila, Mensaje, Pantalla, s, Seccion, Tarjeta } from '../components/ui';
 import { useSesion } from '../context/SesionProvider';
 import { db, MODO_DEMO } from '../datos/demo';
 import { eliminarCuenta, salir } from '../lib/auth';
@@ -9,14 +9,14 @@ import { registrarEsteCelular, type EstadoRegistro } from '../lib/notificaciones
 import { activarBiometria, biometriaActiva, biometriaDisponible, desactivarBiometria } from '../lib/biometria';
 import { pinActivo } from '../lib/pinGuardado';
 import { supabase } from '../lib/supabase';
-import { colores, espacio, fondos, fuentes, texto } from '../tema';
-import { useTema, type PreferenciaTema } from '../context/TemaProvider';
+import { colores, espacio, fondos, fuentes } from '../tema';
+import { useTema } from '../context/TemaProvider';
 import { useRecorrido } from '../context/RecorridoProvider';
 
 const volver = () => (router.canGoBack() ? router.back() : router.replace('/'));
 
 export default function Perfil() {
-  const { preferencia, cambiarPreferencia: cambiarTema } = useTema();
+  const { preferencia, cambiarPreferencia: cambiarTema, oscuro } = useTema();
   const { sesion, perfil, actualizarPerfil } = useSesion();
   const recorrido = useRecorrido();
   const [carrera, setCarrera] = useState<string | null>(null);
@@ -99,26 +99,51 @@ export default function Perfil() {
   return (
     <Pantalla
       cabecera={
-        <CabeceraMarca titulo="Mi perfil" compacta derecha={<BotonIcono icono="close" etiqueta="Cerrar perfil" claro onPress={volver} />}>
+        <CabeceraMarca titulo="Mi perfil" compacta sinPerfil derecha={<BotonIcono icono="close" etiqueta="Cerrar perfil" plano onPress={volver} />}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: espacio.l, marginTop: espacio.l }}>
-            <View style={{ width: 68, height: 68, borderRadius: 34, backgroundColor: fondos.blanco, alignItems: 'center', justifyContent: 'center' }}>
-              <Text style={{ fontFamily: fuentes.bold, fontSize: 28, color: colores.marinoFijo }}>{inicial}</Text>
+            <View style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: fondos.burbuja, alignItems: 'center', justifyContent: 'center' }}>
+              <Text style={{ fontFamily: fuentes.bold, fontSize: 32, color: colores.marino }}>{inicial}</Text>
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={{ fontFamily: fuentes.bold, fontSize: 20, color: colores.blanco }} numberOfLines={2}>{perfil?.nombre ?? 'Sin nombre'}</Text>
-              <Text style={{ fontFamily: fuentes.regular, fontSize: 13, color: colores.blanco, marginTop: 2 }} numberOfLines={1}>{carrera ?? sesion?.user.email}</Text>
+              <Text style={{ fontFamily: fuentes.bold, fontSize: 21, color: colores.marinoOscuro }} numberOfLines={2}>{perfil?.nombre ?? 'Sin nombre'}</Text>
+              <Text style={{ fontFamily: fuentes.regular, fontSize: 14, color: colores.marinoOscuro, marginTop: 2 }} numberOfLines={1}>{carrera ?? sesion?.user.email}</Text>
             </View>
           </View>
         </CabeceraMarca>
       }
     >
-      <View style={{ height: espacio.s }} />
-      <Seccion icono="school-outline">Situación académica</Seccion>
+      <Tarjeta estilo={{ paddingVertical: espacio.xs, marginTop: -espacio.m }}>
+        <Fila simple icono="stats-chart-outline" titulo="Mi progreso académico" onPress={() => router.push('/estadisticas')} />
+        <Fila
+          simple
+          icono="moon-outline"
+          titulo="Modo oscuro"
+          detalle={preferencia === 'sistema' ? 'Sigue el modo de tu celular.' : undefined}
+          derecha={<Interruptor valor={oscuro} onCambio={(v) => cambiarTema(v ? 'oscuro' : 'claro')} etiqueta="Modo oscuro" />}
+        />
+        {preferencia !== 'sistema' && (
+          <Fila simple icono="phone-portrait-outline" titulo="Usar el modo del celular" onPress={() => cambiarTema('sistema')} />
+        )}
+        <Fila
+          simple
+          icono="help-circle-outline"
+          titulo="Ayuda y soporte"
+          detalle="Ver de nuevo el recorrido de bienvenida"
+          onPress={() => {
+            // Se vuelve a las pestañas y ahí se abre el recorrido.
+            if (router.canGoBack()) router.back();
+            else router.replace('/');
+            recorrido.iniciar();
+          }}
+        />
+        <Fila simple icono="log-out-outline" titulo="Cerrar sesión" onPress={salir} ultima />
+      </Tarjeta>
+
+      <Seccion icono="school-outline" estilo={{ marginTop: espacio.l }}>Situación académica</Seccion>
       <Tarjeta estilo={{ paddingVertical: espacio.xs }}>
         <Fila simple icono="school-outline" titulo={carrera ?? '…'} detalle="Carrera" />
         <Fila simple icono="git-network-outline" titulo={plan ?? '…'} detalle="Plan de estudios" />
-        <Fila simple icono="calendar-outline" titulo={perfil?.anio_ingreso ? String(perfil.anio_ingreso) : 'Sin cargar'} detalle="Año de ingreso" />
-        <Fila simple icono="stats-chart-outline" titulo="Mi progreso académico" detalle="Promedio y estadísticas" onPress={() => router.push('/estadisticas')} ultima />
+        <Fila simple icono="calendar-outline" titulo={perfil?.anio_ingreso ? String(perfil.anio_ingreso) : 'Sin cargar'} detalle="Año de ingreso" ultima />
       </Tarjeta>
       <Boton
         texto="Cambiar carrera o plan"
@@ -171,37 +196,6 @@ export default function Perfil() {
       )}
       {push === 'error' && <Mensaje tipo="info" texto="No pudimos activar las notificaciones en este celular. Probá de nuevo más tarde." />}
 
-      <Seccion icono="color-palette-outline" estilo={{ marginTop: espacio.xl }}>Apariencia</Seccion>
-      <Segmentado<PreferenciaTema>
-        opciones={[
-          { valor: 'sistema', texto: 'Automático' },
-          { valor: 'claro', texto: 'Claro' },
-          { valor: 'oscuro', texto: 'Oscuro' },
-        ]}
-        valor={preferencia}
-        onCambio={cambiarTema}
-      />
-      <Text style={[s.filaDetalle, { marginTop: -espacio.s }]}>
-        {preferencia === 'sistema' ? 'Sigue el modo claro u oscuro de tu celular.' : preferencia === 'oscuro' ? 'Modo oscuro siempre, aunque el celular esté en claro.' : 'Modo claro siempre, aunque el celular esté en oscuro.'}
-      </Text>
-
-      <Seccion icono="help-circle-outline" estilo={{ marginTop: espacio.xl }}>Ayuda</Seccion>
-      <Tarjeta estilo={{ paddingVertical: espacio.xs }}>
-        <Fila
-          simple
-          icono="help-buoy-outline"
-          titulo="Ver el recorrido de bienvenida"
-          detalle="Las ventanitas que explican cada sección de la app."
-          onPress={() => {
-            // Se vuelve a las pestañas y ahí se abre el recorrido.
-            if (router.canGoBack()) router.back();
-            else router.replace('/');
-            recorrido.iniciar();
-          }}
-          ultima
-        />
-      </Tarjeta>
-
       <Seccion icono="lock-closed-outline" estilo={{ marginTop: espacio.xl }}>Seguridad</Seccion>
       <Tarjeta estilo={{ paddingVertical: espacio.xs }}>
         {bio && !bio.disponible ? (
@@ -247,8 +241,7 @@ export default function Perfil() {
       </Tarjeta>
 
       <Mensaje texto={error} />
-      <Boton texto="Cerrar sesión" variante="peligro" icono="log-out-outline" onPress={salir} estilo={{ marginTop: espacio.xl }} />
-      {!MODO_DEMO && <Boton texto="Eliminar mi cuenta" variante="fantasma" icono="trash-outline" onPress={pedirBorrarCuenta} cargando={borrando} estilo={{ marginTop: espacio.m }} />}
+      {!MODO_DEMO && <Boton texto="Eliminar mi cuenta" variante="fantasma" icono="trash-outline" onPress={pedirBorrarCuenta} cargando={borrando} estilo={{ marginTop: espacio.xl }} />}
       <Text style={{ fontFamily: fuentes.regular, fontSize: 11.5, color: colores.textoTenue, textAlign: 'center', marginTop: espacio.l }}>
         Portal CEQ · Centro de Estudiantes de Química
       </Text>

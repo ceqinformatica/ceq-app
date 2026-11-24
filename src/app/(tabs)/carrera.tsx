@@ -1,11 +1,11 @@
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Pressable, Text, View } from 'react-native';
-import { FichaMateria, LeyendaMalla, nombreSemestre, nota, type EstadoVisual } from '../../components/academico';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { FichaMateria, nombreSemestre, nota, type EstadoVisual } from '../../components/academico';
 import { useDisposicion } from '../../components/disposicion';
 import { AnilloProgreso, BarraProgreso } from '../../components/graficos';
-import { Boton, BotonIcono, CabeceraMarca, Cargando, Chip, Dato, EstadoVacio, Mensaje, Pantalla, s, Seccion, Tarjeta } from '../../components/ui';
+import { Boton, BotonIcono, CabeceraMarca, Campo, Cargando, Chip, Dato, EstadoVacio, Fila, Mensaje, Pantalla, s, Tarjeta } from '../../components/ui';
 import { useSesion } from '../../context/SesionProvider';
 import { cargarMalla, guardarEstadosEnBloque, type CambioEstado } from '../../datos/academico';
 import { usarDatos } from '../../datos/usarDatos';
@@ -36,6 +36,7 @@ export default function Carrera() {
   const planId = perfil?.plan_id ?? '';
   const { datos: malla, cargando, error, refrescando, recargar, setDatos, sinConexion } = usarDatos(() => cargarMalla(planId, perfil?.carrera_id), [planId, perfil?.carrera_id], { cache: `malla:${planId}` });
   const [filtro, setFiltro] = useState<Filtro>('todas');
+  const [busqueda, setBusqueda] = useState('');
   /** null = modo normal; un Set = modo "Marcar varias" con las materias elegidas. */
   const [seleccion, setSeleccion] = useState<Set<string> | null>(null);
   const [guardando, setGuardando] = useState(false);
@@ -166,7 +167,9 @@ export default function Carrera() {
       return { estado: faltan ? 'bloqueada' : 'pendiente', faltan };
     };
     const semestres = new Map<number, typeof malla.materiasDb>();
+    const buscado = normalizar(busqueda.trim());
     for (const m of malla.materiasDb) {
+      if (buscado && !normalizar(m.nombre).includes(buscado) && !normalizar(m.codigo ?? '').includes(buscado)) continue;
       const { estado } = estadoDe(m.id);
       const optativa = m.grupo_optativa_id != null;
       const pasa =
@@ -182,13 +185,13 @@ export default function Carrera() {
     // Niveles en orden y las optativas al final.
     const orden = (n: number) => (n === OPTATIVAS ? Infinity : n);
     return { progreso, promedio, prom, cursando, estadoDe, semestres: [...semestres.entries()].sort((a, b) => orden(a[0]) - orden(b[0])) };
-  }, [malla, filtro]);
+  }, [malla, filtro, busqueda]);
 
   const sub = [malla?.carrera, malla?.plan?.nombre].filter(Boolean).join(' · ') || 'Tu malla y tu avance';
 
   return (
     <View style={{ flex: 1, backgroundColor: fondos.fondo }}>
-    <Pantalla cabecera={<CabeceraMarca titulo="Mi carrera" sub={sub} derecha={<BotonIcono icono="stats-chart" etiqueta="Promedio y estadísticas" claro onPress={() => router.push('/estadisticas')} />} sinConexion={sinConexion && malla ? error : null} />} refrescando={refrescando} onRefrescar={recargar}>
+    <Pantalla cabecera={<CabeceraMarca titulo="Mi carrera" sub={sub} derecha={<BotonIcono icono="stats-chart" etiqueta="Promedio y estadísticas" plano onPress={() => router.push('/estadisticas')} />} sinConexion={sinConexion && malla ? error : null} />} refrescando={refrescando} onRefrescar={recargar}>
       {cargando && !malla ? (
         <Tarjeta estilo={{ marginTop: -espacio.xxl }}><Cargando texto="Cargando tu malla…" /></Tarjeta>
       ) : error && !malla ? (
@@ -281,38 +284,31 @@ export default function Carrera() {
             </Tarjeta>
           ) : (
             <>
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: espacio.s, marginTop: espacio.s, marginBottom: espacio.m }}>
+              <Tarjeta estilo={{ paddingVertical: espacio.xs }}>
+                <Fila simple icono="checkbox-outline" titulo="Marcar varias aprobadas" onPress={empezarSeleccion} />
+                <Fila simple icono="document-text-outline" titulo="Importar extracto del EALU" onPress={() => router.push('/extracto')} ultima />
+              </Tarjeta>
+              <Text style={est.misMaterias} accessibilityRole="header">Mis materias</Text>
+              <Campo
+                etiqueta="Buscar materia"
+                placeholder="Nombre de la materia"
+                value={busqueda}
+                onChangeText={setBusqueda}
+                autoCorrect={false}
+                returnKeyType="search"
+                clearButtonMode="while-editing"
+              />
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: espacio.s, marginBottom: espacio.s }}>
                 {FILTROS.map((f) => (
                   <Chip key={f.valor} texto={f.texto} elegido={filtro === f.valor} onPress={() => setFiltro(f.valor)} />
                 ))}
               </View>
-              <Tarjeta variante="borde" onPress={empezarSeleccion} etiqueta="Marcar varias materias aprobadas">
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: espacio.m }}>
-                  <View style={est.icono}><Ionicons name="checkbox-outline" size={20} color={colores.marino} /></View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={[s.filaTitulo, { color: colores.marino }]}>Marcar varias aprobadas</Text>
-                    <Text style={s.filaDetalle}>Si ya avanzaste en la carrera, cargalas de una vez.</Text>
-                  </View>
-                  <Ionicons name="chevron-forward" size={18} color={colores.textoTenue} />
-                </View>
-              </Tarjeta>
-              <Tarjeta variante="borde" onPress={() => router.push('/extracto')} etiqueta="Importar extracto del EALU">
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: espacio.m }}>
-                  <View style={est.icono}><Ionicons name="document-text-outline" size={20} color={colores.marino} /></View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={[s.filaTitulo, { color: colores.marino }]}>Importar extracto del EALU</Text>
-                    <Text style={s.filaDetalle}>Subí el PDF de notas finales y cargamos tus aprobadas con nota.</Text>
-                  </View>
-                  <Ionicons name="chevron-forward" size={18} color={colores.textoTenue} />
-                </View>
-              </Tarjeta>
             </>
           )}
-          <LeyendaMalla />
           {error && !sinConexion && <Mensaje texto={error} />}
 
           {vista.semestres.length === 0 && (
-            <EstadoVacio icono="filter-outline" titulo="Nada por acá" texto="No hay materias con este filtro." />
+            <EstadoVacio icono="filter-outline" titulo="Nada por acá" texto={busqueda.trim() ? 'Ninguna materia coincide con la búsqueda.' : 'No hay materias con este filtro.'} />
           )}
 
           {vista.semestres.map(([sem, materias]) => {
@@ -323,16 +319,17 @@ export default function Carrera() {
             for (let i = 0; i < materias.length; i += porFila) filas.push(materias.slice(i, i + porFila));
             return (
               <View key={sem} style={{ marginBottom: espacio.s }}>
-                <Seccion
-                  accion={
-                    seleccion && obligSem.length > 0
-                      ? { texto: semCompleto ? 'Quitar' : 'Todo el semestre', onPress: () => semestreCompleto(sem) }
-                      : undefined
-                  }
-                >
-                  {sem === OPTATIVAS ? 'Optativas' : nombreSemestre(sem)}
-                  <Text style={{ fontFamily: fuentes.regular, fontSize: 13, color: colores.textoSuave }}>{'   '}{aprobadas}/{materias.length} aprobadas</Text>
-                </Seccion>
+                <View style={est.semestre}>
+                  <Text style={est.semestreTitulo} accessibilityRole="header" accessibilityLabel={`${sem === OPTATIVAS ? 'Optativas' : nombreSemestre(sem)}, ${aprobadas} de ${materias.length} aprobadas`}>
+                    {sem === OPTATIVAS ? 'Optativas' : nombreSemestre(sem)}
+                  </Text>
+                  <View style={est.semestreLinea} />
+                  {seleccion && obligSem.length > 0 ? (
+                    <Pressable onPress={() => semestreCompleto(sem)} accessibilityRole="button" hitSlop={8}>
+                      <Text style={s.enlace}>{semCompleto ? 'Quitar' : 'Todo el semestre'}</Text>
+                    </Pressable>
+                  ) : null}
+                </View>
                 {filas.map((fila, i) => (
                   <View key={i} style={{ flexDirection: 'row', gap: espacio.s, marginBottom: espacio.s }}>
                     {fila.map((m, j) => {
@@ -383,8 +380,13 @@ export default function Carrera() {
   );
 }
 
+const normalizar = (x: string) => x.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+
 const est = crearEstilos(() => ({
-  icono: { width: 38, height: 38, borderRadius: 12, backgroundColor: fondos.tarjeta, alignItems: 'center', justifyContent: 'center' },
+  misMaterias: { fontFamily: fuentes.bold, fontSize: 20, color: colores.texto, marginTop: espacio.l, marginBottom: espacio.s },
+  semestre: { flexDirection: 'row', alignItems: 'center', gap: espacio.m, marginTop: espacio.l, marginBottom: espacio.s },
+  semestreTitulo: { fontFamily: fuentes.bold, fontSize: 18, color: colores.texto },
+  semestreLinea: { flex: 1, height: StyleSheet.hairlineWidth * 2, backgroundColor: colores.linea },
   barra: {
     position: 'absolute', left: espacio.l, right: espacio.l, bottom: espacio.l, flexDirection: 'row', alignItems: 'center', gap: espacio.m,
     backgroundColor: fondos.marino, borderRadius: radio.l, padding: espacio.s, paddingLeft: espacio.l, ...sombras.fuerte,

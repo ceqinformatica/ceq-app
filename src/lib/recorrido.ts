@@ -36,7 +36,7 @@ export const PASOS_RECORRIDO: readonly PasoRecorrido[] = [
   {
     id: 'inicio',
     titulo: 'Inicio',
-    texto: 'Tu resumen del día: cuánto avanzaste en la carrera, tus clases de hoy, las próximas fechas y los avisos del CEQ. Los accesos rápidos te llevan a la malla, la firma, la agenda y el carnet.',
+    texto: 'Tu resumen del día: cuánto avanzaste en la carrera, tus clases de hoy, las próximas fechas y los avisos del CEQ. Los accesos rápidos te llevan a la malla, la firma y la agenda.',
     icono: 'home',
     pestana: 0,
     ruta: '/',
@@ -76,7 +76,7 @@ export const PASOS_RECORRIDO: readonly PasoRecorrido[] = [
   {
     id: 'perfil',
     titulo: 'Tu perfil',
-    texto: 'Tocá tu inicial arriba a la derecha en Inicio para cambiar de carrera, elegir el modo oscuro, activar el desbloqueo con huella, manejar las notificaciones y ver este recorrido de nuevo.',
+    texto: 'Tocá el ícono de perfil arriba a la derecha para cambiar de carrera, elegir el modo oscuro, activar el desbloqueo con huella, manejar las notificaciones y ver este recorrido de nuevo.',
     icono: 'person-circle',
     ruta: '/',
   },

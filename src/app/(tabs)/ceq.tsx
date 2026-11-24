@@ -33,11 +33,11 @@ export default function Ceq() {
 
   return (
     <Pantalla
-      cabecera={<CabeceraMarca titulo="CEQ" compacta derecha={<BotonIcono icono="megaphone-outline" etiqueta="Ver avisos" claro onPress={() => router.push('/avisos')} />} sinConexion={sinConexion && datos ? error : null} />}
+      cabecera={<CabeceraMarca titulo="Centro de estudiantes" sub="Facultad de Ciencias Químicas · UNA" derecha={<BotonIcono icono="megaphone-outline" etiqueta="Ver avisos" plano onPress={() => router.push('/avisos')} />} sinConexion={sinConexion && datos ? error : null} />}
       refrescando={refrescando}
       onRefrescar={recargar}
     >
-      <View style={{ marginTop: -espacio.xxl }}>
+      <View style={{ marginTop: -espacio.xl }}>
         {cargando && !datos ? (
           <Tarjeta><Esqueleto alto={150} /></Tarjeta>
         ) : datos?.socio ? (
@@ -72,7 +72,7 @@ export default function Ceq() {
         </Tarjeta>
       )}
 
-      <Seccion icono="grid-outline">Servicios</Seccion>
+      <Seccion>Servicios</Seccion>
       <View style={est.accesos}>
         <Acceso icono="megaphone" texto="Avisos" onPress={() => router.push('/avisos')} />
         <Acceso icono="document-text" texto="Trámites" onPress={() => router.push('/tramites')} />

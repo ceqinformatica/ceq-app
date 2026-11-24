@@ -1,7 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useFocusEffect } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { setStatusBarStyle } from 'expo-status-bar';
-import { useCallback, useEffect, useRef, useState, type ComponentProps, type ComponentRef, type ReactNode } from 'react';
+import { isValidElement, useCallback, useEffect, useRef, useState, type ComponentProps, type ComponentRef, type ReactNode } from 'react';
 import {
   ActivityIndicator, Animated, Image, Keyboard, KeyboardAvoidingView, Modal, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text,
   TextInput, useWindowDimensions, View, type TextInputProps, type TextStyle, type ViewStyle,
@@ -9,9 +9,8 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTema } from '../context/TemaProvider';
 import { useDisposicion } from './disposicion';
-import { FondoOndas, Hexagono } from './graficos';
 import { Aparecer, NumeroAnimado, PressableAnimado, useAparecer, usePresion, vibrar } from './movimiento';
-import { colores, crearEstilos, degradadoMarca, espacio, fondos, fuentes, radio, sombras, texto } from '../tema';
+import { colores, crearEstilos, espacio, fondos, fuentes, radio, sombras, texto } from '../tema';
 
 /**
  * Deja lugar al teclado para que no tape lo que se escribe.
@@ -73,8 +72,8 @@ export type NombreIcono = ComponentProps<typeof Ionicons>['name'];
 /* ------------------------------------------------------------------ */
 
 /**
- * Contenedor de cada pantalla. Con `cabecera` la banda marina ocupa el borde
- * superior (debajo de la barra de estado) y el contenido sube sobre ella.
+ * Contenedor de cada pantalla. Con una `CabeceraMarca`, la barra "Portal CEQ"
+ * queda fija arriba y el título se desplaza con el contenido.
  */
 export function Pantalla({ children, scroll = true, estilo, cabecera, refrescando, onRefrescar }: {
   children: ReactNode; scroll?: boolean; estilo?: ViewStyle; cabecera?: ReactNode;
@@ -83,12 +82,16 @@ export function Pantalla({ children, scroll = true, estilo, cabecera, refrescand
   const { anchoMaximo } = useDisposicion();
   const ancho = anchoMaximo ? { width: '100%' as const, maxWidth: anchoMaximo, alignSelf: 'center' as const } : null;
   const contenido = <View style={[s.contenido, ancho, cabecera ? { paddingTop: 0 } : null, estilo]}>{children}</View>;
+  // Con CabeceraMarca, la barra "Portal CEQ" queda fija arriba y el resto se desplaza.
+  const marca = isValidElement<ComponentProps<typeof CabeceraMarca>>(cabecera) && cabecera.type === CabeceraMarca ? cabecera.props : null;
+  const barra = marca ? <BarraPortal derecha={marca.derecha} sinPerfil={marca.sinPerfil} /> : null;
   const refresh = onRefrescar ? (
-    <RefreshControl refreshing={Boolean(refrescando)} onRefresh={onRefrescar} tintColor={cabecera ? colores.blanco : colores.marino} colors={[colores.marino]} />
+    <RefreshControl refreshing={Boolean(refrescando)} onRefresh={onRefrescar} tintColor={colores.marino} colors={[colores.marino]} />
   ) : undefined;
   return (
     <EvitaTeclado estilo={s.pantalla}>
-    <SafeAreaView style={s.pantalla} edges={cabecera ? ['left', 'right'] : ['top', 'left', 'right']}>
+    <SafeAreaView style={s.pantalla} edges={marca ? ['left', 'right'] : ['top', 'left', 'right']}>
+      {barra}
       {scroll ? (
         <ScrollView
           keyboardShouldPersistTaps="handled"
@@ -111,55 +114,66 @@ export function Pantalla({ children, scroll = true, estilo, cabecera, refrescand
 }
 
 /**
- * Cabecera azul del CEQ, con degradado y ondas: la firma visual de la app.
- * Sin `titulo` muestra la marca (logo y "Portal CEQ"), como en el inicio;
- * con `titulo`, el nombre de la pestaña.
+ * Barra superior "Portal CEQ": logo, nombre y botones (perfil y los de cada pantalla).
+ * Pantalla la deja fija arriba cuando la pantalla usa CabeceraMarca.
  */
-export function CabeceraMarca({ titulo, sub, derecha, children, compacta, sinConexion }: {
+export function BarraPortal({ derecha, sinPerfil }: { derecha?: ReactNode; sinPerfil?: boolean }) {
+  const insets = useSafeAreaInsets();
+  const { anchoMaximo } = useDisposicion();
+  useBarraEstado('dark');
+  const ancho = anchoMaximo ? { width: '100%' as const, maxWidth: anchoMaximo, alignSelf: 'center' as const } : null;
+  return (
+    <View style={s.cabecera}>
+      <View style={[s.cabeceraBarra, { paddingTop: insets.top + espacio.s }, ancho]}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: espacio.s, flexShrink: 1 }}>
+          <View style={s.cabeceraLogo}>
+            <Image source={logoCeq} style={{ width: 24, height: 24 }} accessibilityLabel="Logo del CEQ" />
+          </View>
+          <Text style={s.cabeceraMarca} numberOfLines={1}>Portal CEQ</Text>
+          <Text style={s.cabeceraMarcaSub} numberOfLines={1}>FCQ · UNA</Text>
+        </View>
+        {derecha || !sinPerfil ? (
+          <View style={s.cabeceraAcciones}>
+            {derecha}
+            {derecha && !sinPerfil ? <View style={s.cabeceraSeparador} /> : null}
+            {!sinPerfil ? <BotonIcono icono="person-circle-outline" etiqueta="Abrir mi perfil" plano tamano={26} onPress={() => router.push('/perfil')} /> : null}
+          </View>
+        ) : null}
+      </View>
+    </View>
+  );
+}
+
+/**
+ * Título grande de cada pantalla, sobre el fondo claro con la burbuja.
+ * `derecha` y `sinPerfil` van a la barra "Portal CEQ" (que Pantalla deja fija arriba).
+ */
+export function CabeceraMarca({ titulo, sub, children, compacta, sinConexion }: {
   titulo?: string; sub?: string; derecha?: ReactNode; children?: ReactNode; compacta?: boolean;
   /** Texto del aviso "Sin conexión" (se muestra lo guardado). */
   sinConexion?: string | null;
+  /** Oculta el botón de perfil (pantallas sin sesión, como el alta, o el propio perfil). */
+  sinPerfil?: boolean;
 }) {
-  const insets = useSafeAreaInsets();
   const { anchoMaximo } = useDisposicion();
-  const [tam, setTam] = useState({ w: 0, h: 0 });
-  useBarraEstado('light');
+  const ancho = anchoMaximo ? { width: '100%' as const, maxWidth: anchoMaximo, alignSelf: 'center' as const } : null;
   return (
-    <View
-      style={[s.cabecera, { paddingTop: insets.top + espacio.m, paddingBottom: compacta ? espacio.xl + espacio.s : espacio.xxl + espacio.l }]}
-      onLayout={(e) => setTam({ w: Math.round(e.nativeEvent.layout.width), h: Math.round(e.nativeEvent.layout.height) })}
-    >
-      {tam.w > 0 && <FondoOndas ancho={tam.w} alto={tam.h} />}
-      <View style={anchoMaximo ? { width: '100%', maxWidth: anchoMaximo, alignSelf: 'center' } : null}>
-      {titulo ? (
-        <View style={s.cabeceraFila}>
-          <Text style={s.cabeceraTitulo} accessibilityRole="header" numberOfLines={1}>{titulo}</Text>
-          {derecha}
-        </View>
-      ) : (
-        <View style={s.cabeceraFila}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: espacio.m }}>
-            <Hexagono tamano={54} relleno={fondos.blanco}>
-              <Image source={logoCeq} style={{ width: 34, height: 34 }} accessibilityLabel="Logo del CEQ" />
-            </Hexagono>
-            <View>
-              <Text style={s.cabeceraMarca}>Portal CEQ</Text>
-              <Text style={s.cabeceraMarcaSub}>Centro de Estudiantes{'\n'}FCQ - UNA</Text>
+    <View style={s.cabecera}>
+      <View style={[s.cabeceraCuerpo, { paddingBottom: compacta ? espacio.xl + espacio.s : espacio.xxl + espacio.m }]}>
+        <View style={s.cabeceraBurbuja} pointerEvents="none" />
+        <View style={ancho}>
+          {titulo ? <Text style={s.cabeceraTitulo} accessibilityRole="header">{titulo}</Text> : null}
+          <Aparecer distancia={10}>
+            {sub ? <Text style={s.cabeceraSub}>{sub}</Text> : null}
+            {children}
+          </Aparecer>
+          {sinConexion ? (
+            <View style={s.pildoraSinConexion} accessibilityRole="alert" accessibilityLiveRegion="polite">
+              <Ionicons name="cloud-offline-outline" size={15} color={colores.marino} />
+              <Text style={s.pildoraSinConexionTexto}>{sinConexion}</Text>
             </View>
-          </View>
-          {derecha}
+          ) : null}
         </View>
-      )}
-      <Aparecer distancia={10}>
-      {sub ? <Text style={s.cabeceraSub}>{sub}</Text> : null}
-      {children}
-      </Aparecer>
-      {sinConexion ? (
-        <View style={s.pildoraSinConexion} accessibilityRole="alert" accessibilityLiveRegion="polite">
-          <Ionicons name="cloud-offline-outline" size={15} color={colores.blanco} />
-          <Text style={s.pildoraSinConexionTexto}>{sinConexion}</Text>
-        </View>
-      ) : null}
       </View>
     </View>
   );
@@ -352,16 +366,20 @@ const variantesBoton = (): Record<string, { caja: ViewStyle; presionado: ViewSty
   claro: { caja: { backgroundColor: fondos.blanco }, presionado: { backgroundColor: colores.cielo }, color: colores.marinoFijo },
 });
 
-export function BotonIcono({ icono, etiqueta, onPress, claro, tamano = 22 }: { icono: NombreIcono; etiqueta: string; onPress: () => void; claro?: boolean; tamano?: number }) {
+export function BotonIcono({ icono, etiqueta, onPress, claro, plano, tamano = 22 }: {
+  icono: NombreIcono; etiqueta: string; onPress: () => void; claro?: boolean;
+  /** Sin fondo, ícono marino (para la pastilla de la cabecera). */
+  plano?: boolean; tamano?: number;
+}) {
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={etiqueta}
       hitSlop={6}
-      style={({ pressed }) => [s.botonIcono, claro ? { backgroundColor: 'rgba(255,255,255,0.14)' } : { backgroundColor: fondos.superficieBlanca, ...sombras.suave }, pressed && { opacity: 0.7 }]}
+      style={({ pressed }) => [s.botonIcono, plano ? null : claro ? { backgroundColor: 'rgba(255,255,255,0.14)' } : { backgroundColor: fondos.superficieBlanca, ...sombras.suave }, pressed && { opacity: 0.6 }]}
     >
-      <Ionicons name={icono} size={tamano} color={claro ? colores.blanco : colores.marino} />
+      <Ionicons name={icono} size={tamano} color={claro && !plano ? colores.blanco : colores.marino} />
     </Pressable>
   );
 }
@@ -610,15 +628,17 @@ export const s = crearEstilos(() => ({
   pantalla: { flex: 1, backgroundColor: fondos.fondo },
   contenido: { padding: espacio.l, paddingBottom: espacio.xxxl + espacio.xl },
 
-  cabecera: {
-    backgroundColor: degradadoMarca.desde, paddingHorizontal: espacio.l, borderBottomLeftRadius: radio.xl + 6, borderBottomRightRadius: radio.xl + 6,
-    overflow: 'hidden', marginBottom: espacio.xs,
-  },
-  cabeceraFila: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: espacio.m, gap: espacio.m },
-  cabeceraMarca: { fontFamily: fuentes.bold, fontSize: 22, color: colores.blanco, letterSpacing: 0.2 },
-  cabeceraMarcaSub: { fontFamily: fuentes.medium, fontSize: 12, lineHeight: 15, color: colores.blanco, marginTop: 1 },
-  cabeceraTitulo: { flex: 1, fontFamily: fuentes.bold, fontSize: 24, lineHeight: 30, color: colores.blanco },
-  cabeceraSub: { ...texto.cuerpo, color: colores.blanco, marginTop: -espacio.xs },
+  cabecera: { backgroundColor: fondos.franja },
+  cabeceraBarra: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: espacio.m, paddingHorizontal: espacio.l, paddingBottom: espacio.s + 2 },
+  cabeceraLogo: { width: 34, height: 34, borderRadius: 17, backgroundColor: fondos.blanco, alignItems: 'center', justifyContent: 'center' },
+  cabeceraMarca: { fontFamily: fuentes.bold, fontSize: 17, color: colores.marinoOscuro },
+  cabeceraMarcaSub: { fontFamily: fuentes.medium, fontSize: 12.5, color: colores.marinoOscuro, flexShrink: 1 },
+  cabeceraAcciones: { flexDirection: 'row', alignItems: 'center', backgroundColor: fondos.superficieBlanca, borderRadius: 999, paddingHorizontal: 4, paddingVertical: 2, ...sombras.suave },
+  cabeceraSeparador: { width: StyleSheet.hairlineWidth, alignSelf: 'stretch', marginVertical: 8, backgroundColor: colores.linea },
+  cabeceraCuerpo: { backgroundColor: fondos.fondo, borderTopLeftRadius: radio.xl + 6, borderTopRightRadius: radio.xl + 6, paddingHorizontal: espacio.l, paddingTop: espacio.m, overflow: 'hidden' },
+  cabeceraBurbuja: { position: 'absolute', left: -70, top: -40, width: 150, height: 170, borderRadius: 85, backgroundColor: fondos.burbuja },
+  cabeceraTitulo: { fontFamily: fuentes.bold, fontSize: 32, lineHeight: 38, color: colores.marinoOscuro, letterSpacing: -0.5 },
+  cabeceraSub: { ...texto.cuerpo, color: colores.marinoOscuro, marginTop: 2 },
 
   encabezado: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: espacio.xl },
   marca: { fontFamily: fuentes.bold, fontSize: 22, color: colores.marino, letterSpacing: 1 },
@@ -648,8 +668,8 @@ export const s = crearEstilos(() => ({
     position: 'absolute', right: espacio.l, bottom: espacio.l, flexDirection: 'row', alignItems: 'center', gap: espacio.s,
     backgroundColor: fondos.marino, paddingHorizontal: espacio.l, height: 52, borderRadius: radio.pill, ...sombras.fuerte,
   },
-  pildoraSinConexion: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', marginTop: espacio.s, paddingHorizontal: espacio.m, paddingVertical: 6, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.16)' },
-  pildoraSinConexionTexto: { fontFamily: fuentes.medium, fontSize: 12.5, color: colores.blanco, flexShrink: 1 },
+  pildoraSinConexion: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', marginTop: espacio.s, paddingHorizontal: espacio.m, paddingVertical: 6, borderRadius: 999, backgroundColor: fondos.superficieBlanca },
+  pildoraSinConexionTexto: { fontFamily: fuentes.medium, fontSize: 12.5, color: colores.marino, flexShrink: 1 },
   flotanteTexto: { fontFamily: fuentes.semibold, fontSize: 15, color: colores.blanco },
 
   etiqueta: { fontFamily: fuentes.medium, fontSize: 13.5, color: colores.marinoOscuro, marginBottom: espacio.xs + 2 },
