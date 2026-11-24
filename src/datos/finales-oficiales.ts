@@ -47,15 +47,25 @@ export async function cargarHorario(id: string): Promise<{ horario: HorarioFinal
 }
 
 /** Nombres de las materias de una carrera (todos sus planes), sin repetir. */
-export async function materiasDeCarrera(carreraId: string): Promise<string[]> {
+export async function materiasDeCarrera(carreraId: string, anioPlan?: number | null): Promise<string[]> {
   if (MODO_DEMO) return [...new Set(db.materias.map((m) => m.nombre))];
-  const { data: planes, error } = await supabase.from('planes').select('id').eq('carrera_id', carreraId);
+  const { data: planes, error } = await supabase.from('planes').select('id, anio').eq('carrera_id', carreraId);
   lanzar(error);
-  const ids = (planes ?? []).map((p) => p.id);
+  // Con el plan que nombra el PDF se comparan solo sus materias; si la carrera no lo tiene, todas.
+  const delPlan = anioPlan ? (planes ?? []).filter((p) => p.anio === anioPlan) : [];
+  const ids = (delPlan.length ? delPlan : planes ?? []).map((p) => p.id);
   if (!ids.length) return [];
   const { data, error: e2 } = await supabase.from('materias').select('nombre').in('plan_id', ids).limit(2000);
   lanzar(e2);
   return [...new Set((data ?? []).map((m) => m.nombre))].sort((a, b) => a.localeCompare(b, 'es'));
+}
+
+/** Años de los planes de una carrera (para elegir a qué plan corresponde un horario). */
+export async function aniosDePlanes(carreraId: string): Promise<number[]> {
+  if (MODO_DEMO) return [...new Set(db.planes.map((p) => p.anio).filter((a): a is number => a != null))];
+  const { data, error } = await supabase.from('planes').select('anio').eq('carrera_id', carreraId);
+  lanzar(error);
+  return [...new Set((data ?? []).map((p) => p.anio).filter((a): a is number => a != null))].sort();
 }
 
 /** Bytes del PDF elegido con el selector de archivos. */

@@ -6,7 +6,7 @@
  */
 import type {
   AsistenciaDb, AvisoDb, CalendarioDb, Carrera, EncuestaDb, EvaluacionDb, EventoDb, ExamenFinalDb, GrupoOptativasDb, HorarioDb, MateriaDb,
-  MateriaEstudianteDb, OpcionEncuestaDb, HorarioFinalesDb, FechaFinalDb, VentanaDb, Perfil, Plan, PrerrequisitoDb, ReglaFirmaDb, SocioDb, SolicitudCarnetDb, SugerenciaDb, NotificacionDb, TramiteDb,
+  MateriaEstudianteDb, OpcionEncuestaDb, HorarioFinalesDb, FechaFinalDb, HorarioClasesDb, ClaseOficialDb, VentanaDb, Perfil, Plan, PrerrequisitoDb, ReglaFirmaDb, SocioDb, SolicitudCarnetDb, SugerenciaDb, NotificacionDb, TramiteDb,
 } from '../lib/tipos-db';
 import { GUIA_TRAMITES_FCQ } from './guia-tramites-fcq';
 import { CALENDARIO_FCQ_2026 } from './calendario-fcq';
@@ -165,6 +165,18 @@ export const db = {
     ['Química Analítica I', 2, 22, '08:00', 'Aula 12'], ['Fisicoquímica I', 2, 24, '13:30', null], ['Bioquímica', 2, 26, '08:00', 'Aula 7'],
   ] as const).map(([materia, llamado, dias, hora, aula], i): FechaFinalDb => ({
     id: `ff${i + 1}`, horario_id: 'hf1', materia, llamado, fecha: enDias(dias).slice(0, 10), hora, aula, created_at: enDias(-1),
+  })),
+  horariosClases: [
+    { id: 'hc1', carrera_id: 'car-1', plan_anio: 2018, titulo: 'Horario de clases · 2.º periodo ' + ahora.getFullYear(), pdf_path: null, publicado: true, publicado_en: enDias(-3), creado_por: null, created_at: enDias(-3), updated_at: enDias(-3) },
+  ] as HorarioClasesDb[],
+  clasesOficiales: ([
+    ['Química Analítica I', 3, 'A', 1, '07:30', '09:30', 'Aula 12', 'teoria'], ['Química Analítica I', 3, 'A', 3, '13:30', '17:30', 'Lab. 2', 'laboratorio'],
+    ['Química Analítica I', 3, 'B', 2, '07:30', '09:30', 'Aula 14', 'teoria'], ['Química Analítica I', 3, 'B', 4, '13:30', '17:30', 'Lab. 2', 'laboratorio'],
+    ['Fisicoquímica I', 3, 'A', 1, '10:00', '12:00', 'Aula Magna', 'teoria'], ['Fisicoquímica I', 3, 'A', 4, '07:30', '09:30', 'Aula 12', 'rp'],
+    ['Bioquímica', 4, null, 2, '08:00', '10:00', 'Aula 7', 'teoria'], ['Bioquímica', 4, null, 4, '14:00', '18:00', 'Lab. Bioquímica', 'laboratorio'], ['Bioquímica', 4, null, 5, '13:30', '15:30', 'Aula 7', 'rp'],
+    ['Química Orgánica II', 4, null, 3, '07:30', '09:30', 'Aula 3', 'teoria'],
+  ] as const).map(([materia, nivel, seccion, dia_semana, hora_inicio, hora_fin, aula, tipo_clase], i): ClaseOficialDb => ({
+    id: `co${i + 1}`, horario_id: 'hc1', materia, nivel, seccion, dia_semana, hora_inicio: hora_inicio + ':00', hora_fin: hora_fin + ':00', aula, tipo_clase, created_at: enDias(-3),
   })),
   ventanas: [
     {

@@ -5,6 +5,7 @@ import * as WebBrowser from 'expo-web-browser';
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, Switch, Text, View } from 'react-native';
 import { Columnas } from '../../components/disposicion';
+import { textoProgreso, useLectorOcr } from '../../components/LectorOcr';
 import { CampoFechaHora } from '../../components/fecha';
 import { BarraSuperior, Boton, Campo, Cargando, Chip, Fila, Hoja, Insignia, Mensaje, Pantalla, s, Seccion, Tarjeta } from '../../components/ui';
 import { useTema } from '../../context/TemaProvider';
@@ -14,7 +15,8 @@ import {
   urlPdfHorario, type FechaEditable,
 } from '../../datos/finales-oficiales';
 import { textoError } from '../../lib/errores';
-import { detectarCarrera, isoATexto, leerHorarioFinales, textoAIso, textoLlamado, tituloSugerido } from '../../lib/horario-finales';
+import { detectarCarrera, detectarPlan, isoATexto, leerHorarioFinales, textoAIso, textoLlamado, tituloSugerido } from '../../lib/horario-finales';
+import { confianzaMedia, textoDeOcr } from '../../lib/ocr/documento';
 import { textoDePdfGeneral } from '../../lib/pdf-texto';
 import type { Carrera, HorarioFinalesDb } from '../../lib/tipos-db';
 import { colores, espacio, fondos } from '../../tema';
@@ -51,6 +53,10 @@ export default function HorarioFinalesAdmin() {
   const [pdf, setPdf] = useState<{ bytes: Uint8Array; nombre: string } | null>(null);
   const [filas, setFilas] = useState<Fila[]>([]);
   const [leyendo, setLeyendo] = useState(false);
+  const [progreso, setProgreso] = useState<string | null>(null);
+  const [plan, setPlan] = useState<number | null>(null);
+  const [escaneado, setEscaneado] = useState(false);
+  const lector = useLectorOcr();
   const [editando, setEditando] = useState<Fila | null>(null);
   const [notificar, setNotificar] = useState(true);
   const [guardando, setGuardando] = useState<null | 'guardar' | 'publicar' | 'ocultar' | 'borrar'>(null);
@@ -82,11 +88,11 @@ export default function HorarioFinalesAdmin() {
   useEffect(() => {
     if (!carreraId) return setMaterias([]);
     let activo = true;
-    materiasDeCarrera(carreraId).then((m) => activo && setMaterias(m)).catch(() => {});
+    materiasDeCarrera(carreraId, plan).then((m) => activo && setMaterias(m)).catch(() => {});
     return () => {
       activo = false;
     };
-  }, [carreraId]);
+  }, [carreraId, plan]);
 
   // Al tener el texto y las materias, se detecta todo (y se vuelve a detectar si cambia la carrera).
   useEffect(() => {
@@ -107,12 +113,29 @@ export default function HorarioFinalesAdmin() {
       const bytes = await bytesDeArchivo(a as { uri: string; file?: File });
       // Leer el PDF lleva un momento: se deja dibujar el "Leyendo…" primero.
       await new Promise((ok) => setTimeout(ok, 50));
-      const t = textoDePdfGeneral(bytes);
+      let t = textoDePdfGeneral(bytes);
+      setEscaneado(false);
+      if (!t.trim()) {
+        // PDF escaneado: se lee la imagen con OCR (en el dispositivo).
+        setProgreso(textoProgreso(null));
+        try {
+          const paginas = await lector.leer(bytes, (p) => setProgreso(textoProgreso(p)));
+          t = textoDeOcr(paginas);
+          setEscaneado(true);
+          if (t.trim() && confianzaMedia(paginas) < 65) setAviso('El escaneo se ve borroso: revisá bien cada fecha antes de publicar.');
+        } catch (e) {
+          setAviso(`${textoError(e, 'No se pudo leer el PDF escaneado.')} Podés cargar las fechas a mano y el PDF queda para que lo vean los estudiantes.`);
+          t = '';
+        } finally {
+          setProgreso(null);
+        }
+      }
       setPdf({ bytes, nombre: a.name ?? 'horario.pdf' });
       setTexto(t);
+      setPlan(detectarPlan(t));
       if (!t.trim()) {
         setFilas([]);
-        setAviso('Este PDF es una imagen escaneada: no tiene texto para leer. Podés cargar las fechas a mano y el PDF queda para que lo vean los estudiantes.');
+        setAviso((v) => v ?? 'No encontramos texto en este PDF. Podés cargar las fechas a mano y el PDF queda para que lo vean los estudiantes.');
       }
       const c = t ? detectarCarrera(t, carreras) : null;
       if (c) setCarreraId(c);
@@ -244,13 +267,15 @@ export default function HorarioFinalesAdmin() {
         <Tarjeta variante="celeste">
           <Text style={s.filaTitulo}>{pdf ? pdf.nombre : '1. Elegí el PDF de una carrera'}</Text>
           <Text style={[s.filaDetalle, { marginTop: 2 }]}>
-            {pdf
-              ? texto
-                ? carreraId
-                  ? `Encontramos ${filas.length} fechas${sinMateria.length ? `, ${sinMateria.length} para revisar` : ''}.`
-                  : 'Elegí la carrera para ver las fechas.'
-                : 'Sin texto para leer.'
-              : 'El horario o anteproyecto de exámenes finales que publica la Dirección Académica.'}
+            {leyendo && progreso
+              ? `${progreso} La primera vez descarga el lector (unos 8 MB).`
+              : pdf
+                ? texto
+                  ? carreraId
+                    ? `${escaneado ? 'PDF escaneado leído. ' : ''}Encontramos ${filas.length} fechas${sinMateria.length ? `, ${sinMateria.length} para revisar` : ''}.`
+                    : 'Elegí la carrera para ver las fechas.'
+                  : 'Sin texto para leer.'
+                : 'El horario o anteproyecto de exámenes finales que publica la Dirección Académica. Si está escaneado (con firmas), lo leemos igual.'}
           </Text>
           <Boton
             texto={pdf ? 'Elegir otro PDF' : 'Elegir PDF'}
@@ -272,6 +297,12 @@ export default function HorarioFinalesAdmin() {
               <Chip key={c.id} texto={c.sigla ?? c.nombre} elegido={carreraId === c.id} onPress={nuevo ? () => { setCarreraId(c.id); setDetectada(false); } : undefined} />
             ))}
           </View>
+          {plan && nuevo ? (
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: espacio.s, marginBottom: espacio.m }}>
+              <Insignia texto={`Plan ${plan} (detectado en el PDF)`} icono="school-outline" />
+              <Chip texto="Usar todos los planes" icono="close" onPress={() => setPlan(null)} />
+            </View>
+          ) : null}
           <Campo etiqueta="Título" value={titulo} onChangeText={(t) => { setTitulo(t); setCambios(true); }} maxLength={120} placeholder="Ej.: Finales diciembre 2026" />
         </>
       )}
@@ -362,6 +393,7 @@ export default function HorarioFinalesAdmin() {
         derecha={<>{lista}</>}
       />
       <EditorFecha fila={editando} materias={materias} onListo={aplicarEdicion} onCerrar={() => setEditando(null)} />
+      {lector.vista}
     </Pantalla>
   );
 }

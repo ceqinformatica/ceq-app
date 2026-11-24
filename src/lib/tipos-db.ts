@@ -118,7 +118,15 @@ export type NotificacionDb = {
   creada_por: string | null; created_at: string;
 }
 export type ResumenAdmin = { usuarios: number; celulares: number; sugerencias_nuevas: number; programadas: number };
-export type PendientesPanel = { carnets_pendientes: number; ventanas_activas: number; horarios_borrador: number };
+export type PendientesPanel = { carnets_pendientes: number; ventanas_activas: number; horarios_borrador: number; clases_borrador?: number };
+export type HorarioClasesDb = {
+  id: string; carrera_id: string; plan_anio: number | null; titulo: string; pdf_path: string | null; publicado: boolean; publicado_en: string | null;
+  creado_por: string | null; created_at: string; updated_at: string;
+}
+export type ClaseOficialDb = {
+  id: string; horario_id: string; materia: string; nivel: number | null; seccion: string | null; dia_semana: number;
+  hora_inicio: string; hora_fin: string; aula: string | null; tipo_clase: 'teoria' | 'rp' | 'laboratorio' | null; created_at: string;
+}
 export type HorarioFinalesDb = {
   id: string; carrera_id: string; titulo: string; pdf_path: string | null; publicado: boolean; publicado_en: string | null;
   creado_por: string | null; created_at: string; updated_at: string;
@@ -167,6 +175,8 @@ export type Database = {
       dispositivos: Tabla<DispositivoDb, 'usuario_id' | 'plataforma' | 'updated_at'>;
       horarios_finales: Tabla<HorarioFinalesDb, 'id' | 'pdf_path' | 'publicado' | 'publicado_en' | 'creado_por' | 'created_at' | 'updated_at'>;
       fechas_finales: Tabla<FechaFinalDb, 'id' | 'hora' | 'aula' | 'created_at'>;
+      horarios_clases: Tabla<HorarioClasesDb, 'id' | 'plan_anio' | 'pdf_path' | 'publicado' | 'publicado_en' | 'creado_por' | 'created_at' | 'updated_at'>;
+      clases_oficiales: Tabla<ClaseOficialDb, 'id' | 'nivel' | 'seccion' | 'aula' | 'tipo_clase' | 'created_at'>;
       ventanas: Tabla<VentanaDb, 'id' | 'cuerpo' | 'imagen_url' | 'icono' | 'boton_texto' | 'boton_destino' | 'color' | 'forma' | 'alineacion' | 'donde' | 'frecuencia' | 'cerrable' | 'carrera_id' | 'desde' | 'hasta' | 'activa' | 'prioridad' | 'creada_por' | 'created_at' | 'updated_at'>;
     };
     Views: {
@@ -191,6 +201,8 @@ export type Database = {
       eliminar_mi_cuenta: { Args: Record<string, never>; Returns: undefined };
       pendientes_panel: { Args: Record<string, never>; Returns: PendientesPanel };
       publicar_horario_finales: { Args: { p_id: string; p_notificar?: boolean }; Returns: number };
+      publicar_horario_clases: { Args: { p_id: string; p_notificar?: boolean }; Returns: number };
+      guardar_clases_oficiales: { Args: { p_horario: string; p_clases: { materia: string; nivel: number | null; seccion: string | null; dia_semana: number; hora_inicio: string; hora_fin: string; aula: string | null; tipo_clase: string | null }[] }; Returns: number };
       guardar_fechas_finales: { Args: { p_horario: string; p_fechas: { materia: string; llamado: number; fecha: string; hora: string | null; aula: string | null }[] }; Returns: number };
     };
     Enums: {

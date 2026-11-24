@@ -611,6 +611,36 @@ select pg_temp.como('00000000-0000-0000-0000-00000000000b');
 select pg_temp.debe_ser('Beto ve el horario publicado', (select count(*) from public.fechas_finales), 3);
 select pg_temp.debe_ser('Beto no borra fechas', pg_temp.filas($q$delete from public.fechas_finales$q$), 0);
 
+-- Horarios de clases oficiales ---------------------------------------
+select pg_temp.como('00000000-0000-0000-0000-00000000000a');
+select pg_temp.debe_fallar('Ana no carga horarios de clases', $$insert into public.horarios_clases (carrera_id, titulo) values ('10000000-0000-0000-0000-000000000001', 'Trucho')$$);
+select pg_temp.como('00000000-0000-0000-0000-0000000000ad');
+select pg_temp.debe_fallar('no se crea ya publicado (clases)', $$insert into public.horarios_clases (carrera_id, titulo, publicado) values ('10000000-0000-0000-0000-000000000001', '1.er periodo', true)$$);
+insert into public.horarios_clases (id, carrera_id, plan_anio, titulo) values ('61000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000001', 2018, '1.er periodo 2027');
+select pg_temp.debe_fallar('no se publica sin clases', $$select public.publicar_horario_clases('61000000-0000-0000-0000-000000000001')$$);
+select pg_temp.debe_ser('guarda las clases de una vez', public.guardar_clases_oficiales('61000000-0000-0000-0000-000000000001',
+  '[{"materia":"Química General","nivel":1,"seccion":"A","dia_semana":1,"hora_inicio":"07:00","hora_fin":"08:30","aula":"Aula 12","tipo_clase":"teoria"},{"materia":"Física I","nivel":1,"dia_semana":2,"hora_inicio":"07:00","hora_fin":"08:30","aula":"","tipo_clase":""}]'::jsonb), 2);
+select pg_temp.debe_fallar('hora al revés no guarda nada', $$select public.guardar_clases_oficiales('61000000-0000-0000-0000-000000000001', '[{"materia":"Física I","dia_semana":2,"hora_inicio":"09:00","hora_fin":"08:00"}]'::jsonb)$$);
+select pg_temp.debe_fallar('tipo de clase inventado', $$select public.guardar_clases_oficiales('61000000-0000-0000-0000-000000000001', '[{"materia":"Física I","dia_semana":2,"hora_inicio":"07:00","hora_fin":"08:00","tipo_clase":"siesta"}]'::jsonb)$$);
+select pg_temp.debe_ser('las clases siguen enteras tras el error', (select count(*) from public.clases_oficiales), 2);
+select pg_temp.debe_ser('el panel cuenta el borrador', (public.pendientes_panel() ->> 'clases_borrador')::int, 1);
+select pg_temp.como('00000000-0000-0000-0000-00000000000b');
+select pg_temp.debe_ser('Beto no ve el horario en borrador', (select count(*) from public.horarios_clases), 0);
+select pg_temp.debe_ser('Beto no ve sus clases', (select count(*) from public.clases_oficiales), 0);
+select pg_temp.debe_fallar('Beto no publica el horario de clases', $$select public.publicar_horario_clases('61000000-0000-0000-0000-000000000001')$$);
+select pg_temp.debe_fallar('Beto no guarda clases', $$select public.guardar_clases_oficiales('61000000-0000-0000-0000-000000000001', '[]'::jsonb)$$);
+select pg_temp.debe_ser('Beto no publica a mano (clases)', pg_temp.filas($q$update public.horarios_clases set publicado = true$q$), 0);
+select pg_temp.como('00000000-0000-0000-0000-0000000000ad');
+select pg_temp.debe_ser('publicar devuelve las clases', public.publicar_horario_clases('61000000-0000-0000-0000-000000000001'), 2);
+update public.horarios_clases set publicado = false where id = '61000000-0000-0000-0000-000000000001';
+select public.publicar_horario_clases('61000000-0000-0000-0000-000000000001');
+reset role;
+select pg_temp.debe_ser('avisa una sola vez a la carrera (clases)', (select count(*) from public.notificaciones where ruta = '/agenda' and carrera_id = '10000000-0000-0000-0000-000000000001' and usuario_id is null and titulo = 'Salió el horario de clases'), 1);
+select pg_temp.como('00000000-0000-0000-0000-00000000000b');
+select pg_temp.debe_ser('Beto ve el horario de clases publicado', (select count(*) from public.clases_oficiales), 2);
+select pg_temp.debe_ser('Beto no borra clases oficiales', pg_temp.filas($q$delete from public.clases_oficiales$q$), 0);
+select pg_temp.debe_ser('Beto no cambia clases oficiales', pg_temp.filas($q$update public.clases_oficiales set aula = 'Patio'$q$), 0);
+
 -- Ventanas flotantes -------------------------------------------------
 select pg_temp.debe_fallar('Beto no crea ventanas', $$insert into public.ventanas (titulo) values ('Hola')$$);
 select pg_temp.como('00000000-0000-0000-0000-0000000000ad');
