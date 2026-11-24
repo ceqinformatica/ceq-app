@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SystemUI from 'expo-system-ui';
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { Appearance, Platform, useColorScheme } from 'react-native';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { AccessibilityInfo, Animated, Appearance, Easing, Platform, StyleSheet, View, useColorScheme } from 'react-native';
 import { fijarEsquema, fondos, type Esquema } from '../tema';
 
 /** Lo que elige la persona en Perfil: seguir al celular o forzar un tema. */
@@ -61,8 +61,37 @@ export function TemaProvider({ inicial = 'sistema', children }: { inicial?: Pref
   }, [preferencia]);
 
   const esquema: Esquema = preferencia === 'sistema' ? (sistema === 'dark' ? 'oscuro' : 'claro') : preferencia;
+
+  // Transición al cambiar de tema: un velo del color de fondo anterior se
+  // desvanece sobre la app ya dibujada con el tema nuevo (fundido suave).
+  const anterior = useRef<{ esquema: Esquema; fondo: string } | null>(null);
+  const velo = useRef(new Animated.Value(0)).current;
+  const [colorVelo, setColorVelo] = useState<string | null>(null);
+  // En el primer cuadro con el tema nuevo el efecto todavía no corrió: el velo ya tiene que taparlo.
+  const cambiando = anterior.current != null && anterior.current.esquema !== esquema;
+  if (cambiando) velo.setValue(1);
+  const colorMostrado = colorVelo ?? (cambiando ? anterior.current!.fondo : null);
+
   // Se fija durante el render para que los hijos ya se dibujen con el tema nuevo.
   fijarEsquema(esquema);
+
+  useEffect(() => {
+    const previo = anterior.current;
+    anterior.current = { esquema, fondo: fondos.fondo };
+    if (!previo || previo.esquema === esquema) return;
+    let vivo = true;
+    setColorVelo(previo.fondo);
+    velo.setValue(1);
+    AccessibilityInfo.isReduceMotionEnabled?.()
+      .catch(() => false)
+      .then((reducido) => {
+        if (!vivo) return;
+        if (reducido) { velo.setValue(0); setColorVelo(null); return; }
+        Animated.timing(velo, { toValue: 0, duration: 420, easing: Easing.out(Easing.quad), useNativeDriver: Platform.OS !== 'web' })
+          .start(({ finished }) => { if (finished && vivo) setColorVelo(null); });
+      });
+    return () => { vivo = false; };
+  }, [esquema, velo]);
 
   useEffect(() => {
     // Color de la ventana detrás de la app (se ve al rotar o abrir el teclado).
@@ -75,7 +104,16 @@ export function TemaProvider({ inicial = 'sistema', children }: { inicial?: Pref
   }, []);
 
   const valor = useMemo(() => ({ esquema, oscuro: esquema === 'oscuro', preferencia, cambiarPreferencia }), [esquema, preferencia, cambiarPreferencia]);
-  return <TemaContexto.Provider value={valor}>{children}</TemaContexto.Provider>;
+  return (
+    <TemaContexto.Provider value={valor}>
+      <View style={{ flex: 1 }}>
+        {children}
+        {colorMostrado ? (
+          <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: colorMostrado, opacity: velo }]} />
+        ) : null}
+      </View>
+    </TemaContexto.Provider>
+  );
 }
 
 /**

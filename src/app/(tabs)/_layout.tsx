@@ -64,6 +64,8 @@ export default function TabsLayout() {
         tabBarActiveTintColor: colores.marino,
         tabBarInactiveTintColor: colores.textoSuave,
         tabBarPosition: barraLateral ? 'left' : 'bottom',
+        // Al cambiar de pestaña, la pantalla se desliza un poco (se omite con "Reducir movimiento").
+        animation: movimientoReducido() ? 'none' : 'shift',
         tabBarVariant: barraLateral ? 'material' : 'uikit',
         tabBarLabelPosition: 'below-icon',
         tabBarActiveBackgroundColor: 'transparent',
