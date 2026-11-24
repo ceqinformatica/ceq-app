@@ -5,6 +5,7 @@ import { supabase } from './supabase';
 import { olvidarEsteCelular } from './notificaciones';
 import { desactivarBiometria } from './biometria';
 import { borrarPin } from './pinGuardado';
+import { resultadoGoogle, traducirErrorClave } from './recuperacion';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -113,6 +114,66 @@ export async function registrarseConCorreo(correo: string, clave: string, nombre
     options: { data: { full_name: nombre.trim() }, emailRedirectTo: urlRetorno() },
   });
   return error ? traducirError(error.message) : null;
+}
+
+/** Dirección del enlace del correo para elegir una contraseña nueva. */
+export const urlRestablecer = () => Linking.createURL('auth/restablecer');
+
+/**
+ * Manda el correo con el enlace para elegir una contraseña nueva. Por
+ * seguridad, la respuesta es la misma exista o no una cuenta con ese correo.
+ * El enlace hay que abrirlo en este mismo dispositivo (PKCE).
+ */
+export async function pedirRecuperarClave(correo: string): Promise<string | null> {
+  const { error } = await supabase.auth.resetPasswordForEmail(correo.trim(), { redirectTo: urlRestablecer() });
+  return error ? traducirErrorClave(error.message) : null;
+}
+
+/** Guarda la contraseña nueva de la cuenta con la que hay sesión. */
+export async function cambiarClave(nueva: string): Promise<string | null> {
+  const { error } = await supabase.auth.updateUser({ password: nueva });
+  return error ? traducirErrorClave(error.message) : null;
+}
+
+/**
+ * Confirma que quien tiene el celular es el dueño de la cuenta, para poder
+ * crear un PIN nuevo si lo olvidó. Devuelve null si la contraseña es la de
+ * la cuenta, o el mensaje de error. No cierra la sesión si se equivoca.
+ */
+export async function confirmarConClave(correo: string, clave: string): Promise<string | null> {
+  const { data, error } = await supabase.auth.signInWithPassword({ email: correo.trim(), password: clave });
+  if (error || !data.session) return traducirErrorClave(error?.message ?? 'Invalid login credentials');
+  return null;
+}
+
+/**
+ * Como entrarConGoogle(), pero distingue "entró" de "cerró la ventana" y
+ * exige que sea la MISMA cuenta de la sesión. Si eligió otra cuenta de Google,
+ * Supabase ya cambió la sesión: se cierra como un cierre de sesión normal
+ * (borra el celular, la caché y el PIN) y se devuelve el error.
+ */
+export async function confirmarConGoogle(): Promise<string | 'cancelado' | null> {
+  const actual = (await supabase.auth.getSession()).data.session;
+  const uidAntes = actual?.user.id ?? null;
+  const tokenAntes = actual?.access_token ?? null;
+  let resultado: 'misma' | 'otra' | null = null;
+  const { data: sub } = supabase.auth.onAuthStateChange((evento, sesion) => {
+    const r = resultadoGoogle(uidAntes, tokenAntes, evento, sesion);
+    // Si en algún momento entró otra cuenta, eso manda aunque después llegue otro aviso.
+    if (r && resultado !== 'otra') resultado = r;
+  });
+  let error: string | null;
+  try {
+    error = await entrarConGoogle();
+  } finally {
+    sub.subscription.unsubscribe();
+  }
+  if (resultado === 'otra') {
+    await salir();
+    return 'Esa cuenta de Google no es la de esta sesión. Cerramos la sesión por seguridad: entrá de nuevo con tu cuenta.';
+  }
+  if (error) return error;
+  return resultado === 'misma' ? null : 'cancelado';
 }
 
 export async function salir() {

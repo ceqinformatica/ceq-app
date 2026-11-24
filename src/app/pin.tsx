@@ -2,12 +2,12 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
+import { ConfirmarCuenta } from '../components/ConfirmarCuenta';
 import { TecladoPin } from '../components/TecladoPin';
 import { BarraSuperior, Boton, Mensaje, Pantalla, s } from '../components/ui';
 import { useTema } from '../context/TemaProvider';
-import { salir } from '../lib/auth';
 import { problemaPin } from '../lib/pin';
-import { borrarPin, comprobarPin, guardarPin, largoPin } from '../lib/pinGuardado';
+import { borrarPin, comprobarPin, guardarPin, largoPin, reiniciarIntentosPin } from '../lib/pinGuardado';
 import { colores, espacio, fondos, texto } from '../tema';
 
 type Modo = 'crear' | 'cambiar' | 'quitar';
@@ -29,6 +29,7 @@ export default function PantallaPin() {
   const [trabado, setTrabado] = useState(false);
   const [ocupado, setOcupado] = useState(false);
   const [intento, setIntento] = useState(0);
+  const [recuperando, setRecuperando] = useState(false);
 
   useEffect(() => {
     largoPin().then((l) => {
@@ -66,9 +67,23 @@ export default function PantallaPin() {
     }
     if (r.motivo === 'demasiados') {
       setTrabado(true);
-      setError('Hubo demasiados intentos con un PIN incorrecto. Cerrá sesión y volvé a entrar para crear uno nuevo.');
+      setError('Hubo demasiados intentos con un PIN incorrecto. Confirmá tu cuenta para crear uno nuevo.');
     } else if (r.motivo === 'esperar') reiniciar(`PIN incorrecto. Esperá ${r.segundos} s para volver a probar.`);
     else reiniciar('PIN incorrecto.');
+  };
+
+  // "¿Olvidaste tu PIN?": confirmada la cuenta, se salta el PIN actual.
+  const cuentaConfirmada = async () => {
+    await reiniciarIntentosPin().catch(() => {});
+    setRecuperando(false);
+    setTrabado(false);
+    if (modo === 'quitar') {
+      await borrarPin().catch(() => {});
+      volver();
+      return;
+    }
+    reiniciar(null);
+    setPaso('nuevo');
   };
 
   const conNuevo = (pin: string) => {
@@ -99,6 +114,17 @@ export default function PantallaPin() {
         ? 'Elegí un PIN de 4 a 6 números y tocá ✓.'
         : 'Escribilo otra vez para confirmar.';
 
+  if (recuperando) {
+    return (
+      <Pantalla>
+        <BarraSuperior titulo={TITULOS[modo]} onVolver={() => setRecuperando(false)} />
+        <View style={{ marginTop: espacio.l }}>
+          <ConfirmarCuenta onConfirmado={cuentaConfirmada} onCancelar={() => setRecuperando(false)} />
+        </View>
+      </Pantalla>
+    );
+  }
+
   return (
     <Pantalla>
       <BarraSuperior titulo={TITULOS[modo]} onVolver={volver} />
@@ -111,7 +137,7 @@ export default function PantallaPin() {
         </Text>
         {paso === 'nuevo' && (
           <Text style={[s.filaDetalle, { textAlign: 'center', marginTop: espacio.xs, marginBottom: espacio.s }]}>
-            Lo vas a usar para abrir la app en este dispositivo. Si lo olvidás, cerrás sesión y entrás de nuevo con tu cuenta.
+            Lo vas a usar para abrir la app en este dispositivo. Si lo olvidás, podés crear otro confirmando tu cuenta.
           </Text>
         )}
         <View style={{ height: espacio.l }} />
@@ -126,7 +152,14 @@ export default function PantallaPin() {
         )}
       </View>
       <Mensaje texto={error} />
-      {trabado && <Boton texto="Cerrar sesión" variante="peligro" icono="log-out-outline" onPress={salir} />}
+      {paso === 'actual' && largoActual != null && (
+        <Boton
+          texto={trabado ? 'Crear un PIN nuevo' : '¿Olvidaste tu PIN?'}
+          variante={trabado ? 'primario' : 'fantasma'}
+          icono={trabado ? 'shield-checkmark-outline' : undefined}
+          onPress={() => { setError(null); setRecuperando(true); }}
+        />
+      )}
     </Pantalla>
   );
 }

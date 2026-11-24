@@ -10,7 +10,7 @@ export const PIN_MIN = 4;
 export const PIN_MAX = 6;
 /** Intentos fallidos libres antes de tener que esperar. */
 export const FALLOS_LIBRES = 5;
-/** Con esta cantidad de fallos seguidos se cierra la sesión (se vuelve a entrar con Google). */
+/** Con esta cantidad de fallos seguidos ya no se acepta el PIN: hay que confirmar la cuenta (o cerrar sesión) y crear uno nuevo. */
 export const FALLOS_MAXIMOS = 10;
 export const ITERACIONES = 1000;
 
