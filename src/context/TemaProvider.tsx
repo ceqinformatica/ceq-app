@@ -88,7 +88,13 @@ export function TemaProvider({ inicial = 'sistema', children }: { inicial?: Pref
     anterior.current = { esquema, fondo: fondos.fondo };
     const porAcceso = previoSoloClaro.current !== soloClaro;
     previoSoloClaro.current = soloClaro;
-    if (porAcceso || !previo || previo.esquema === esquema) return;
+    if (porAcceso) {
+      // Si había un fundido en curso, se corta para que el velo no quede tapando el acceso.
+      velo.setValue(0);
+      setColorVelo(null);
+      return;
+    }
+    if (!previo || previo.esquema === esquema) return;
     let vivo = true;
     setColorVelo(previo.fondo);
     velo.setValue(1);
