@@ -82,6 +82,7 @@ export default function Ceq() {
         <Acceso icono="card" texto="Carnet" onPress={() => router.push('/carnet')} />
       </View>
       <Tarjeta estilo={{ paddingVertical: espacio.xs }}>
+        <Fila icono="school-outline" titulo="Fechas de finales" detalle="Cuándo rendís cada materia, según el horario oficial" onPress={() => router.push('/finales-fechas')} />
         <Fila
           icono="calendar-outline"
           titulo="Calendario académico"

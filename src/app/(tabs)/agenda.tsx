@@ -152,7 +152,13 @@ export default function Agenda() {
         ) : (
           <>
             <ListaEventos datos={datos!} onElegir={setEventoElegido} />
-            <Tarjeta estilo={{ marginTop: espacio.m }}>
+            <Tarjeta estilo={{ marginTop: espacio.m, paddingVertical: espacio.xs }}>
+              <Fila
+                icono="school-outline"
+                titulo="Fechas de finales"
+                detalle="El horario de finales de tu carrera que publica el CEQ. Agregalos a tu agenda con un toque."
+                onPress={() => router.push('/finales-fechas')}
+              />
               <Fila
                 icono="calendar-outline"
                 titulo="Calendario académico de la FCQ"
