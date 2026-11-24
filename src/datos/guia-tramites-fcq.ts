@@ -108,7 +108,7 @@ export const GUIA_TRAMITES_FCQ: TramiteNuevo[] = [
     clave: 'semestre-opuesto',
     categoria: 'Inscripciones y matrícula',
     nombre: 'Inscripción en semestre opuesto',
-    descripcion: 'Cursar una materia en el semestre en que no se dicta, rindiendo solo parciales y finales. Solo si ya tenés aprobadas las prácticas y cumplida la asistencia (Art. 7 c y 23). No aplica a materias del plan 2018 ni equivalentes 2008 que estén en la oferta.',
+    descripcion: 'Cursar una materia en el semestre en que no se dicta, rindiendo solo parciales y finales. Solo si ya tenés aprobadas las prácticas y cumplida la asistencia (Art. 7 c y 23). Se abre si alguien se inscribe.',
     pasos: ['Completá el formulario de agregado para semestre opuesto.', ENTREGAR, 'Si hace falta, pedí también la apertura de mesa examinadora en semestre opuesto.'],
     requisitos: [...REQ_BASE, 'Prácticas aprobadas y asistencia cumplida en la materia', 'Estar matriculado en el semestre'],
     costo: SIN_RECIBO,
