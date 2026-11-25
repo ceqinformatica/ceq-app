@@ -33,9 +33,14 @@ export function leerFechaHora(fechaTxt: string, horaTxt: string, ahora = new Dat
   let anio = conAnio ? Number(f[3]) : ahora.getFullYear();
   if (anio < 100) anio += 2000;
   const armar = (a: number) => new Date(a, mes - 1, dia, hora, minuto, 0, 0);
+  const existe = (d: Date) => d.getDate() === dia && d.getMonth() === mes - 1;
   let fecha = armar(anio);
-  if (fecha.getDate() !== dia || fecha.getMonth() !== mes - 1) return { error: 'Esa fecha no existe.' };
-  if (!conAnio && fecha.getTime() < ahora.getTime() - 60_000) fecha = armar(anio + 1);
+  if (!existe(fecha)) return { error: 'Esa fecha no existe.' };
+  if (!conAnio && fecha.getTime() < ahora.getTime() - 60_000) {
+    fecha = armar(anio + 1);
+    // Un 29 de febrero puede no existir el año siguiente (no pasa al 1 de marzo).
+    if (!existe(fecha)) return { error: `Esa fecha no existe en ${anio + 1}.` };
+  }
   if (fecha.getTime() < ahora.getTime() - 60_000) return { error: 'Esa fecha ya pasó.' };
   if (fecha.getTime() > ahora.getTime() + 366 * 86_400_000) return { error: 'Se puede programar hasta un año adelante.' };
   return { fecha };

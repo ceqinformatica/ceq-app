@@ -80,12 +80,17 @@ export default function Inicio() {
           <View style={{ gap: 8, marginTop: espacio.l }}><Esqueleto alto={36} ancho="45%" /><Esqueleto alto={12} ancho="60%" /></View>
         ) : (
           <>
-            <NumeroAnimado
-              valor={datos?.progreso?.porcentaje ?? 0}
-              decimales={Number.isInteger(datos?.progreso?.porcentaje ?? 0) ? 0 : 1}
-              sufijo="%"
-              estilo={est.avanceNumero}
-            >%</NumeroAnimado>
+            {/* Sin datos por un error de carga no se muestra 0 %: parecería que se perdió el avance. */}
+            {error && !datos ? (
+              <Text style={est.avanceNumero} accessibilityLabel="Avance sin cargar">–</Text>
+            ) : (
+              <NumeroAnimado
+                valor={datos?.progreso?.porcentaje ?? 0}
+                decimales={Number.isInteger(datos?.progreso?.porcentaje ?? 0) ? 0 : 1}
+                sufijo="%"
+                estilo={est.avanceNumero}
+              >%</NumeroAnimado>
+            )}
             <Text style={est.avanceDetalle}>
               {datos?.progreso?.obligatoriasTotales
                 ? (({ aprobadas, total }) => `${aprobadas} de ${total} materias aprobadas`)(materiasContadas(datos.progreso))

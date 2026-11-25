@@ -7,7 +7,7 @@ import { confirmarConClave, confirmarConProveedor, salir } from '../lib/auth';
 import type { Proveedor } from '../lib/acceso';
 import { BotonProveedor } from './BotonProveedor';
 import { biometriaActiva, biometriaDisponible, verificarIdentidad } from '../lib/biometria';
-import { metodosDeCuenta } from '../lib/recuperacion';
+import { correoEnmascarado, metodosDeCuenta } from '../lib/recuperacion';
 import { colores, crearEstilos, espacio, fondos, fuentes } from '../tema';
 import { Boton, Campo, Mensaje, s } from './ui';
 
@@ -86,7 +86,7 @@ export function ConfirmarCuenta({ onConfirmado, onCancelar }: { onConfirmado: ()
         <View style={{ marginTop: huella || conOtraCuenta ? espacio.l : 0 }}>
           {(huella || conOtraCuenta) && <Text style={[s.filaDetalle, { textAlign: 'center', marginBottom: espacio.m }]}>o con la contraseña de tu cuenta</Text>}
           <Text style={[s.filaDetalle, { marginBottom: espacio.s }]} numberOfLines={1}>
-            Cuenta: <Text style={{ fontFamily: fuentes.semibold, color: colores.marino }}>{metodos.correo}</Text>
+            Cuenta: <Text style={{ fontFamily: fuentes.semibold, color: colores.marino }}>{correoEnmascarado(metodos.correo)}</Text>
           </Text>
           <View>
             <Campo

@@ -18,7 +18,7 @@ import { textoError } from '../lib/errores';
 
 const volver = () => (router.canGoBack() ? router.back() : router.replace('/ceq'));
 
-/** Hora que corre en vivo: una captura de pantalla se nota porque queda quieta. */
+/** Hora que corre en vivo: referencia visual (la validez la da el QR). */
 function useHora() {
   const [ahora, setAhora] = useState(() => new Date());
   useEffect(() => {
@@ -112,7 +112,7 @@ export default function PantallaCarnet() {
 
           <View style={{ flexDirection: 'row', gap: espacio.s, marginTop: espacio.l, paddingHorizontal: espacio.s }}>
             <Ionicons name="sunny-outline" size={18} color={colores.textoSuave} />
-            <Text style={[s.filaDetalle, { flex: 1 }]}>Subí el brillo para que lean mejor el código. Mostralo desde la app: la hora en vivo prueba que no es una captura.</Text>
+            <Text style={[s.filaDetalle, { flex: 1 }]}>Subí el brillo para que lean mejor el código. La hora en vivo es una referencia a la vista; la validez se comprueba leyendo el QR, que consulta el estado del carnet en el CEQ.</Text>
           </View>
 
           <Tarjeta estilo={{ paddingVertical: espacio.xs, marginTop: espacio.l }}>

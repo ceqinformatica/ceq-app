@@ -13,7 +13,7 @@ import { aplicarRecuperatorio, aplicarRegularizacion, esRecuperatorio, esRegular
 import { supabase } from '../lib/supabase';
 import type { AsistenciaDb, ComponenteDb, EvaluacionDb, ExamenFinalDb, GrupoOptativasDb, MateriaDb, Plan, PrerrequisitoDb, ReglaFirmaDb } from '../lib/tipos-db';
 import { db, esperar, idDemo, MODO_DEMO, UID_DEMO } from './demo';
-import { lanzar } from '../lib/errores';
+import { lanzar, textoError } from '../lib/errores';
 
 export interface Malla {
   plan: Plan | null;
@@ -187,7 +187,11 @@ export async function guardarFirma(materiaId: string, promedio: number) {
 export async function cargarParaImportar(): Promise<{ existentes: IntentoAImportar[]; aprobadas: Set<string> }> {
   if (MODO_DEMO) {
     await esperar(100);
-    return { existentes: [], aprobadas: new Set(db.estados.filter((e) => e.estado === 'aprobada').map((e) => e.materia_id)) };
+    return {
+      // Igual que la base: los finales ya cargados (para no duplicarlos al reimportar).
+      existentes: db.finales.filter((f) => f.nota != null).map((f) => ({ materia_id: f.materia_id, fecha: f.fecha, nota: f.nota! })),
+      aprobadas: new Set(db.estados.filter((e) => e.estado === 'aprobada').map((e) => e.materia_id)),
+    };
   }
   const [intentos, estados] = await Promise.all([
     supabase.from('examenes_finales').select('materia_id, fecha, nota'),
@@ -202,14 +206,32 @@ export async function cargarParaImportar(): Promise<{ existentes: IntentoAImport
 }
 
 /**
+ * Error de una importación que quedó a medias: los finales se guardaron
+ * pero las aprobadas sin nota no. Reintentar completa lo que falta (se
+ * vuelve a leer lo guardado, así que no se duplica nada).
+ */
+export class ImportacionParcial extends Error {
+  constructor(public finalesGuardados: number, public aprobadasFaltantes: number, causa: string) {
+    super(`Se guardaron ${finalesGuardados} finales, pero no las ${aprobadasFaltantes} materias aprobadas sin nota (${causa}). Tocá Importar de nuevo para completarlas: lo que ya está no se duplica.`);
+    this.name = 'ImportacionParcial';
+  }
+}
+
+/**
  * Carga lo que salió del extracto del EALU. Los finales van a
  * examenes_finales (la base aprueba la materia con esa nota); las aprobadas
- * sin nota se marcan aprobadas sin tocar las que ya lo estaban.
+ * sin nota se marcan aprobadas sin tocar las que ya lo estaban. Si falla lo
+ * primero, no se guardó nada; si falla lo segundo, lanza ImportacionParcial
+ * diciendo exactamente qué quedó guardado.
  */
 export async function importarExtracto(plan: PlanImportacion) {
   if (MODO_DEMO) {
     await esperar(200);
     const hoy = new Date().toISOString();
+    // Los intentos quedan guardados como en la base (para reimportar igual que en producción).
+    for (const i of plan.intentos) {
+      db.finales.push({ id: idDemo(), usuario_id: UID_DEMO, materia_id: i.materia_id, periodo: null, llamado: null, fecha: i.fecha, nota: i.nota, created_at: hoy });
+    }
     const aprobar = (materia_id: string, nota: number | null, fecha: string | null) => {
       const periodo = db.estados.find((e) => e.materia_id === materia_id)?.periodo ?? null;
       db.estados = db.estados.filter((e) => e.materia_id !== materia_id);
@@ -237,6 +259,7 @@ export async function importarExtracto(plan: PlanImportacion) {
         plan.aprobadasSinNota.map((materia_id) => ({ materia_id, estado: 'aprobada' as const, nota_final: null, nota_desde_final: false })),
         { onConflict: 'usuario_id,materia_id' },
       );
+    if (error && plan.intentos.length) throw new ImportacionParcial(plan.intentos.length, plan.aprobadasSinNota.length, textoError(error));
     lanzar(error);
   }
 }

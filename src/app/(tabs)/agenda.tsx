@@ -444,7 +444,7 @@ function ElegirCursando({ datos, primeraVez, onListo, onSaltar }: {
 }
 
 /** Controla el paso "¿qué estás cursando?" dentro de un formulario. */
-function usarEleccion(visible: boolean, mias: MateriaAgenda[], editando = false) {
+function useEleccion(visible: boolean, mias: MateriaAgenda[], editando = false) {
   const [eligiendo, setEligiendo] = useState(false);
   const [saltada, setSaltada] = useState(false);
   useEffect(() => {
@@ -500,7 +500,7 @@ function FormClase({ visible, clase, diaInicial, datos, recordatoriosApagados, o
   const mias = clase?.materia_id && !cursando.some((m) => m.id === clase.materia_id)
     ? [...cursando, ...(datos?.materias.filter((m) => m.id === clase.materia_id) ?? [])]
     : cursando;
-  const eleccion = usarEleccion(visible, mias, clase != null);
+  const eleccion = useEleccion(visible, mias, clase != null);
 
   // Al elegir la hora de inicio, se propone que termine 2 horas después.
   const elegirInicio = (v: string) => {
@@ -716,7 +716,7 @@ function FormEvento({ visible, uid, datos, onCursando, onCerrar, onListo }: Prop
 
   // Para fechas también sirven las firmadas: ahí van los finales.
   const mias = misMaterias(datos, ['cursando', 'firmada']);
-  const eleccion = usarEleccion(visible, mias);
+  const eleccion = useEleccion(visible, mias);
 
   const fechaIso = (() => {
     const m = /^(\d{1,2})\/(\d{1,2})(?:\/(\d{4}))?$/.exec(fecha.trim());

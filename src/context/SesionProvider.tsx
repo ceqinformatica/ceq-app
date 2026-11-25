@@ -52,6 +52,8 @@ export function SesionProvider({ children }: { children: ReactNode }) {
       setErrorPerfil(null);
       return;
     }
+    // Cambió la cuenta: el perfil de la anterior no se muestra mientras llega el nuevo.
+    setPerfil((p) => (p && p.id === uid ? p : null));
     const { data, error } = await supabase.from('perfiles').select('*').eq('id', uid).maybeSingle();
     // Si mientras tanto cambió la cuenta, esta respuesta ya no corresponde.
     if (usuarioActual.current !== uid) return;
@@ -60,7 +62,7 @@ export function SesionProvider({ children }: { children: ReactNode }) {
       // se usa el perfil guardado en el celular (o el anterior) y se avisa.
       const guardado = esErrorDeRed(error) ? await leerCache<Perfil>('perfil') : null;
       if (guardado && usuarioActual.current === uid && guardado.valor.id === uid) {
-        setPerfil((p) => p ?? guardado.valor);
+        setPerfil((p) => (p && p.id === uid ? p : guardado.valor));
         setErrorPerfil(null);
         return;
       }
