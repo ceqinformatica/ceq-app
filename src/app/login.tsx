@@ -94,6 +94,9 @@ export default function Login() {
     setError(null);
     setInfo(null);
     setVerClave(false);
+    // Las contraseñas no pasan de un formulario a otro (registro ↔ ingreso).
+    setClave('');
+    setRepetida('');
   };
 
   // Botón Atrás de Android: vuelve a la pantalla anterior del acceso en vez de cerrar la app.
@@ -108,9 +111,11 @@ export default function Login() {
   }, [modo]);
 
   const problema = problemaRegistro({ nombre, apellido, correoOk: correoValido(correo), clave, repetida }, CLAVE_MINIMA);
+  // La diferencia entre las dos contraseñas ya se avisa debajo del campo.
+  const noCoinciden = !!repetida && repetida !== clave;
 
   const crearCuenta = async () => {
-    if (problema) return setError(problema);
+    if (problema) return setError(noCoinciden ? null : problema);
     setCargando('correo');
     setError(null);
     setInfo(null);
@@ -160,7 +165,7 @@ export default function Login() {
   const formulario = (m: Exclude<ModoAcceso, 'portada'>) => {
 
   /** Google y Microsoft, debajo del formulario. */
-  const otrasCuentas = (
+  const otrasCuentas = proveedores.length === 0 ? null : (
     <>
       <View style={est.separador}>
         <View style={est.linea} />
@@ -233,7 +238,7 @@ export default function Login() {
         <Boton
           texto="Entrar"
           cargando={cargando === 'correo'}
-          deshabilitado={!correo || !clave || ocupado}
+          deshabilitado={!correoValido(correo) || !clave || ocupado}
           onPress={() => ejecutar('correo', () => entrarConCorreo(correo, clave))}
         />
         <Pressable onPress={() => cambiarModo('recuperar')} accessibilityRole="button" hitSlop={8} style={{ alignSelf: 'center', padding: espacio.s, marginTop: espacio.xs }}>
@@ -273,7 +278,7 @@ export default function Login() {
           secureTextEntry={!verClave}
           autoComplete="new-password"
           textContentType="newPassword"
-          ayuda={repetida && repetida !== clave ? 'Las dos contraseñas no coinciden.' : undefined}
+          ayuda={noCoinciden ? 'Las dos contraseñas no coinciden.' : undefined}
         />
         {/* Activo aunque falten datos: al tocarlo dice qué falta. */}
         <Boton texto="Crear cuenta" cargando={cargando === 'correo'} deshabilitado={ocupado} onPress={crearCuenta} />

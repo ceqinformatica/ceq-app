@@ -147,8 +147,8 @@ export async function registrarseConCorreo(
 }
 
 /**
- * Botones de otras cuentas que se pueden mostrar (Google siempre; Microsoft
- * solo si ya está habilitado en Supabase). Sin internet, solo Google.
+ * Botones de otras cuentas que se pueden mostrar (cada uno solo si está
+ * habilitado en Supabase). Sin internet, solo Google.
  */
 export async function proveedoresDisponibles(): Promise<Proveedor[]> {
   const url = process.env.EXPO_PUBLIC_SUPABASE_URL;

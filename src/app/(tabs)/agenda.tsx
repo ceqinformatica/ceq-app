@@ -37,7 +37,12 @@ export default function Agenda() {
   const { perfil, sesion } = useSesion();
   const { datos, setDatos, cargando, error, refrescando, recargar, sinConexion } = usarDatos(() => cargarAgenda(perfil?.plan_id, perfil?.fin_clases), [perfil?.plan_id, perfil?.fin_clases], { cache: `agenda:${perfil?.plan_id}` });
   const [vista, setVista] = useState<'horario' | 'fechas'>('horario');
-  const [dia, setDia] = useState(diaSemanaHoy() === 7 ? 1 : diaSemanaHoy());
+  const [dia, setDia] = useState(diaSemanaHoy());
+  // El domingo solo se muestra si hay alguna clase ese día; si no, la vista diaria arranca el lunes.
+  const hayDomingo = !!datos?.horario.some((h) => h.dia_semana === 7);
+  useEffect(() => {
+    if (dia === 7 && datos && !hayDomingo) setDia(1);
+  }, [dia, datos, hayDomingo]);
   const [modoHorario, setModoHorario] = useState<'semana' | 'dia'>('semana');
   const [nuevaClase, setNuevaClase] = useState(false);
   const [editando, setEditando] = useState<HorarioDb | null>(null);
@@ -101,7 +106,7 @@ export default function Agenda() {
             ) : (
             <>
             <View style={{ flexDirection: 'row', gap: 6, paddingBottom: espacio.m }}>
-              {DIAS_CORTOS.slice(0, datos?.horario.some((h) => h.dia_semana === 7) ? 7 : 6).map((d, i) => {
+              {DIAS_CORTOS.slice(0, hayDomingo ? 7 : 6).map((d, i) => {
                 const n = i + 1;
                 const activo = n === dia;
                 const hoy = n === diaSemanaHoy();
@@ -220,6 +225,7 @@ export default function Agenda() {
       <Hoja visible={claseElegida != null} titulo={claseElegida ? nombreClase(claseElegida) : ''} onCerrar={() => setClaseElegida(null)}>
         {claseElegida && (
           <Detalle
+            key={claseElegida.id}
             filas={[
               ...((tipo) => (tipo ? [[tipo.icono, tipo.texto] as [string, string]] : []))(infoTipoClase(claseElegida.tipo_clase)),
               ['calendar-outline', DIAS[claseElegida.dia_semana - 1]],
@@ -241,6 +247,7 @@ export default function Agenda() {
       <Hoja visible={eventoElegido != null} titulo={eventoElegido?.titulo ?? ''} onCerrar={() => setEventoElegido(null)}>
         {eventoElegido && (
           <Detalle
+            key={eventoElegido.id}
             filas={[
               ['calendar-outline', `${partesFecha(eventoElegido.fecha).dia} ${partesFecha(eventoElegido.fecha).mes.toLowerCase()} · ${horaDe(eventoElegido.fecha)}`],
               ...(eventoElegido.materia_id && datos?.nombres.get(eventoElegido.materia_id) ? [['book-outline', datos.nombres.get(eventoElegido.materia_id)!] as [string, string]] : []),
@@ -298,6 +305,20 @@ function Detalle({ filas, onBorrar, textoBorrar, nota, accion }: {
   accion?: { texto: string; icono: 'create-outline'; onPress: () => void };
 }) {
   const [borrando, setBorrando] = useState(false);
+  const [errorBorrar, setErrorBorrar] = useState<string | null>(null);
+  const borrar = async () => {
+    if (!onBorrar) return;
+    setBorrando(true);
+    setErrorBorrar(null);
+    try {
+      await onBorrar();
+    } catch (e) {
+      // El detalle sigue abierto: lo que se quería borrar sigue guardado y se puede reintentar.
+      setErrorBorrar(`No se pudo borrar: sigue guardado. ${textoError(e)}`);
+    } finally {
+      setBorrando(false);
+    }
+  };
   return (
     <View>
       {filas.map(([icono, t]) => (
@@ -308,7 +329,8 @@ function Detalle({ filas, onBorrar, textoBorrar, nota, accion }: {
       ))}
       {nota && <Mensaje tipo="info" texto={nota} />}
       {accion && <Boton texto={accion.texto} icono={accion.icono} variante="secundario" onPress={accion.onPress} estilo={{ marginBottom: espacio.s }} />}
-      {onBorrar && <Boton texto={textoBorrar} variante="peligro" icono="trash-outline" cargando={borrando} onPress={async () => { setBorrando(true); await onBorrar().catch(() => {}); setBorrando(false); }} />}
+      <Mensaje texto={errorBorrar} />
+      {onBorrar && <Boton texto={errorBorrar ? 'Reintentar' : textoBorrar} variante="peligro" icono="trash-outline" cargando={borrando} onPress={borrar} />}
       <View style={{ height: espacio.l }} />
     </View>
   );
@@ -534,7 +556,7 @@ function FormClase({ visible, clase, diaInicial, datos, recordatoriosApagados, o
       </View>
       <Text style={[s.etiqueta, { marginBottom: espacio.s }]}>{clase ? 'Día' : 'Días (podés elegir varios)'}</Text>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: espacio.s, marginBottom: espacio.m }}>
-        {DIAS_CORTOS.slice(0, 6).map((d, i) => <Chip key={d} texto={d} elegido={dias.includes(i + 1)} onPress={() => alternarDia(i + 1)} />)}
+        {DIAS_CORTOS.map((d, i) => <Chip key={d} texto={d} elegido={dias.includes(i + 1)} onPress={() => alternarDia(i + 1)} />)}
       </View>
       <View style={{ flexDirection: 'row', gap: espacio.m }}>
         <CampoFechaHora etiqueta="Empieza" modo="time" valor={inicio} onCambio={elegirInicio} placeholder="Elegir hora" estilo={{ flex: 1 }} />
