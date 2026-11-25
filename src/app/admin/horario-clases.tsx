@@ -2,7 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import * as DocumentPicker from 'expo-document-picker';
 import { router, useLocalSearchParams } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
 import { Pressable, Switch, Text, View } from 'react-native';
 import { Columnas } from '../../components/disposicion';
 import { CampoFechaHora } from '../../components/fecha';
@@ -108,17 +108,23 @@ export default function HorarioClasesAdmin() {
 
   // PDF con hojas de varios planes: se muestra el plan con más hojas de los que tiene la carrera
   // (un horario por plan, para que cada estudiante vea solo el suyo).
+  const planAutomatico = useRef<Map<number, number> | null>(null);
   useEffect(() => {
-    if (planesDoc.size < 2 || !planes.length) return;
+    // Una sola vez por PDF: después manda lo que elija el admin.
+    if (planesDoc.size < 2 || !planes.length || planAutomatico.current === planesDoc) return;
+    planAutomatico.current = planesDoc;
     const candidatos = [...planesDoc.entries()].filter(([p]) => planes.includes(p)).sort((a, b) => b[1] - a[1] || b[0] - a[0]);
     const elegido = candidatos[0]?.[0] ?? null;
-    if (elegido == null) return;
-    setPlan(elegido);
-    setPlanDetectado(true);
     const lista = [...planesDoc.keys()].sort();
-    setAviso(
-      `Este PDF trae hojas de los planes ${lista.slice(0, -1).join(', ')} y ${lista[lista.length - 1]}. Ahora ves las del plan ${elegido}: guardalo y, para otro plan, subí el mismo PDF en un horario nuevo y elegí ese plan.`,
-    );
+    const cuales = `${lista.slice(0, -1).join(', ')} y ${lista[lista.length - 1]}`;
+    if (elegido != null) {
+      setPlan(elegido);
+      setPlanDetectado(true);
+    }
+    const texto = elegido != null
+      ? `Este PDF trae hojas de los planes ${cuales}. Ahora ves las del plan ${elegido}: guardalo y, para otro plan, subí el mismo PDF en un horario nuevo y elegí ese plan.`
+      : `Este PDF trae hojas de los planes ${cuales}, que no están cargados en esta carrera: revisá que sea la carrera correcta.`;
+    setAviso((v) => (v ? `${v} ${texto}` : texto));
   }, [planesDoc, planes]);
 
   useEffect(() => {

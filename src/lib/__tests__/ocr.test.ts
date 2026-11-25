@@ -300,3 +300,23 @@ test('página OCR: usa pdf.js "legacy" y rellena Promise.withResolvers para WebV
   const i = HTML_OCR.indexOf('Promise.withResolvers =');
   assert.ok(i > 0 && i < HTML_OCR.indexOf(URLS_OCR.tesseract) && i < HTML_OCR.indexOf('type="module"'));
 });
+
+test('finales: un año suelto o una fecha no son el plan de la fila (formato viejo con plan elegido)', () => {
+  const texto = 'Mesas de examen final - Plan 2018\nQuímica General   15 de diciembre de 2025   08:00\nFísica I   22/12/2025   08:00\nBiología General   del 2025 al 2026   18/12/2025';
+  const r = leerHorarioFinales(texto, ['Química General', 'Física I', 'Biología General'], new Date(2025, 10, 1), { plan: 2018 });
+  assert.deepEqual(r.filas.map((f) => f.materia).sort(), ['Biología General', 'Física I', 'Química General']);
+  assert.ok(r.filas.every((f) => f.plan == null));
+});
+
+test('finales: 2018 y 2026 en días distintos de la misma semana son el mismo llamado', () => {
+  const texto = 'SEGUNDO SEMESTRE 2026\nIQ001   Química General   IQ2018   25-nov   14:00\nIQ-05   Química General   IQ2026   27-nov   14:00\nIQ001   Química General   IQ2018   09-dic   14:00\nIQ-05   Química General   IQ2026   11-dic   14:00';
+  const r = leerHorarioFinales(texto, ['Química General'], new Date(2026, 6, 1));
+  assert.deepEqual(r.filas.map((f) => `${f.plan} ${f.llamado} ${f.fecha}`).sort(), ['2018 1 2026-11-25', '2018 2 2026-12-09', '2026 1 2026-11-27', '2026 2 2026-12-11']);
+});
+
+test('limpiarNombre no corta la primera letra con tilde', () => {
+  assert.equal(limpiarNombre('Álgebra Lineal'), 'Álgebra Lineal');
+  assert.equal(limpiarNombre('1 Ética Profesional'), 'Ética Profesional');
+  assert.equal(limpiarNombre('Óptica'), 'Óptica');
+  assert.equal(limpiarNombre('2 Análisis Industrial'), 'Análisis Industrial');
+});

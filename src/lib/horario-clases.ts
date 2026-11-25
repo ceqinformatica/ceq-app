@@ -594,7 +594,7 @@ function nivelPorMaterias(hoja: ClaseLeida[], fichas: FichaMateria[]): number | 
 export function limpiarNombre(t: string): string {
   let n = t.replace(/\s+/g, ' ').trim();
   // Número de fila ("1", "6.", "2:") o basura del borde ("Si", "uu", "[") y etiquetas sueltas al principio.
-  for (let i = 0; i < 4; i++) n = n.replace(/^(?:[\W\d_]+|(?:s[il1]|uu|a|de|del|l|i)\b[\s:.]*)\s*/iu, '').trim();
+  for (let i = 0; i < 4; i++) n = n.replace(/^(?:[^\p{L}]+|(?:s[il1]|uu|a|de|del|l|i)(?![\p{L}])[\s:.]*)\s*/iu, '').trim();
   n = n.replace(/\s+(?:de|a)\s*:$/i, '').replace(/[\s:;,.\-–]+$/, '');
   // Números romanos que el OCR lee con eles: "Il", "ll", "li", "Ill".
   return romanosOcr(n);
