@@ -45,6 +45,7 @@ export function SesionProvider({ children }: { children: ReactNode }) {
   const usuarioActual = useRef<string | null>(null);
   // La cuenta con sesión, para saber cuándo alguien recién entra.
   const uidSesion = useRef<string | null>(null);
+  const comprobandoEntrada = useRef<Promise<void> | null>(null);
 
   const cargarPerfil = useCallback(async (uid: string | undefined) => {
     fijarUsuarioCache(uid ?? null);
@@ -130,7 +131,10 @@ export function SesionProvider({ children }: { children: ReactNode }) {
         if (!nueva) setBloqueado(false);
         cargarPerfil(uid ?? undefined);
       };
-      if (entro) hayBloqueo().then(aplicar, () => aplicar(false));
+      if (entro) {
+        // Otros avisos de la misma cuenta (p. ej. TOKEN_REFRESHED) esperan esta comprobación.
+        comprobandoEntrada.current = hayBloqueo().then(aplicar, () => aplicar(false));
+      } else if (comprobandoEntrada.current && uid) comprobandoEntrada.current.then(() => aplicar(false));
       else aplicar(false);
     });
     return () => {

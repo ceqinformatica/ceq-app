@@ -109,7 +109,7 @@ export async function esperaPin(): Promise<number> {
 /**
  * Comprueba el PIN contando los intentos fallidos (que se guardan, así cerrar
  * y abrir la app no reinicia la cuenta). Con FALLOS_MAXIMOS fallos seguidos
- * devuelve 'demasiados': hay que cerrar sesión y volver a entrar con Google.
+ * devuelve 'demasiados': hay que confirmar la cuenta ("¿Olvidaste tu PIN?").
  */
 export async function comprobarPin(pin: string): Promise<ResultadoPin> {
   const guardado = await leerPin();
