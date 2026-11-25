@@ -67,7 +67,7 @@ export function RecorteOcr({ paginas, zona, titulo = 'Así está en el PDF' }: {
         </ScrollView>
       )}
       {ancho > 0 && (
-        <Pressable onPress={() => setEntera((v) => !v)} accessibilityRole="button" style={{ flexDirection: 'row', alignItems: 'center', gap: espacio.xs, marginTop: espacio.xs, alignSelf: 'flex-start', paddingVertical: espacio.xs }}>
+        <Pressable onPress={() => setEntera((v) => !v)} accessibilityRole="button" accessibilityState={{ expanded: entera }} style={{ flexDirection: 'row', alignItems: 'center', gap: espacio.xs, marginTop: espacio.xs, alignSelf: 'flex-start', paddingVertical: espacio.xs }}>
           <Ionicons name={entera ? 'contract-outline' : 'expand-outline'} size={14} color={colores.marino} />
           <Text style={{ fontSize: 13, color: colores.marino, fontWeight: '600' }}>{entera ? 'Ocultar la página' : `Ver la página ${zona.pagina + 1} entera`}</Text>
         </Pressable>
@@ -84,7 +84,10 @@ function PaginaEntera({ pagina, zona, escala, alto }: { pagina: PaginaVista; zon
   const vertical = useRef<ScrollViewInstance>(null);
   const horizontal = useRef<ScrollViewInstance>(null);
   // Se abre mostrando el renglón marcado (contentOffset no anda en la web).
+  const ubicado = useRef(false);
   const ir = () => {
+    if (ubicado.current) return;
+    ubicado.current = true;
     vertical.current?.scrollTo({ y: Math.max(0, zona.y0 * escala - alto / 3), animated: false });
     horizontal.current?.scrollTo({ x: Math.max(0, zona.x0 * escala - 40), animated: false });
   };

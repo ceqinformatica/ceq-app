@@ -2,7 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import * as DocumentPicker from 'expo-document-picker';
 import { router, useLocalSearchParams } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
-import { useEffect, useMemo, useState, useRef, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
 import { Pressable, Switch, Text, View } from 'react-native';
 import { Columnas } from '../../components/disposicion';
 import { CampoFechaHora } from '../../components/fecha';
@@ -150,7 +150,7 @@ export default function HorarioClasesAdmin() {
     const r = leerHorarioClases(doc, materias, plan, fichas);
     setFilas(r.clases.map((c) => ({ clave: nuevaClave(), materia: c.materia, nivel: c.nivel, seccion: c.seccion, dia_semana: c.dia, hora_inicio: c.inicio, hora_fin: c.fin, aula: c.aula, tipo_clase: c.tipo, origen: c.origen, zona: c.zona, pagina: c.pagina })));
     // Las materias fuera de la malla ya aparecen como clases para revisar.
-    setRevisar(r.revisar.filter((x) => x.motivo !== 'materia').map((x) => ({ ...x, clave: nuevaClave() })));
+    setRevisar(r.revisar.filter((x) => x.motivo !== 'materia').map((x) => ({ ...x, clave: nuevaClave() })).sort((a, b) => (a.pagina ?? a.zona?.pagina ?? 999) - (b.pagina ?? b.zona?.pagina ?? 999)));
   }, [doc, materias, plan, fichas]);
 
   const elegirPdf = async () => {
@@ -578,7 +578,7 @@ function EditorClase({ fila, materias, vistas, onListo, onCerrar }: { fila: Fila
   return (
     <Hoja visible={Boolean(fila)} titulo={fila?.materia ? 'Editar clase' : 'Clase'} onCerrar={onCerrar}>
       {fila?.zona && vistas?.[fila.zona.pagina]?.imagen ? (
-        <RecorteOcr paginas={vistas} zona={fila.zona} titulo={`Así está en el PDF (página ${fila.zona.pagina + 1})`} />
+        <RecorteOcr key={fila.clave} paginas={vistas} zona={fila.zona} titulo={`Así está en el PDF (página ${fila.zona.pagina + 1})`} />
       ) : fila?.origen ? (
         <Mensaje tipo="info" texto={`En el PDF: "${fila.origen}"`} />
       ) : null}

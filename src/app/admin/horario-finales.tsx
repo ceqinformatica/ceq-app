@@ -2,7 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import * as DocumentPicker from 'expo-document-picker';
 import { router, useLocalSearchParams } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Pressable, Switch, Text, View } from 'react-native';
 import { Columnas } from '../../components/disposicion';
 import { textoProgreso, useLectorOcr } from '../../components/LectorOcr';
@@ -488,7 +488,7 @@ function EditorFecha({ fila, materias, vistas, onListo, onCerrar }: { fila: Fila
   return (
     <Hoja visible={Boolean(fila)} titulo={fila?.materia ? 'Editar fecha' : 'Fecha de final'} onCerrar={onCerrar}>
       {fila?.zona && vistas?.[fila.zona.pagina]?.imagen ? (
-        <RecorteOcr paginas={vistas} zona={fila.zona} titulo={`Así está en el PDF (página ${fila.zona.pagina + 1})`} />
+        <RecorteOcr key={fila.clave} paginas={vistas} zona={fila.zona} titulo={`Así está en el PDF (página ${fila.zona.pagina + 1})`} />
       ) : fila?.origen ? (
         <Mensaje tipo="info" texto={`En el PDF: "${fila.origen}"`} />
       ) : null}
