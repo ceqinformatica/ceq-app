@@ -7,7 +7,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { celdasDeRenglon, filasDeOcr, renglones, textoDeOcr, type PaginaOcr, type PalabraOcr, type RenglonOcr } from '../ocr/documento.ts';
+import { celdasDeRenglon, filasDeOcr, renglones, textoDeOcr, ubicar, type PaginaOcr, type PalabraOcr, type RenglonOcr } from '../ocr/documento.ts';
 const textoDeRenglon = (r: RenglonOcr) => celdasDeRenglon(r).map((c) => c.texto).join('   ');
 import { categoriaDe, leerCalendarioPdf } from '../calendario-pdf.ts';
 import { detectarPlan, fechasCortasEn, leerHorarioFinales, romanosOcr } from '../horario-finales.ts';
@@ -319,4 +319,61 @@ test('limpiarNombre no corta la primera letra con tilde', () => {
   assert.equal(limpiarNombre('1 Ética Profesional'), 'Ética Profesional');
   assert.equal(limpiarNombre('Óptica'), 'Óptica');
   assert.equal(limpiarNombre('2 Análisis Industrial'), 'Análisis Industrial');
+});
+
+// ── Filas armadas con las líneas de la tabla y recortes para revisar ──
+
+const pal = (t: string, x0: number, y0: number, x1: number, y1: number): PalabraOcr => ({ t, x0, y0, x1, y1, c: 95 });
+
+test('tabla: lo que está entre dos líneas es una fila, con celdas de dos renglones en orden', () => {
+  const pagina: PaginaOcr = {
+    ancho: 1000,
+    alto: 400,
+    palabras: [
+      pal('Computación', 20, 112, 140, 132), pal('y', 150, 113, 160, 131), pal('Algoritmia', 170, 110, 280, 132),
+      pal('para', 20, 152, 70, 172), pal('Ingeniería', 80, 150, 190, 172),
+      pal('25-nov', 400, 132, 480, 152), pal('14:00', 600, 131, 660, 151),
+      // Palabra con una mancha: mide el doble pero es del mismo renglón.
+      pal('Admi', 20, 210, 70, 250), pal('istración', 75, 212, 160, 228), pal('02-dic', 400, 212, 480, 230),
+    ],
+    lineas: { h: [[100, 0, 1000], [182, 0, 520], [183, 520, 1000], [262, 0, 1000]], v: [[300, 100, 262], [560, 100, 262]] },
+  };
+  const filas = filasDeOcr([pagina], { tablas: true });
+  assert.deepEqual(filas.map((f) => f.celdas.map((c) => c.texto)), [
+    ['Computación y Algoritmia para Ingeniería', '25-nov', '14:00'],
+    ['Admi istración', '02-dic'],
+  ]);
+  assert.equal(filas[0].zona?.y0, 110);
+  // Sin usar las líneas, la celda de dos renglones queda partida.
+  assert.ok(filasDeOcr([pagina]).length > 2);
+  // Sin líneas (lector viejo) es igual que antes.
+  assert.deepEqual(filasDeOcr([{ ...pagina, lineas: undefined }], { tablas: true }), filasDeOcr([pagina]));
+});
+
+test('ubicar: el renglón exacto, o el que más palabras comparte', () => {
+  const pagina: PaginaOcr = { ancho: 1000, alto: 400, palabras: [pal('Química', 20, 100, 120, 120), pal('General', 130, 100, 230, 120), pal('25-nov', 400, 100, 480, 120), pal('Física', 20, 200, 100, 220), pal('II', 110, 200, 130, 220)] };
+  const filas = filasDeOcr([pagina]);
+  assert.equal(ubicar(filas, 'Química General   25-nov')?.y0, 100);
+  assert.equal(ubicar(filas, 'Fisica II: Martes 08:00')?.y0, 200);
+  assert.equal(ubicar(filas, 'Termodinámica'), null);
+  // PDF con texto: sin zonas, sin recorte.
+  assert.equal(ubicar(filas.map(({ zona: _z, ...f }) => f), 'Química General   25-nov'), null);
+});
+
+test('grilla FCQ: cada clase sabe dónde está en el PDF y lo dudoso trae motivo', () => {
+  const paginas = ocr('horario-fcq');
+  const r = leerHorarioClases(filasDeOcr(paginas), MATERIAS_IQ, null, FICHAS_IQ);
+  assert.ok(r.clases.length > 0);
+  for (const c of r.clases) {
+    assert.ok(c.zona, `${c.materia} sin zona`);
+    assert.ok(c.zona!.y1 > c.zona!.y0);
+  }
+  for (const x of r.revisar) assert.ok(['sin-fin', 'materia', 'nivel'].includes(x.motivo));
+  assert.deepEqual(r.sinUsar, r.revisar.map((x) => x.texto));
+});
+
+test('página del lector: manda líneas, miniatura y relee lo que se saltó', () => {
+  assert.match(HTML_OCR, /function rescatar\(/);
+  assert.match(HTML_OCR, /lineas, imagen/);
+  assert.ok(HTML_OCR.includes('/[\\p{L}\\p{N}]/u'), 'la expresión con \\p tiene que llegar entera a la página');
 });

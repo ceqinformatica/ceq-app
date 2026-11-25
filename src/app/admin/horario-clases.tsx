@@ -2,11 +2,12 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import * as DocumentPicker from 'expo-document-picker';
 import { router, useLocalSearchParams } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
-import { useEffect, useMemo, useState, useRef } from 'react';
+import { useEffect, useMemo, useState, useRef, type ReactNode } from 'react';
 import { Pressable, Switch, Text, View } from 'react-native';
 import { Columnas } from '../../components/disposicion';
 import { CampoFechaHora } from '../../components/fecha';
 import { textoProgreso, useLectorOcr } from '../../components/LectorOcr';
+import { RecorteOcr, type PaginaVista } from '../../components/RecorteOcr';
 import { BarraSuperior, Boton, Campo, Cargando, Chip, Fila, Hoja, Insignia, Mensaje, Pantalla, s, Seccion, Tarjeta } from '../../components/ui';
 import { useTema } from '../../context/TemaProvider';
 import { cargarCarreras } from '../../datos/admin';
@@ -17,9 +18,9 @@ import {
 } from '../../datos/horarios-clases';
 import { estadoAviso, TEXTO_AVISO } from '../../lib/aviso-publicacion';
 import { textoError } from '../../lib/errores';
-import { leerHorarioClases, NOMBRE_DIA, planesDeHojas, textoNivel } from '../../lib/horario-clases';
+import { leerHorarioClases, NOMBRE_DIA, planesDeHojas, textoNivel, type ParaRevisar } from '../../lib/horario-clases';
 import { detectarCarrera, detectarPlan, normalizar, type FichaMateria } from '../../lib/horario-finales';
-import { confianzaMedia, filasDeOcr, textoDeFilas, type FilaDoc } from '../../lib/ocr/documento';
+import { confianzaMedia, filasDeOcr, textoDeFilas, type FilaDoc, type Zona } from '../../lib/ocr/documento';
 import { filasDePdfGeneral } from '../../lib/pdf-texto';
 import { infoTipoClase, TIPOS_CLASE, type TipoClase } from '../../lib/tipo-clase';
 import type { Carrera, HorarioClasesDb } from '../../lib/tipos-db';
@@ -28,7 +29,7 @@ import { colores, espacio, fondos } from '../../tema';
 const volver = () => (router.canGoBack() ? router.back() : router.replace('/admin/horarios-clases'));
 
 /** Clase en edición: la materia puede faltar hasta que el admin la elija. */
-type FilaClase = Omit<ClaseEditable, 'materia'> & { clave: string; materia: string | null; origen?: string };
+type FilaClase = Omit<ClaseEditable, 'materia'> & { clave: string; materia: string | null; origen?: string; zona?: Zona | null };
 
 let contador = 0;
 const nuevaClave = () => `k${++contador}`;
@@ -68,6 +69,9 @@ export default function HorarioClasesAdmin() {
   // Planes que trae el PDF (una hoja por carrera, plan y nivel): plan → cantidad de hojas.
   const [planesDoc, setPlanesDoc] = useState<Map<number, number>>(new Map());
   const [doc, setDoc] = useState<FilaDoc[] | null>(null);
+  // Páginas escaneadas (con su imagen) para mostrar el recorte de lo que hay que revisar.
+  const [vistas, setVistas] = useState<PaginaVista[] | null>(null);
+  const [revisar, setRevisar] = useState<(ParaRevisar & { clave: string })[]>([]);
   const [pdf, setPdf] = useState<{ bytes: Uint8Array; nombre: string } | null>(null);
   const [filas, setFilas] = useState<FilaClase[]>([]);
   const [leyendo, setLeyendo] = useState(false);
@@ -142,7 +146,9 @@ export default function HorarioClasesAdmin() {
   useEffect(() => {
     if (!doc || !materias.length) return;
     const r = leerHorarioClases(doc, materias, plan, fichas);
-    setFilas(r.clases.map((c) => ({ clave: nuevaClave(), materia: c.materia, nivel: c.nivel, seccion: c.seccion, dia_semana: c.dia, hora_inicio: c.inicio, hora_fin: c.fin, aula: c.aula, tipo_clase: c.tipo, origen: c.origen })));
+    setFilas(r.clases.map((c) => ({ clave: nuevaClave(), materia: c.materia, nivel: c.nivel, seccion: c.seccion, dia_semana: c.dia, hora_inicio: c.inicio, hora_fin: c.fin, aula: c.aula, tipo_clase: c.tipo, origen: c.origen, zona: c.zona })));
+    // Las materias fuera de la malla ya aparecen como clases para revisar.
+    setRevisar(r.revisar.filter((x) => x.motivo !== 'materia').map((x) => ({ ...x, clave: nuevaClave() })));
   }, [doc, materias, plan, fichas]);
 
   const elegirPdf = async () => {
@@ -157,10 +163,12 @@ export default function HorarioClasesAdmin() {
       const bytes = await bytesDeArchivo(a as { uri: string; file?: File });
       await new Promise((ok) => setTimeout(ok, 50));
       let filasDoc = filasDePdfGeneral(bytes);
+      setVistas(null);
       if (!filasDoc.length) {
         setProgreso(textoProgreso(null));
         const paginas = await lector.leer(bytes, (p) => setProgreso(textoProgreso(p)));
         filasDoc = filasDeOcr(paginas);
+        setVistas(paginas.map((p) => ({ ancho: p.ancho, alto: p.alto, imagen: p.imagen })));
         if (filasDoc.length && confianzaMedia(paginas) < 65) setAviso('El escaneo se ve borroso: revisá bien cada clase antes de publicar.');
       }
       const texto = textoDeFilas(filasDoc);
@@ -190,6 +198,29 @@ export default function HorarioClasesAdmin() {
   };
 
   const sinMateria = filas.filter((f) => !f.materia);
+  // Lo que conviene mirar antes de publicar, cada cosa con su motivo.
+  const dudosas = useMemo(() => {
+    const enMalla = new Set(materias);
+    const l: { fila: FilaClase; motivo: string }[] = [];
+    for (const f of filas) {
+      if (!f.materia) l.push({ fila: f, motivo: 'No reconocimos la materia. Elegila (o borrá la clase).' });
+      else if (materias.length && !enMalla.has(f.materia)) l.push({ fila: f, motivo: `"${f.materia}" no está en la malla de este plan. Elegí la materia correcta, o dejala así si es una optativa.` });
+    }
+    return l;
+  }, [filas, materias]);
+  const totalRevisar = dudosas.length + revisar.length;
+
+  const resolver = (clave: string) => setRevisar((l) => l.filter((x) => x.clave !== clave));
+  const completarClase = (r: ParaRevisar & { clave: string }) => {
+    const ultima = filas[filas.length - 1];
+    resolver(r.clave);
+    setEditando({ clave: nuevaClave(), materia: r.materia && materias.includes(r.materia) ? r.materia : null, nivel: ultima?.nivel ?? null, seccion: null, dia_semana: r.dia ?? 1, hora_inicio: r.inicio ?? '07:00', hora_fin: '', aula: null, tipo_clase: null, origen: r.texto, zona: r.zona });
+  };
+  const ponerNivel = (r: ParaRevisar & { clave: string }, nivel: number) => {
+    setFilas((l) => l.map((f) => (f.nivel == null && f.zona?.pagina === r.pagina ? { ...f, nivel } : f)));
+    resolver(r.clave);
+    setCambios(true);
+  };
   const grupos = useMemo(() => {
     const m = new Map<string, { titulo: string; filas: FilaClase[] }>();
     for (const f of filas) {
@@ -317,7 +348,7 @@ export default function HorarioClasesAdmin() {
               : pdf
                 ? doc?.length
                   ? carreraId
-                    ? `Encontramos ${filas.length} clases${sinMateria.length ? `, ${sinMateria.length} para revisar` : ''}.`
+                    ? `Encontramos ${filas.length} clases${totalRevisar ? `, ${totalRevisar} para revisar` : ''}.`
                     : 'Elegí la carrera para reconocer las materias.'
                   : 'Sin texto para leer.'
                 : 'El horario de clases del periodo que publica la facultad. Si está escaneado (con firmas y sellos), lo leemos igual.'}
@@ -416,11 +447,42 @@ export default function HorarioClasesAdmin() {
           <Text style={s.filaDetalle}>Todavía no hay clases. Cargalas a mano con "Agregar".</Text>
         </Tarjeta>
       )}
-      {sinMateria.length > 0 && (
+      {totalRevisar > 0 && (
         <>
-          <Text style={[s.etiqueta, { color: colores.rojo }]}>Para revisar: no reconocimos la materia</Text>
+          <Text style={[s.etiqueta, { color: colores.rojo }]}>Para revisar ({totalRevisar})</Text>
+          <Text style={[s.filaDetalle, { marginBottom: espacio.s }]}>
+            {vistas ? 'Lo que no pudimos leer bien, con el pedazo del PDF marcado en rojo.' : 'Lo que no pudimos leer bien.'}
+          </Text>
           <Tarjeta estilo={{ paddingVertical: espacio.xs, borderWidth: 1, borderColor: colores.rojo }}>
-            {sinMateria.map((f, i) => <FilaDeClase key={f.clave} f={f} ultima={i === sinMateria.length - 1} onPress={() => setEditando(f)} mostrarOrigen />)}
+            {dudosas.map(({ fila, motivo }, i) => (
+              <ItemRevision key={fila.clave} motivo={motivo} ultima={i === dudosas.length - 1 && !revisar.length}>
+                <FilaDeClase f={fila} ultima onPress={() => setEditando(fila)} mostrarOrigen={!vistas} />
+                <RecorteOcr paginas={vistas} zona={fila.zona} titulo={null} />
+              </ItemRevision>
+            ))}
+            {revisar.map((r, i) => (
+              <ItemRevision
+                key={r.clave}
+                motivo={
+                  r.motivo === 'sin-fin'
+                    ? `${r.materia ?? 'Una clase'}: empieza el ${NOMBRE_DIA[r.dia ?? 1].toLowerCase()} a las ${r.inicio}, pero no leímos a qué hora termina.`
+                    : `${r.texto}. Elegilo para las clases de esa hoja:`
+                }
+                ultima={i === revisar.length - 1}
+              >
+                <RecorteOcr paginas={vistas} zona={r.zona} titulo={null} />
+                {r.motivo === 'sin-fin' ? (
+                  <View style={{ flexDirection: 'row', gap: espacio.s, flexWrap: 'wrap' }}>
+                    <Boton texto="Completar la clase" icono="add" variante="secundario" compacto onPress={() => completarClase(r)} />
+                    <Boton texto="No va" icono="close" variante="fantasma" compacto onPress={() => resolver(r.clave)} />
+                  </View>
+                ) : (
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: espacio.s }}>
+                    {NIVELES.map((n) => <Chip key={n} texto={String(n)} onPress={() => ponerNivel(r, n)} />)}
+                  </View>
+                )}
+              </ItemRevision>
+            ))}
           </Tarjeta>
         </>
       )}
@@ -439,9 +501,21 @@ export default function HorarioClasesAdmin() {
     <Pantalla>
       <BarraSuperior titulo={nuevo ? 'Subir horario de clases' : 'Horario de clases'} onVolver={volver} />
       <Columnas proporcion={1} izquierda={<>{datosGenerales}{acciones}</>} derecha={<>{lista}</>} />
-      <EditorClase fila={editando} materias={materias} onListo={aplicarEdicion} onCerrar={() => setEditando(null)} />
+      <EditorClase fila={editando} materias={materias} vistas={vistas} onListo={aplicarEdicion} onCerrar={() => setEditando(null)} />
       {lector.vista}
     </Pantalla>
+  );
+}
+
+function ItemRevision({ motivo, ultima, children }: { motivo: string; ultima: boolean; children: ReactNode }) {
+  return (
+    <View style={{ paddingVertical: espacio.s, borderBottomWidth: ultima ? 0 : 1, borderBottomColor: colores.linea }}>
+      <View style={{ flexDirection: 'row', gap: espacio.s, alignItems: 'flex-start' }}>
+        <Ionicons name="alert-circle" size={16} color={colores.rojo} style={{ marginTop: 2 }} />
+        <Text style={[s.filaDetalle, { flex: 1, color: colores.texto }]}>{motivo}</Text>
+      </View>
+      {children}
+    </View>
   );
 }
 
@@ -464,7 +538,7 @@ function FilaDeClase({ f, ultima, onPress, mostrarOrigen }: { f: FilaClase; ulti
 const NIVELES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
 /** Hoja para corregir (o agregar) una clase. */
-function EditorClase({ fila, materias, onListo, onCerrar }: { fila: FilaClase | null; materias: string[]; onListo: (f: FilaClase | null) => void; onCerrar: () => void }) {
+function EditorClase({ fila, materias, vistas, onListo, onCerrar }: { fila: FilaClase | null; materias: string[]; vistas: PaginaVista[] | null; onListo: (f: FilaClase | null) => void; onCerrar: () => void }) {
   const [materia, setMateria] = useState<string | null>(null);
   const [busca, setBusca] = useState('');
   const [nivel, setNivel] = useState<number | null>(null);
@@ -505,7 +579,11 @@ function EditorClase({ fila, materias, onListo, onCerrar }: { fila: FilaClase | 
 
   return (
     <Hoja visible={Boolean(fila)} titulo={fila?.materia ? 'Editar clase' : 'Clase'} onCerrar={onCerrar}>
-      {fila?.origen ? <Mensaje tipo="info" texto={`En el PDF: "${fila.origen}"`} /> : null}
+      {fila?.zona && vistas?.[fila.zona.pagina]?.imagen ? (
+        <RecorteOcr paginas={vistas} zona={fila.zona} />
+      ) : fila?.origen ? (
+        <Mensaje tipo="info" texto={`En el PDF: "${fila.origen}"`} />
+      ) : null}
       <Text style={s.etiqueta}>Materia</Text>
       {materia ? (
         <View style={{ flexDirection: 'row', marginBottom: espacio.m }}>
