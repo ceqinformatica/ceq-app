@@ -442,7 +442,8 @@ function HojaResultado({ abierta, materiaId, finales, firma, semestreOpuesto, pe
       {yaAprobo && quePaso !== 'ausente' && <Mensaje tipo="info" texto="Ya tenés un final aprobado en esta materia. ¿Seguro que rendiste este?" />}
       <Mensaje texto={error} />
       <Boton texto="Guardar" icono="checkmark" onPress={guardar} cargando={guardando} deshabilitado={!valido} />
-      {fila && <Boton texto="Eliminar" variante="peligro" icono="trash-outline" onPress={borrar} deshabilitado={guardando} estilo={{ marginTop: espacio.s }} />}
+      {/* Las filas viejas sin llamado no se borran desde acá. */}
+      {fila?.llamado != null && <Boton texto="Eliminar" variante="peligro" icono="trash-outline" onPress={borrar} deshabilitado={guardando} estilo={{ marginTop: espacio.s }} />}
       <View style={{ height: espacio.l }} />
     </Hoja>
   );

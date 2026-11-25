@@ -506,6 +506,8 @@ function FormEvaluacion({ visible, evaluacion, materiaId, onCerrar, onGuardado, 
   // Recu y Regu usan un llamado de finales: en qué semestre y cuál.
   const [periodo, setPeriodo] = useState(periodoDe());
   const [llamado, setLlamado] = useState<1 | 2>(1);
+  // Hasta saber si ya había un Recu o una Regu en Finales, no se guarda (se movería sin querer).
+  const [finalesLeidos, setFinalesLeidos] = useState(false);
   const usaLlamado = tipo === 'recuperatorio' || tipo === 'regularizacion';
   // El Recu solo se rinde en el 1.er llamado.
   const llamadoUsado: 1 | 2 = tipo === 'recuperatorio' ? 1 : llamado;
@@ -524,16 +526,19 @@ function FormEvaluacion({ visible, evaluacion, materiaId, onCerrar, onGuardado, 
     setError(null);
     setPeriodo(periodoDe());
     setLlamado(1);
+    setFinalesLeidos(false);
     // Si ya había un Recu o una Regu en Finales, arranca con ese semestre y llamado.
     let vivo = true;
     cargarFinales(materiaId)
       .then((fs) => {
         const usado = fs.find((f) => !f.cursada_anterior && (f.tipo === 'recuperatorio' || f.tipo === 'regularizacion'));
-        if (!vivo || !usado) return;
+        if (!vivo) return;
+        setFinalesLeidos(true);
+        if (!usado) return;
         if (usado.periodo) setPeriodo(usado.periodo);
         if (usado.llamado === 1 || usado.llamado === 2) setLlamado(usado.llamado);
       })
-      .catch(() => {});
+      .catch(() => vivo && setFinalesLeidos(true));
     return () => {
       vivo = false;
     };
@@ -660,7 +665,7 @@ function FormEvaluacion({ visible, evaluacion, materiaId, onCerrar, onGuardado, 
         </>
       )}
       <Mensaje texto={error} />
-      <Boton texto="Guardar" icono="checkmark" onPress={guardar} cargando={guardando} deshabilitado={!valido} />
+      <Boton texto="Guardar" icono="checkmark" onPress={guardar} cargando={guardando} deshabilitado={!valido || (usaLlamado && !finalesLeidos)} />
       {evaluacion && !esPredefinida(evaluacion) && <Boton texto="Eliminar" variante="peligro" icono="trash-outline" onPress={borrar} deshabilitado={guardando} />}
       <View style={{ height: espacio.l }} />
     </Hoja>
