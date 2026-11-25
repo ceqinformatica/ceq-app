@@ -106,8 +106,6 @@ async function atenderSegunMemoria(clave: string, memoria: MemoriaEnlace): Promi
     return true;
   } finally {
     comprobando--;
-    // Quien esperaba la comprobación (la ruta auth/pin) se entera siempre.
-    if (comprobando === 0) queueMicrotask(avisar);
   }
 }
 
@@ -149,6 +147,7 @@ export async function procesarEnlacePin(
   // Un enlace viejo (Android lo vuelve a entregar al reabrir) o que no se pidió
   // en este celular se ignora sin avisar nada.
   if (memoria && !(await atenderSegunMemoria(claveEnlace(e), memoria))) {
+    // Cada salida sin resultado avisa, para que la ruta auth/pin no quede esperando.
     avisar();
     return;
   }

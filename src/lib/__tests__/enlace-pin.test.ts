@@ -252,3 +252,29 @@ test('al bloquearse, una confirmación vieja que nadie tomó no sirve', async ()
   descartarResultadoSinTomar();
   assert.deepEqual(resultadoPin(), { tipo: 'confirmado' });
 });
+
+test('con un enlace bueno, la ruta nunca ve "nada" (no se va al inicio por error)', async () => {
+  for (const dos of [false, true]) {
+    reiniciarEnlacePin();
+    const base = memoriaFalsa();
+    base.pedir();
+    const lenta = {
+      leer: async () => {
+        await new Promise((r) => setTimeout(r, 3));
+        return base.leer();
+      },
+      guardar: base.guardar,
+    };
+    const vistosPorRuta: (string | null)[] = [];
+    const dejar = escucharResultadoPin(() => {
+      if (!hayEnlaceComprobando()) vistosPorRuta.push(resultadoPin()?.tipo ?? null);
+    });
+    const ps = [procesarEnlacePin({ code: `ok${dos}`, flowId: null }, async () => null, 1000, lenta)];
+    if (dos) ps.push(procesarEnlacePin({ code: `ok${dos}`, flowId: null }, async () => null, 1000, lenta));
+    await Promise.all(ps);
+    await new Promise((r) => setTimeout(r, 5));
+    dejar();
+    assert.ok(vistosPorRuta.length > 0);
+    assert.equal(vistosPorRuta.includes(null), false, JSON.stringify(vistosPorRuta));
+  }
+});
