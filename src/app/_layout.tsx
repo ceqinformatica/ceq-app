@@ -2,7 +2,7 @@ import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold, us
 import * as Notifications from 'expo-notifications';
 import { router, Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect, useLayoutEffect, useRef } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { alFallarSalida } from '../lib/auth';
 import { ActivityIndicator, AppState, Image, Platform, View } from 'react-native';
@@ -27,6 +27,7 @@ configurarNotificaciones();
  */
 function useNotificaciones(uid: string | null, lista: boolean) {
   const registrado = useRef<string | null>(null);
+  const [reintento, setReintento] = useState(0);
   useEffect(() => {
     // Al cerrar sesión se borra el celular: al volver a entrar hay que registrarlo de nuevo.
     if (!uid) registrado.current = null;
@@ -45,17 +46,23 @@ function useNotificaciones(uid: string | null, lista: boolean) {
     const sub = AppState.addEventListener('change', (estado) => {
       if (estado === 'active' && registrado.current !== uid) intentar();
     });
-    // Un cierre de sesión que falló a medias pudo borrar el registro: se vuelve a registrar.
-    const fallo = alFallarSalida(() => {
-      registrado.current = null;
-      intentar();
-    });
     return () => {
       activo = false;
       sub.remove();
-      fallo();
     };
-  }, [uid, lista]);
+  }, [uid, lista, reintento]);
+
+  // Un cierre de sesión que falló a medias (incluso desde el bloqueo) pudo borrar
+  // el registro: se olvida y el efecto de arriba vuelve a registrar el celular
+  // en cuanto haya sesión lista. Se escucha siempre, sin depender del registro.
+  useEffect(
+    () =>
+      alFallarSalida(() => {
+        registrado.current = null;
+        setReintento((n) => n + 1);
+      }),
+    [],
+  );
 
   useEffect(() => {
     if (!lista || Platform.OS === 'web') return;
