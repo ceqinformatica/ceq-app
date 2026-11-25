@@ -149,7 +149,10 @@ function Encuesta({ encuesta, onVotado }: { encuesta: EncuestaConResultados; onV
   const [elegida, setElegida] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const mostrarResultados = encuesta.yaVote;
+  // Encuesta privada: después de votar no se muestran porcentajes, solo la
+  // confirmación (la base tampoco manda los votos).
+  const privada = encuesta.resultados_publicos === false;
+  const mostrarResultados = encuesta.yaVote && !privada;
 
   const enviar = async () => {
     if (!elegida) return;
@@ -174,7 +177,13 @@ function Encuesta({ encuesta, onVotado }: { encuesta: EncuestaConResultados; onV
           <Text style={[s.filaDetalle, { color: colores.verde, fontFamily: fuentes.medium }]}>Anónima: nadie sabe qué votaste</Text>
         </View>
         <Text style={[s.filaTitulo, { fontSize: 16, color: colores.marino, marginBottom: espacio.m }]}>{encuesta.pregunta}</Text>
-        {encuesta.opciones.map((o) => {
+        {encuesta.yaVote && privada ? (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: espacio.s, marginBottom: espacio.s }}>
+            <Ionicons name="checkmark-circle" size={20} color={colores.verde} />
+            <Text style={[s.cuerpo, { flex: 1 }]}>Gracias por votar. Los resultados de esta encuesta son privados: solo los ve el CEQ.</Text>
+          </View>
+        ) : null}
+        {encuesta.yaVote && privada ? null : encuesta.opciones.map((o) => {
           const porc = encuesta.total ? Math.round((o.votos / encuesta.total) * 100) : 0;
           if (mostrarResultados) {
             return (
@@ -196,9 +205,12 @@ function Encuesta({ encuesta, onVotado }: { encuesta: EncuestaConResultados; onV
           );
         })}
         {mostrarResultados ? (
-          <Text style={s.filaDetalle}>{encuesta.total} votos · Ya votaste</Text>
-        ) : (
-          <Boton texto="Votar" onPress={enviar} cargando={enviando} deshabilitado={!elegida} />
+          <Text style={s.filaDetalle}>{encuesta.total} {encuesta.total === 1 ? 'voto' : 'votos'} · Ya votaste</Text>
+        ) : encuesta.yaVote ? null : (
+          <>
+            {privada && <Text style={[s.filaDetalle, { marginBottom: espacio.s }]}>Los resultados son privados: solo los ve el CEQ.</Text>}
+            <Boton texto="Votar" onPress={enviar} cargando={enviando} deshabilitado={!elegida} />
+          </>
         )}
         <Mensaje texto={error} />
       </Tarjeta>

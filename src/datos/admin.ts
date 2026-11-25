@@ -4,7 +4,7 @@
  * llegue a estas pantallas.
  */
 import { supabase } from '../lib/supabase';
-import type { AvisoDb, Carrera, EncuestaDb, NotificacionDb, PendientesPanel, ResumenAdmin, SugerenciaDb } from '../lib/tipos-db';
+import type { AvisoDb, Carrera, EncuestaDb, EstudianteRegistrado, NotificacionDb, PendientesPanel, ResumenAdmin, SugerenciaDb } from '../lib/tipos-db';
 import { db, esperar, idDemo, MODO_DEMO } from './demo';
 import { lanzar } from '../lib/errores';
 
@@ -172,15 +172,15 @@ export async function cargarEncuestasAdmin(): Promise<EncuestaAdmin[]> {
   });
 }
 
-export async function crearEncuesta(pregunta: string, opciones: string[], cierraEn: string | null) {
+export async function crearEncuesta(pregunta: string, opciones: string[], cierraEn: string | null, resultadosPublicos = true) {
   if (MODO_DEMO) {
     await esperar(300);
     const id = idDemo();
-    db.encuestas.unshift({ id, pregunta, abierta: true, cierra_en: cierraEn, created_at: new Date().toISOString() });
+    db.encuestas.unshift({ id, pregunta, abierta: true, cierra_en: cierraEn, created_at: new Date().toISOString(), resultados_publicos: resultadosPublicos });
     opciones.forEach((texto, orden) => db.opciones.push({ id: idDemo(), encuesta_id: id, texto, orden }));
     return;
   }
-  const { data, error } = await supabase.from('encuestas').insert({ pregunta, cierra_en: cierraEn }).select('id').single();
+  const { data, error } = await supabase.from('encuestas').insert({ pregunta, cierra_en: cierraEn, resultados_publicos: resultadosPublicos }).select('id').single();
   lanzar(error);
   const { error: e2 } = await supabase.from('opciones_encuesta').insert(opciones.map((texto, orden) => ({ encuesta_id: data!.id, texto, orden })));
   if (e2) {
@@ -196,6 +196,16 @@ export async function cambiarEncuesta(id: string, abierta: boolean) {
     return;
   }
   const { error } = await supabase.from('encuestas').update({ abierta }).eq('id', id);
+  lanzar(error);
+}
+
+/** Cambia si quien vota ve los porcentajes o si son solo para la administración. */
+export async function cambiarVisibilidadEncuesta(id: string, resultadosPublicos: boolean) {
+  if (MODO_DEMO) {
+    db.encuestas = db.encuestas.map((e) => (e.id === id ? { ...e, resultados_publicos: resultadosPublicos } : e));
+    return;
+  }
+  const { error } = await supabase.from('encuestas').update({ resultados_publicos: resultadosPublicos }).eq('id', id);
   lanzar(error);
 }
 
@@ -227,4 +237,23 @@ export async function responderSugerencia(id: string, estado: SugerenciaDb['esta
   }
   const { error } = await supabase.from('sugerencias').update({ estado, respuesta }).eq('id', id);
   lanzar(error);
+}
+
+/* ---------------- Estudiantes registrados ---------------- */
+
+/** Todas las cuentas de la app, de la más nueva a la más vieja. Solo admin (la base rechaza a los demás). */
+export async function cargarEstudiantes(): Promise<EstudianteRegistrado[]> {
+  if (MODO_DEMO) {
+    await esperar(150);
+    const hace = (d: number) => new Date(Date.now() - d * 86400000).toISOString();
+    return [
+      { id: 'demo-e1', nombre: 'Ana Giménez', ci: '5123456', correo: 'ana@ejemplo.com', carrera: 'Química', plan: 'Plan 2026', anio_ingreso: 2024, rol: 'estudiante', registrado_en: hace(2), ultimo_ingreso: hace(0), socio_vigente: true },
+      { id: 'demo-e2', nombre: 'Bruno Ortiz', ci: '4987654', correo: 'bruno@ejemplo.com', carrera: 'Ingeniería Química', plan: 'Plan 2018', anio_ingreso: 2021, rol: 'estudiante', registrado_en: hace(9), ultimo_ingreso: hace(3), socio_vigente: false },
+      { id: 'demo-e3', nombre: null, ci: null, correo: 'nuevo@ejemplo.com', carrera: null, plan: null, anio_ingreso: null, rol: 'estudiante', registrado_en: hace(20), ultimo_ingreso: null, socio_vigente: false },
+      { id: 'demo-e4', nombre: 'CEQ Informática', ci: null, correo: 'admin@ejemplo.com', carrera: null, plan: null, anio_ingreso: null, rol: 'admin', registrado_en: hace(40), ultimo_ingreso: hace(1), socio_vigente: false },
+    ];
+  }
+  const { data, error } = await supabase.rpc('listar_estudiantes');
+  lanzar(error);
+  return (data as EstudianteRegistrado[] | null) ?? [];
 }

@@ -58,7 +58,8 @@ export async function cargarEncuestas(uid: string): Promise<EncuestaConResultado
   if (MODO_DEMO) {
     await esperar(150);
     return db.encuestas.map((e) => {
-      const opciones = db.opciones.filter((o) => o.encuesta_id === e.id).map((o) => ({ id: o.id, texto: o.texto, votos: db.votos[o.id] ?? 0 }));
+      // Como en la base: los votos de una encuesta privada no llegan a quien vota.
+      const opciones = db.opciones.filter((o) => o.encuesta_id === e.id).map((o) => ({ id: o.id, texto: o.texto, votos: e.resultados_publicos ? (db.votos[o.id] ?? 0) : 0 }));
       return { ...e, opciones, total: opciones.reduce((s, o) => s + o.votos, 0), yaVote: db.yaVote.has(e.id) };
     });
   }
