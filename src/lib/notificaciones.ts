@@ -14,7 +14,24 @@ import { supabase } from './supabase';
 
 const CLAVE_TOKEN = 'ceq.push.token';
 
-export type EstadoRegistro = 'activo' | 'sin_permiso' | 'no_disponible' | 'error';
+/** 'sin_servicios': celular sin servicios de Google (p. ej. Huawei nuevos), no puede recibir push. */
+export type EstadoRegistro = 'activo' | 'sin_permiso' | 'no_disponible' | 'sin_servicios' | 'error';
+
+/**
+ * true/false si se pudo averiguar si el celular tiene los servicios de Google
+ * Play (las notificaciones push de Android pasan por ellos); null si no se sabe.
+ */
+export async function tieneServiciosDeGoogle(): Promise<boolean | null> {
+  if (Platform.OS !== 'android') return null;
+  try {
+    const { GoogleSignin } = require('@react-native-google-signin/google-signin') as typeof import('@react-native-google-signin/google-signin');
+    return await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: false });
+  } catch (e) {
+    // Sin el módulo nativo (Expo Go) no se sabe; si el módulo respondió con
+    // error, es que faltan o no andan los servicios de Google.
+    return (e as { code?: string })?.code ? false : null;
+  }
+}
 
 /** Con la app abierta también se muestra el aviso arriba. */
 export function configurarNotificaciones() {
@@ -53,7 +70,10 @@ export async function registrarEsteCelular({ pedirPermiso = true } = {}): Promis
     await AsyncStorage.setItem(CLAVE_TOKEN, token).catch(() => {});
     return 'activo';
   } catch {
-    // Por ejemplo: el APK se compiló sin la configuración de Firebase.
+    // Sin servicios de Google (Huawei) no hay token posible: no es un error
+    // pasajero, así que no se reintenta. Si no, por ejemplo: el APK se compiló
+    // sin la configuración de Firebase.
+    if ((await tieneServiciosDeGoogle()) === false) return 'sin_servicios';
     return 'error';
   }
 }
