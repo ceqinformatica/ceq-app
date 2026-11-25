@@ -17,7 +17,7 @@ export default function PanelAdmin() {
   const n = (v: number | undefined) => (v == null ? '…' : String(v));
   return (
     <Pantalla cabecera={<CabeceraMarca titulo="Panel del CEQ" sub="Solo lo ven las cuentas de administración" compacta />} refrescando={refrescando} onRefrescar={recargar}>
-      <Tarjeta estilo={{ marginTop: -espacio.l }}>
+      <Tarjeta estilo={{ marginTop: -espacio.l }} onPress={() => router.push('/admin/estudiantes')} etiqueta="Ver los estudiantes registrados">
         <View style={{ flexDirection: 'row', gap: espacio.m }}>
           <Dato valor={n(datos?.usuarios)} etiqueta="Estudiantes" />
           <Dato valor={n(datos?.celulares)} etiqueta="Celulares con avisos" />
@@ -45,12 +45,13 @@ export default function PanelAdmin() {
 
       <Seccion>Gestionar</Seccion>
       <Tarjeta estilo={{ paddingVertical: espacio.xs }}>
+        <Fila icono="people-outline" titulo="Estudiantes registrados" detalle={datos?.usuarios != null ? `${datos.usuarios} ${datos.usuarios === 1 ? 'cuenta' : 'cuentas'} en la app: buscar y ver sus datos` : 'Ver quién se registró en la app'} onPress={() => router.push('/admin/estudiantes')} />
         <Fila icono="camera-outline" titulo="Validar carnets" detalle={carnets ? `${carnets} por revisar` : 'Revisar las fotos de carnets físicos que mandaron los estudiantes'} onPress={() => router.push('/admin/solicitudes-carnet')} />
         <Fila icono="card-outline" titulo="Socios y carnets" detalle="Dar de alta a quien pagó, renovar o dar de baja" onPress={() => router.push('/admin/socios')} />
         <Fila icono="qr-code-outline" titulo="Verificar carnet" detalle="Escanear el QR de un socio en la puerta o en un comercio" onPress={() => router.push('/verificar')} />
         <Fila icono="megaphone-outline" titulo="Avisos" detalle="Publicar, programar y editar comunicados" onPress={() => router.push('/admin/avisos')} />
         <Fila icono="notifications-outline" titulo="Notificaciones" detalle="Recordatorios y mensajes al celular, ahora o programados" onPress={() => router.push('/admin/notificaciones')} />
-        <Fila icono="stats-chart-outline" titulo="Encuestas" detalle="Crear encuestas anónimas y ver resultados" onPress={() => router.push('/admin/encuestas')} />
+        <Fila icono="stats-chart-outline" titulo="Encuestas" detalle="Crear encuestas anónimas, con resultados visibles o privados" onPress={() => router.push('/admin/encuestas')} />
         <Fila icono="school-outline" titulo="Horarios de finales" detalle={datos?.pendientes?.horarios_borrador ? `${datos.pendientes.horarios_borrador} en borrador` : 'Subir el PDF de cada carrera y repartir las fechas'} onPress={() => router.push('/admin/horarios-finales')} />
         <Fila icono="albums-outline" titulo="Ventanas flotantes" detalle={datos?.pendientes?.ventanas_activas ? `${datos.pendientes.ventanas_activas} visibles ahora` : 'Carteles que aparecen al abrir la app, a tu gusto'} onPress={() => router.push('/admin/ventanas')} />
         <Fila icono="time-outline" titulo="Horarios de clases" detalle={datos?.pendientes?.clases_borrador ? `${datos.pendientes.clases_borrador} en borrador` : 'Subir el PDF de cada carrera para que carguen sus clases'} onPress={() => router.push('/admin/horarios-clases')} />

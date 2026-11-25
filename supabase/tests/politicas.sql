@@ -685,6 +685,48 @@ select pg_temp.debe_ser('y la fecha queda en blanco para el próximo semestre',
   (select count(*) from public.perfiles where fin_clases is not null), 0);
 drop table clases_beto;
 
+-- Lista de estudiantes y encuestas privadas --------------------------
+reset role;
+select pg_temp.como('00000000-0000-0000-0000-00000000000a');
+select pg_temp.debe_fallar('Ana no ve la lista de estudiantes', 'select * from public.listar_estudiantes()');
+select pg_temp.como(null);
+select pg_temp.debe_fallar('anon no ve la lista de estudiantes', 'select * from public.listar_estudiantes()');
+reset role;
+select pg_temp.como('00000000-0000-0000-0000-0000000000ad');
+select pg_temp.debe_ser('admin ve a todos los registrados',
+  (select count(*) from public.listar_estudiantes()), (select count(*) from public.perfiles));
+select pg_temp.debe_ser('admin ve el correo de Ana',
+  (select count(*) from public.listar_estudiantes() where correo = 'ana@ejemplo.com'), 1);
+select pg_temp.debe_ser('admin crea una encuesta privada',
+  pg_temp.filas($q$insert into public.encuestas (id, pregunta, resultados_publicos) values ('40000000-0000-0000-0000-000000000009', '¿Privada?', false)$q$), 1);
+select pg_temp.debe_ser('admin carga sus opciones',
+  pg_temp.filas($q$insert into public.opciones_encuesta (id, encuesta_id, texto) values ('50000000-0000-0000-0000-000000000091', '40000000-0000-0000-0000-000000000009', 'A'), ('50000000-0000-0000-0000-000000000092', '40000000-0000-0000-0000-000000000009', 'B')$q$), 2);
+reset role;
+select pg_temp.como('00000000-0000-0000-0000-00000000000b');
+select public.votar('40000000-0000-0000-0000-000000000009', '50000000-0000-0000-0000-000000000091');
+select pg_temp.debe_fallar('Beto no lee los votos directamente', 'select count(*) from public.votos');
+select pg_temp.debe_ser('Beto no ve los resultados de la encuesta privada',
+  (select count(*) from public.resultados_encuesta where encuesta_id = '40000000-0000-0000-0000-000000000009'), 0);
+select pg_temp.debe_ser('Beto sigue viendo los de una encuesta pública',
+  (select count(*) from public.resultados_encuesta where encuesta_id = '40000000-0000-0000-0000-000000000001'), 2);
+do $d$ begin
+  update public.encuestas set resultados_publicos = true where id = '40000000-0000-0000-0000-000000000009';
+exception when others then null;
+end $d$;
+reset role;
+select pg_temp.debe_ser('la encuesta sigue privada',
+  (select count(*) from public.encuestas where id = '40000000-0000-0000-0000-000000000009' and not resultados_publicos), 1);
+select pg_temp.como('00000000-0000-0000-0000-0000000000ad');
+select pg_temp.debe_ser('admin sí ve el voto de la encuesta privada',
+  (select votos from public.resultados_encuesta where opcion_id = '50000000-0000-0000-0000-000000000091'), 1);
+select pg_temp.debe_ser('admin puede hacer públicos los resultados después',
+  pg_temp.filas($q$update public.encuestas set resultados_publicos = true where id = '40000000-0000-0000-0000-000000000009'$q$), 1);
+reset role;
+select pg_temp.como('00000000-0000-0000-0000-00000000000b');
+select pg_temp.debe_ser('y entonces Beto los ve',
+  (select votos from public.resultados_encuesta where opcion_id = '50000000-0000-0000-0000-000000000091'), 1);
+reset role;
+
 -- Todas las tablas públicas tienen RLS ------------------------------
 select pg_temp.debe_ser('tablas sin RLS',
   (select count(*) from pg_class c join pg_namespace n on n.oid = c.relnamespace

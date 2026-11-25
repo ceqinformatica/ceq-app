@@ -148,7 +148,7 @@ export const db = {
     { id: 'n2', tipo: 'aviso', titulo: 'Inscripciones a exámenes finales', cuerpo: 'Recordá que la inscripción a los finales del primer periodo cierra el viernes.', ruta: '/aviso/a1', aviso_id: 'a1', evento_id: null, usuario_id: null, carrera_id: null, plan_id: null, programada_para: enDias(-1), estado: 'enviada', enviada_en: enDias(-1), destinatarios: 214, creada_por: null, created_at: enDias(-1) },
   ] as NotificacionDb[],
   encuestas: [
-    { id: 'enc1', pregunta: '¿Qué horario preferís para las tutorías?', abierta: true, cierra_en: enDias(5), created_at: enDias(-2) },
+    { id: 'enc1', pregunta: '¿Qué horario preferís para las tutorías?', abierta: true, cierra_en: enDias(5), created_at: enDias(-2), resultados_publicos: true },
   ] as EncuestaDb[],
   opciones: [
     { id: 'o1', encuesta_id: 'enc1', texto: 'Mañana (7:00 a 9:00)', orden: 0 },

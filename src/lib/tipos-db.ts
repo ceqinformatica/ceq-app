@@ -83,6 +83,11 @@ export type VerificacionCarnet = {
   resultado: ResultadoVerificacion; socio_id?: string; nombre?: string; numero_socio?: string; ci?: string;
   carrera?: string | null; vigente_hasta?: string | null; foto_path?: string | null; con_cuenta?: boolean;
 }
+/** Una cuenta registrada en la app, para la lista del panel (solo admins). */
+export type EstudianteRegistrado = {
+  id: string; nombre: string | null; ci: string | null; correo: string | null; carrera: string | null; plan: string | null;
+  anio_ingreso: number | null; rol: RolUsuario; registrado_en: string; ultimo_ingreso: string | null; socio_vigente: boolean;
+};
 export type EstudianteEncontrado = { id: string; nombre: string | null; ci: string | null; correo: string | null; carrera: string | null };
 export type AvisoDb = {
   id: string; titulo: string; cuerpo: string; imagen_url: string | null; notificar: boolean; publicado: boolean;
@@ -99,7 +104,8 @@ export type SugerenciaDb = {
   id: string; usuario_id: string | null; categoria: string | null; texto: string;
   estado: 'recibida' | 'en_revision' | 'respondida'; respuesta: string | null; created_at: string;
 }
-export type EncuestaDb = { id: string; pregunta: string; abierta: boolean; cierra_en: string | null; created_at: string }
+/** resultados_publicos: true, quien vota ve los porcentajes; false, solo los ve la administración. */
+export type EncuestaDb = { id: string; pregunta: string; abierta: boolean; cierra_en: string | null; created_at: string; resultados_publicos: boolean }
 export type OpcionEncuestaDb = { id: string; encuesta_id: string; texto: string; orden: number }
 export type YaVotaronDb = { encuesta_id: string; usuario_id: string }
 /** Para qué se usó un llamado: final, regularización (1.º o 2.º) o recuperatorio (1.º). */
@@ -171,7 +177,7 @@ export type Database = {
       notificaciones: Tabla<NotificacionDb, 'id' | 'tipo' | 'ruta' | 'aviso_id' | 'evento_id' | 'usuario_id' | 'carrera_id' | 'plan_id' | 'programada_para' | 'estado' | 'enviada_en' | 'destinatarios' | 'creada_por' | 'created_at'>;
       tramites: Tabla<TramiteDb, 'id' | 'clave' | 'categoria' | 'descripcion' | 'pasos' | 'requisitos' | 'costo' | 'donde' | 'plazo' | 'contacto' | 'modalidad' | 'formulario_url' | 'fuente_url' | 'orden' | 'publicado' | 'updated_at'>;
       sugerencias: Tabla<SugerenciaDb, 'id' | 'usuario_id' | 'categoria' | 'estado' | 'respuesta' | 'created_at'>;
-      encuestas: Tabla<EncuestaDb, 'id' | 'abierta' | 'cierra_en' | 'created_at'>;
+      encuestas: Tabla<EncuestaDb, 'id' | 'abierta' | 'cierra_en' | 'created_at' | 'resultados_publicos'>;
       opciones_encuesta: Tabla<OpcionEncuestaDb, 'id' | 'orden'>;
       ya_votaron: Tabla<YaVotaronDb>;
       examenes_finales: Tabla<ExamenFinalDb, 'id' | 'usuario_id' | 'periodo' | 'llamado' | 'fecha' | 'created_at' | 'porcentaje' | 'tipo' | 'cursada_anterior'>;
@@ -198,6 +204,7 @@ export type Database = {
       verificar_carnet: { Args: { p_texto: string }; Returns: VerificacionCarnet };
       renovar_codigo_carnet: { Args: { p_socio: string }; Returns: string };
       poner_foto_carnet: { Args: { p_socio: string; p_path: string | null }; Returns: undefined };
+      listar_estudiantes: { Args: Record<string, never>; Returns: EstudianteRegistrado[] };
       buscar_estudiantes: { Args: { p_texto: string }; Returns: EstudianteEncontrado[] };
       solicitar_carnet: { Args: { p_nombre: string; p_ci: string; p_numero: string | null; p_vence: string; p_foto: string }; Returns: string };
       aprobar_solicitud_carnet: { Args: { p_id: string; p_version: string }; Returns: string };

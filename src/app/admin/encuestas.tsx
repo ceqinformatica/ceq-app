@@ -3,8 +3,8 @@ import { useState } from 'react';
 import { Switch, Text, View } from 'react-native';
 import { CampoFechaHora, hoy } from '../../components/fecha';
 import { BarraProgreso } from '../../components/graficos';
-import { BarraSuperior, Boton, BotonFlotante, BotonIcono, Campo, Cargando, EstadoVacio, Fila, Hoja, Insignia, Mensaje, Pantalla, s, Tarjeta } from '../../components/ui';
-import { borrarEncuesta, cambiarEncuesta, cargarEncuestasAdmin, crearEncuesta, programarNotificacion, type EncuestaAdmin } from '../../datos/admin';
+import { BarraSuperior, Boton, BotonFlotante, BotonIcono, Campo, Cargando, EstadoVacio, Fila, Hoja, Insignia, Mensaje, Pantalla, s, Segmentado, Tarjeta } from '../../components/ui';
+import { borrarEncuesta, cambiarEncuesta, cambiarVisibilidadEncuesta, cargarEncuestasAdmin, crearEncuesta, programarNotificacion, type EncuestaAdmin } from '../../datos/admin';
 import { usarDatos } from '../../datos/usarDatos';
 import { describirCuando, leerFechaHora } from '../../lib/programacion';
 import { colores, espacio, fondos, fuentes } from '../../tema';
@@ -27,7 +27,7 @@ export default function EncuestasAdmin() {
         {cargando && !datos ? (
           <Cargando />
         ) : !datos?.length ? (
-          <EstadoVacio icono="stats-chart-outline" titulo={error ? 'No pudimos cargar las encuestas' : 'Sin encuestas'} texto={error ?? 'Las encuestas son anónimas: se sabe cuántos votaron cada opción, nunca quién.'} />
+          <EstadoVacio icono="stats-chart-outline" titulo={error ? 'No pudimos cargar las encuestas' : 'Sin encuestas'} texto={error ?? 'Las encuestas son anónimas: se sabe cuántos votaron cada opción, nunca quién. Al crearla elegís si quien vota ve los porcentajes o si quedan privados.'} />
         ) : (
           datos.map((e) => <Encuesta key={e.id} e={e} onCambio={recargar} />)
         )}
@@ -75,6 +75,11 @@ function Encuesta({ e, onCambio }: { e: EncuestaAdmin; onCambio: () => void }) {
               <Insignia texto="Cerrada" color={colores.gris} fondo={fondos.grisFondo} />
             )}
             <Insignia texto={`${e.total} ${e.total === 1 ? 'voto' : 'votos'}`} />
+            {e.resultados_publicos === false ? (
+              <Insignia texto="Resultados privados" icono="eye-off-outline" color={colores.gris} fondo={fondos.grisFondo} />
+            ) : (
+              <Insignia texto="Resultados visibles" icono="eye-outline" color={colores.azul} fondo={fondos.tarjeta} />
+            )}
           </View>
           <Text style={[s.filaTitulo, { fontSize: 16, color: colores.marino, marginBottom: espacio.m }]}>{e.pregunta}</Text>
         </View>
@@ -94,14 +99,27 @@ function Encuesta({ e, onCambio }: { e: EncuestaAdmin; onCambio: () => void }) {
       })}
       {confirmar && <Mensaje texto="Se borran la encuesta y sus resultados. Tocá el tacho otra vez para confirmar." />}
       <Mensaje texto={error} />
-      <Boton
-        texto={e.abierta ? 'Cerrar encuesta' : 'Volver a abrir'}
-        variante="secundario"
-        compacto
-        icono={e.abierta ? 'lock-closed-outline' : 'lock-open-outline'}
-        onPress={() => hacer(() => cambiarEncuesta(e.id, !e.abierta))}
-        cargando={ocupado}
-      />
+      <Text style={[s.filaDetalle, { marginBottom: espacio.s }]}>
+        {e.resultados_publicos === false ? 'Solo vos y los demás admins ven los porcentajes. Quien vota ve solo que su voto se guardó.' : 'Quien vota ve los porcentajes después de votar.'}
+      </Text>
+      <View style={{ gap: espacio.xs }}>
+        <Boton
+          texto={e.abierta ? 'Cerrar encuesta' : 'Volver a abrir'}
+          variante="secundario"
+          compacto
+          icono={e.abierta ? 'lock-closed-outline' : 'lock-open-outline'}
+          onPress={() => hacer(() => cambiarEncuesta(e.id, !e.abierta))}
+          cargando={ocupado}
+        />
+        <Boton
+          texto={e.resultados_publicos === false ? 'Mostrar resultados' : 'Hacer privados'}
+          variante="fantasma"
+          compacto
+          icono={e.resultados_publicos === false ? 'eye-outline' : 'eye-off-outline'}
+          onPress={() => hacer(() => cambiarVisibilidadEncuesta(e.id, e.resultados_publicos === false))}
+          deshabilitado={ocupado}
+        />
+      </View>
     </Tarjeta>
   );
 }
@@ -111,6 +129,7 @@ function Formulario({ visible, onCerrar, onListo }: { visible: boolean; onCerrar
   const [opciones, setOpciones] = useState(['', '']);
   const [cierreFecha, setCierreFecha] = useState('');
   const [notificar, setNotificar] = useState(true);
+  const [visibilidad, setVisibilidad] = useState<'visibles' | 'privados'>('visibles');
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -129,13 +148,14 @@ function Formulario({ visible, onCerrar, onListo }: { visible: boolean; onCerrar
     }
     setGuardando(true);
     try {
-      await crearEncuesta(p, ops, cierra);
+      await crearEncuesta(p, ops, cierra, visibilidad === 'visibles');
       if (notificar) {
         await programarNotificacion({ titulo: 'Nueva encuesta del CEQ', cuerpo: p.slice(0, 180), programada_para: new Date().toISOString(), carrera_id: null, ruta: '/ceq' });
       }
       setPregunta('');
       setOpciones(['', '']);
       setCierreFecha('');
+      setVisibilidad('visibles');
       onListo(notificar ? 'Encuesta publicada y notificada.' : 'Encuesta publicada.');
     } catch (err) {
       setError(textoError(err, 'No se pudo crear.'));
@@ -159,6 +179,18 @@ function Formulario({ visible, onCerrar, onListo }: { visible: boolean; onCerrar
       ))}
       {opciones.length < 6 && <Boton texto="Agregar opción" variante="fantasma" compacto icono="add" onPress={() => setOpciones([...opciones, ''])} />}
       <CampoFechaHora etiqueta="Cierra el (opcional)" modo="date" valor={cierreFecha} onCambio={setCierreFecha} opcional minimo={hoy()} ayuda="Se cierra sola a las 23:59 de ese día. Vacío: queda abierta hasta que la cierres." estilo={{ marginTop: espacio.m }} />
+      <Text style={[s.etiqueta, { marginTop: espacio.s }]}>Porcentajes para quien vota</Text>
+      <Segmentado<'visibles' | 'privados'>
+        opciones={[
+          { valor: 'visibles', texto: 'Visibles' },
+          { valor: 'privados', texto: 'Privados' },
+        ]}
+        valor={visibilidad}
+        onCambio={setVisibilidad}
+      />
+      <Text style={[s.filaDetalle, { marginTop: espacio.xs, marginBottom: espacio.m }]}>
+        {visibilidad === 'visibles' ? 'Después de votar, cada estudiante ve cuánto sacó cada opción.' : 'Los resultados los ven solo los admins. Podés hacerlos visibles más tarde.'}
+      </Text>
       <Tarjeta estilo={{ paddingVertical: espacio.xs }}>
         <Fila
           icono="notifications-outline"
