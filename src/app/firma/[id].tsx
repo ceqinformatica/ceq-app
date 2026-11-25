@@ -9,7 +9,7 @@ import {
 } from '../../components/ui';
 import { useSesion } from '../../context/SesionProvider';
 import {
-  aAsistencia, aEvaluacion, borrarEvaluacion, cargarFinales, cargarFirmas, registrarLlamadoParcial, cargarMalla, guardarAsistencia, guardarEvaluacion, guardarFirma, REGLA_POR_DEFECTO, reglaDe,
+  aAsistencia, aEvaluacion, borrarParcial, cargarFinales, cargarFirmas, guardarParcial, cargarMalla, guardarAsistencia, guardarFirma, nuevoId, REGLA_POR_DEFECTO, reglaDe,
   tieneLab, tipoEvaluacion, type NuevaEvaluacion, type TipoEvaluacion,
 } from '../../datos/academico';
 import { usarDatos } from '../../datos/usarDatos';
@@ -267,13 +267,13 @@ export default function Parciales() {
 
       {/* Art. 46 a): para optar al recuperatorio hay que haber cumplido la asistencia. */}
       {!combinado && !datos.semestreOpuesto && !datos.recuperado && !tieneRecuperatorio && !pendientesTeoria && puedeRecuperar(resultado.teoria) && sinFaltaDeAsistencia && (
-        <Mensaje tipo="info" texto={`Tu promedio teórico está entre ${RECUPERACION_DESDE} y ${regla.minimoTeoria} %: podés rendir el recuperatorio en el 1.er llamado de finales (ese llamado queda usado). Si sacás ${RECUPERACION_MINIMO} % o más, reemplaza tu parcial más bajo. Cargalo como "Recuperatorio".`} />
+        <Mensaje tipo="info" texto={`Tu promedio teórico está entre ${RECUPERACION_DESDE} y ${regla.minimoTeoria} %: podés rendir el recuperatorio en el 1.er llamado de finales. Se registra en el historial del primer llamado y conservás tus finales. Si sacás ${RECUPERACION_MINIMO} % o más, reemplaza tu parcial más bajo. Cargalo como "Recuperatorio".`} />
       )}
       {regularizado && (
-        <Mensaje tipo="exito" texto="Regularización aplicada: ocupa el lugar del parcial que faltaste. Recordá que el llamado en que la rendiste queda usado." />
+        <Mensaje tipo="exito" texto="Regularización aplicada: ocupa el lugar del parcial que faltaste. Se registra en el historial del llamado en que la rendiste y conservás tus finales." />
       )}
       {!regularizado && !datos.evaluacionesDb.some(esRegularizacion) && datos.evaluacionesDb.filter((e) => esParcialTeorico(e) && !e.rendida).length === 1 && (
-        <Mensaje tipo="info" texto='Si faltás a ese parcial, no cuenta como cero: podés rendir la regularización en el 1.º o 2.º llamado de finales (ese llamado queda usado). Cargala como "Regularización". Con dos faltas no se puede regularizar.' />
+        <Mensaje tipo="info" texto='Si faltás a ese parcial, no cuenta como cero: podés rendir la regularización en el 1.º o 2.º llamado de finales. Se registra en el historial de ese llamado y conservás tus finales. Cargala como "Regularización". Con dos faltas no se puede regularizar.' />
       )}
       {datos.recuperado && (
         <Mensaje tipo="exito" texto="Recuperación aplicada: reemplazó tu parcial más bajo. Ahora necesitás un promedio de firma de 50 % o más." />
@@ -512,10 +512,14 @@ function FormEvaluacion({ visible, evaluacion, materiaId, onCerrar, onGuardado, 
   // El Recu solo se rinde en el 1.er llamado.
   const llamadoUsado: 1 | 2 = tipo === 'recuperatorio' ? 1 : llamado;
   const masViejo = periodoAnterior(periodoAnterior(periodoDe()));
+  // ID estable mientras el formulario está abierto: si se corta la red y se
+  // reintenta, se actualiza la misma evaluación en vez de crear otra.
+  const idEstable = useRef('');
 
   useEffect(() => {
     if (!visible) return;
     const e = evaluacion;
+    idEstable.current = e && !esPredefinida(e) ? e.id : nuevoId();
     setNombre(e?.nombre ?? '');
     setTipo(e ? (tipoEvaluacion(e) === 'tp' ? 'parcial' : tipoEvaluacion(e)) : 'parcial');
     setModo(e && e.porcentaje == null && e.puntaje_total != null ? 'puntaje' : 'porcentaje');
@@ -579,19 +583,19 @@ function FormEvaluacion({ visible, evaluacion, materiaId, onCerrar, onGuardado, 
       fecha: evaluacion?.fecha ?? null,
     };
     try {
-      await guardarEvaluacion(materiaId, datos, evaluacion && !esPredefinida(evaluacion) ? evaluacion.id : undefined);
-      // Rendido el Recu o la Regu: el llamado queda en el historial de Finales.
-      // Si dejó de ser un Recu o Regu rendido, el llamado se libera.
-      try {
-        if (registraLlamado) await registrarLlamadoParcial(materiaId, { tipo: tipo as 'recuperatorio' | 'regularizacion', periodo, llamado: llamadoUsado });
-        else if (eraRecuORegu && otrasRecuRegu === 0) await registrarLlamadoParcial(materiaId, null);
-      } catch (e) {
-        setError(`La nota se guardó, pero no pudimos actualizar el llamado en Finales: ${textoError(e, 'probá de nuevo.')}`);
-        return;
-      }
+      // La nota y el llamado en Finales van juntos (una transacción): si algo
+      // falla no queda ninguno de los dos a medias.
+      await guardarParcial(
+        materiaId,
+        idEstable.current,
+        datos,
+        registraLlamado ? { tipo: tipo as 'recuperatorio' | 'regularizacion', periodo, llamado: llamadoUsado } : null,
+        // Si dejó de ser un Recu o Regu rendido, el llamado se libera.
+        !registraLlamado && eraRecuORegu && otrasRecuRegu === 0,
+      );
       onGuardado();
     } catch (e) {
-      setError(textoError(e, 'No se pudo guardar.'));
+      setError(textoError(e, 'No se pudo guardar. Probá de nuevo: no se duplica nada.'));
     } finally {
       setGuardando(false);
     }
@@ -601,9 +605,8 @@ function FormEvaluacion({ visible, evaluacion, materiaId, onCerrar, onGuardado, 
     if (!evaluacion) return;
     setGuardando(true);
     try {
-      await borrarEvaluacion(evaluacion.id);
-      // Sin Recu ni Regu cargado, el llamado deja de estar usado en Finales.
-      if (eraRecuORegu && otrasRecuRegu === 0) await registrarLlamadoParcial(materiaId, null).catch(() => {});
+      // Sin Recu ni Regu cargado, el llamado deja de estar en Finales (en la misma transacción).
+      await borrarParcial(materiaId, evaluacion.id, eraRecuORegu && otrasRecuRegu === 0);
       onGuardado();
     } catch (e) {
       setError(textoError(e, 'No se pudo borrar.'));

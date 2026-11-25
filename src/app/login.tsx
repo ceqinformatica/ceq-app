@@ -6,7 +6,7 @@ import { BotonProveedor } from '../components/BotonProveedor';
 import { movimientoReducido } from '../components/movimiento';
 import { LogoAcceso } from '../components/LogoAcceso';
 import { Boton, Campo, EvitaTeclado, Mensaje, s, useBarraEstado } from '../components/ui';
-import { problemaRegistro, type ModoAcceso, type Proveedor } from '../lib/acceso';
+import { NOMBRE_PROVEEDOR, problemaRegistro, type ModoAcceso, type Proveedor } from '../lib/acceso';
 import { entrarConCorreo, entrarConGoogle, entrarConMicrosoft, pedirRecuperarClave, proveedoresDisponibles, registrarseConCorreo } from '../lib/auth';
 import { CLAVE_MINIMA, correoValido } from '../lib/recuperacion';
 import { supabaseConfigurado } from '../lib/supabase';
@@ -24,7 +24,7 @@ const NIVEL: Record<ModoAcceso, number> = { portada: 0, entrar: 1, registro: 1, 
 /**
  * Acceso. Siempre empieza en la portada (Iniciar sesión / Crear cuenta). Al
  * elegir, la portada sube y el formulario entra desde abajo, como una sola
- * hoja que se desliza. En cada formulario, abajo, Google y Microsoft.
+ * hoja que se desliza. En cada formulario, abajo, las cuentas habilitadas (Google; Microsoft si se activa).
  */
 export default function Login() {
   useTema();
@@ -49,6 +49,8 @@ export default function Login() {
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [proveedores, setProveedores] = useState<Proveedor[]>(['google']);
+  // Solo se nombran las cuentas que de verdad tienen botón (Microsoft está pendiente).
+  const conOtras = proveedores.map((p) => NOMBRE_PROVEEDOR[p]).join(' o ');
 
   useEffect(() => {
     let activo = true;
@@ -130,7 +132,7 @@ export default function Login() {
       cambiarModo('entrar');
       setClave('');
       setRepetida('');
-      setInfo('Ese correo ya tiene una cuenta. Iniciá sesión con tu contraseña, o con Google o Microsoft si la creaste así.');
+      setInfo(`Ese correo ya tiene una cuenta. Iniciá sesión con tu contraseña${conOtras ? `, o con ${conOtras} si la creaste así` : ''}.`);
     }
   };
 
@@ -220,7 +222,7 @@ export default function Login() {
             )
           }
         />
-        <Text style={[s.filaDetalle, { marginTop: espacio.m, color: colores.marinoOscuro }]}>Si entrás con Google o Microsoft, recuperá tu contraseña desde esa cuenta.</Text>
+        {conOtras ? <Text style={[s.filaDetalle, { marginTop: espacio.m, color: colores.marinoOscuro }]}>Si entrás con {conOtras}, recuperá tu contraseña desde esa cuenta.</Text> : null}
         {mensajes}
       </>
     );

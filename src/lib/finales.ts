@@ -155,22 +155,31 @@ export function aplazosDeLaCursada(
 
 /**
  * Vigencia de la firma (Art. 49, 50 y 62): la habilitación dura dos periodos
- * académicos en que se ofrece la materia. Si en la cursada actual ya se usaron
- * llamados (final, Recu o Regu) en dos periodos distintos sin aprobar, la
- * firma venció: un llamado en un tercer periodo ya no corresponde y hay que
- * volver a cursar. Solo cuenta los periodos cargados, así que no avisa de más
- * si la materia no se ofreció en algún semestre.
+ * académicos en que se OFRECE la materia. El registro personal no sabe en
+ * qué periodos se ofreció, así que la app nunca afirma que la firma venció:
+ * si en la cursada actual hay llamados en dos periodos distintos sin aprobar
+ * y se mira un periodo posterior (o ya hay un tercero), devuelve esos
+ * periodos para pedirle al estudiante que lo confirme. null si no hay nada
+ * que revisar.
  */
-export function firmaVencida(
+export function vigenciaPorConfirmar(
   finales: { nota: number | null; tipo?: string | null; periodo?: string | null; cursada_anterior?: boolean | null }[],
   periodoActual: string,
-): boolean {
+): { periodos: string[] } | null {
   const propios = finales.filter((f) => !f.cursada_anterior);
-  if (propios.some((f) => (f.tipo ?? 'final') === 'final' && f.nota != null && f.nota >= 2)) return false;
+  if (propios.some((f) => (f.tipo ?? 'final') === 'final' && f.nota != null && f.nota >= 2)) return null;
   const periodos = [...new Set(propios.map((f) => f.periodo).filter((p): p is string => !!p))].sort();
-  if (periodos.length < 2) return false;
-  // Venció si ya hay un tercer periodo cargado o si el que se mira es posterior a los dos usados.
-  return periodos.length > 2 || periodoActual > periodos[1];
+  if (periodos.length < 2) return null;
+  return periodos.length > 2 || periodoActual > periodos[1] ? { periodos } : null;
+}
+
+/**
+ * Finales de la cursada actual sin semestre ni llamado (los importados del
+ * extracto se guardaban así). Mientras haya alguno, no se sabe cuántos de
+ * los 3 finales quedan: pueden ser de una cursada anterior.
+ */
+export function finalesSinUbicar<T extends { llamado?: number | null; tipo?: string | null; cursada_anterior?: boolean | null }>(finales: T[]): T[] {
+  return finales.filter((f) => !f.cursada_anterior && f.llamado == null && esFinalRendido(f.tipo));
 }
 
 /**
@@ -249,13 +258,24 @@ export function llamadosUsados(finales: { llamado?: number | null; tipo?: string
   return finales.filter((f) => f.llamado != null && !f.cursada_anterior && esFinalRendido(f.tipo)).length;
 }
 
-export type MotivoSinOpuesto = 'llamados' | 'aplazos' | 'vencida' | 'aprobada' | 'plan';
+/**
+ * Finales que le quedan de los 3 en la cursada actual, o null si hay
+ * importados sin ubicar (el saldo no se puede calcular todavía).
+ */
+export function llamadosRestantes(finales: { llamado?: number | null; tipo?: string | null; cursada_anterior?: boolean | null }[]): number | null {
+  if (finalesSinUbicar(finales).length) return null;
+  return Math.max(0, LLAMADOS_POR_MATERIA - llamadosUsados(finales));
+}
+
+export type MotivoSinOpuesto = 'llamados' | 'aplazos' | 'sinUbicar' | 'aprobada' | 'plan';
 
 /**
  * ¿Puede volver a cursar en el semestre opuesto? (Res. 0108-00-2024)
- * - Art. 62: con tres aplazos o la firma vencida (dos periodos) lo pierde.
+ * - Art. 62: con tres aplazos lo pierde (la firma vencida también, pero eso
+ *   lo confirma el estudiante: ver vigenciaPorConfirmar).
+ * - Con finales importados sin ubicar no se sabe cuántos quedan.
  * - Los tres llamados son de la materia: si ya los usó todos, no hay opuesto.
- * - Art. 23: las materias del plan 2018 no se ofrecen en semestre opuesto
+ * - Art. 23 (plan 2018): una resolución posterior lo abre; hoy no se oculta para ningún plan
  *   (se respeta solo si `sinOpuestoEnPlan` es true).
  * Las prácticas aprobadas y la asistencia cumplida (Art. 7 c) las confirma
  * el estudiante.
@@ -265,13 +285,12 @@ export function semestreOpuesto(params: {
   aprobada?: boolean;
   periodoActual?: string;
   sinOpuestoEnPlan?: boolean;
-}): { puede: boolean; motivo: MotivoSinOpuesto | null; llamadosRestantes: number } {
-  const usados = llamadosUsados(params.finales);
-  const restantes = Math.max(0, LLAMADOS_POR_MATERIA - usados);
+}): { puede: boolean; motivo: MotivoSinOpuesto | null; llamadosRestantes: number | null } {
+  const restantes = llamadosRestantes(params.finales);
   const no = (motivo: MotivoSinOpuesto) => ({ puede: false, motivo, llamadosRestantes: restantes });
   if (params.aprobada) return no('aprobada');
   if (aplazosDeLaCursada(params.finales).debeRecursar) return no('aplazos');
-  if (firmaVencida(params.finales, params.periodoActual ?? periodoDe())) return no('vencida');
+  if (restantes == null) return no('sinUbicar');
   if (restantes === 0) return no('llamados');
   if (params.sinOpuestoEnPlan) return no('plan');
   return { puede: true, motivo: null, llamadosRestantes: restantes };
@@ -280,9 +299,9 @@ export function semestreOpuesto(params: {
 export const TEXTO_SIN_OPUESTO: Record<MotivoSinOpuesto, string> = {
   llamados: 'Ya rendiste los 3 finales de esta materia: no te queda ninguno para el semestre opuesto.',
   aplazos: 'Con 3 aplazos tenés que volver a cursarla entera y perdés el semestre opuesto (Art. 62).',
-  vencida: 'Pasaron 2 periodos sin aprobar: tenés que volver a cursarla entera y perdés el semestre opuesto (Art. 62).',
+  sinUbicar: 'Tenés finales importados del extracto sin ubicar: indicá en Finales el semestre y el llamado de cada uno (o si son de una cursada anterior) para saber cuántos te quedan.',
   aprobada: 'Ya aprobaste esta materia.',
-  plan: 'Las materias del plan 2018 no se ofrecen en semestre opuesto (Art. 23).',
+  plan: 'Esta materia no se ofrece en semestre opuesto.',
 };
 
 /** "2026-2" → "Segundo semestre de 2026". */

@@ -18,11 +18,11 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
-import { cargarFinales, guardarFirma, guardarUnLlamado, recursarMateria } from '../datos/academico';
+import { borrarResultadoFinal, cargarFinales, guardarFirma, guardarResultadoFinal, recursarMateria, type DatosResultado } from '../datos/academico';
 import { sinOpuestoEnPlan, VolverACursar } from './volver-a-cursar';
 import {
-  aplazosDeLaCursada, firmaVencida, LLAMADOS_POR_MATERIA, llamadosUsados, nombreLlamado, nombreSemestre, notaDelLlamado, periodoDe,
-  periodosParaFinales, semestreOpuesto as calcularOpuesto, tituloResultado, type LlamadoCargado,
+  aplazosDeLaCursada, finalesSinUbicar, LLAMADOS_POR_MATERIA, llamadosRestantes, llamadosUsados, nombreLlamado, nombreSemestre, notaDelLlamado, periodoDe,
+  periodosParaFinales, semestreOpuesto as calcularOpuesto, tituloResultado, vigenciaPorConfirmar,
 } from '../lib/finales';
 import { calificacionFinal, CONCEPTO, FINAL_MINIMO, finalesNecesarios, finalNecesario, type Nota } from '../lib/reglamento-fcq';
 import type { ExamenFinalDb } from '../lib/tipos-db';
@@ -96,9 +96,13 @@ export function TarjetaFinales({ materiaId, firma: firmaGuardadaEnMateria, aprob
   const anteriores = useMemo(() => todos?.filter((f) => f.cursada_anterior && f.nota != null) ?? [], [todos]);
   const historial = useMemo(() => [...finales].sort(ordenHistorial), [finales]);
   const cursada = aplazosDeLaCursada(finales);
-  // Art. 49 y 62: dos periodos sin aprobar vencen la firma.
-  const vencida = !aprobada && !cursada.debeRecursar && firmaVencida(finales, periodoDe());
-  const recursar = !aprobada && (cursada.debeRecursar || vencida);
+  // Art. 49 y 62: la firma vence tras dos periodos en que se OFRECE la
+  // materia. La app no sabe cuándo se ofreció: solo pide confirmarlo.
+  const porConfirmar = !aprobada && !cursada.debeRecursar ? vigenciaPorConfirmar(finales, periodoDe()) : null;
+  const recursar = !aprobada && cursada.debeRecursar;
+  // Importados del extracto sin semestre ni llamado: el saldo queda sin calcular.
+  const sinUbicar = finalesSinUbicar(finales);
+  const restantes = llamadosRestantes(finales);
   const pendiente = historial.find((f) => f.tipo === 'pendiente') ?? null;
   const opuesto = calcularOpuesto({ finales, aprobada, sinOpuestoEnPlan: sinOpuestoEnPlan(anioPlan) });
   const necesario = firma != null ? finalNecesario(firma) : null;
@@ -107,7 +111,9 @@ export function TarjetaFinales({ materiaId, firma: firmaGuardadaEnMateria, aprob
     ? 'Materia aprobada'
     : recursar
       ? 'Recursada pendiente'
-      : pendiente
+      : porConfirmar
+        ? 'Revisá la vigencia de tu firma'
+        : pendiente
         ? 'Resultado pendiente'
         : cursada.aplazos > 0 && opuesto.puede
           ? 'Podés rendir el final en semestre opuesto.'
@@ -129,11 +135,32 @@ export function TarjetaFinales({ materiaId, firma: firmaGuardadaEnMateria, aprob
         <Text style={[s.cuerpo, { marginTop: 2 }]}>
           {todos == null ? 'Cargando…' : `${cursada.aplazos} ${cursada.aplazos === 1 ? 'aplazo registrado' : 'aplazos registrados'}`}
         </Text>
+        {todos != null && !aprobada && !recursar && (
+          <Text style={[s.filaDetalle, { marginTop: 2 }]}>
+            {restantes == null
+              ? 'Finales que te quedan: sin calcular hasta ubicar los importados.'
+              : `Te ${restantes === 1 ? 'queda' : 'quedan'} ${restantes} de ${LLAMADOS_POR_MATERIA} finales.`}
+          </Text>
+        )}
+        {sinUbicar.length > 0 && (
+          <Mensaje
+            tipo="info"
+            texto={`${sinUbicar.length === 1 ? 'Hay 1 nota importada' : `Hay ${sinUbicar.length} notas importadas`} del extracto sin semestre ni llamado. El extracto puede traer intentos de cursadas anteriores: tocá cada una en el historial y elegí su semestre y llamado, o marcá que es de una cursada anterior.`}
+          />
+        )}
 
-        {!aprobada && !recursar && cursada.aplazos === LLAMADOS_POR_MATERIA - 1 && (
+        {!aprobada && !recursar && sinUbicar.length === 0 && cursada.aplazos === LLAMADOS_POR_MATERIA - 1 && (
           <Mensaje tipo="info" texto="Si volvés a aplazar, te corresponde recursar la materia completa." />
         )}
-        {vencida && <Mensaje tipo="info" texto="Pasaron dos periodos sin aprobar y tu firma venció: te corresponde volver a cursar la materia (Art. 62)." />}
+        {porConfirmar && (
+          <>
+            <Mensaje
+              tipo="info"
+              texto={`Según tus registros usaste llamados en ${porConfirmar.periodos.map(nombreSemestre).join(' y ').toLowerCase()} sin aprobar. La firma vence después de dos periodos en que se ofrece la materia (Art. 49 y 62), y eso no lo sabemos: confirmalo en Secretaría Académica. Si te dijeron que venció, recursá desde acá.`}
+            />
+            <Enlace texto="Me confirmaron que venció: volver a cursar" onPress={() => setHojaRecursar('obligatoria')} />
+          </>
+        )}
 
         {!aprobada && !recursar && (
           <Boton
@@ -162,7 +189,7 @@ export function TarjetaFinales({ materiaId, firma: firmaGuardadaEnMateria, aprob
           <FilaResultado
             key={f.id}
             f={f}
-            opuesto={!!semestreOpuesto && f.periodo === periodoDe()}
+            opuesto={!!f.semestre_opuesto}
             ultima={i === historial.length - 1}
             // El Recu y la Regu se cambian desde Parciales.
             onPress={() => (esParcialEnFinales(f) ? router.push(`/firma/${materiaId}`) : setHoja({ fila: f }))}
@@ -176,7 +203,7 @@ export function TarjetaFinales({ materiaId, firma: firmaGuardadaEnMateria, aprob
       </Tarjeta>
 
       {/* Con algún aplazo se puede elegir volver a cursar antes, por ejemplo en el semestre opuesto. */}
-      {!aprobada && !recursar && cursada.aplazos > 0 && (
+      {!aprobada && !recursar && !porConfirmar && cursada.aplazos > 0 && (
         <Enlace texto="¿Preferís volver a cursarla (semestre normal u opuesto)?" onPress={() => setHojaRecursar('elegir')} />
       )}
 
@@ -236,6 +263,7 @@ function FilaResultado({ f, opuesto, ultima, onPress }: { f: ExamenFinalDb; opue
     opuesto ? 'Semestre opuesto' : null,
     f.periodo ? nombreSemestre(f.periodo) : null,
     f.llamado ? nombreLlamado(f.llamado) : null,
+    f.llamado == null ? (f.origen === 'extracto' ? 'Importado del extracto · sin ubicar' : 'Sin semestre ni llamado') : null,
     f.tipo === 'pendiente' ? 'Completar nota' : null,
   ].filter(Boolean);
   const titulo = tituloResultado(f);
@@ -285,7 +313,8 @@ function HojaResultado({ abierta, materiaId, finales, firma, semestreOpuesto, pe
   useEffect(() => {
     if (!abierta) return;
     const f = abierta.fila;
-    const p = f?.periodo ?? periodoDe();
+    // Un importado sin ubicar arranca en el semestre de su fecha.
+    const p = f?.periodo ?? (f?.fecha && fechaValida(f.fecha) ? periodoDe(new Date(`${f.fecha}T12:00:00`)) : periodoDe());
     setPeriodo(p);
     const libre = ([1, 2, 3] as const).find((n) => !finales.some((x) => x.periodo === p && x.llamado === n)) ?? 1;
     setLlamado(f?.llamado === 1 || f?.llamado === 2 || f?.llamado === 3 ? f.llamado : libre);
@@ -300,16 +329,17 @@ function HojaResultado({ abierta, materiaId, finales, firma, semestreOpuesto, pe
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [abierta]);
 
-  const periodos = periodosParaFinales(periodoFirma, periodoDe(), finales.map((f) => f.periodo).filter((p): p is string => !!p));
+  const periodos = [...new Set([periodo, ...periodosParaFinales(periodoFirma, periodoDe(), finales.map((f) => f.periodo).filter((p): p is string => !!p))])].sort().reverse();
   const ocupado = finales.find((f) => f.periodo === periodo && f.llamado === llamado && f.id !== fila?.id) ?? null;
   const conPorcentaje = firma != null && !conNota;
   const v = quePaso === 'nota' ? num(valor) : null;
   const valorValido = v != null && Number.isFinite(v) && (conPorcentaje ? v >= 0 && v <= 100 : Number.isInteger(v) && v >= 1 && v <= 5);
   const nota = valorValido ? notaDelLlamado(firma, conPorcentaje ? v : null, conPorcentaje ? null : v, calificacionFinal) : null;
   const rendimiento = conPorcentaje && valorValido ? calificacionFinal(firma!, v!).rendimiento : null;
-  // En el semestre opuesto los 3 finales son los de la materia (estar ausente no gasta uno).
+  // Los 3 finales son de la materia, en semestre normal u opuesto (estar ausente no gasta uno).
   const otros = finales.filter((f) => f.id !== fila?.id && f.id !== ocupado?.id);
-  const pasaDeLlamados = !!semestreOpuesto && quePaso !== 'ausente' && llamadosUsados(otros) + 1 > LLAMADOS_POR_MATERIA;
+  const pasaDeLlamados = quePaso !== 'ausente' && llamadosUsados(otros) + 1 > LLAMADOS_POR_MATERIA;
+  const importado = fila?.origen === 'extracto';
   const yaAprobo = otros.some((f) => (f.tipo ?? 'final') === 'final' && f.nota != null && f.nota >= 2);
   const valido = (quePaso !== 'nota' || valorValido) && fechaValida(fecha) && !(ocupado && esParcialEnFinales(ocupado)) && !pasaDeLlamados;
 
@@ -317,12 +347,15 @@ function HojaResultado({ abierta, materiaId, finales, firma, semestreOpuesto, pe
     if (!valido) return;
     setGuardando(true);
     setError(null);
-    const base = { llamado, fecha: fecha.trim() || null };
-    const cargado: LlamadoCargado = quePaso === 'nota'
+    // El semestre opuesto queda guardado en el intento: si se corrige sin
+    // cambiar de semestre se conserva; uno nuevo lo toma de la materia.
+    const opuestoGuardado = fila && fila.periodo === periodo ? !!fila.semestre_opuesto : !!semestreOpuesto && periodo === periodoDe();
+    const base = { periodo, llamado, fecha: fecha.trim() || null, semestre_opuesto: opuestoGuardado };
+    const cargado: DatosResultado = quePaso === 'nota'
       ? { ...base, tipo: 'final', nota: nota!, porcentaje: conPorcentaje ? v : null }
       : { ...base, tipo: quePaso === 'espera' ? 'pendiente' : 'ausente', nota: null, porcentaje: null };
     try {
-      await guardarUnLlamado(materiaId, periodo, cargado, fila);
+      await guardarResultadoFinal(materiaId, fila, cargado, ocupado);
       onGuardado(
         quePaso === 'nota' && nota != null && nota >= 2
           ? `Guardado. Aprobaste con ${nota} (${CONCEPTO[nota as Nota]}).`
@@ -335,12 +368,26 @@ function HojaResultado({ abierta, materiaId, finales, firma, semestreOpuesto, pe
     }
   };
 
-  const borrar = async () => {
-    if (!fila?.periodo) return;
+  const deCursadaAnterior = async () => {
+    if (!fila) return;
     setGuardando(true);
     setError(null);
     try {
-      await guardarUnLlamado(materiaId, fila.periodo, null, fila);
+      await guardarResultadoFinal(materiaId, fila, { cursadaAnterior: true });
+      onGuardado('Listo: queda como de una cursada anterior y no gasta un final de esta.');
+    } catch (e) {
+      setError(textoError(e, 'No se pudo guardar.'));
+    } finally {
+      setGuardando(false);
+    }
+  };
+
+  const borrar = async () => {
+    if (!fila) return;
+    setGuardando(true);
+    setError(null);
+    try {
+      await borrarResultadoFinal(materiaId, fila);
       onGuardado('Listo, lo quitamos del historial.');
     } catch (e) {
       setError(textoError(e, 'No se pudo borrar.'));
@@ -438,12 +485,14 @@ function HojaResultado({ abierta, materiaId, finales, firma, semestreOpuesto, pe
         estilo={{ marginTop: espacio.m }}
       />
       {!fechaValida(fecha) && <Mensaje texto="Escribí la fecha así: 2026-12-04." />}
-      {pasaDeLlamados && <Mensaje texto={`En el semestre opuesto usás los mismos ${LLAMADOS_POR_MATERIA} finales de la materia, y ya los cargaste todos.`} />}
+      {pasaDeLlamados && <Mensaje texto={`Ya registraste los ${LLAMADOS_POR_MATERIA} finales de esta cursada (en semestre normal u opuesto son los mismos). Si uno está mal, corregilo o borralo.`} />}
       {yaAprobo && quePaso !== 'ausente' && <Mensaje tipo="info" texto="Ya tenés un final aprobado en esta materia. ¿Seguro que rendiste este?" />}
       <Mensaje texto={error} />
       <Boton texto="Guardar" icono="checkmark" onPress={guardar} cargando={guardando} deshabilitado={!valido} />
-      {/* Las filas viejas sin llamado no se borran desde acá. */}
-      {fila?.llamado != null && <Boton texto="Eliminar" variante="peligro" icono="trash-outline" onPress={borrar} deshabilitado={guardando} estilo={{ marginTop: espacio.s }} />}
+      {importado && fila?.llamado == null && (
+        <Boton texto="Es de una cursada anterior" variante="fantasma" icono="time-outline" onPress={deCursadaAnterior} deshabilitado={guardando} estilo={{ marginTop: espacio.s }} />
+      )}
+      {fila && <Boton texto="Eliminar" variante="peligro" icono="trash-outline" onPress={borrar} deshabilitado={guardando} estilo={{ marginTop: espacio.s }} />}
       <View style={{ height: espacio.l }} />
     </Hoja>
   );

@@ -118,6 +118,15 @@ export type ExamenFinalDb = {
   id: string; usuario_id: string; materia_id: string; periodo: string | null; llamado: number | null; fecha: string | null;
   nota: number | null; created_at: string; porcentaje?: number | null;
   tipo?: TipoExamen; cursada_anterior?: boolean;
+  /** Sube con cada cambio: detecta si otro dispositivo lo editó. */
+  version?: number;
+  /** 'extracto' si vino de la importación del EALU (nota_extracto: la nota original). */
+  origen?: 'manual' | 'extracto';
+  nota_extracto?: number | null;
+  /** Rendido en semestre opuesto (queda guardado en el intento). */
+  semestre_opuesto?: boolean;
+  /** Recu o Regu: la evaluación de Parciales a la que corresponde. */
+  evaluacion_id?: string | null;
 }
 export type TipoNotificacion = 'aviso' | 'mensaje' | 'recordatorio';
 export type EstadoNotificacion = 'pendiente' | 'enviada' | 'cancelada' | 'sin_destinatarios' | 'error';
@@ -184,7 +193,7 @@ export type Database = {
       encuestas: Tabla<EncuestaDb, 'id' | 'abierta' | 'cierra_en' | 'created_at' | 'resultados_publicos'>;
       opciones_encuesta: Tabla<OpcionEncuestaDb, 'id' | 'orden'>;
       ya_votaron: Tabla<YaVotaronDb>;
-      examenes_finales: Tabla<ExamenFinalDb, 'id' | 'usuario_id' | 'periodo' | 'llamado' | 'fecha' | 'created_at' | 'porcentaje' | 'tipo' | 'cursada_anterior'>;
+      examenes_finales: Tabla<ExamenFinalDb, 'id' | 'usuario_id' | 'periodo' | 'llamado' | 'fecha' | 'created_at' | 'porcentaje' | 'tipo' | 'cursada_anterior' | 'version' | 'origen' | 'nota_extracto' | 'semestre_opuesto' | 'evaluacion_id'>;
       solicitudes_carnet: Tabla<SolicitudCarnetDb, 'id' | 'usuario_id' | 'numero_socio' | 'estado' | 'motivo' | 'revisado_por' | 'revisado_en' | 'created_at'>;
       dispositivos: Tabla<DispositivoDb, 'usuario_id' | 'plataforma' | 'updated_at'>;
       horarios_finales: Tabla<HorarioFinalesDb, 'id' | 'avisado_en' | 'pdf_path' | 'publicado' | 'publicado_en' | 'creado_por' | 'created_at' | 'updated_at'>;
@@ -201,6 +210,10 @@ export type Database = {
       recursar_materia: { Args: { p_materia: string }; Returns: undefined };
       cursar_semestre_opuesto: { Args: { p_materia: string }; Returns: undefined };
       guardar_llamados: { Args: { p_materia: string; p_periodos: string[]; p_filas: unknown[] }; Returns: undefined };
+      guardar_final: { Args: { p_materia: string; p_id: string | null; p_version: number | null; p_fila: Record<string, unknown>; p_reemplaza?: string | null; p_reemplaza_version?: number | null }; Returns: string };
+      borrar_final: { Args: { p_id: string; p_version: number }; Returns: undefined };
+      guardar_parcial: { Args: { p_materia: string; p_eval_id: string; p_eval: Record<string, unknown>; p_uso: Record<string, unknown> | null; p_liberar?: boolean }; Returns: string };
+      borrar_parcial: { Args: { p_eval_id: string; p_liberar?: boolean }; Returns: undefined };
       deshacer_recursada: { Args: { p_materia: string }; Returns: undefined };
       es_admin: { Args: Record<string, never>; Returns: boolean };
       registrar_dispositivo: { Args: { p_token: string; p_plataforma?: string | null }; Returns: undefined };

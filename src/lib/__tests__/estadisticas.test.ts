@@ -144,3 +144,19 @@ test('una materia devuelta a firmada no cuenta su aprobado en ningún dato', () 
   assert.equal(r.porPeriodo[0].promedio, 4);
   assert.equal(notasAprobadas(ms, es, is).has('x'), false);
 });
+
+test('finales que esperan la nota: cuentan como rendidos, no en el porcentaje de aprobados', () => {
+  const e = calcularEstadisticas(materias, grupos, estados, intentos, 'materias', ['d', 's']);
+  // 5 calificados + 1 pendiente del plan (el seminario no cuenta).
+  assert.equal(e.finalesCalificados, 5);
+  assert.equal(e.finalesPendientes, 1);
+  assert.equal(e.finalesRendidos, 6);
+  assert.equal(e.efectividad, 60); // 3 aprobados de 5 con nota
+});
+
+test('solo aplazos: hay promedio con aplazos aunque no haya aprobadas', () => {
+  const e = calcularEstadisticas(materias, grupos, est({ d: { estado: 'firmada' } }), [{ materiaId: 'd', nota: 1, periodo: '2026-1', llamado: 1 }]);
+  assert.equal(e.promedio, null);
+  assert.equal(e.promedioConAplazos, 1);
+  assert.equal(e.aplazos, 1);
+});

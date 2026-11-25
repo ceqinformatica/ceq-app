@@ -21,7 +21,7 @@ const volver = () => (router.canGoBack() ? router.back() : router.replace('/admi
 
 const ICONOS: NombreIcono[] = ['megaphone', 'school', 'calendar', 'notifications', 'information-circle', 'alert-circle', 'gift', 'star', 'heart', 'people', 'card', 'ticket', 'flask', 'trophy'];
 const DESTINOS = [
-  { ruta: '/', texto: 'Inicio' }, { ruta: '/agenda', texto: 'Agenda' }, { ruta: '/carrera', texto: 'Mi carrera' }, { ruta: '/firma', texto: 'Parciales' },
+  { ruta: '/', texto: 'Inicio' }, { ruta: '/agenda', texto: 'Agenda' }, { ruta: '/carrera', texto: 'Mi carrera' }, { ruta: '/firma', texto: 'Firma' },
   { ruta: '/ceq', texto: 'CEQ' }, { ruta: '/avisos', texto: 'Avisos' }, { ruta: '/calendario', texto: 'Calendario' },
   { ruta: '/finales-fechas', texto: 'Fechas de finales' }, { ruta: '/tramites', texto: 'Trámites' }, { ruta: '/carnet', texto: 'Carnet' },
 ];

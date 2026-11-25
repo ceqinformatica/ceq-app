@@ -51,9 +51,14 @@ export interface Estadisticas {
   /** Optativas: las que exige el plan, cuántas aprobó y su promedio. null si el plan no tiene. */
   optativas: { aprobadas: number; total: number; promedio: number | null } | null;
   porPeriodo: DatosPeriodo[];
+  /** Finales rendidos: calificados + los que esperan la nota. */
   finalesRendidos: number;
+  /** Finales con nota (aprobados o aplazos). */
+  finalesCalificados: number;
+  /** Rendidos que todavía esperan la nota. */
+  finalesPendientes: number;
   finalesAprobados: number;
-  /** % de finales rendidos que aprobó, o null si no rindió ninguno. */
+  /** % de finales CALIFICADOS que aprobó, o null si no tiene ninguno con nota. */
   efectividad: number | null;
 }
 
@@ -90,6 +95,8 @@ export function calcularEstadisticas(
   estados: Map<string, EstadoEstudiante>,
   intentos: IntentoFinal[],
   unidad: UnidadAvance = 'materias',
+  /** Una materia por cada final rendido que espera la nota. */
+  pendientes: string[] = [],
 ): Estadisticas {
   const progreso = calcularProgreso(materias, grupos, estados, unidad);
   // Un aprobado de una materia que volvió a firmada no cuenta en ningún lado.
@@ -179,6 +186,7 @@ export function calcularEstadisticas(
     });
 
   const finalesAprobados = propios.filter((i) => i.nota >= 2).length;
+  const finalesPendientes = pendientes.filter((id) => delPlan.has(id)).length;
 
   return {
     progreso,
@@ -197,8 +205,11 @@ export function calcularEstadisticas(
     porNivel,
     optativas,
     porPeriodo,
-    finalesRendidos: propios.length,
+    finalesRendidos: propios.length + finalesPendientes,
+    finalesCalificados: propios.length,
+    finalesPendientes,
     finalesAprobados,
+    // Solo sobre los que ya tienen nota: un final que espera la nota no es aplazo.
     efectividad: propios.length ? Math.round((finalesAprobados / propios.length) * 100) : null,
   };
 }

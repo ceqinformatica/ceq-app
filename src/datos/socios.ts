@@ -5,7 +5,7 @@
  * permiso, Supabase lo rechaza aunque alguien llegue a estas pantallas.
  */
 import { Platform } from 'react-native';
-import { estadoCarnet, leerQr, normalizarCi, type FormularioSocio } from '../lib/carnet';
+import { estadoCarnet, hoyPy, leerQr, normalizarCi, type FormularioSocio } from '../lib/carnet';
 import { supabase } from '../lib/supabase';
 import type { EstudianteEncontrado, SocioDb, SolicitudCarnetDb, VerificacionCarnet } from '../lib/tipos-db';
 import { db, esperar, idDemo, MODO_DEMO, UID_DEMO } from './demo';
@@ -15,14 +15,55 @@ const todosDemo = () => [...(db.socio ? [db.socio] : []), ...db.otrosSocios];
 
 /* ---------------- Panel: lista y alta ---------------- */
 
-export async function cargarSocios(): Promise<SocioDb[]> {
+export type FiltroSocios = 'todos' | 'vigente' | 'vencido';
+export const SOCIOS_POR_PAGINA = 50;
+
+/** Texto seguro para un filtro `or` de PostgREST (sin comas, paréntesis ni comodines). */
+const limpiarBusqueda = (t: string) => t.replace(/[%_,()*\\:"']/g, ' ').replace(/\s+/g, ' ').trim();
+
+/**
+ * Busca en TODO el padrón, en el servidor y por páginas: antes se cargaban
+ * los 1.000 más nuevos y se buscaba solo ahí, así que un socio viejo daba
+ * "No encontramos a nadie".
+ */
+export async function buscarSocios(p: { texto: string; filtro: FiltroSocios; desde: number }): Promise<{ filas: SocioDb[]; hayMas: boolean }> {
+  const t = limpiarBusqueda(p.texto).toLowerCase();
+  const ci = normalizarCi(t);
   if (MODO_DEMO) {
     await esperar();
-    return todosDemo();
+    const todas = todosDemo().filter((x) => {
+      if (p.filtro !== 'todos' && estadoCarnet(x) !== p.filtro) return false;
+      if (!t) return true;
+      return x.nombre.toLowerCase().includes(t) || (!!ci && x.ci.includes(ci)) || (x.numero_socio ?? '').toLowerCase().includes(t);
+    });
+    return { filas: todas.slice(p.desde, p.desde + SOCIOS_POR_PAGINA), hayMas: todas.length > p.desde + SOCIOS_POR_PAGINA };
   }
-  const { data, error } = await supabase.from('socios').select('*').order('created_at', { ascending: false }).limit(1000);
+  let q = supabase.from('socios').select('*').order('created_at', { ascending: false }).order('id');
+  const hoy = hoyPy();
+  if (p.filtro === 'vigente') q = q.eq('activo', true).or(`vigente_hasta.is.null,vigente_hasta.gte.${hoy}`);
+  if (p.filtro === 'vencido') q = q.eq('activo', true).lt('vigente_hasta', hoy);
+  if (t) q = q.or([`nombre.ilike.%${t}%`, `numero_socio.ilike.%${t}%`, ...(ci ? [`ci.ilike.%${ci}%`] : [])].join(','));
+  // Se pide uno de más para saber si hay otra página.
+  const { data, error } = await q.range(p.desde, p.desde + SOCIOS_POR_PAGINA);
   lanzar(error);
-  return data ?? [];
+  const filas = (data ?? []) as SocioDb[];
+  return { filas: filas.slice(0, SOCIOS_POR_PAGINA), hayMas: filas.length > SOCIOS_POR_PAGINA };
+}
+
+/** Cuántos socios hay en total y cuántos con carnet vigente (sin traer las filas). */
+export async function contarSocios(): Promise<{ todos: number; vigentes: number }> {
+  if (MODO_DEMO) {
+    const todas = todosDemo();
+    return { todos: todas.length, vigentes: todas.filter((x) => estadoCarnet(x) === 'vigente').length };
+  }
+  const hoy = hoyPy();
+  const [a, b] = await Promise.all([
+    supabase.from('socios').select('id', { count: 'exact', head: true }),
+    supabase.from('socios').select('id', { count: 'exact', head: true }).eq('activo', true).or(`vigente_hasta.is.null,vigente_hasta.gte.${hoy}`),
+  ]);
+  lanzar(a.error);
+  lanzar(b.error);
+  return { todos: a.count ?? 0, vigentes: b.count ?? 0 };
 }
 
 export async function cargarSocioPorId(id: string): Promise<SocioDb | null> {

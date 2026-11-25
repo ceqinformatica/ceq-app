@@ -18,17 +18,29 @@ import { textoError } from '../../lib/errores';
 const TRAMITES_DESTACADOS = ['inscripcion-finales', 'certificado-estudios', 'constancia-general', 'matriculacion'];
 
 async function cargar(uid: string) {
-  const [socio, avisos, todos, encuestas] = await Promise.all([cargarSocio(uid), cargarAvisos(3), cargarTramites(), cargarEncuestas(uid)]);
+  const [avisos, todos, encuestas] = await Promise.all([cargarAvisos(3), cargarTramites(), cargarEncuestas(uid)]);
   const destacados = TRAMITES_DESTACADOS.map((c) => todos.find((t) => t.clave === c)).filter((t) => t != null);
   const tramites = (destacados.length ? destacados : todos).slice(0, 4);
-  return { socio, avisos, tramites, totalTramites: todos.length, encuestas };
+  return { avisos, tramites, totalTramites: todos.length, encuestas };
 }
+
+/**
+ * El carnet va aparte: si fallan los avisos o las encuestas no tiene que
+ * decir "Todavía no tenés carnet". Envuelto en un objeto para distinguir
+ * "no tiene carnet" (socio null) de "todavía no se pudo consultar".
+ */
+const cargarCarnet = (uid: string) => cargarSocio(uid).then((socio) => ({ socio }));
 
 export default function Ceq() {
   useTema();
   const { sesion, perfil } = useSesion();
   const uid = sesion?.user.id ?? '';
-  const { datos, cargando, error, refrescando, recargar, setDatos, sinConexion } = usarDatos(() => cargar(uid), [uid], { cache: 'ceq' });
+  const { datos, cargando, error, refrescando, recargar: recargarResto, setDatos, sinConexion } = usarDatos(() => cargar(uid), [uid], { cache: 'ceq' });
+  const carnet = usarDatos(() => cargarCarnet(uid), [uid], { cache: 'ceq-carnet' });
+  const recargar = () => {
+    carnet.recargar();
+    recargarResto();
+  };
   const [sugerir, setSugerir] = useState(false);
 
   return (
@@ -38,12 +50,18 @@ export default function Ceq() {
       onRefrescar={recargar}
     >
       <View style={{ marginTop: -espacio.xl }}>
-        {cargando && !datos ? (
+        {carnet.cargando && !carnet.datos ? (
           <Tarjeta><Esqueleto alto={150} /></Tarjeta>
-        ) : datos?.socio ? (
+        ) : carnet.datos?.socio ? (
           <Pressable onPress={() => router.push('/carnet')} accessibilityRole="button" accessibilityHint="Abre el carnet con el código QR">
-            <Carnet socio={datos.socio} />
+            <Carnet socio={carnet.datos.socio} />
           </Pressable>
+        ) : !carnet.datos ? (
+          <Tarjeta>
+            <Text style={s.filaTitulo}>No pudimos consultar tu carnet</Text>
+            {carnet.error ? <Text style={s.filaDetalle}>{carnet.error}</Text> : null}
+            <Boton texto="Reintentar" variante="fantasma" compacto icono="refresh" onPress={() => carnet.recargar()} estilo={{ marginTop: espacio.s }} />
+          </Tarjeta>
         ) : (
           <Tarjeta onPress={() => router.push('/carnet')} etiqueta="Cómo obtener el carnet de socio">
             <View style={{ flexDirection: 'row', gap: espacio.m, alignItems: 'center' }}>
