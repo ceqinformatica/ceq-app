@@ -93,7 +93,7 @@ export default function Onboarding() {
 
       <Mensaje texto={error} />
       <Boton texto="Empezar" icono="arrow-forward" onPress={guardar} cargando={guardando} deshabilitado={!planId || !anioValido} estilo={{ marginTop: espacio.l }} />
-      <Boton texto="Cerrar sesión" variante="fantasma" onPress={salir} />
+      <Boton texto="Cerrar sesión" variante="fantasma" onPress={async () => setError(await salir())} />
       <Text style={{ fontFamily: fuentes.regular, fontSize: 11, color: colores.textoTenue, textAlign: 'center', marginTop: espacio.m }}>CEQ · FCQ</Text>
     </Pantalla>
   );

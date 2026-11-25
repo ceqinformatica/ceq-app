@@ -110,7 +110,7 @@ export function ConfirmarCuenta({ onConfirmado, onCancelar }: { onConfirmado: ()
       <Mensaje texto={error} />
 
       <Boton texto="Volver al PIN" variante="fantasma" onPress={onCancelar} deshabilitado={cargando != null} estilo={{ marginTop: espacio.s }} />
-      <Pressable onPress={salir} accessibilityRole="button" style={{ alignSelf: 'center', padding: espacio.s }}>
+      <Pressable onPress={async () => setError(await salir())} accessibilityRole="button" style={{ alignSelf: 'center', padding: espacio.s }}>
         <Text style={[s.filaDetalle, { textAlign: 'center' }]}>
           ¿Tampoco podés entrar a tu cuenta? <Text style={s.enlace}>Cerrar sesión</Text>
         </Text>

@@ -1,7 +1,7 @@
 /// <reference types="node" />
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { clasesDeMisMaterias, seccionSugerida, type ClaseOficial } from '../clases-oficiales.ts';
+import { clasesDeMisMaterias, elegirHorarioPublicado, seccionSugerida, type ClaseOficial } from '../clases-oficiales.ts';
 
 const c = (materia: string, dia: number, inicio: string, seccion: string | null = null): ClaseOficial => ({
   materia, nivel: 3, seccion, dia_semana: dia, hora_inicio: inicio, hora_fin: '23:00', aula: null, tipo_clase: null,
@@ -28,4 +28,16 @@ test('agrupa por materia y sección, y marca lo que ya está en la agenda', () =
 test('sugiere la sección que ya tenés cargada', () => {
   const r = clasesDeMisMaterias([c('Física II', 1, '07:00', 'A'), c('Física II', 2, '09:00', 'B')], [{ id: 'f2', nombre: 'Física II' }], [{ materia_id: 'f2', dia_semana: 2, hora_inicio: '09:00' }]);
   assert.equal(seccionSugerida(r.materias[0]), 'B');
+});
+
+test('horario publicado: el del plan del estudiante, o uno general, nunca el de otro plan', () => {
+  const h2018 = { id: 'a', plan_anio: 2018, publicado_en: '2026-08-01' };
+  const h2026 = { id: 'b', plan_anio: 2026, publicado_en: '2026-08-10' };
+  const general = { id: 'c', plan_anio: null, publicado_en: '2026-07-01' };
+  assert.deepEqual(elegirHorarioPublicado([h2018, h2026], 2018), { horario: h2018, general: false });
+  assert.deepEqual(elegirHorarioPublicado([h2018, h2026, general], 2018), { horario: h2018, general: false });
+  assert.deepEqual(elegirHorarioPublicado([h2026, general], 2018), { horario: general, general: true });
+  assert.equal(elegirHorarioPublicado([h2026], 2018), null);
+  assert.equal(elegirHorarioPublicado([h2018, h2026], null), null);
+  assert.deepEqual(elegirHorarioPublicado([h2026, general], null), { horario: general, general: true });
 });

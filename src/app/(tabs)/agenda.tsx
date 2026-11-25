@@ -159,7 +159,7 @@ export default function Agenda() {
             )}
             </>
             )}
-            <HorarioOficial carreraId={perfil?.carrera_id} datos={datos} onCargadas={recargar} />
+            <HorarioOficial carreraId={perfil?.carrera_id} planId={perfil?.plan_id} datos={datos} onCargadas={recargar} />
             <Tarjeta estilo={{ marginTop: espacio.m }}>
               <Fila
                 icono="flag-outline"
