@@ -10,15 +10,15 @@ import { textoProgreso, useLectorOcr } from '../../components/LectorOcr';
 import { BarraSuperior, Boton, Campo, Cargando, Chip, Fila, Hoja, Insignia, Mensaje, Pantalla, s, Seccion, Tarjeta } from '../../components/ui';
 import { useTema } from '../../context/TemaProvider';
 import { cargarCarreras } from '../../datos/admin';
-import { aniosDePlanes, bytesDeArchivo, materiasDeCarrera } from '../../datos/finales-oficiales';
+import { aniosDePlanes, bytesDeArchivo, fichasDeMaterias, materiasDeCarrera } from '../../datos/finales-oficiales';
 import {
   actualizarHorarioClases, borrarHorarioClases, cargarHorarioClases, crearHorarioClases, guardarClasesOficiales, ocultarHorarioClases, publicarHorarioClases,
   urlPdfHorarioClases, type ClaseEditable,
 } from '../../datos/horarios-clases';
 import { estadoAviso, TEXTO_AVISO } from '../../lib/aviso-publicacion';
 import { textoError } from '../../lib/errores';
-import { leerHorarioClases, NOMBRE_DIA, textoNivel } from '../../lib/horario-clases';
-import { detectarCarrera, detectarPlan, normalizar } from '../../lib/horario-finales';
+import { leerHorarioClases, NOMBRE_DIA, planesDeHojas, textoNivel } from '../../lib/horario-clases';
+import { detectarCarrera, detectarPlan, normalizar, type FichaMateria } from '../../lib/horario-finales';
 import { confianzaMedia, filasDeOcr, textoDeFilas, type FilaDoc } from '../../lib/ocr/documento';
 import { filasDePdfGeneral } from '../../lib/pdf-texto';
 import { infoTipoClase, TIPOS_CLASE, type TipoClase } from '../../lib/tipo-clase';
@@ -64,6 +64,9 @@ export default function HorarioClasesAdmin() {
   const [planDetectado, setPlanDetectado] = useState(false);
   const [titulo, setTitulo] = useState('');
   const [materias, setMaterias] = useState<string[]>([]);
+  const [fichas, setFichas] = useState<FichaMateria[]>([]);
+  // Planes que trae el PDF (una hoja por carrera, plan y nivel): plan → cantidad de hojas.
+  const [planesDoc, setPlanesDoc] = useState<Map<number, number>>(new Map());
   const [doc, setDoc] = useState<FilaDoc[] | null>(null);
   const [pdf, setPdf] = useState<{ bytes: Uint8Array; nombre: string } | null>(null);
   const [filas, setFilas] = useState<FilaClase[]>([]);
@@ -100,7 +103,23 @@ export default function HorarioClasesAdmin() {
   useEffect(() => {
     if (!carreraId) return setPlanes([]);
     aniosDePlanes(carreraId).then(setPlanes).catch(() => {});
+    fichasDeMaterias(carreraId).then(setFichas).catch(() => setFichas([]));
   }, [carreraId]);
+
+  // PDF con hojas de varios planes: se muestra el plan con más hojas de los que tiene la carrera
+  // (un horario por plan, para que cada estudiante vea solo el suyo).
+  useEffect(() => {
+    if (planesDoc.size < 2 || !planes.length) return;
+    const candidatos = [...planesDoc.entries()].filter(([p]) => planes.includes(p)).sort((a, b) => b[1] - a[1] || b[0] - a[0]);
+    const elegido = candidatos[0]?.[0] ?? null;
+    if (elegido == null) return;
+    setPlan(elegido);
+    setPlanDetectado(true);
+    const lista = [...planesDoc.keys()].sort();
+    setAviso(
+      `Este PDF trae hojas de los planes ${lista.slice(0, -1).join(', ')} y ${lista[lista.length - 1]}. Ahora ves las del plan ${elegido}: guardalo y, para otro plan, subí el mismo PDF en un horario nuevo y elegí ese plan.`,
+    );
+  }, [planesDoc, planes]);
 
   useEffect(() => {
     if (!carreraId) return setMaterias([]);
@@ -114,9 +133,9 @@ export default function HorarioClasesAdmin() {
   // Con el documento y las materias se leen las clases (y se vuelven a leer si cambia la carrera o el plan).
   useEffect(() => {
     if (!doc || !materias.length) return;
-    const r = leerHorarioClases(doc, materias);
+    const r = leerHorarioClases(doc, materias, plan, fichas);
     setFilas(r.clases.map((c) => ({ clave: nuevaClave(), materia: c.materia, nivel: c.nivel, seccion: c.seccion, dia_semana: c.dia, hora_inicio: c.inicio, hora_fin: c.fin, aula: c.aula, tipo_clase: c.tipo, origen: c.origen })));
-  }, [doc, materias]);
+  }, [doc, materias, plan, fichas]);
 
   const elegirPdf = async () => {
     setError(null);
@@ -146,7 +165,9 @@ export default function HorarioClasesAdmin() {
       const c = texto ? detectarCarrera(texto, carreras) : null;
       if (c) setCarreraId(c);
       setDetectada(Boolean(c));
-      const p = detectarPlan(texto);
+      const hojas = planesDeHojas(filasDoc);
+      setPlanesDoc(hojas);
+      const p = hojas.size === 1 ? [...hojas.keys()][0] : hojas.size > 1 ? null : detectarPlan(texto);
       setPlan(p);
       setPlanDetectado(Boolean(p));
       if (!titulo) setTitulo(tituloDeHorario(texto));
