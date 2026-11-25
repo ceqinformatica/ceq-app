@@ -6,7 +6,7 @@ import { db as demo, MODO_DEMO, UID_DEMO } from '../datos/demo';
 import { esErrorDeRed, textoError } from '../lib/errores';
 import { biometriaActiva, verificarIdentidad } from '../lib/biometria';
 import { almacenSeguro } from '../lib/almacenSeguro';
-import { borrarPin, comprobarPin, guardarPin, pinActivo, reiniciarIntentosPin, type ResultadoPin } from '../lib/pinGuardado';
+import { borrarPin, comprobarPin, fijarCuentaPin, guardarPin, pinActivo, reiniciarIntentosPin, type ResultadoPin } from '../lib/pinGuardado';
 import { supabase } from '../lib/supabase';
 import type { Perfil } from '../lib/tipos-db';
 
@@ -43,6 +43,8 @@ export function SesionProvider({ children }: { children: ReactNode }) {
   const enFondoDesde = useRef<number | null>(null);
   const sinConexionAlEmpezar = useRef(false);
   const usuarioActual = useRef<string | null>(null);
+  // La cuenta con sesión, para saber cuándo alguien recién entra.
+  const uidSesion = useRef<string | null>(null);
 
   const cargarPerfil = useCallback(async (uid: string | undefined) => {
     fijarUsuarioCache(uid ?? null);
@@ -77,6 +79,8 @@ export function SesionProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     // Modo demostración: sesión falsa con datos de ejemplo, sin Supabase.
     if (MODO_DEMO) {
+      fijarCuentaPin(UID_DEMO);
+      uidSesion.current = UID_DEMO;
       setSesion({ user: { id: UID_DEMO, email: demo.correo } } as Session);
       setPerfil(demo.perfil);
       hayBloqueo().then((b) => {
@@ -95,6 +99,8 @@ export function SesionProvider({ children }: { children: ReactNode }) {
       if (!inicial && 'error' in r && r.error && esErrorDeRed(r.error)) inicial = await sesionGuardada();
       sinConexionAlEmpezar.current = Boolean(inicial && !r.data.session);
       if (!activo) return;
+      uidSesion.current = inicial?.user.id ?? null;
+      fijarCuentaPin(uidSesion.current);
       setSesion(inicial);
       const data = { session: inicial };
       if (data.session && (await hayBloqueo())) setBloqueado(true);
@@ -107,12 +113,25 @@ export function SesionProvider({ children }: { children: ReactNode }) {
       if (evento === 'SIGNED_OUT') {
         sinConexionAlEmpezar.current = false;
         borrarCache();
-        // El PIN es de la cuenta que cerró sesión: la próxima no lo hereda.
-        borrarPin().catch(() => {});
+        // El PIN NO se borra: es de esa cuenta en este celular y se vuelve a
+        // pedir cuando entre de nuevo (ver pinGuardado).
       }
-      setSesion(nueva);
-      if (!nueva) setBloqueado(false);
-      cargarPerfil(nueva?.user.id);
+      const uid = nueva?.user.id ?? null;
+      // Alguien recién entra (o cambió de cuenta): si esa cuenta tiene PIN o
+      // huella en este celular, se bloquea ANTES de mostrar nada. Así cerrar
+      // sesión y volver a entrar con Google no saltea el PIN.
+      const entro = uid != null && uid !== uidSesion.current;
+      uidSesion.current = uid;
+      fijarCuentaPin(uid);
+      const aplicar = (bloquear: boolean) => {
+        if (uidSesion.current !== uid) return; // mientras tanto cambió otra vez
+        if (bloquear) setBloqueado(true);
+        setSesion(nueva);
+        if (!nueva) setBloqueado(false);
+        cargarPerfil(uid ?? undefined);
+      };
+      if (entro) hayBloqueo().then(aplicar, () => aplicar(false));
+      else aplicar(false);
     });
     return () => {
       activo = false;

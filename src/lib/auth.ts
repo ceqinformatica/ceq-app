@@ -220,7 +220,6 @@ export async function confirmarConEnlace(code: string, flowId: string | null = n
   if (uid !== uidAntes) {
     if (await salir()) {
       await supabase.auth.signOut({ scope: 'local' }).catch(() => undefined);
-      await borrarPin().catch(() => {});
     }
     return 'Ese enlace es de otra cuenta. Cerramos la sesión por seguridad: entrá de nuevo con tu cuenta.';
   }
@@ -284,9 +283,10 @@ export async function salir(): Promise<string | null> {
   olvidarEnlacePin();
   // Un enlace pedido por esta cuenta no se espera más (los ya usados se siguen recordando).
   await memoriaEnlace.leer().then((e) => memoriaEnlace.guardar({ ...e, pedido: null })).catch(() => {});
-  // El PIN es de esta cuenta en este dispositivo: así, si alguien lo olvidó,
-  // cierra sesión, vuelve a entrar con Google y puede crear otro.
-  await borrarPin().catch(() => {});
+  // El PIN NO se borra al salir: si no, cualquiera con el celular cerraba
+  // sesión, volvía a entrar con la cuenta de Google del celular y quedaba
+  // adentro sin PIN. Al volver a entrar con esta cuenta se pide el PIN; si lo
+  // olvidó, "¿Olvidaste tu PIN?" permite crear otro confirmando la cuenta.
   return null;
 }
 

@@ -149,3 +149,13 @@ export function sha256(texto: string): string {
   }
   return Array.from(h, (x) => x.toString(16).padStart(8, '0')).join('');
 }
+
+/**
+ * Dónde se guarda el PIN de una cuenta en este dispositivo (null sin cuenta).
+ * SecureStore solo acepta letras, números, '.', '-' y '_' en la clave.
+ */
+export function clavesPin(uid: string | null | undefined): { pin: string; intentos: string } | null {
+  if (!uid) return null;
+  const id = uid.replace(/[^A-Za-z0-9._-]/g, '_');
+  return { pin: `ceq_pin.${id}`, intentos: `ceq_pin_intentos.${id}` };
+}

@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import {
-  crearRegistroPin, esperaTrasFallos, FALLOS_LIBRES, leerPinGuardado, nuevaSal, pinCoincide, problemaPin, segundosRestantes, sha256,
+  clavesPin, crearRegistroPin, esperaTrasFallos, FALLOS_LIBRES, leerPinGuardado, nuevaSal, pinCoincide, problemaPin, segundosRestantes, sha256,
 } from '../pin.ts';
 
 test('sha256 coincide con el de Node', () => {
@@ -57,4 +57,14 @@ test('espera creciente tras muchos fallos', () => {
   assert.equal(segundosRestantes(FALLOS_LIBRES, ahora - 40_000, ahora), 0);
   assert.equal(segundosRestantes(2, ahora, ahora), 0);
   assert.equal(segundosRestantes(9, null, ahora), 0);
+});
+
+test('el PIN se guarda aparte para cada cuenta (y sin cuenta no hay PIN)', () => {
+  assert.equal(clavesPin(null), null);
+  assert.equal(clavesPin(''), null);
+  const a = clavesPin('8f14e45f-ceea-467a-9575-1a2b3c4d5e6f');
+  assert.deepEqual(a, { pin: 'ceq_pin.8f14e45f-ceea-467a-9575-1a2b3c4d5e6f', intentos: 'ceq_pin_intentos.8f14e45f-ceea-467a-9575-1a2b3c4d5e6f' });
+  assert.notEqual(clavesPin('otra')?.pin, a?.pin);
+  // SecureStore solo acepta letras, números, '.', '-' y '_'.
+  assert.match(clavesPin('a/b c@d')!.pin, /^[A-Za-z0-9._-]+$/);
 });
