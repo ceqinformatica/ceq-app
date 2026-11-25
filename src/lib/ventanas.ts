@@ -118,6 +118,22 @@ export const LIMITE_TITULO_VENTANA = 80;
 export const LIMITE_CUERPO_VENTANA = 600;
 export const LIMITE_BOTON_VENTANA = 30;
 
+/**
+ * Tiempo (ms) desde que aparece la ventana en el que no se hace caso a los
+ * toques afuera: la ventana sale a los segundos y quien está deslizando la
+ * cerraría sin querer.
+ */
+export const ESPERA_TOQUE_AFUERA_MS = 1000;
+
+/**
+ * ¿Tocar afuera (o el botón Atrás de Android) cierra la ventana? La cruz
+ * siempre está; `cerrable` es "también tocando afuera" (en la de pantalla
+ * completa, que no tiene afuera, queda solo el botón Atrás).
+ */
+export function cierraTocandoAfuera(v: { cerrable: boolean; forma: string }, msDesdeQueAparecio: number): boolean {
+  return v.cerrable && msDesdeQueAparecio >= ESPERA_TOQUE_AFUERA_MS;
+}
+
 export interface FormularioVentana {
   titulo: string;
   cuerpo: string;
@@ -142,7 +158,6 @@ export function validarVentana(f: FormularioVentana): string | null {
   if (bd && !bt) return 'Escribí el texto del botón.';
   if (bt.length > LIMITE_BOTON_VENTANA) return `El botón puede tener hasta ${LIMITE_BOTON_VENTANA} letras.`;
   if (bd && !destinoValido(bd)) return 'El botón tiene que llevar a una pantalla de la app o a un enlace https://';
-  if (!f.cerrable && !bt) return 'Si no se puede cerrar, poné un botón: es la única forma de salir.';
   if (!colorValido(f.color)) return 'El color tiene que ser de la lista o un código como #1879B4.';
   return null;
 }

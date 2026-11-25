@@ -315,9 +315,9 @@ export default function EditarVentana() {
       <Tarjeta estilo={{ paddingVertical: espacio.xs }}>
         <Fila
           icono="close-circle-outline"
-          titulo="Se puede cerrar"
-          detalle={cerrable ? 'Con la cruz o tocando afuera.' : 'Solo se sale con el botón.'}
-          derecha={<Switch value={cerrable} onValueChange={setCerrable} accessibilityLabel="Se puede cerrar" trackColor={{ true: fondos.marino, false: colores.linea }} thumbColor={colores.blanco} />}
+          titulo="Cerrar tocando afuera"
+          detalle={!cerrable ? 'Se cierra solo con la cruz.' : forma === 'pantalla' ? 'Ocupa toda la pantalla: se cierra con la cruz o con Atrás.' : 'Se cierra con la cruz o tocando afuera.'}
+          derecha={<Switch value={cerrable} onValueChange={setCerrable} accessibilityLabel="Cerrar también tocando afuera" trackColor={{ true: fondos.marino, false: colores.linea }} thumbColor={colores.blanco} />}
         />
         <Fila
           icono="eye-outline"
