@@ -17,10 +17,10 @@ import type { HorarioDb } from '../lib/tipos-db';
 import { infoTipoClase } from '../lib/tipo-clase';
 import { colores, crearEstilos, espacio, fondos, fuentes, radio } from '../tema';
 
-/** La imagen se diseña en 480 × 360 puntos y sale en 1440 × 1080 (horizontal 4:3). */
-const ANCHO = 480;
-const ALTO = 360;
-const SALIDA = { width: 1440, height: 1080 };
+/** La imagen se diseña en 420 × 420 puntos y sale en 1080 × 1080 (cuadrada). */
+const ANCHO = 420;
+const ALTO = 420;
+const SALIDA = { width: 1080, height: 1080 };
 const CLAVE_PREFERENCIAS = 'ceq.imagenHorario';
 const TITULO_PREDETERMINADO = 'Mi horario';
 
@@ -105,7 +105,7 @@ export function CompartirHorario({ visible, clases, nombre, onCerrar }: {
         ) : null}
       </View>
 
-      {/* Copia fuera de la pantalla al tamaño exacto de salida (1080 px de ancho): la vista previa es más chica y escalada se vería borrosa. */}
+      {/* Copia fuera de la pantalla al tamaño exacto de salida (1080 × 1080 px): la vista previa es más chica y escalada se vería borrosa. */}
       {visible && puedeCompartirImagen ? (
         <View style={{ position: 'absolute', left: -10000, top: 0 }} pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
           <ImagenHorario
@@ -170,7 +170,7 @@ function MuestraPaleta({ paleta, elegida, onPress }: { paleta: PaletaImagen; ele
 /**
  * La imagen en sí: cabecera con el título, la grilla de la semana en una
  * tarjeta y la leyenda de materias. Todas las medidas salen de un diseño
- * de 360 × 640 escalado al ancho disponible, así la imagen es siempre la
+ * de 420 × 420 (cuadrado) escalado al ancho disponible, así la imagen es siempre la
  * misma (no depende del tamaño del celular).
  */
 export function ImagenHorario({ refVista, ancho, clases, nombre, titulo, subtitulo, modo, paleta }: {
@@ -191,7 +191,7 @@ export function ImagenHorario({ refVista, ancho, clases, nombre, titulo, subtitu
   // Alto de la zona de bloques, medido en puntos del diseño (sin escalar).
   const [altoGrilla, setAltoGrilla] = useState(0);
   const altoHora = altoGrilla > 0 ? altoGrilla / horas.length : 0;
-  const anchoDia = (ANCHO - 36 - 16 - 24) / dias.length;
+  const anchoDia = (ANCHO - 36 - 14 - 24) / dias.length;
   const acento = paleta.tonos[0];
 
   return (
@@ -251,16 +251,22 @@ export function ImagenHorario({ refVista, ancho, clases, nombre, titulo, subtitu
                 const alto = Math.max(((minutos(c.hora_fin) - minutos(c.hora_inicio)) / 60) * altoHora - 2, 14);
                 const lineas = Math.max(1, Math.floor((alto - 5) / 11.5));
                 const tipo = infoTipoClase(c.tipo_clase);
+                // Letras que entran por línea (9 pt semibold ≈ 4,6 unidades por letra):
+                // las palabras más largas se recortan para no partirlas a la mitad.
+                const capacidad = ((anchoDia / columnas) - 11) / 4.6;
+                const letras = Math.max(5, Math.floor(capacidad));
+                const nombreCorto = abreviar(nombre(c), letras);
+                // La prueba usa el ancho real (sin el mínimo de 5): en columnas
+                // angostas el nombre pasa a ocupar varias líneas.
+                const cabeEnUna = nombreCorto.length <= capacidad;
                 // Con dos líneas: el nombre arriba y "TEO · Aula 12" abajo si el
                 // nombre entra en una línea; si no, el nombre completo en dos.
-                const cabeEnUna = nombre(c).length * 4.6 <= (anchoDia / columnas) - 11;
                 const dosLineas = lineas === 2 && cabeEnUna && (tipo != null || !!c.aula);
                 const conTipo = tipo != null && lineas >= 3;
-                const conAula = !!c.aula && lineas >= 4;
+                const conAula = !!c.aula && (lineas >= 4 || (lineas === 3 && cabeEnUna));
                 const conHora = lineas >= 5;
                 const lineasNombre = dosLineas ? 1 : Math.max(1, lineas - (conTipo ? 1 : 0) - (conAula ? 1 : 0) - (conHora ? 1 : 0));
                 const detalle = [tipo?.corto.toUpperCase(), c.aula].filter(Boolean).join(' · ');
-                const largo = anchoDia / columnas >= 70 ? 14 : anchoDia / columnas >= 50 ? 9 : 6;
                 return (
                   <View
                     key={c.id}
@@ -273,7 +279,7 @@ export function ImagenHorario({ refVista, ancho, clases, nombre, titulo, subtitu
                     <View style={{ flex: 1, backgroundColor: tono, borderRadius: u(7), paddingHorizontal: u(4), paddingVertical: u(3), overflow: 'hidden' }}>
                       {conTipo ? <T style={[txt(u, 7.5, fuentes.bold, tinta), { opacity: 0.85, letterSpacing: u(0.4) }]} numberOfLines={1}>{tipo!.corto.toUpperCase()}</T> : null}
                       <T style={txt(u, 9, fuentes.semibold, tinta)} numberOfLines={lineasNombre}>
-                        {tipo && !conTipo && lineas === 1 ? `${tipo.corto} · ` : ''}{abreviar(nombre(c), largo)}
+                        {tipo && !conTipo && lineas === 1 ? `${tipo.corto} · ` : ''}{nombreCorto}
                       </T>
                       {dosLineas ? <T style={[txt(u, 7.5, fuentes.medium, tinta), { opacity: 0.85 }]} numberOfLines={1}>{detalle}</T> : null}
                       {conAula ? <T style={[txt(u, 7.5, fuentes.medium, tinta), { opacity: 0.85 }]} numberOfLines={1}>{c.aula}</T> : null}
