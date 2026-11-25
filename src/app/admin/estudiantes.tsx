@@ -143,7 +143,7 @@ function Detalle({ e, onCerrar }: { e: EstudianteRegistrado | null; onCerrar: ()
         ['Año de ingreso', e.anio_ingreso ? String(e.anio_ingreso) : '—'],
         ['Cuenta', ROLES[e.rol] ?? e.rol],
         ['Carnet del CEQ', e.socio_vigente ? 'Socio al día' : 'Sin carnet vigente'],
-        ['Se registró', describirCuando(e.registrado_en)],
+        ['Se registró', fecha(e.registrado_en)],
         ['Último ingreso', e.ultimo_ingreso ? describirCuando(e.ultimo_ingreso) : '—'],
       ]
     : [];

@@ -27,8 +27,9 @@ begin
            coalesce(pl.nombre, pl.anio::text), p.anio_ingreso, p.rol::text,
            p.created_at, u.last_sign_in_at,
            exists (select 1 from public.socios so
-                   where so.usuario_id = p.id
-                     and (so.vigente_hasta is null or so.vigente_hasta >= current_date))
+                   where so.usuario_id = p.id and so.activo
+                     and (so.vigente_hasta is null
+                          or so.vigente_hasta >= (now() at time zone 'America/Asuncion')::date))
     from public.perfiles p
     join auth.users u on u.id = p.id
     left join public.carreras c on c.id = p.carrera_id
@@ -54,7 +55,7 @@ with (security_invoker = false) as
   from public.opciones_encuesta o
   join public.encuestas e on e.id = o.encuesta_id
   left join public.votos v on v.opcion_id = o.id
-  where e.resultados_publicos or public.es_admin()
+  where e.resultados_publicos or (select public.es_admin())
   group by o.encuesta_id, o.id, o.texto;
 revoke all on public.resultados_encuesta from public, anon;
 grant select on public.resultados_encuesta to authenticated;

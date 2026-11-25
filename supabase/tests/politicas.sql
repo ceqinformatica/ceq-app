@@ -704,6 +704,7 @@ select pg_temp.debe_ser('admin carga sus opciones',
 reset role;
 select pg_temp.como('00000000-0000-0000-0000-00000000000b');
 select public.votar('40000000-0000-0000-0000-000000000009', '50000000-0000-0000-0000-000000000091');
+select pg_temp.debe_fallar('Beto no lee los votos directamente', 'select count(*) from public.votos');
 select pg_temp.debe_ser('Beto no ve los resultados de la encuesta privada',
   (select count(*) from public.resultados_encuesta where encuesta_id = '40000000-0000-0000-0000-000000000009'), 0);
 select pg_temp.debe_ser('Beto sigue viendo los de una encuesta pública',
