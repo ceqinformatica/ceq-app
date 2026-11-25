@@ -4,7 +4,7 @@ import { Pressable, ScrollView, Text, View, type ViewStyle } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSesion } from '../context/SesionProvider';
 import { salir } from '../lib/auth';
-import { escucharResultadoPin, resultadoPin } from '../lib/enlace-pin';
+import { descartarResultadoSinTomar, escucharResultadoPin, resultadoPin } from '../lib/enlace-pin';
 import { biometriaActiva, biometriaDisponible } from '../lib/biometria';
 import { problemaPin } from '../lib/pin';
 import { esperaPin, largoPin, reiniciarIntentosPin } from '../lib/pinGuardado';
@@ -34,6 +34,8 @@ export function Bloqueo() {
   // se abre "¿Olvidaste tu PIN?", que toma el resultado. También si llegó
   // justo antes de que la app se bloqueara.
   useEffect(() => {
+    // Una confirmación vieja que nadie tomó no abre el bloqueo de ahora.
+    descartarResultadoSinTomar();
     const ver = () => {
       if (resultadoPin()) setVista((v) => (v === 'pin' ? 'recuperar' : v));
     };

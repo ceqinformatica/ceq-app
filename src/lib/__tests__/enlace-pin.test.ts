@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   ESPERA_ENLACE_MS,
+  descartarResultadoSinTomar,
   escucharResultadoPin,
   estadoAlPedir,
   hayEnlaceComprobando,
@@ -185,4 +186,69 @@ test('lo guardado roto o vacío no rompe nada', () => {
   assert.deepEqual(leerEstadoEnlace('{"pedido":"x","usados":[1,"a"]}'), { pedido: null, usados: ['a'] });
   assert.equal(hayQueAtender({ pedido: Date.now(), usados: ['a'] }, 'a'), false);
   assert.equal(hayQueAtender({ pedido: Date.now(), usados: ['a'] }, 'b'), true);
+});
+
+/** Como la ruta auth/pin: espera a que termine la comprobación y decide. */
+function esperarDecision(): Promise<void> {
+  return new Promise((ok) => {
+    const decidir = () => {
+      if (hayEnlaceComprobando()) return;
+      dejar();
+      ok();
+    };
+    const dejar = escucharResultadoPin(decidir);
+    decidir();
+  });
+}
+
+test('dos enlaces con error iguales a la vez: la ruta no queda esperando para siempre', async () => {
+  reiniciarEnlacePin();
+  const base = memoriaFalsa();
+  base.pedir();
+  const lenta = {
+    leer: async () => {
+      await new Promise((r) => setTimeout(r, 5));
+      return base.leer();
+    },
+    guardar: async (e: EstadoEnlace) => {
+      await new Promise((r) => setTimeout(r, 5));
+      return base.guardar(e);
+    },
+  };
+  const e = { error: 'Email link is invalid or has expired' };
+  const a = procesarEnlacePin(e, async () => null, 1000, lenta);
+  const b = procesarEnlacePin(e, async () => null, 1000, lenta);
+  const decision = esperarDecision();
+  await Promise.all([a, b]);
+  await Promise.race([decision, new Promise((_, mal) => setTimeout(() => mal(new Error('la ruta quedó esperando')), 200))]);
+  assert.equal(tomarResultadoPin()?.tipo, 'error');
+});
+
+test('si no se llegó a Supabase (sin conexión), el mismo enlace se puede volver a tocar', async () => {
+  reiniciarEnlacePin();
+  const memoria = memoriaFalsa();
+  memoria.pedir();
+  await procesarEnlacePin({ code: 'red', flowId: null }, async () => { throw new Error('Network request failed'); }, 1000, memoria);
+  assert.equal(tomarResultadoPin()?.tipo, 'error');
+  assert.equal(memoria.ver().usados.includes('red'), false);
+  await procesarEnlacePin({ code: 'lento2', flowId: null }, () => new Promise(() => {}), 10, memoria);
+  assert.equal(tomarResultadoPin()?.tipo, 'error');
+  assert.equal(memoria.ver().usados.includes('lento2'), false);
+  await procesarEnlacePin({ code: 'red', flowId: null }, async () => null, 1000, memoria);
+  assert.deepEqual(tomarResultadoPin(), { tipo: 'confirmado' });
+  // Un "código inválido" de Supabase sí lo gasta.
+  memoria.pedir();
+  await procesarEnlacePin({ code: 'malo', flowId: null }, async () => 'El código no es válido.', 1000, memoria);
+  assert.equal(memoria.ver().usados.includes('malo'), true);
+});
+
+test('al bloquearse, una confirmación vieja que nadie tomó no sirve', async () => {
+  reiniciarEnlacePin();
+  await procesarEnlacePin({ code: 'olvidado', flowId: null }, async () => null);
+  descartarResultadoSinTomar(10_000, Date.now() + 60_000);
+  assert.equal(resultadoPin(), null);
+  // Una que llega justo al bloquearse se mantiene.
+  await procesarEnlacePin({ code: 'justo', flowId: null }, async () => null);
+  descartarResultadoSinTomar();
+  assert.deepEqual(resultadoPin(), { tipo: 'confirmado' });
 });

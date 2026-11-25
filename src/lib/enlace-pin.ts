@@ -106,7 +106,29 @@ async function atenderSegunMemoria(clave: string, memoria: MemoriaEnlace): Promi
     return true;
   } finally {
     comprobando--;
+    // Quien esperaba la comprobación (la ruta auth/pin) se entera siempre.
+    if (comprobando === 0) queueMicrotask(avisar);
   }
+}
+
+/** Se pudo no llegar a Supabase: el código no se gastó y se puede volver a tocar el enlace. */
+async function olvidarAtendido(code: string, memoria: MemoriaEnlace | undefined) {
+  vistos.delete(code);
+  if (!memoria) return;
+  await memoria
+    .leer()
+    .then((m) => memoria.guardar({ ...m, usados: m.usados.filter((u) => u !== code) }))
+    .catch(() => {});
+}
+const SIN_RESPUESTA = /conexi|network|fetch|timed? ?out/i;
+
+/**
+ * Al bloquearse la app: un resultado final que quedó guardado sin nadie que
+ * lo tomara (de hace más de unos segundos) no sirve para desbloquear a quien
+ * tenga el celular ahora. Uno que llega justo al bloquearse sí se mantiene.
+ */
+export function descartarResultadoSinTomar(margenMs = 10_000, ahora = Date.now()) {
+  if (actual && actual.r.tipo !== 'canjeando' && ahora - actual.desde > margenMs) actual = null;
 }
 
 /**
@@ -133,10 +155,10 @@ export async function procesarEnlacePin(
   if ('error' in e) {
     // El mismo enlace con error llega por dos caminos casi juntos: se avisa una vez.
     const ahora = Date.now();
-    if (ultimoError && ultimoError.texto === e.error && ahora - ultimoError.desde < 5_000) return;
+    if (ultimoError && ultimoError.texto === e.error && ahora - ultimoError.desde < 5_000) return avisar();
     ultimoError = { texto: e.error, desde: ahora };
     // Un enlace con error no pisa una confirmación que todavía nadie tomó.
-    if (actual && actual.r.tipo !== 'error') return;
+    if (actual && actual.r.tipo !== 'error') return avisar();
     fijar({ tipo: 'error', mensaje: 'El enlace venció o ya se usó. Pedí uno nuevo.' });
     return;
   }
@@ -146,8 +168,19 @@ export async function procesarEnlacePin(
   const limite = new Promise<string>((ok) => {
     reloj = setTimeout(() => ok('No pudimos comprobar el enlace: revisá tu conexión y pedí uno nuevo.'), espera);
   });
-  const r = await Promise.race([canjear(e.code, e.flowId).catch(() => 'No se pudo confirmar. Probá de nuevo.'), limite]);
+  let sinRespuesta = false;
+  const r = await Promise.race([
+    canjear(e.code, e.flowId).catch(() => {
+      sinRespuesta = true;
+      return 'No se pudo confirmar. Probá de nuevo.';
+    }),
+    limite.then((m) => {
+      sinRespuesta = true;
+      return m;
+    }),
+  ]);
   clearTimeout(reloj);
+  if (r !== null && (sinRespuesta || SIN_RESPUESTA.test(r))) await olvidarAtendido(e.code, memoria);
   if (r === null && memoria) {
     // Ya se recuperó: no se espera otro enlace.
     await memoria.leer().then((m) => memoria.guardar({ ...m, pedido: null })).catch(() => {});
