@@ -23,9 +23,12 @@ propio se puede; 30 alcanza).
 
 ## 2. Direcciones de retorno
 
-Authentication → URL Configuration → Redirect URLs: tiene que estar
-`ceqapp://**` (o, uno por uno, `ceqapp://auth/callback`,
-`ceqapp://auth/restablecer` y `ceqapp://auth/pin`).
+Authentication → URL Configuration → Redirect URLs: tienen que estar
+**`ceqapp://**`** y, para probar con Expo Go, **`exp://**`** (así están hoy).
+Tienen que ser con comodín: la app agrega `?sb_flow_id=…` a cada dirección de
+retorno, y Supabase compara también esa parte, así que direcciones exactas
+(`ceqapp://auth/pin`) dejarían de coincidir y fallarían el registro, la
+contraseña nueva, Google/Microsoft por navegador y el enlace del PIN.
 
 ## 3. Plantillas en castellano
 

@@ -31,7 +31,7 @@ export default function PantallaPin() {
   const [ocupado, setOcupado] = useState(false);
   const [intento, setIntento] = useState(0);
   // recuperar=1: viene del enlace del correo (lo canjea ConfirmarCuenta).
-  const [recuperando, setRecuperando] = useState(params.recuperar === '1' || resultadoPin() != null);
+  const [recuperando, setRecuperando] = useState(params.recuperar === '1' || (resultadoPin() ?? { tipo: 'error' }).tipo !== 'error');
 
   useEffect(() => {
     largoPin().then((l) => {

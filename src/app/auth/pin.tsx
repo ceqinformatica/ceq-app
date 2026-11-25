@@ -21,7 +21,11 @@ export default function EnlacePin() {
     if (typeof p.error === 'string') q.set('error', p.error);
     if (typeof p.error_description === 'string') q.set('error_description', p.error_description);
     recibirEnlacePin(`ceqapp://auth/pin?${q.toString()}`);
-    if (!resultadoPin()) router.replace('/');
+    if (!resultadoPin()) {
+      // Ya se usó (por ejemplo, la pantalla del PIN lo tomó o lo canjeó el bloqueo).
+      if (router.canGoBack()) router.back();
+      else router.replace('/');
+    }
     else if (hayPantallaPin() && router.canGoBack()) router.back();
     else router.replace('/pin?modo=cambiar&recuperar=1');
   }, [p.code, p.sb_flow_id, p.error, p.error_description]);

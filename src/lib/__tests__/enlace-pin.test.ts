@@ -41,12 +41,22 @@ test('mientras canjea no se toma; el error se informa', async () => {
   assert.deepEqual(tomarResultadoPin(), { tipo: 'error', mensaje: 'Ese enlace es de otra cuenta.' });
 });
 
-test('un enlace con error se avisa siempre, aunque se repita', async () => {
+test('un enlace con error se avisa una vez y no pisa una confirmación', async () => {
   reiniciarEnlacePin();
   const canjear = async () => null;
   await procesarEnlacePin({ error: 'Email link is invalid' }, canjear);
   assert.equal(tomarResultadoPin()?.tipo, 'error');
+  // El mismo enlace por el otro camino, enseguida: no se repite.
   await procesarEnlacePin({ error: 'Email link is invalid' }, canjear);
+  assert.equal(tomarResultadoPin(), null);
+  await procesarEnlacePin({ code: 'z', flowId: null }, canjear);
+  await procesarEnlacePin({ error: 'otro' }, canjear);
+  assert.deepEqual(tomarResultadoPin(), { tipo: 'confirmado' });
+});
+
+test('si el canje no responde, se avisa en vez de quedar esperando', async () => {
+  reiniciarEnlacePin();
+  await procesarEnlacePin({ code: 'lento', flowId: null }, () => new Promise(() => {}), 10);
   assert.equal(tomarResultadoPin()?.tipo, 'error');
 });
 

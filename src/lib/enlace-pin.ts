@@ -30,6 +30,7 @@ export function leerEnlacePin(url: string | null | undefined): EnlacePin | null 
 let actual: { r: ResultadoPin; desde: number } | null = null;
 const oyentes = new Set<() => void>();
 const vistos = new Set<string>();
+let ultimoError: { texto: string; desde: number } | null = null;
 
 function fijar(r: ResultadoPin | null, ahora = Date.now()) {
   actual = r ? { r, desde: ahora } : null;
@@ -41,15 +42,27 @@ function fijar(r: ResultadoPin | null, ahora = Date.now()) {
  * llegar por dos caminos); un enlace con error siempre se avisa.
  * `canjear` devuelve null si el enlace es de la cuenta de la sesión, o el error.
  */
-export async function procesarEnlacePin(e: EnlacePin, canjear: (code: string, flowId: string | null) => Promise<string | null>) {
+export async function procesarEnlacePin(e: EnlacePin, canjear: (code: string, flowId: string | null) => Promise<string | null>, espera = 20_000) {
   if ('error' in e) {
+    // El mismo enlace con error llega por dos caminos casi juntos: se avisa una vez.
+    const ahora = Date.now();
+    if (ultimoError && ultimoError.texto === e.error && ahora - ultimoError.desde < 5_000) return;
+    ultimoError = { texto: e.error, desde: ahora };
+    // Un enlace con error no pisa una confirmación que todavía nadie tomó.
+    if (actual && actual.r.tipo !== 'error') return;
     fijar({ tipo: 'error', mensaje: 'El enlace venció o ya se usó. Pedí uno nuevo.' });
     return;
   }
   if (vistos.has(e.code)) return;
   vistos.add(e.code);
   fijar({ tipo: 'canjeando' });
-  const r = await canjear(e.code, e.flowId).catch(() => 'No se pudo confirmar. Probá de nuevo.');
+  // Sin respuesta en un tiempo razonable (conexión trabada), se avisa y se puede seguir.
+  let reloj: ReturnType<typeof setTimeout> | undefined;
+  const limite = new Promise<string>((ok) => {
+    reloj = setTimeout(() => ok('No pudimos comprobar el enlace: revisá tu conexión y pedí uno nuevo.'), espera);
+  });
+  const r = await Promise.race([canjear(e.code, e.flowId).catch(() => 'No se pudo confirmar. Probá de nuevo.'), limite]);
+  clearTimeout(reloj);
   fijar(r === null ? { tipo: 'confirmado' } : { tipo: 'error', mensaje: r });
 }
 
@@ -95,5 +108,6 @@ export function reiniciarEnlacePin() {
   actual = null;
   oyentes.clear();
   vistos.clear();
+  ultimoError = null;
   pantallas = 0;
 }
