@@ -13,9 +13,9 @@ export interface UsuarioCuenta {
 }
 
 export interface MetodosCuenta {
-  /** Entró alguna vez con Google: puede confirmar eligiendo su cuenta de Google. */
+  /** Entró alguna vez con Google. No sirve para recuperar el PIN: quien tiene el celular ya tiene esa cuenta abierta. */
   google: boolean;
-  /** Entró alguna vez con Microsoft (en Supabase se llama "azure"). */
+  /** Entró alguna vez con Microsoft (en Supabase se llama "azure"). Tampoco sirve para recuperar el PIN. */
   microsoft: boolean;
   /** Tiene contraseña propia (cuenta creada con correo): puede confirmar escribiéndola. */
   clave: boolean;
@@ -30,21 +30,6 @@ export function metodosDeCuenta(usuario: UsuarioCuenta | null | undefined): Meto
   for (const i of usuario?.identities ?? []) proveedores.add(i.provider);
   const correo = usuario?.email?.trim() || null;
   return { google: proveedores.has('google'), microsoft: proveedores.has('azure'), clave: proveedores.has('email') && correo != null, correo };
-}
-
-/**
- * Cómo tomar un aviso de Supabase mientras se confirma con Google:
- * 'misma' si entró de nuevo la cuenta de la sesión, 'otra' si eligió otra
- * cuenta de Google, o null si el aviso no es un inicio de sesión nuevo.
- */
-export function resultadoGoogle(
-  uidAntes: string | null,
-  tokenAntes: string | null,
-  evento: string,
-  sesion: { access_token: string; user: { id: string } } | null,
-): 'misma' | 'otra' | null {
-  if (evento !== 'SIGNED_IN' || !sesion || sesion.access_token === tokenAntes) return null;
-  return uidAntes != null && sesion.user.id === uidAntes ? 'misma' : 'otra';
 }
 
 /** Motivo por el que la contraseña nueva no sirve, o null si está bien. */
@@ -79,6 +64,17 @@ export function traducirErrorClave(mensaje: string | null | undefined): string {
   if (m.includes('invalid login') || m.includes('invalid credentials')) return 'La contraseña no es correcta.';
   if (m.includes('fetch') || m.includes('network')) return 'No hay conexión. Revisá tu internet y probá de nuevo.';
   return mensaje ?? 'No se pudo completar. Probá de nuevo.';
+}
+
+/**
+ * ¿El correo que escribió la persona es el de su cuenta? Antes de mandar el
+ * enlace para recuperar el PIN se pide escribirlo: quien solo tiene el
+ * celular en la mano no puede pedirlo sin saber cuál es.
+ */
+export function mismoCorreo(escrito: string, deLaCuenta: string | null | undefined): boolean {
+  const a = escrito.trim().toLowerCase();
+  const b = (deLaCuenta ?? '').trim().toLowerCase();
+  return a.length > 0 && a === b;
 }
 
 /** "ana.gimenez@gmail.com" → "an•••••••@gmail.com": se reconoce sin mostrarlo entero. */
