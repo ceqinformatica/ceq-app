@@ -212,7 +212,7 @@ export function ConfirmarCuenta({ onConfirmado, onCancelar }: { onConfirmado: ()
         </View>
       )}
 
-      {ninguno && <Mensaje tipo="info" texto="No encontramos otra forma de confirmar tu cuenta. Cerrá sesión y volvé a entrar para crear un PIN nuevo." />}
+      {ninguno && <Mensaje tipo="info" texto="No encontramos otra forma de confirmar tu cuenta. Escribinos a informatica@ceq-una.com y te ayudamos a crear un PIN nuevo." />}
       <Mensaje texto={error} />
 
       <Boton texto="Volver al PIN" variante="fantasma" onPress={onCancelar} deshabilitado={cargando != null && cargando !== 'enlace'} estilo={{ marginTop: espacio.s }} />

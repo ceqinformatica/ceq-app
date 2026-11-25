@@ -94,7 +94,7 @@ export function Bloqueo() {
           : `PIN incorrecto. Después de ${r.quedanAntesDeSalir} ${r.quedanAntesDeSalir === 1 ? 'intento más' : 'intentos más'} vas a tener que confirmar tu cuenta para crear uno nuevo.`,
       );
     } else {
-      setError('No se pudo comprobar el PIN. Probá de nuevo o cerrá sesión y volvé a entrar.');
+      setError('No se pudo comprobar el PIN. Probá de nuevo o tocá "¿Olvidaste tu PIN?".');
     }
   };
 
