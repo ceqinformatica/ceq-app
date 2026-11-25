@@ -7,7 +7,7 @@ import { Pressable, Switch, Text, View } from 'react-native';
 import { Columnas } from '../../components/disposicion';
 import { textoProgreso, useLectorOcr } from '../../components/LectorOcr';
 import { CampoFechaHora } from '../../components/fecha';
-import { RecorteOcr, type PaginaVista } from '../../components/RecorteOcr';
+import { ItemRevision, RecorteOcr, type PaginaVista } from '../../components/RecorteOcr';
 import { BarraSuperior, Boton, Campo, Cargando, Chip, Fila, Hoja, Insignia, Mensaje, Pantalla, s, Seccion, Tarjeta } from '../../components/ui';
 import { useTema } from '../../context/TemaProvider';
 import { cargarCarreras } from '../../datos/admin';
@@ -175,7 +175,8 @@ export default function HorarioFinalesAdmin() {
       else if (materias.length && !enMalla.has(f.materia)) l.push({ fila: f, motivo: `"${f.materia}" no está en la malla. Elegí la materia correcta.` });
       else if (!f.hora) l.push({ fila: f, motivo: `${f.materia}: no leímos la hora.` });
     }
-    return l;
+    const pag = (x: { fila: Fila }) => x.fila.zona?.pagina ?? 999;
+    return l.sort((a, b) => pag(a) - pag(b));
   }, [filas, materias]);
   const porMateria = useMemo(() => {
     const m = new Map<string, Fila[]>();
@@ -404,7 +405,7 @@ export default function HorarioFinalesAdmin() {
           </Text>
           <Tarjeta estilo={{ paddingVertical: espacio.xs, borderWidth: 1, borderColor: colores.rojo }}>
             {dudosas.map(({ fila, motivo }, i) => (
-              <ItemRevision key={fila.clave} motivo={motivo} ultima={i === dudosas.length - 1}>
+              <ItemRevision key={fila.clave} motivo={motivo} pagina={fila.zona?.pagina} ultima={i === dudosas.length - 1}>
                 <FilaFecha f={fila} ultima onPress={() => setEditando(fila)} mostrarOrigen={!(fila.zona && vistas?.[fila.zona.pagina]?.imagen)} />
                 <RecorteOcr paginas={vistas} zona={fila.zona} titulo={null} />
               </ItemRevision>
@@ -432,18 +433,6 @@ export default function HorarioFinalesAdmin() {
       <EditorFecha fila={editando} materias={materias} vistas={vistas} onListo={aplicarEdicion} onCerrar={() => setEditando(null)} />
       {lector.vista}
     </Pantalla>
-  );
-}
-
-function ItemRevision({ motivo, ultima, children }: { motivo: string; ultima: boolean; children: ReactNode }) {
-  return (
-    <View style={{ paddingVertical: espacio.s, borderBottomWidth: ultima ? 0 : 1, borderBottomColor: colores.linea }}>
-      <View style={{ flexDirection: 'row', gap: espacio.s, alignItems: 'flex-start' }}>
-        <Ionicons name="alert-circle" size={16} color={colores.rojo} style={{ marginTop: 2 }} />
-        <Text style={[s.filaDetalle, { flex: 1, color: colores.texto }]}>{motivo}</Text>
-      </View>
-      {children}
-    </View>
   );
 }
 
@@ -499,7 +488,7 @@ function EditorFecha({ fila, materias, vistas, onListo, onCerrar }: { fila: Fila
   return (
     <Hoja visible={Boolean(fila)} titulo={fila?.materia ? 'Editar fecha' : 'Fecha de final'} onCerrar={onCerrar}>
       {fila?.zona && vistas?.[fila.zona.pagina]?.imagen ? (
-        <RecorteOcr paginas={vistas} zona={fila.zona} />
+        <RecorteOcr paginas={vistas} zona={fila.zona} titulo={`Así está en el PDF (página ${fila.zona.pagina + 1})`} />
       ) : fila?.origen ? (
         <Mensaje tipo="info" texto={`En el PDF: "${fila.origen}"`} />
       ) : null}

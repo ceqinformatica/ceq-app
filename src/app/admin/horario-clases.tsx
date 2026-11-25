@@ -7,7 +7,7 @@ import { Pressable, Switch, Text, View } from 'react-native';
 import { Columnas } from '../../components/disposicion';
 import { CampoFechaHora } from '../../components/fecha';
 import { textoProgreso, useLectorOcr } from '../../components/LectorOcr';
-import { RecorteOcr, type PaginaVista } from '../../components/RecorteOcr';
+import { ItemRevision, RecorteOcr, type PaginaVista } from '../../components/RecorteOcr';
 import { BarraSuperior, Boton, Campo, Cargando, Chip, Fila, Hoja, Insignia, Mensaje, Pantalla, s, Seccion, Tarjeta } from '../../components/ui';
 import { useTema } from '../../context/TemaProvider';
 import { cargarCarreras } from '../../datos/admin';
@@ -208,7 +208,8 @@ export default function HorarioClasesAdmin() {
       if (!f.materia) l.push({ fila: f, motivo: 'No reconocimos la materia. Elegila (o borrá la clase).' });
       else if (materias.length && !enMalla.has(f.materia)) l.push({ fila: f, motivo: `"${f.materia}" no está en la malla de este plan. Elegí la materia correcta, o dejala así si es una optativa.` });
     }
-    return l;
+    const pag = (x: { fila: FilaClase }) => x.fila.pagina ?? x.fila.zona?.pagina ?? 999;
+    return l.sort((a, b) => pag(a) - pag(b));
   }, [filas, materias]);
   const totalRevisar = dudosas.length + revisar.length;
 
@@ -463,7 +464,7 @@ export default function HorarioClasesAdmin() {
           </Text>
           <Tarjeta estilo={{ paddingVertical: espacio.xs, borderWidth: 1, borderColor: colores.rojo }}>
             {dudosas.map(({ fila, motivo }, i) => (
-              <ItemRevision key={fila.clave} motivo={motivo} ultima={i === dudosas.length - 1 && !revisar.length}>
+              <ItemRevision key={fila.clave} motivo={motivo} pagina={fila.pagina ?? fila.zona?.pagina} ultima={i === dudosas.length - 1 && !revisar.length}>
                 <FilaDeClase f={fila} ultima onPress={() => setEditando(fila)} mostrarOrigen={!vistas} />
                 <RecorteOcr paginas={vistas} zona={fila.zona} titulo={null} />
               </ItemRevision>
@@ -471,6 +472,7 @@ export default function HorarioClasesAdmin() {
             {revisar.map((r, i) => (
               <ItemRevision
                 key={r.clave}
+                pagina={r.pagina ?? r.zona?.pagina}
                 motivo={
                   r.motivo === 'sin-fin'
                     ? `${r.materia ?? 'Una clase'}: empieza el ${NOMBRE_DIA[r.dia ?? 1].toLowerCase()} a las ${r.inicio}, pero no leímos a qué hora termina.`
@@ -512,18 +514,6 @@ export default function HorarioClasesAdmin() {
       <EditorClase fila={editando} materias={materias} vistas={vistas} onListo={aplicarEdicion} onCerrar={() => { pendiente.current = null; setEditando(null); }} />
       {lector.vista}
     </Pantalla>
-  );
-}
-
-function ItemRevision({ motivo, ultima, children }: { motivo: string; ultima: boolean; children: ReactNode }) {
-  return (
-    <View style={{ paddingVertical: espacio.s, borderBottomWidth: ultima ? 0 : 1, borderBottomColor: colores.linea }}>
-      <View style={{ flexDirection: 'row', gap: espacio.s, alignItems: 'flex-start' }}>
-        <Ionicons name="alert-circle" size={16} color={colores.rojo} style={{ marginTop: 2 }} />
-        <Text style={[s.filaDetalle, { flex: 1, color: colores.texto }]}>{motivo}</Text>
-      </View>
-      {children}
-    </View>
   );
 }
 
@@ -588,7 +578,7 @@ function EditorClase({ fila, materias, vistas, onListo, onCerrar }: { fila: Fila
   return (
     <Hoja visible={Boolean(fila)} titulo={fila?.materia ? 'Editar clase' : 'Clase'} onCerrar={onCerrar}>
       {fila?.zona && vistas?.[fila.zona.pagina]?.imagen ? (
-        <RecorteOcr paginas={vistas} zona={fila.zona} />
+        <RecorteOcr paginas={vistas} zona={fila.zona} titulo={`Así está en el PDF (página ${fila.zona.pagina + 1})`} />
       ) : fila?.origen ? (
         <Mensaje tipo="info" texto={`En el PDF: "${fila.origen}"`} />
       ) : null}

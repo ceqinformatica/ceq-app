@@ -499,7 +499,7 @@ function leerGrillaPorMateria(filas: FilaDoc[], lista: Patron[], fichas: FichaMa
       });
       const fin = mejor >= 0 && dist <= paso ? libres[mejor] : null;
       if (!fin || fin.hora <= ini.hora) {
-        revisar.push({ motivo: 'sin-fin', texto: `${nombre}: ${NOMBRE_DIA[col.dia]} ${ini.hora} (sin hora de fin)`, materia, dia: col.dia, inicio: ini.hora, plan, zona });
+        revisar.push({ motivo: 'sin-fin', texto: `${nombre}: ${NOMBRE_DIA[col.dia]} ${ini.hora} (sin hora de fin)`, materia, dia: col.dia, inicio: ini.hora, plan, pagina, zona });
         continue;
       }
       libres.splice(mejor, 1);
@@ -508,7 +508,7 @@ function leerGrillaPorMateria(filas: FilaDoc[], lista: Patron[], fichas: FichaMa
       clase.pagina = pagina;
       clases.push(clase);
     }
-    if (!reconocida && actual.inicios.length) revisar.push({ motivo: 'materia', texto: nombre, materia, plan, zona });
+    if (!reconocida && actual.inicios.length) revisar.push({ motivo: 'materia', texto: nombre, materia, plan, pagina, zona });
     actual = null;
   };
 
