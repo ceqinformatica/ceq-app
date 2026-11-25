@@ -34,7 +34,7 @@ export default function Estadisticas() {
 
   const columnas = useRef<ScrollViewInstance>(null);
   const e = useMemo(
-    () => (malla ? calcularEstadisticas(malla.materias, malla.grupos, malla.estados, malla.intentos, malla.unidad) : null),
+    () => (malla ? calcularEstadisticas(malla.materias, malla.grupos, malla.estados, malla.intentos, malla.unidad, malla.finalesPendientes) : null),
     [malla],
   );
 
@@ -87,7 +87,9 @@ export default function Estadisticas() {
           <Text style={est.promedio} accessibilityLabel={`Promedio general ${prom2(e.promedio)}`}>{prom2(e.promedio)}</Text>
           <Text style={[s.filaDetalle, { color: colores.celeste }]}>
             {e.promedio == null
-              ? 'Todavía no cargaste notas de materias aprobadas.'
+              ? e.promedioConAplazos != null
+                ? `Todavía sin materias aprobadas · ${prom2(e.promedioConAplazos)} con aplazos (${e.aplazos})`
+                : 'Todavía no cargaste notas de materias aprobadas.'
               : [
                   e.aplazos ? `${prom2(e.promedioConAplazos)} con aplazos (${e.aplazos})` : 'Sin aplazos',
                   e.promedioPonderado != null ? `${prom2(e.promedioPonderado)} ponderado por ${unidad}` : null,
@@ -105,10 +107,15 @@ export default function Estadisticas() {
         </View>
         <View style={[est.datos, { marginTop: espacio.l }]}>
           <Dato valor={String(e.finalesRendidos)} etiqueta="Finales rendidos" estilo={est.dato} />
-          <Dato valor={e.efectividad == null ? '—' : `${e.efectividad}%`} etiqueta="Finales aprobados" estilo={est.dato} />
+          <Dato valor={e.efectividad == null ? '—' : `${e.efectividad}%`} etiqueta="Aprobados (con nota)" estilo={est.dato} />
           <Dato valor={String(e.aplazos)} etiqueta="Aplazos" color={e.aplazos ? colores.rojo : colores.marino} estilo={est.dato} />
           <Dato valor={e.promedioFirma == null ? '—' : `${numero(e.promedioFirma)}%`} etiqueta="Promedio de firma" estilo={est.dato} />
         </View>
+        <Text style={[s.filaDetalle, { marginTop: espacio.m }]}>
+          {e.finalesPendientes
+            ? `${e.finalesRendidos} rendidos: ${e.finalesCalificados} con nota y ${e.finalesPendientes} ${e.finalesPendientes === 1 ? 'espera' : 'esperan'} la nota. El porcentaje de aprobados es solo sobre los que tienen nota.`
+            : `${e.finalesCalificados} ${e.finalesCalificados === 1 ? 'final calificado' : 'finales calificados'}. El porcentaje de aprobados es sobre esos.`}
+        </Text>
       </Tarjeta>
 
       <Seccion>Cuánto te falta</Seccion>

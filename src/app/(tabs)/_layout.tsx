@@ -34,7 +34,7 @@ export default function TabsLayout() {
       >
         <TopTabs.Screen name="index" options={{ title: 'Inicio' }} />
         <TopTabs.Screen name="carrera" options={{ title: 'Mi carrera' }} />
-        <TopTabs.Screen name="firma" options={{ title: 'Parciales' }} />
+        <TopTabs.Screen name="firma" options={{ title: 'Firma' }} />
         <TopTabs.Screen name="agenda" options={{ title: 'Agenda' }} />
         <TopTabs.Screen name="ceq" options={{ title: 'CEQ' }} />
       </TopTabs>

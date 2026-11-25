@@ -108,7 +108,7 @@ export default function Inicio() {
       {/* Accesos rápidos */}
       <View style={est.accesos}>
         <Acceso icono="git-network-outline" texto="Malla" retraso={120} onPress={() => router.navigate('/carrera')} />
-        <Acceso icono="calculator-outline" texto="Parciales" retraso={180} onPress={() => router.navigate('/firma')} />
+        <Acceso icono="calculator-outline" texto="Firma" retraso={180} onPress={() => router.navigate('/firma')} />
         <Acceso icono="calendar-outline" texto="Agenda" retraso={240} onPress={() => router.navigate('/agenda')} />
       </View>
 

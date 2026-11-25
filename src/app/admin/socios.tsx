@@ -1,16 +1,18 @@
 import { router } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Text, View } from 'react-native';
 import { BarraSuperior, Boton, BotonFlotante, Campo, Cargando, EstadoVacio, Insignia, Mensaje, Pantalla, s, Segmentado, Tarjeta } from '../../components/ui';
-import { cargarSocios } from '../../datos/socios';
+import { buscarSocios, contarSocios, type FiltroSocios } from '../../datos/socios';
+import type { SocioDb } from '../../lib/tipos-db';
+import { textoError } from '../../lib/errores';
 import { usarDatos } from '../../datos/usarDatos';
-import { estadoCarnet, formatearCi, normalizarCi, textoSemestre } from '../../lib/carnet';
+import { estadoCarnet, formatearCi, textoSemestre } from '../../lib/carnet';
 import { colores, espacio, fondos } from '../../tema';
 import { useTema } from '../../context/TemaProvider';
 
 const volver = () => (router.canGoBack() ? router.back() : router.replace('/admin'));
 
-type Filtro = 'todos' | 'vigente' | 'vencido';
+type Filtro = FiltroSocios;
 
 const insignias = () => ({
   vigente: { texto: 'Vigente', color: colores.verde, fondo: fondos.verdeFondo },
@@ -21,21 +23,58 @@ const insignias = () => ({
 /** Socios con carnet: solo los que pagaron y el CEQ dio de alta. */
 export default function SociosAdmin() {
   useTema();
-  const { datos, cargando, error, refrescando, recargar } = usarDatos(cargarSocios, []);
+  const conteo = usarDatos(contarSocios, []);
   const [busqueda, setBusqueda] = useState('');
+  const [buscado, setBuscado] = useState('');
   const [filtro, setFiltro] = useState<Filtro>('todos');
+  // La búsqueda va al servidor (todo el padrón), por páginas.
+  const [lista, setLista] = useState<SocioDb[] | null>(null);
+  const [hayMas, setHayMas] = useState(false);
+  const [cargando, setCargando] = useState(true);
+  const [masCargando, setMasCargando] = useState(false);
+  const [refrescando, setRefrescando] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const pedido = useRef(0);
 
-  const lista = useMemo(() => {
-    const t = busqueda.trim().toLowerCase();
-    const ci = normalizarCi(t);
-    return (datos ?? []).filter((x) => {
-      if (filtro !== 'todos' && estadoCarnet(x) !== filtro) return false;
-      if (!t) return true;
-      return x.nombre.toLowerCase().includes(t) || (ci && x.ci.includes(ci)) || (x.numero_socio ?? '').toLowerCase().includes(t);
-    });
-  }, [datos, busqueda, filtro]);
+  // Espera a que termine de escribir para no consultar con cada letra.
+  useEffect(() => {
+    const t = setTimeout(() => setBuscado(busqueda), 300);
+    return () => clearTimeout(t);
+  }, [busqueda]);
 
-  const vigentes = (datos ?? []).filter((x) => estadoCarnet(x) === 'vigente').length;
+  const cargar = useCallback(async (desde: number, modo: 'nuevo' | 'mas' | 'refrescar') => {
+    const id = ++pedido.current;
+    if (modo === 'mas') setMasCargando(true);
+    else if (modo === 'refrescar') setRefrescando(true);
+    else setCargando(true);
+    setError(null);
+    try {
+      const r = await buscarSocios({ texto: buscado, filtro, desde });
+      // Una respuesta vieja (otra búsqueda) no pisa la nueva.
+      if (id !== pedido.current) return;
+      setLista((antes) => (desde === 0 ? r.filas : [...(antes ?? []), ...r.filas]));
+      setHayMas(r.hayMas);
+    } catch (e) {
+      if (id === pedido.current) setError(textoError(e, 'No pudimos cargar los socios.'));
+    } finally {
+      if (id === pedido.current) {
+        setCargando(false);
+        setMasCargando(false);
+        setRefrescando(false);
+      }
+    }
+  }, [buscado, filtro]);
+
+  useEffect(() => {
+    cargar(0, 'nuevo');
+  }, [cargar]);
+
+  const recargar = () => {
+    conteo.recargar();
+    cargar(0, 'refrescar');
+  };
+  const datos = lista;
+  const buscando = buscado.trim() !== '' || filtro !== 'todos';
 
   return (
     <View style={{ flex: 1 }}>
@@ -48,8 +87,8 @@ export default function SociosAdmin() {
         <Campo etiqueta="Buscar" value={busqueda} onChangeText={setBusqueda} placeholder="Nombre o C.I." autoCorrect={false} limpiable />
         <Segmentado<Filtro>
           opciones={[
-            { valor: 'todos', texto: `Todos (${datos?.length ?? 0})` },
-            { valor: 'vigente', texto: `Vigentes (${vigentes})` },
+            { valor: 'todos', texto: conteo.datos ? `Todos (${conteo.datos.todos})` : 'Todos' },
+            { valor: 'vigente', texto: conteo.datos ? `Vigentes (${conteo.datos.vigentes})` : 'Vigentes' },
             { valor: 'vencido', texto: 'Vencidos' },
           ]}
           valor={filtro}
@@ -59,17 +98,17 @@ export default function SociosAdmin() {
         <Mensaje texto={datos ? error : null} />
         {cargando && !datos ? (
           <Cargando />
-        ) : !datos?.length ? (
+        ) : !datos?.length && (error || !buscando) ? (
           <EstadoVacio
             icono="card-outline"
             titulo={error ? 'No pudimos cargar los socios' : 'Todavía no hay socios'}
             texto={error ?? 'Cuando alguien pague la cuota, dalo de alta con el botón +.'}
             accion={{ texto: error ? 'Reintentar' : 'Dar de alta', onPress: error ? recargar : () => router.push('/admin/socio') }}
           />
-        ) : !lista.length ? (
+        ) : !datos?.length ? (
           <EstadoVacio icono="search-outline" titulo="No encontramos a nadie" texto="Probá con otro nombre o cédula." />
         ) : (
-          lista.map((x) => {
+          datos.map((x) => {
             const i = insignias()[estadoCarnet(x)];
             return (
               <Tarjeta key={x.id} onPress={() => router.push(`/admin/socio?id=${x.id}`)} etiqueta={`Editar a ${x.nombre}`}>
@@ -85,6 +124,9 @@ export default function SociosAdmin() {
             );
           })
         )}
+        {hayMas && datos?.length ? (
+          <Boton texto="Ver más socios" variante="fantasma" onPress={() => cargar(datos.length, 'mas')} cargando={masCargando} estilo={{ marginTop: espacio.s }} />
+        ) : null}
         <View style={{ height: 72 }} />
       </Pantalla>
       <BotonFlotante etiqueta="Dar de alta un socio" onPress={() => router.push('/admin/socio')} />

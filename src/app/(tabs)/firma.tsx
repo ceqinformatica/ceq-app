@@ -50,7 +50,7 @@ export default function Parciales() {
   return (
     <Pantalla
       cabecera={
-        <CabeceraMarca titulo="Parciales" sub="Tus evaluaciones y el avance de tu firma" sinConexion={sinConexion && datos ? error : null} />
+        <CabeceraMarca titulo="Firma" sub="Tus evaluaciones y el avance de tu firma" sinConexion={sinConexion && datos ? error : null} />
       }
       refrescando={refrescando}
       onRefrescar={recargar}

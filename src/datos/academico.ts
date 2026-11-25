@@ -3,12 +3,12 @@
  * pantallas. Usa Supabase, o los datos de ejemplo en modo demostración.
  * El cálculo vive en src/lib/progreso.ts y src/lib/firma.ts.
  */
-import { llamadosUsados, periodoAlCambiar, periodoDe, recuReguDespuesDeFinal } from '../lib/finales';
+import { finalesSinUbicar, llamadosUsados, periodoAlCambiar, periodoDe, recuReguDespuesDeFinal } from '../lib/finales';
 import { conParcialesMinimos, idPredefinido } from '../lib/firma-carga';
 import { pesosIguales, type Asistencia, type Evaluacion, type ReglaFirma } from '../lib/firma';
 import type { EstadoEstudiante, EstadoMateria, GrupoOptativas, Materia, Prerrequisito, UnidadAvance } from '../lib/progreso';
 import type { IntentoAImportar, PlanImportacion } from '../lib/extracto-ealu';
-import type { IntentoFinal, LlamadoCargado } from '../lib/finales';
+import type { IntentoFinal } from '../lib/finales';
 import { aplicarRecuperatorio, aplicarRegularizacion, esRecuperatorio, esRegularizacion, REGLA_FCQ } from '../lib/reglamento-fcq';
 import { supabase } from '../lib/supabase';
 import type { AsistenciaDb, ComponenteDb, EvaluacionDb, ExamenFinalDb, GrupoOptativasDb, MateriaDb, Plan, PrerrequisitoDb, ReglaFirmaDb } from '../lib/tipos-db';
@@ -27,6 +27,8 @@ export interface Malla {
   unidad: UnidadAvance;
   /** Intentos de final (todos los llamados), para los promedios con y sin aplazos. */
   intentos: IntentoFinal[];
+  /** Una materia por cada final rendido que espera la nota (cursada actual). */
+  finalesPendientes: string[];
 }
 
 const aMateria = (m: MateriaDb): Materia => ({ id: m.id, nombre: m.nombre, semestre: m.semestre, horas: m.horas, creditos: m.creditos, grupoOptativaId: m.grupo_optativa_id });
@@ -40,7 +42,7 @@ export async function cargarMalla(planId: string, carreraId?: string | null): Pr
   let grupos: GrupoOptativasDb[];
   let pre: PrerrequisitoDb[];
   let reglas: ReglaFirmaDb[];
-  let finalesDb: Pick<ExamenFinalDb, 'materia_id' | 'nota' | 'llamado' | 'periodo' | 'fecha' | 'tipo'>[];
+  let finalesDb: Pick<ExamenFinalDb, 'materia_id' | 'nota' | 'llamado' | 'periodo' | 'fecha' | 'tipo' | 'cursada_anterior'>[];
   let estadosDb: { materia_id: string; estado: EstadoMateria; nota_final: number | null; promedio_firma?: number | null; respaldo_recursada?: unknown; periodo?: string | null; semestre_opuesto?: boolean }[];
 
   if (MODO_DEMO) {
@@ -73,7 +75,7 @@ export async function cargarMalla(planId: string, carreraId?: string | null): Pr
       const [rPre, rEst, rFin] = await Promise.all([
         supabase.from('prerrequisitos').select('*').in('materia_id', ids),
         supabase.from('materias_estudiante').select('materia_id, estado, nota_final, promedio_firma, respaldo_recursada, periodo, semestre_opuesto').in('materia_id', ids),
-        supabase.from('examenes_finales').select('materia_id, nota, llamado, periodo, fecha, tipo').in('materia_id', ids),
+        supabase.from('examenes_finales').select('materia_id, nota, llamado, periodo, fecha, tipo, cursada_anterior').in('materia_id', ids),
       ]);
       lanzar(rPre.error); lanzar(rEst.error); lanzar(rFin.error);
       pre = rPre.data ?? [];
@@ -107,6 +109,9 @@ export async function cargarMalla(planId: string, carreraId?: string | null): Pr
     intentos: finalesDb
       .filter((f) => (f.tipo ?? 'final') === 'final' && f.nota != null)
       .map((f) => ({ materiaId: f.materia_id, nota: Number(f.nota), llamado: f.llamado, periodo: f.periodo, fecha: f.fecha })),
+    // Rendidos que esperan la nota (una materia por cada uno): cuentan como
+    // rendidos, no como calificados.
+    finalesPendientes: finalesDb.filter((f) => f.tipo === 'pendiente' && !f.cursada_anterior).map((f) => f.materia_id),
   };
 }
 
@@ -189,18 +194,21 @@ export async function cargarParaImportar(): Promise<{ existentes: IntentoAImport
     await esperar(100);
     return {
       // Igual que la base: los finales ya cargados (para no duplicarlos al reimportar).
-      existentes: db.finales.filter((f) => f.nota != null).map((f) => ({ materia_id: f.materia_id, fecha: f.fecha, nota: f.nota! })),
+      existentes: db.finales.filter((f) => (f.nota_extracto ?? f.nota) != null).map((f) => ({ materia_id: f.materia_id, fecha: f.fecha, nota: (f.nota_extracto ?? f.nota)! })),
       aprobadas: new Set(db.estados.filter((e) => e.estado === 'aprobada').map((e) => e.materia_id)),
     };
   }
   const [intentos, estados] = await Promise.all([
-    supabase.from('examenes_finales').select('materia_id, fecha, nota'),
+    supabase.from('examenes_finales').select('materia_id, fecha, nota, nota_extracto'),
     supabase.from('materias_estudiante').select('materia_id').eq('estado', 'aprobada'),
   ]);
   lanzar(intentos.error);
   lanzar(estados.error);
   return {
-    existentes: (intentos.data ?? []) as IntentoAImportar[],
+    // Un importado corregido se reconoce por la nota original del extracto.
+    existentes: ((intentos.data ?? []) as { materia_id: string; fecha: string | null; nota: number | null; nota_extracto: number | null }[])
+      .filter((f) => (f.nota_extracto ?? f.nota) != null)
+      .map((f) => ({ materia_id: f.materia_id, fecha: f.fecha, nota: (f.nota_extracto ?? f.nota) as number })),
     aprobadas: new Set((estados.data ?? []).map((e: { materia_id: string }) => e.materia_id)),
   };
 }
@@ -230,7 +238,7 @@ export async function importarExtracto(plan: PlanImportacion) {
     const hoy = new Date().toISOString();
     // Los intentos quedan guardados como en la base (para reimportar igual que en producción).
     for (const i of plan.intentos) {
-      db.finales.push({ id: idDemo(), usuario_id: UID_DEMO, materia_id: i.materia_id, periodo: null, llamado: null, fecha: i.fecha, nota: i.nota, created_at: hoy });
+      db.finales.push({ id: idDemo(), usuario_id: UID_DEMO, materia_id: i.materia_id, periodo: null, llamado: null, fecha: i.fecha, nota: i.nota, created_at: hoy, version: 1, origen: 'extracto', nota_extracto: i.nota });
     }
     const aprobar = (materia_id: string, nota: number | null, fecha: string | null) => {
       const periodo = db.estados.find((e) => e.materia_id === materia_id)?.periodo ?? null;
@@ -249,7 +257,9 @@ export async function importarExtracto(plan: PlanImportacion) {
     return;
   }
   if (plan.intentos.length) {
-    const { error } = await supabase.from('examenes_finales').insert(plan.intentos);
+    // Conservan el origen y la nota del extracto: si después se corrige la
+    // nota, reimportar no los vuelve a cargar.
+    const { error } = await supabase.from('examenes_finales').insert(plan.intentos.map((i) => ({ ...i, origen: 'extracto' as const, nota_extracto: i.nota })));
     lanzar(error);
   }
   if (plan.aprobadasSinNota.length) {
@@ -314,70 +324,142 @@ export async function cargarFinales(materiaId: string): Promise<ExamenFinalDb[]>
   return (data ?? []) as ExamenFinalDb[];
 }
 
-/**
- * Guarda los tres llamados de un periodo de la cursada actual: borra los de
- * ese periodo y carga los que tienen nota o se usaron para regularizar. La
- * base aprueba la materia con la mejor nota de final (≥ 2) o la vuelve a
- * firmada si ya no hay ninguna aprobada. Los intentos de una cursada
- * anterior no se tocan.
- */
-export const ERROR_REGU_TRAS_FINAL = 'Ya rendiste un final: después no se puede rendir Recu ni Regu. Si te equivocaste, cambiá ese llamado a "No rendí".';
+export const ERROR_REGU_TRAS_FINAL = 'Ya rendiste un final: después no se puede rendir Recu ni Regu. Si te equivocaste, corregí ese resultado.';
+const ERROR_UN_RECU_O_REGU = 'Ya usaste el Recu o la Regu en otro semestre de esta cursada. Se usa uno solo.';
+export const ERROR_DESACTUALIZADO = 'Ese resultado cambió en otro dispositivo. Volvé a abrir la materia para ver lo último.';
+const ERROR_TOPE = 'Ya registraste los 3 finales de esta materia en esta cursada (Art. 62).';
 
-export async function guardarFinales(materiaId: string, periodo: string, llamados: LlamadoCargado[]) {
-  await guardarLlamados(materiaId, [{ periodo, llamados }]);
+/** Identificador nuevo (UUID v4). Se genera una vez por formulario: un reintento guarda la misma fila. */
+export function nuevoId(): string {
+  const c = (globalThis as { crypto?: { randomUUID?: () => string; getRandomValues?: (a: Uint8Array) => Uint8Array } }).crypto;
+  if (c?.randomUUID) return c.randomUUID();
+  const b = new Uint8Array(16);
+  if (c?.getRandomValues) c.getRandomValues(b);
+  else for (let i = 0; i < 16; i++) b[i] = Math.floor(Math.random() * 256);
+  b[6] = (b[6] & 0x0f) | 0x40;
+  b[8] = (b[8] & 0x3f) | 0x80;
+  const h = [...b].map((x) => x.toString(16).padStart(2, '0')).join('');
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
 }
 
-const ERROR_UN_RECU_O_REGU = 'Ya usaste el Recu o la Regu en otro semestre de esta cursada. Se usa uno solo.';
+/** Errores de las funciones de finales de la base, en castellano. */
+function errorDeFinales(error: { code?: string; message: string } | null | undefined) {
+  if (!error) return;
+  if (error.code === '23505' && error.message.includes('recu_o_regu')) throw new Error(ERROR_UN_RECU_O_REGU);
+  if (/guardar_final|borrar_final|guardar_parcial|borrar_parcial/.test(error.message) && /function|función|schema cache/i.test(error.message)) {
+    throw new Error('Falta actualizar la base del CEQ para guardar finales. Avisale al CEQ y probá más tarde.');
+  }
+  lanzar(error);
+}
+
+/** En modo demo, lo que hace el trigger de la base: aprueba con la mejor nota o vuelve a firmada. */
+function recalcularDemo(materiaId: string) {
+  const hoy = new Date().toISOString();
+  const notas = db.finales.filter((f) => f.materia_id === materiaId && (f.tipo ?? 'final') === 'final' && !f.cursada_anterior && f.nota != null).map((f) => f.nota as number);
+  const mejor = Math.max(0, ...notas);
+  const e = db.estados.find((x) => x.materia_id === materiaId);
+  if (mejor >= 2) {
+    if (e) Object.assign(e, { estado: 'aprobada', nota_final: mejor, nota_desde_final: true });
+    else db.estados.push({ usuario_id: UID_DEMO, materia_id: materiaId, estado: 'aprobada', nota_final: mejor, fecha: null, periodo: null, updated_at: hoy, nota_desde_final: true });
+  } else if (e?.nota_desde_final) {
+    Object.assign(e, { estado: 'firmada', nota_final: null, nota_desde_final: false });
+  }
+}
+
+/** En modo demo, los controles que hace la base (tope de 3 y orden Recu/Regu). */
+function validarDemo(materiaId: string) {
+  const actuales = db.finales.filter((f) => f.materia_id === materiaId && !f.cursada_anterior);
+  if (llamadosUsados(actuales) > 3) throw new Error(ERROR_TOPE);
+  if (actuales.filter((f) => f.tipo === 'recuperatorio' || f.tipo === 'regularizacion').length > 1) throw new Error(ERROR_UN_RECU_O_REGU);
+  if (recuReguDespuesDeFinal(actuales.filter((f) => f.periodo != null && f.llamado != null))) throw new Error(ERROR_REGU_TRAS_FINAL);
+}
+
+/** Corre `cambio` sobre los finales de la demo y lo deshace si no pasa los controles. */
+async function transaccionDemo(materiaId: string, cambio: () => void) {
+  await esperar(150);
+  const antes = db.finales.map((f) => ({ ...f }));
+  const evalsAntes = db.evaluaciones.map((e) => ({ ...e }));
+  try {
+    cambio();
+    validarDemo(materiaId);
+  } catch (e) {
+    db.finales = antes;
+    db.evaluaciones = evalsAntes;
+    throw e;
+  }
+  recalcularDemo(materiaId);
+}
+
+export interface DatosResultado {
+  periodo: string;
+  llamado: 1 | 2 | 3;
+  tipo: 'final' | 'pendiente' | 'ausente';
+  nota: number | null;
+  porcentaje: number | null;
+  fecha: string | null;
+  semestre_opuesto: boolean;
+}
 
 /**
- * Reemplaza los llamados de uno o más semestres de la cursada actual, todo
- * junto: antes de tocar la base se valida el resultado completo (Recu o Regu
- * uno solo, nunca después de un final), y en la base se borra e inserta en
- * una sola transacción (RPC guardar_llamados): si algo falla, no se pierde
- * nada. Las filas viejas sin llamado no se tocan.
+ * Crea o corrige UN resultado de final, por su ID y con su versión: si otro
+ * dispositivo lo cambió, no se pisa (ERROR_DESACTUALIZADO). Si el llamado
+ * elegido lo ocupa otro resultado (que la app mostró), se reemplaza en la
+ * misma transacción. Corregir un final importado lo ubica, no lo duplica;
+ * conserva su origen y la nota del extracto. Con `{ cursadaAnterior: true }`
+ * un importado pasa a una cursada anterior (no gasta un final de esta).
  */
-export async function guardarLlamados(materiaId: string, cambios: { periodo: string; llamados: LlamadoCargado[] }[]) {
-  const periodos = cambios.map((c) => c.periodo);
-  const filas = cambios.flatMap(({ periodo, llamados }) => llamados.map((l) => ({
-    materia_id: materiaId,
-    periodo,
-    llamado: l.llamado,
-    tipo: l.tipo ?? ('final' as const),
-    nota: l.tipo && l.tipo !== 'final' ? null : l.nota,
-    porcentaje: l.tipo && l.tipo !== 'final' ? null : l.porcentaje,
-    fecha: l.fecha ?? null,
-  })));
-  const actuales = (await cargarFinales(materiaId)).filter((f) => !f.cursada_anterior);
-  // Lo que queda en la cursada después de guardar.
-  const quedan = [...actuales.filter((f) => !(f.llamado != null && f.periodo != null && periodos.includes(f.periodo))), ...filas];
-  if (quedan.filter((f) => f.tipo === 'recuperatorio' || f.tipo === 'regularizacion').length > 1) throw new Error(ERROR_UN_RECU_O_REGU);
-  // Después de rendir un final ya no se rinde Recu ni Regu.
-  if (recuReguDespuesDeFinal(quedan)) throw new Error(ERROR_REGU_TRAS_FINAL);
+export async function guardarResultadoFinal(
+  materiaId: string,
+  fila: ExamenFinalDb | null,
+  datos: DatosResultado | { cursadaAnterior: true },
+  reemplaza?: ExamenFinalDb | null,
+) {
+  const anterior = 'cursadaAnterior' in datos;
   if (MODO_DEMO) {
-    await esperar(200);
-    db.finales = db.finales.filter((f) => !(f.materia_id === materiaId && !f.cursada_anterior && f.llamado != null && f.periodo != null && periodos.includes(f.periodo)));
-    const hoy = new Date().toISOString();
-    for (const f of filas) db.finales.push({ id: idDemo(), usuario_id: UID_DEMO, created_at: hoy, cursada_anterior: false, ...f });
-    // Igual que el trigger de la base.
-    const notas = db.finales.filter((f) => f.materia_id === materiaId && (f.tipo ?? 'final') === 'final' && !f.cursada_anterior && f.nota != null).map((f) => f.nota as number);
-    const mejor = Math.max(0, ...notas);
-    const e = db.estados.find((x) => x.materia_id === materiaId);
-    if (mejor >= 2) {
-      if (e) Object.assign(e, { estado: 'aprobada', nota_final: mejor, nota_desde_final: true });
-      else db.estados.push({ usuario_id: UID_DEMO, materia_id: materiaId, estado: 'aprobada', nota_final: mejor, fecha: null, periodo: null, updated_at: hoy, nota_desde_final: true });
-    } else if (e?.nota_desde_final) {
-      Object.assign(e, { estado: 'firmada', nota_final: null, nota_desde_final: false });
-    }
+    await transaccionDemo(materiaId, () => {
+      const actual = fila ? db.finales.find((f) => f.id === fila.id) : null;
+      if (fila && !actual) throw new Error(ERROR_DESACTUALIZADO);
+      if (actual && (actual.version ?? 1) !== (fila!.version ?? 1)) throw new Error(ERROR_DESACTUALIZADO);
+      if (anterior) {
+        if (!actual || actual.origen !== 'extracto') throw new Error('Solo un final importado del extracto se puede pasar a una cursada anterior.');
+        Object.assign(actual, { cursada_anterior: true, version: (actual.version ?? 1) + 1 });
+        return;
+      }
+      const ocupante = db.finales.find((f) => f.materia_id === materiaId && !f.cursada_anterior && f.periodo === datos.periodo && f.llamado === datos.llamado && f.id !== fila?.id);
+      if (ocupante) {
+        if (ocupante.tipo === 'recuperatorio' || ocupante.tipo === 'regularizacion') throw new Error('Ese llamado lo usaste para el Recu o la Regu. Elegí otro, o cambialo desde Parciales.');
+        if (ocupante.id !== reemplaza?.id || (ocupante.version ?? 1) !== (reemplaza.version ?? 1)) throw new Error(ERROR_DESACTUALIZADO);
+        db.finales = db.finales.filter((f) => f.id !== ocupante.id);
+      }
+      if (actual) Object.assign(actual, datos, { version: (actual.version ?? 1) + 1 });
+      else db.finales.push({ id: idDemo(), usuario_id: UID_DEMO, materia_id: materiaId, created_at: new Date().toISOString(), cursada_anterior: false, version: 1, origen: 'manual', ...datos });
+    });
     return;
   }
-  const { error } = await supabase.rpc('guardar_llamados', {
+  const { error } = await supabase.rpc('guardar_final', {
     p_materia: materiaId,
-    p_periodos: periodos,
-    p_filas: filas.map(({ materia_id: _m, ...f }) => f),
+    p_id: fila?.id ?? null,
+    p_version: fila ? fila.version ?? 1 : null,
+    p_fila: anterior ? { cursada_anterior: true } : { ...datos },
+    p_reemplaza: reemplaza?.id ?? null,
+    p_reemplaza_version: reemplaza ? reemplaza.version ?? 1 : null,
   });
-  if (error?.code === '23505' && error.message.includes('recu_o_regu')) throw new Error(ERROR_UN_RECU_O_REGU);
-  if (error && /guardar_llamados/.test(error.message)) throw new Error('Falta actualizar la base del CEQ para guardar finales. Avisale al CEQ y probá más tarde.');
-  lanzar(error);
+  errorDeFinales(error);
+}
+
+/** Borra un resultado de final por su ID (si nadie lo cambió desde que se mostró). */
+export async function borrarResultadoFinal(materiaId: string, fila: ExamenFinalDb) {
+  if (MODO_DEMO) {
+    await transaccionDemo(materiaId, () => {
+      const actual = db.finales.find((f) => f.id === fila.id);
+      if (!actual) return;
+      if ((actual.version ?? 1) !== (fila.version ?? 1)) throw new Error(ERROR_DESACTUALIZADO);
+      db.finales = db.finales.filter((f) => f.id !== fila.id);
+    });
+    return;
+  }
+  const { error } = await supabase.rpc('borrar_final', { p_id: fila.id, p_version: fila.version ?? 1 });
+  errorDeFinales(error);
 }
 
 /**
@@ -427,7 +509,9 @@ export async function cursarSemestreOpuesto(materiaId: string) {
     if (e?.estado === 'aprobada') throw new Error('Ya aprobaste esta materia');
     if (e?.estado === 'cursando' && e.respaldo_recursada) throw new Error('Ya marcaste que volvés a cursar esta materia');
     // Igual que la base: el Recu y la Regu no gastan un final.
-    if (llamadosUsados(db.finales.filter((f) => f.materia_id === materiaId)) >= 3) throw new Error('Ya rendiste los tres finales: tenés que volver a cursar en el semestre normal (Art. 62)');
+    const actuales = db.finales.filter((f) => f.materia_id === materiaId && !f.cursada_anterior);
+    if (finalesSinUbicar(actuales).length) throw new Error('Tenés finales importados del extracto sin ubicar en esta materia. Indicá el semestre y el llamado de cada uno para saber cuántos te quedan.');
+    if (llamadosUsados(actuales) >= 3) throw new Error('Ya rendiste los tres finales: tenés que volver a cursar en el semestre normal (Art. 62)');
     const respaldo = {
       modo: 'opuesto',
       estado: e?.estado ?? 'pendiente',
@@ -614,45 +698,48 @@ export function tipoEvaluacion(e: { componente: ComponenteDb; nombre: string }):
 /** La materia tiene laboratorio si el estudiante cargó al menos una nota de laboratorio. */
 export const tieneLab = (evals: { componente: ComponenteDb }[]) => evals.some((e) => e.componente === 'laboratorio');
 
-/** Una fila guardada como llamado para volver a guardarla tal cual. */
-const aLlamado = (f: ExamenFinalDb): LlamadoCargado => ({
-  llamado: f.llamado as 1 | 2 | 3,
-  tipo: f.tipo ?? 'final',
-  nota: f.nota,
-  porcentaje: f.porcentaje ?? null,
-  fecha: f.fecha,
-});
+/** Uso de un llamado de Finales por el Recu o la Regu. */
+export type UsoLlamadoParcial = { tipo: 'recuperatorio' | 'regularizacion'; periodo: string; llamado: 1 | 2 };
 
 /**
- * Guarda un solo llamado de un periodo (el resultado de una mesa) sin tocar
- * los demás. Con `reemplaza`, esa fila se quita antes (al editarla, aunque
- * cambie de llamado o de semestre). Con `llamado` null solo se borra.
+ * Guarda una evaluación de Parciales y, si es un Recu o una Regu rendido, su
+ * llamado en el historial de Finales, en UNA transacción (RPC
+ * guardar_parcial): o se guardan las dos cosas o ninguna. `id` es estable
+ * (nuevoId() al abrir el formulario): reintentar actualiza la misma fila.
+ * Con `uso` null y `liberar`, se quita el llamado de Recu o Regu.
  */
-export async function guardarUnLlamado(materiaId: string, periodo: string, llamado: LlamadoCargado | null, reemplaza?: ExamenFinalDb | null) {
-  const finales = (await cargarFinales(materiaId)).filter((f) => !f.cursada_anterior && f.llamado != null);
-  const delPeriodo = (p: string) => finales.filter((f) => f.periodo === p && f.id !== reemplaza?.id);
-  const cambios = [{
-    periodo,
-    llamados: [...delPeriodo(periodo).filter((f) => f.llamado !== llamado?.llamado).map(aLlamado), ...(llamado ? [llamado] : [])],
-  }];
-  // Si la fila editada estaba en otro semestre, se saca de ahí en el mismo guardado.
-  if (reemplaza?.periodo && reemplaza.periodo !== periodo) cambios.push({ periodo: reemplaza.periodo, llamados: delPeriodo(reemplaza.periodo).map(aLlamado) });
-  await guardarLlamados(materiaId, cambios);
-}
-
-/**
- * El Recu o la Regu cargado en Parciales usa un llamado de finales: queda en
- * el historial de Finales (sin nota, conserva los 3 finales). Mueve el que
- * ya estaba si cambió de semestre o de llamado; con `uso` null lo quita.
- */
-export async function registrarLlamadoParcial(materiaId: string, uso: { tipo: 'recuperatorio' | 'regularizacion'; periodo: string; llamado: 1 | 2 } | null) {
-  const finales = (await cargarFinales(materiaId)).filter((f) => !f.cursada_anterior);
-  const anterior = finales.find((f) => f.tipo === 'recuperatorio' || f.tipo === 'regularizacion') ?? null;
-  if (!uso) {
-    if (anterior?.periodo) await guardarUnLlamado(materiaId, anterior.periodo, null, anterior);
+export async function guardarParcial(materiaId: string, id: string, datos: NuevaEvaluacion, uso: UsoLlamadoParcial | null, liberar: boolean) {
+  if (MODO_DEMO) {
+    await transaccionDemo(materiaId, () => {
+      const previa = db.evaluaciones.find((e) => e.id === id);
+      if (previa) Object.assign(previa, datos);
+      else db.evaluaciones.push({ ...datos, id, usuario_id: UID_DEMO, materia_id: materiaId, orden: db.evaluaciones.length, created_at: new Date().toISOString() });
+      const actual = db.finales.find((f) => f.materia_id === materiaId && !f.cursada_anterior && (f.tipo === 'recuperatorio' || f.tipo === 'regularizacion'));
+      if (uso) {
+        if (db.finales.some((f) => f.materia_id === materiaId && !f.cursada_anterior && f.periodo === uso.periodo && f.llamado === uso.llamado && f.id !== actual?.id)) {
+          throw new Error('En ese llamado ya cargaste un resultado de final. Elegí otro llamado o cambiá ese resultado en Finales.');
+        }
+        if (actual) Object.assign(actual, { ...uso, nota: null, porcentaje: null, evaluacion_id: id, version: (actual.version ?? 1) + 1 });
+        else db.finales.push({ id: idDemo(), usuario_id: UID_DEMO, materia_id: materiaId, created_at: new Date().toISOString(), cursada_anterior: false, version: 1, origen: 'manual', fecha: null, nota: null, porcentaje: null, evaluacion_id: id, ...uso });
+      } else if (liberar && actual) {
+        db.finales = db.finales.filter((f) => f.id !== actual.id);
+      }
+    });
     return;
   }
-  const ocupado = finales.find((f) => f.periodo === uso.periodo && f.llamado === uso.llamado && f.id !== anterior?.id);
-  if (ocupado) throw new Error('En ese llamado ya cargaste un resultado de final. Elegí otro llamado o cambiá ese resultado en Finales.');
-  await guardarUnLlamado(materiaId, uso.periodo, { llamado: uso.llamado, tipo: uso.tipo, nota: null, porcentaje: null }, anterior?.periodo ? anterior : null);
+  const { error } = await supabase.rpc('guardar_parcial', { p_materia: materiaId, p_eval_id: id, p_eval: { ...datos }, p_uso: uso, p_liberar: liberar });
+  errorDeFinales(error);
+}
+
+/** Borra una evaluación y, con `liberar`, el llamado de Recu o Regu, juntos. */
+export async function borrarParcial(materiaId: string, id: string, liberar: boolean) {
+  if (MODO_DEMO) {
+    await transaccionDemo(materiaId, () => {
+      if (liberar) db.finales = db.finales.filter((f) => !(f.materia_id === materiaId && !f.cursada_anterior && (f.tipo === 'recuperatorio' || f.tipo === 'regularizacion')));
+      db.evaluaciones = db.evaluaciones.filter((e) => e.id !== id);
+    });
+    return;
+  }
+  const { error } = await supabase.rpc('borrar_parcial', { p_eval_id: id, p_liberar: liberar });
+  errorDeFinales(error);
 }

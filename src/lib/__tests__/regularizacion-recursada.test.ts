@@ -108,21 +108,40 @@ test('tres aplazos en la cursada: hay que recursar', () => {
   );
 });
 
-test('la firma vence después de dos periodos sin aprobar (Art. 49 y 62)', async () => {
-  const { firmaVencida } = await import('../finales.ts');
+test('vigencia de la firma: la app pide confirmarla, nunca la da por vencida (Art. 49 y 62)', async () => {
+  const { vigenciaPorConfirmar, semestreOpuesto } = await import('../finales.ts');
   const f = (periodo: string, nota: number | null, tipo = 'final') => ({ periodo, nota, tipo });
-  // Un periodo con aplazos: sigue vigente.
-  assert.equal(firmaVencida([f('2026-1', 1), f('2026-1', 1)], '2026-1'), false);
-  assert.equal(firmaVencida([f('2026-1', 1)], '2026-2'), false);
-  // Dos periodos usados: vigente mientras mira el segundo, vencida en el siguiente.
-  assert.equal(firmaVencida([f('2026-1', 1), f('2026-2', 1)], '2026-2'), false);
-  assert.equal(firmaVencida([f('2026-1', 1), f('2026-2', 1)], '2027-1'), true);
-  // La regularización también usa el periodo (Art. 50).
-  assert.equal(firmaVencida([f('2026-1', null, 'regularizacion'), f('2026-2', 1)], '2027-1'), true);
-  // Si aprobó, no vence nada.
-  assert.equal(firmaVencida([f('2026-1', 1), f('2026-2', 3)], '2027-1'), false);
+  // Un periodo con aplazos: nada que revisar.
+  assert.equal(vigenciaPorConfirmar([f('2026-1', 1), f('2026-1', 1)], '2026-1'), null);
+  assert.equal(vigenciaPorConfirmar([f('2026-1', 1)], '2026-2'), null);
+  // Dos periodos usados: nada mientras mira el segundo; en el siguiente, pide confirmar.
+  assert.equal(vigenciaPorConfirmar([f('2026-1', 1), f('2026-2', 1)], '2026-2'), null);
+  assert.deepEqual(vigenciaPorConfirmar([f('2026-1', 1), f('2026-2', 1)], '2027-1'), { periodos: ['2026-1', '2026-2'] });
+  // Caso de la auditoría: dos ausencias en periodos distintos solo piden confirmar.
+  assert.deepEqual(vigenciaPorConfirmar([f('2026-1', null, 'ausente'), f('2026-2', null, 'ausente')], '2027-1'), { periodos: ['2026-1', '2026-2'] });
+  // ... y no bloquean el semestre opuesto ni obligan a recursar.
+  assert.equal(semestreOpuesto({ finales: [{ ...f('2026-1', null, 'ausente'), llamado: 1 }, { ...f('2026-2', null, 'ausente'), llamado: 1 }], periodoActual: '2027-1' }).puede, true);
+  // Si aprobó, nada.
+  assert.equal(vigenciaPorConfirmar([f('2026-1', 1), f('2026-2', 3)], '2027-1'), null);
   // Al recursar, lo anterior no cuenta.
-  assert.equal(firmaVencida([{ ...f('2025-1', 1), cursada_anterior: true }, { ...f('2025-2', 1), cursada_anterior: true }, f('2026-1', 1)], '2026-2'), false);
+  assert.equal(vigenciaPorConfirmar([{ ...f('2025-1', 1), cursada_anterior: true }, { ...f('2025-2', 1), cursada_anterior: true }, f('2026-1', 1)], '2026-2'), null);
+});
+
+test('importados sin ubicar: el saldo de finales queda sin calcular', async () => {
+  const { llamadosRestantes, finalesSinUbicar, semestreOpuesto } = await import('../finales.ts');
+  // Caso de la auditoría: dos notas 1 importadas (sin llamado) no dejan "3 disponibles".
+  const importados = [{ llamado: null, nota: 1, tipo: 'final', periodo: null }, { llamado: null, nota: 1, tipo: 'final', periodo: null }];
+  assert.equal(finalesSinUbicar(importados).length, 2);
+  assert.equal(llamadosRestantes(importados), null);
+  assert.equal(semestreOpuesto({ finales: importados, periodoActual: '2026-2' }).motivo, 'sinUbicar');
+  // Ubicados en esta cursada: queda uno.
+  const ubicados = [{ llamado: 1, nota: 1, tipo: 'final', periodo: '2026-1' }, { llamado: 2, nota: 1, tipo: 'final', periodo: '2026-1' }];
+  assert.equal(llamadosRestantes(ubicados), 1);
+  // Tres aplazos importados sin ubicar no obligan a recursar (pueden ser de otra cursada).
+  const { aplazosDeLaCursada } = await import('../finales.ts');
+  assert.deepEqual(aplazosDeLaCursada([...importados, { ...importados[0] }]), { aplazos: 0, debeRecursar: false });
+  // Uno pasado a una cursada anterior ya no cuenta.
+  assert.equal(llamadosRestantes([ubicados[0], { ...importados[0], cursada_anterior: true }]), 2);
 });
 
 test('periodoAlCambiar: el semestre de la firma para la agenda', () => {

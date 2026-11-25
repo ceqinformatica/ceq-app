@@ -51,7 +51,7 @@ export const PASOS_RECORRIDO: readonly PasoRecorrido[] = [
   },
   {
     id: 'firma',
-    titulo: 'Parciales',
+    titulo: 'Firma',
     texto: 'Cargá las notas de tus parciales, el Recu o la Regu y tu asistencia, y te mostramos cuánto te falta para firmar cada materia que estás cursando.',
     icono: 'calculator',
     pestana: 2,

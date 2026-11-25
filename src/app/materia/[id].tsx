@@ -83,16 +83,23 @@ export default function DetalleMateria() {
   const verParciales = vista === 'firmada' && !seminario;
   const estimar = verParciales && firmaGuardada == null;
   // Las evaluaciones cargadas, para la lista de la pestaña Parciales.
-  const [evaluaciones, setEvaluaciones] = useState<{ id: string; lista: EvaluacionDb[] } | null>(null);
+  // Estados explícitos: cargando (null o de otra materia), lista, o error con reintento.
+  const [evaluaciones, setEvaluaciones] = useState<{ id: string; lista: EvaluacionDb[] | null; error?: string } | null>(null);
+  const [intentoEvaluaciones, setIntentoEvaluaciones] = useState(0);
 
   useEffect(() => {
     if (!verParciales || !malla || !id) return;
     let vivo = true;
+    setEvaluaciones((e) => (e?.id === id && e.error ? null : e));
     cargarFirmas([id])
       .then((firmas) => {
+        if (!vivo) return;
         const f = firmas.get(id);
-        if (!vivo || !f) return;
-        setEvaluaciones({ id, lista: f.evaluacionesDb });
+        setEvaluaciones({ id, lista: f?.evaluacionesDb ?? [] });
+        if (!f) {
+          if (estimar) setFirmaEstimada({ id, valor: null });
+          return;
+        }
         if (!estimar) return;
         const regla = reglaDe(malla.reglas, id) ?? REGLA_POR_DEFECTO;
         const r = evaluarFirma({
@@ -118,11 +125,15 @@ export default function DetalleMateria() {
             : undefined;
         setFirmaEstimada({ id, valor: promedioFirma(r, { recuperado: f.recuperado }) ?? (parcial == null ? null : Math.round(parcial + 1e-9)), aviso });
       })
-      .catch(() => vivo && estimar && setFirmaEstimada({ id, valor: null, error: true }));
+      .catch((e) => {
+        if (!vivo) return;
+        setEvaluaciones({ id, lista: null, error: textoError(e, 'No pudimos cargar tus evaluaciones.') });
+        if (estimar) setFirmaEstimada({ id, valor: null, error: true });
+      });
     return () => {
       vivo = false;
     };
-  }, [verParciales, estimar, malla, id]);
+  }, [verParciales, estimar, malla, id, intentoEvaluaciones]);
   const notaNum = seminario || notaTxt.trim() === '' ? null : Number(notaTxt.replace(',', '.'));
   const notaValida = notaNum == null || (Number.isFinite(notaNum) && notaNum >= 1 && notaNum <= 5);
   // Deja de estar aprobada con un final aprobado cargado: ese final se borra al guardar.
@@ -281,6 +292,11 @@ export default function DetalleMateria() {
           <Tarjeta estilo={{ paddingVertical: espacio.xs }} onPress={() => router.push(`/firma/${materia.id}`)} etiqueta="Ver y agregar evaluaciones">
             {evaluaciones?.id !== materia.id ? (
               <Text style={[s.filaDetalle, { paddingVertical: espacio.m }]}>Cargando…</Text>
+            ) : evaluaciones.lista == null ? (
+              <View style={{ paddingVertical: espacio.m }}>
+                <Text style={s.filaDetalle}>{evaluaciones.error ?? 'No pudimos cargar tus evaluaciones.'}</Text>
+                <Boton texto="Reintentar" variante="fantasma" compacto icono="refresh" onPress={() => setIntentoEvaluaciones((n) => n + 1)} estilo={{ marginTop: espacio.s }} />
+              </View>
             ) : evaluaciones.lista.length === 0 ? (
               <Text style={[s.filaDetalle, { paddingVertical: espacio.m }]}>Todavía no cargaste parciales. Tocá para agregarlos.</Text>
             ) : (

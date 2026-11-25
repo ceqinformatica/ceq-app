@@ -30,6 +30,23 @@ export interface MateriaAgenda {
  * Horario semanal y fechas de hoy en adelante. Las fechas son solo las que
  * carga cada estudiante, porque dependen de su situación académica.
  */
+/**
+ * Todas las fechas futuras del estudiante, por páginas: antes se cortaba en
+ * 100 sin aviso y las siguientes no aparecían.
+ */
+async function eventosFuturos(desdeIso: string): Promise<{ data: EventoDb[]; error: { message: string } | null }> {
+  const pagina = 500;
+  const todas: EventoDb[] = [];
+  for (let desde = 0; ; desde += pagina) {
+    const { data, error } = await supabase.from('eventos').select('*').not('usuario_id', 'is', null).gte('fecha', desdeIso)
+      .order('fecha').order('id').range(desde, desde + pagina - 1);
+    if (error) return { data: todas, error };
+    todas.push(...((data ?? []) as EventoDb[]));
+    if ((data ?? []).length < pagina || desde >= 20 * pagina) break;
+  }
+  return { data: todas, error: null };
+}
+
 export async function cargarAgenda(planId: string | null | undefined, finClases?: string | null): Promise<Agenda> {
   const desde = new Date();
   desde.setHours(0, 0, 0, 0);
@@ -47,7 +64,7 @@ export async function cargarAgenda(planId: string | null | undefined, finClases?
   } else {
     const [rH, rE, rM, rS] = await Promise.all([
       supabase.from('horario').select('*').order('dia_semana').order('hora_inicio'),
-      supabase.from('eventos').select('*').not('usuario_id', 'is', null).gte('fecha', desde.toISOString()).order('fecha').limit(100),
+      eventosFuturos(desde.toISOString()),
       planId
         ? supabase.from('materias').select('id, nombre, semestre, grupo_optativa_id, orden').eq('plan_id', planId)
         : Promise.resolve({ data: [], error: null }),
