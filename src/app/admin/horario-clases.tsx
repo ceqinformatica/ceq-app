@@ -108,11 +108,12 @@ export default function HorarioClasesAdmin() {
 
   // PDF con hojas de varios planes: se muestra el plan con más hojas de los que tiene la carrera
   // (un horario por plan, para que cada estudiante vea solo el suyo).
-  const planAutomatico = useRef<Map<number, number> | null>(null);
+  const planAutomatico = useRef<{ doc: Map<number, number>; planes: number[] } | null>(null);
   useEffect(() => {
-    // Una sola vez por PDF: después manda lo que elija el admin.
-    if (planesDoc.size < 2 || !planes.length || planAutomatico.current === planesDoc) return;
-    planAutomatico.current = planesDoc;
+    // Una vez por PDF y por lista de planes (cuando llega la de la carrera detectada): después manda lo que elija el admin.
+    if (planesDoc.size < 2 || !planes.length) return;
+    if (planAutomatico.current?.doc === planesDoc && planAutomatico.current.planes === planes) return;
+    planAutomatico.current = { doc: planesDoc, planes };
     const candidatos = [...planesDoc.entries()].filter(([p]) => planes.includes(p)).sort((a, b) => b[1] - a[1] || b[0] - a[0]);
     const elegido = candidatos[0]?.[0] ?? null;
     const lista = [...planesDoc.keys()].sort();
@@ -124,7 +125,7 @@ export default function HorarioClasesAdmin() {
     const texto = elegido != null
       ? `Este PDF trae hojas de los planes ${cuales}. Ahora ves las del plan ${elegido}: guardalo y, para otro plan, subí el mismo PDF en un horario nuevo y elegí ese plan.`
       : `Este PDF trae hojas de los planes ${cuales}, que no están cargados en esta carrera: revisá que sea la carrera correcta.`;
-    setAviso((v) => (v ? `${v} ${texto}` : texto));
+    setAviso((v) => (v && !v.startsWith('Este PDF trae hojas') ? `${v} ${texto}` : v?.includes('El escaneo') ? `${v.split(' Este PDF trae hojas')[0]} ${texto}` : texto));
   }, [planesDoc, planes]);
 
   useEffect(() => {
