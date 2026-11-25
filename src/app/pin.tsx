@@ -116,12 +116,20 @@ export default function PantallaPin() {
         ? 'Elegí un PIN de 4 a 6 números y tocá ✓.'
         : 'Escribilo otra vez para confirmar.';
 
+  // Si se llegó desde el enlace del correo, cancelar cierra la pantalla: no
+  // tiene sentido pedir el PIN actual a quien lo olvidó (y parecía un bloqueo).
+  const cancelarRecuperar = () => {
+    if (params.recuperar !== '1') return setRecuperando(false);
+    if (router.canGoBack()) router.back();
+    else router.replace('/');
+  };
+
   if (recuperando) {
     return (
       <Pantalla>
-        <BarraSuperior titulo={TITULOS[modo]} onVolver={() => setRecuperando(false)} />
+        <BarraSuperior titulo={TITULOS[modo]} onVolver={cancelarRecuperar} />
         <View style={{ marginTop: espacio.l }}>
-          <ConfirmarCuenta onConfirmado={cuentaConfirmada} onCancelar={() => setRecuperando(false)} />
+          <ConfirmarCuenta onConfirmado={cuentaConfirmada} onCancelar={cancelarRecuperar} />
         </View>
       </Pantalla>
     );
