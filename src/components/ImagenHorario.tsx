@@ -253,9 +253,12 @@ export function ImagenHorario({ refVista, ancho, clases, nombre, titulo, subtitu
                 const tipo = infoTipoClase(c.tipo_clase);
                 // Letras que entran por línea (9 pt semibold ≈ 4,6 unidades por letra):
                 // las palabras más largas se recortan para no partirlas a la mitad.
-                const letras = Math.max(5, Math.floor(((anchoDia / columnas) - 11) / 4.6));
+                const capacidad = ((anchoDia / columnas) - 11) / 4.6;
+                const letras = Math.max(5, Math.floor(capacidad));
                 const nombreCorto = abreviar(nombre(c), letras);
-                const cabeEnUna = nombreCorto.length <= letras + 1;
+                // La prueba usa el ancho real (sin el mínimo de 5): en columnas
+                // angostas el nombre pasa a ocupar varias líneas.
+                const cabeEnUna = nombreCorto.length <= capacidad;
                 // Con dos líneas: el nombre arriba y "TEO · Aula 12" abajo si el
                 // nombre entra en una línea; si no, el nombre completo en dos.
                 const dosLineas = lineas === 2 && cabeEnUna && (tipo != null || !!c.aula);
