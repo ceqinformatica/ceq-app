@@ -128,6 +128,9 @@ export function ConfirmarCuenta({ onConfirmado, onCancelar }: { onConfirmado: ()
 
       {metodos.correo && (
         <View style={{ marginTop: huella ? espacio.s : 0, marginBottom: espacio.s }}>
+          <Text style={[s.filaDetalle, { marginBottom: espacio.s }]} numberOfLines={1}>
+            Cuenta: <Text style={{ fontFamily: fuentes.semibold, color: colores.marino }}>{correoEnmascarado(metodos.correo)}</Text>
+          </Text>
           {enviado ? (
             <Mensaje
               tipo="exito"
@@ -137,7 +140,7 @@ export function ConfirmarCuenta({ onConfirmado, onCancelar }: { onConfirmado: ()
             />
           ) : null}
           <Boton
-            texto={enviado ? 'Mandar otro enlace' : `Mandarme un enlace a ${correoEnmascarado(metodos.correo)}`}
+            texto={enviado ? 'Mandar otro enlace' : 'Mandarme un enlace por correo'}
             icono="mail-outline"
             variante={huella ? 'secundario' : 'primario'}
             onPress={pedirEnlace}
@@ -154,11 +157,8 @@ export function ConfirmarCuenta({ onConfirmado, onCancelar }: { onConfirmado: ()
       )}
 
       {metodos.clave && (
-        <View style={{ marginTop: huella || conOtraCuenta ? espacio.l : 0 }}>
-          {(huella || conOtraCuenta) && <Text style={[s.filaDetalle, { textAlign: 'center', marginBottom: espacio.m }]}>o con la contraseña de tu cuenta</Text>}
-          <Text style={[s.filaDetalle, { marginBottom: espacio.s }]} numberOfLines={1}>
-            Cuenta: <Text style={{ fontFamily: fuentes.semibold, color: colores.marino }}>{correoEnmascarado(metodos.correo)}</Text>
-          </Text>
+        <View style={{ marginTop: espacio.l }}>
+          {(huella || conOtraCuenta || metodos.correo) && <Text style={[s.filaDetalle, { textAlign: 'center', marginBottom: espacio.m }]}>o con la contraseña de tu cuenta</Text>}
           <View>
             <Campo
               etiqueta="Contraseña"
