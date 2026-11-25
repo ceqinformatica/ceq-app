@@ -282,7 +282,9 @@ export default function Login() {
   }
 
   return (
-      <ScrollView style={{ flex: 1, backgroundColor: fondos.superficieBlanca }} contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled" bounces={false}>
+      // Como la maqueta animada: arriba blanco (sigue al blanco de la portada al deslizar) y el
+      // formulario sobre celeste, unidos por la misma curva en S que la portada.
+      <ScrollView style={{ flex: 1, backgroundColor: fondos.cabeceraAcceso }} contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled" bounces={false}>
           <View style={[est.cabecera, { paddingTop: insets.top + espacio.l }]}>
             <Regla estilo={{ top: insets.top + espacio.s }} corta />
             <Pressable onPress={() => cambiarModo(volverA)} accessibilityRole="button" accessibilityLabel="Volver" hitSlop={10} style={{ alignSelf: 'flex-start', paddingVertical: espacio.xs }}>
@@ -291,10 +293,12 @@ export default function Login() {
             <Text style={est.titulo} accessibilityRole="header">{titulo}</Text>
             <Text style={est.sub}>{sub}</Text>
           </View>
-          <View style={[est.cuerpo, { paddingBottom: insets.bottom + espacio.xl }]}>
-            <View style={{ width: '100%', maxWidth: 480, alignSelf: 'center' }}>
-              {avisoConfig}
-              {cuerpo}
+          <View style={{ flexGrow: 1, backgroundColor: fondos.superficieBlanca }}>
+            <View style={[est.cuerpo, { paddingBottom: insets.bottom + espacio.xl }]}>
+              <View style={{ width: '100%', maxWidth: 480, alignSelf: 'center' }}>
+                {avisoConfig}
+                {cuerpo}
+              </View>
             </View>
           </View>
       </ScrollView>
@@ -354,12 +358,15 @@ const est = crearEstilos(() => ({
     paddingHorizontal: espacio.xl, paddingTop: espacio.xxl,
   },
   cabecera: {
-    backgroundColor: fondos.cabeceraAcceso, borderBottomRightRadius: CURVA * 1.5, overflow: 'hidden',
+    backgroundColor: fondos.superficieBlanca, borderBottomRightRadius: CURVA * 1.5, overflow: 'hidden',
     paddingHorizontal: espacio.xl, paddingBottom: espacio.xl + espacio.s,
   },
   titulo: { fontFamily: fuentes.bold, fontSize: 28, color: colores.marinoOscuro, letterSpacing: -0.6, marginTop: espacio.m },
   sub: { fontFamily: fuentes.regular, fontSize: 13.5, color: colores.marinoOscuro, marginTop: espacio.xs },
-  cuerpo: { flexGrow: 1, backgroundColor: fondos.superficieBlanca, paddingHorizontal: espacio.xl, paddingTop: espacio.xl },
+  cuerpo: {
+    flexGrow: 1, backgroundColor: fondos.cabeceraAcceso, borderTopLeftRadius: CURVA * 1.5,
+    paddingHorizontal: espacio.xl, paddingTop: espacio.xl + espacio.s,
+  },
   separador: { flexDirection: 'row', alignItems: 'center', gap: espacio.m, marginVertical: espacio.l },
   linea: { flex: 1, height: 1, backgroundColor: fondos.linea },
   ojo: { position: 'absolute', right: 14, top: 38 },
