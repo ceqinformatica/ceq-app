@@ -324,10 +324,21 @@ export async function cargarFinales(materiaId: string): Promise<ExamenFinalDb[]>
 export const ERROR_REGU_TRAS_FINAL = 'Ya rendiste un final: después no se puede rendir Recu ni Regu. Si te equivocaste, cambiá ese llamado a "No rendí".';
 
 export async function guardarFinales(materiaId: string, periodo: string, llamados: LlamadoCargado[]) {
-  if (llamados.filter((l) => l.tipo === 'recuperatorio' || l.tipo === 'regularizacion').length > 1) {
-    throw new Error('Recu o Regu: se usa uno solo por cursada.');
-  }
-  const filas = llamados.map((l) => ({
+  await guardarLlamados(materiaId, [{ periodo, llamados }]);
+}
+
+const ERROR_UN_RECU_O_REGU = 'Ya usaste el Recu o la Regu en otro semestre de esta cursada. Se usa uno solo.';
+
+/**
+ * Reemplaza los llamados de uno o más semestres de la cursada actual, todo
+ * junto: antes de tocar la base se valida el resultado completo (Recu o Regu
+ * uno solo, nunca después de un final), y en la base se borra e inserta en
+ * una sola transacción (RPC guardar_llamados): si algo falla, no se pierde
+ * nada. Las filas viejas sin llamado no se tocan.
+ */
+export async function guardarLlamados(materiaId: string, cambios: { periodo: string; llamados: LlamadoCargado[] }[]) {
+  const periodos = cambios.map((c) => c.periodo);
+  const filas = cambios.flatMap(({ periodo, llamados }) => llamados.map((l) => ({
     materia_id: materiaId,
     periodo,
     llamado: l.llamado,
@@ -335,18 +346,16 @@ export async function guardarFinales(materiaId: string, periodo: string, llamado
     nota: l.tipo && l.tipo !== 'final' ? null : l.nota,
     porcentaje: l.tipo && l.tipo !== 'final' ? null : l.porcentaje,
     fecha: l.fecha ?? null,
-  }));
-  // Después de rendir un final ya no se rinde Recu ni Regu (en este semestre ni en los anteriores).
-  const fueraDeOrden = (otros: { periodo: string | null; llamado: number | null; tipo?: string | null }[]) => {
-    if (recuReguDespuesDeFinal([...otros.filter((o) => o.periodo !== periodo), ...filas])) throw new Error(ERROR_REGU_TRAS_FINAL);
-  };
+  })));
+  const actuales = (await cargarFinales(materiaId)).filter((f) => !f.cursada_anterior);
+  // Lo que queda en la cursada después de guardar.
+  const quedan = [...actuales.filter((f) => !(f.llamado != null && f.periodo != null && periodos.includes(f.periodo))), ...filas];
+  if (quedan.filter((f) => f.tipo === 'recuperatorio' || f.tipo === 'regularizacion').length > 1) throw new Error(ERROR_UN_RECU_O_REGU);
+  // Después de rendir un final ya no se rinde Recu ni Regu.
+  if (recuReguDespuesDeFinal(quedan)) throw new Error(ERROR_REGU_TRAS_FINAL);
   if (MODO_DEMO) {
     await esperar(200);
-    fueraDeOrden(db.finales.filter((f) => f.materia_id === materiaId && !f.cursada_anterior));
-    // Igual que el índice de la base: Recu o Regu, uno solo por cursada.
-    const otro = db.finales.some((f) => f.materia_id === materiaId && f.periodo !== periodo && !f.cursada_anterior && (f.tipo === 'recuperatorio' || f.tipo === 'regularizacion'));
-    if (otro && filas.some((f) => f.tipo !== 'final')) throw new Error('Ya usaste el Recu o la Regu en otro semestre de esta cursada. Se usa uno solo.');
-    db.finales = db.finales.filter((f) => !(f.materia_id === materiaId && f.periodo === periodo && !f.cursada_anterior));
+    db.finales = db.finales.filter((f) => !(f.materia_id === materiaId && !f.cursada_anterior && f.llamado != null && f.periodo != null && periodos.includes(f.periodo)));
     const hoy = new Date().toISOString();
     for (const f of filas) db.finales.push({ id: idDemo(), usuario_id: UID_DEMO, created_at: hoy, cursada_anterior: false, ...f });
     // Igual que el trigger de la base.
@@ -361,26 +370,14 @@ export async function guardarFinales(materiaId: string, periodo: string, llamado
     }
     return;
   }
-  {
-    const r = await supabase.from('examenes_finales').select('periodo, llamado, tipo').eq('materia_id', materiaId).eq('cursada_anterior', false);
-    lanzar(r.error);
-    fueraDeOrden((r.data ?? []) as { periodo: string | null; llamado: number | null; tipo: string | null }[]);
-  }
-  // Antes de borrar: si el Recu o la Regu ya se usó en otro semestre, el
-  // insert fallaría y se perderían los finales de este semestre.
-  if (filas.some((f) => f.tipo !== 'final')) {
-    const otro = await supabase.from('examenes_finales').select('id').eq('materia_id', materiaId).eq('cursada_anterior', false)
-      .neq('periodo', periodo).in('tipo', ['recuperatorio', 'regularizacion']).limit(1);
-    lanzar(otro.error);
-    if (otro.data?.length) throw new Error('Ya usaste el Recu o la Regu en otro semestre de esta cursada. Se usa uno solo.');
-  }
-  const borrar = await supabase.from('examenes_finales').delete().eq('materia_id', materiaId).eq('periodo', periodo).eq('cursada_anterior', false);
-  lanzar(borrar.error);
-  if (filas.length) {
-    const { error } = await supabase.from('examenes_finales').insert(filas);
-    if (error?.code === '23505' && error.message.includes('recu_o_regu')) throw new Error('Ya usaste el Recu o la Regu en otro semestre de esta cursada. Se usa uno solo.');
-    lanzar(error);
-  }
+  const { error } = await supabase.rpc('guardar_llamados', {
+    p_materia: materiaId,
+    p_periodos: periodos,
+    p_filas: filas.map(({ materia_id: _m, ...f }) => f),
+  });
+  if (error?.code === '23505' && error.message.includes('recu_o_regu')) throw new Error(ERROR_UN_RECU_O_REGU);
+  if (error && /guardar_llamados/.test(error.message)) throw new Error('Falta actualizar la base del CEQ para guardar finales. Avisale al CEQ y probá más tarde.');
+  lanzar(error);
 }
 
 /**
@@ -632,13 +629,15 @@ const aLlamado = (f: ExamenFinalDb): LlamadoCargado => ({
  * cambie de llamado o de semestre). Con `llamado` null solo se borra.
  */
 export async function guardarUnLlamado(materiaId: string, periodo: string, llamado: LlamadoCargado | null, reemplaza?: ExamenFinalDb | null) {
-  const finales = (await cargarFinales(materiaId)).filter((f) => !f.cursada_anterior);
-  // Si la fila editada estaba en otro semestre, se saca de ahí primero.
-  if (reemplaza?.periodo && reemplaza.periodo !== periodo) {
-    await guardarFinales(materiaId, reemplaza.periodo, finales.filter((f) => f.periodo === reemplaza.periodo && f.llamado != null && f.id !== reemplaza.id).map(aLlamado));
-  }
-  const quedan = finales.filter((f) => f.periodo === periodo && f.llamado != null && f.id !== reemplaza?.id && f.llamado !== llamado?.llamado);
-  await guardarFinales(materiaId, periodo, [...quedan.map(aLlamado), ...(llamado ? [llamado] : [])]);
+  const finales = (await cargarFinales(materiaId)).filter((f) => !f.cursada_anterior && f.llamado != null);
+  const delPeriodo = (p: string) => finales.filter((f) => f.periodo === p && f.id !== reemplaza?.id);
+  const cambios = [{
+    periodo,
+    llamados: [...delPeriodo(periodo).filter((f) => f.llamado !== llamado?.llamado).map(aLlamado), ...(llamado ? [llamado] : [])],
+  }];
+  // Si la fila editada estaba en otro semestre, se saca de ahí en el mismo guardado.
+  if (reemplaza?.periodo && reemplaza.periodo !== periodo) cambios.push({ periodo: reemplaza.periodo, llamados: delPeriodo(reemplaza.periodo).map(aLlamado) });
+  await guardarLlamados(materiaId, cambios);
 }
 
 /**

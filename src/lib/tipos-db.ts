@@ -200,6 +200,7 @@ export type Database = {
       votar: { Args: { p_encuesta: string; p_opcion: string }; Returns: undefined };
       recursar_materia: { Args: { p_materia: string }; Returns: undefined };
       cursar_semestre_opuesto: { Args: { p_materia: string }; Returns: undefined };
+      guardar_llamados: { Args: { p_materia: string; p_periodos: string[]; p_filas: unknown[] }; Returns: undefined };
       deshacer_recursada: { Args: { p_materia: string }; Returns: undefined };
       es_admin: { Args: Record<string, never>; Returns: boolean };
       registrar_dispositivo: { Args: { p_token: string; p_plataforma?: string | null }; Returns: undefined };

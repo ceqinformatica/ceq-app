@@ -312,6 +312,7 @@ export default function Parciales() {
         }}
         materiaId={materia.id}
         sinRecuperatorio={datos.semestreOpuesto}
+        otrasRecuRegu={datos.evaluacionesDb.filter((e) => (esRecuperatorio(e) || esRegularizacion(e)) && e.rendida && (editando === 'nueva' || e.id !== editando?.id)).length}
       />
 
       <Hoja visible={clasesEnAgenda > 0} titulo="¿Terminaron tus clases?" onCerrar={() => setClasesEnAgenda(0)}>
@@ -486,8 +487,10 @@ function FilaContador({ texto: t, ayuda, valor, onCambio, max }: { texto: string
   );
 }
 
-function FormEvaluacion({ visible, evaluacion, materiaId, onCerrar, onGuardado, sinRecuperatorio }: {
+function FormEvaluacion({ visible, evaluacion, materiaId, onCerrar, onGuardado, sinRecuperatorio, otrasRecuRegu }: {
   visible: boolean; evaluacion: EvaluacionDb | null; materiaId: string; onCerrar: () => void; onGuardado: () => void;
+  /** Otras evaluaciones de Recu o Regu ya rendidas: se usa uno solo por cursada. */
+  otrasRecuRegu: number;
   /** Semestre opuesto: no hay examen de recuperación (Art. 23). */
   sinRecuperatorio?: boolean;
 }) {
@@ -544,7 +547,15 @@ function FormEvaluacion({ visible, evaluacion, materiaId, onCerrar, onGuardado, 
 
   const vistaPrevia = modo === 'puntaje' && num(obtenido) != null && num(total) ? (num(obtenido)! / num(total)!) * 100 : null;
 
+  const eraRecuORegu = evaluacion != null && (esRecuperatorio(evaluacion) || esRegularizacion(evaluacion));
+  const registraLlamado = usaLlamado && rendida === 'si';
+
   const guardar = async () => {
+    // Recu o Regu: uno solo por cursada (antes de guardar nada).
+    if (registraLlamado && otrasRecuRegu > 0) {
+      setError('Ya cargaste un Recu o una Regu rendido en esta cursada: se usa uno solo. Editá ese en vez de agregar otro.');
+      return;
+    }
     setGuardando(true);
     setError(null);
     const datos: NuevaEvaluacion = {
@@ -565,13 +576,13 @@ function FormEvaluacion({ visible, evaluacion, materiaId, onCerrar, onGuardado, 
     try {
       await guardarEvaluacion(materiaId, datos, evaluacion && !esPredefinida(evaluacion) ? evaluacion.id : undefined);
       // Rendido el Recu o la Regu: el llamado queda en el historial de Finales.
-      if (usaLlamado && rendida === 'si') {
-        try {
-          await registrarLlamadoParcial(materiaId, { tipo: tipo as 'recuperatorio' | 'regularizacion', periodo, llamado: llamadoUsado });
-        } catch (e) {
-          setError(`La nota se guardó, pero no pudimos anotar el llamado en Finales: ${textoError(e, 'probá de nuevo.')}`);
-          return;
-        }
+      // Si dejó de ser un Recu o Regu rendido, el llamado se libera.
+      try {
+        if (registraLlamado) await registrarLlamadoParcial(materiaId, { tipo: tipo as 'recuperatorio' | 'regularizacion', periodo, llamado: llamadoUsado });
+        else if (eraRecuORegu && otrasRecuRegu === 0) await registrarLlamadoParcial(materiaId, null);
+      } catch (e) {
+        setError(`La nota se guardó, pero no pudimos actualizar el llamado en Finales: ${textoError(e, 'probá de nuevo.')}`);
+        return;
       }
       onGuardado();
     } catch (e) {
@@ -587,7 +598,7 @@ function FormEvaluacion({ visible, evaluacion, materiaId, onCerrar, onGuardado, 
     try {
       await borrarEvaluacion(evaluacion.id);
       // Sin Recu ni Regu cargado, el llamado deja de estar usado en Finales.
-      if (esRecuperatorio(evaluacion) || esRegularizacion(evaluacion)) await registrarLlamadoParcial(materiaId, null).catch(() => {});
+      if (eraRecuORegu && otrasRecuRegu === 0) await registrarLlamadoParcial(materiaId, null).catch(() => {});
       onGuardado();
     } catch (e) {
       setError(textoError(e, 'No se pudo borrar.'));

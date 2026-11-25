@@ -91,12 +91,13 @@ function Navegacion() {
   useLayoutEffect(() => {
     fijarSoloClaro(soloClaro);
   }, [soloClaro, fijarSoloClaro]);
-  useNotificaciones(sesion?.user.id ?? null, !cargando && !bloqueado && Boolean(perfil?.plan_id));
   const [arranqueVisto, setArranqueVisto] = useState(false);
   useEffect(() => {
     const t = setTimeout(() => setArranqueVisto(true), DURACION_ARRANQUE);
     return () => clearTimeout(t);
   }, []);
+  // Recién con las pantallas montadas (después del arranque) se puede abrir la de una notificación.
+  useNotificaciones(sesion?.user.id ?? null, !cargando && arranqueVisto && !bloqueado && Boolean(perfil?.plan_id));
 
   // La animación de arranque se ve al menos un momento, aunque la sesión cargue al toque.
   if (cargando || !arranqueVisto) return <Arranque />;
