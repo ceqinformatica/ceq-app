@@ -145,9 +145,11 @@ export const APLAZOS_PARA_RECURSAR = 3;
  * cuentan). Con tres aplazos sin aprobar tiene que volver a cursar.
  */
 export function aplazosDeLaCursada(
-  finales: { nota: number | null; tipo?: string | null; cursada_anterior?: boolean | null }[],
+  finales: { nota: number | null; tipo?: string | null; cursada_anterior?: boolean | null; llamado?: number | null }[],
 ): { aplazos: number; debeRecursar: boolean } {
-  const propios = finales.filter((f) => (f.tipo ?? 'final') === 'final' && f.nota != null && !f.cursada_anterior);
+  // Los importados sin ubicar (llamado null) pueden ser de otra cursada: no
+  // cuentan hasta que el estudiante los ubica (ver finalesSinUbicar).
+  const propios = finales.filter((f) => (f.tipo ?? 'final') === 'final' && f.nota != null && !f.cursada_anterior && f.llamado !== null);
   const aplazos = propios.filter((f) => (f.nota as number) < 2).length;
   const aprobo = propios.some((f) => (f.nota as number) >= 2);
   return { aplazos, debeRecursar: !aprobo && aplazos >= APLAZOS_PARA_RECURSAR };

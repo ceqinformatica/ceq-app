@@ -81,6 +81,14 @@ begin
   if new.cursada_anterior or new.llamado is null or new.tipo not in ('final', 'pendiente') then
     return new;
   end if;
+  -- Una fila que ya contaba y sigue contando (completar la nota de un
+  -- pendiente, corregir la fecha) no se frena: si alguien ya tenía más de 3
+  -- de antes, igual puede corregirlos o borrarlos.
+  if tg_op = 'UPDATE' and not old.cursada_anterior and old.llamado is not null
+     and old.tipo in ('final', 'pendiente')
+     and old.usuario_id = new.usuario_id and old.materia_id = new.materia_id then
+    return new;
+  end if;
   -- Dos guardados a la vez de la misma materia no pasan los dos el control.
   perform pg_advisory_xact_lock(hashtext('finales:' || new.usuario_id::text || ':' || new.materia_id::text));
   select count(*) into usados from public.examenes_finales
@@ -163,6 +171,9 @@ begin
     end if;
     if actual.cursada_anterior then
       raise exception 'Los resultados de una cursada anterior no se editan.';
+    end if;
+    if actual.tipo in ('recuperatorio', 'regularizacion') then
+      raise exception 'El Recu y la Regu se cambian desde Parciales.';
     end if;
     if v_anterior and actual.origen <> 'extracto' then
       raise exception 'Solo un final importado del extracto se puede pasar a una cursada anterior.';
@@ -386,6 +397,60 @@ begin
                 respaldo_recursada = excluded.respaldo_recursada, semestre_opuesto = true;
 end;
 $$;
+
+-- ---------------------------------------------------------------- APKs viejos
+-- Un APK viejo importa el extracto sin decir el origen: una fila de final
+-- con nota y sin semestre ni llamado es una importación.
+create or replace function public.examenes_finales_origen()
+returns trigger language plpgsql set search_path = public as $$
+begin
+  if new.origen = 'manual' and new.periodo is null and new.llamado is null
+     and new.tipo = 'final' and new.nota is not null and not new.cursada_anterior then
+    new.origen := 'extracto';
+    new.nota_extracto := coalesce(new.nota_extracto, new.nota);
+  end if;
+  return new;
+end;
+$$;
+drop trigger if exists examenes_finales_origen on public.examenes_finales;
+create trigger examenes_finales_origen before insert on public.examenes_finales
+  for each row execute function public.examenes_finales_origen();
+
+-- guardar_llamados (lo usa un APK viejo) borra y vuelve a insertar el
+-- semestre: ahora conserva el origen, la nota del extracto, el semestre
+-- opuesto y la evaluación de cada llamado que vuelve a guardar.
+create or replace function public.guardar_llamados(p_materia uuid, p_periodos text[], p_filas jsonb)
+returns void language plpgsql security invoker set search_path = public as $$
+declare
+  u uuid := auth.uid();
+  viejos jsonb;
+begin
+  if u is null then
+    raise exception 'Necesitás iniciar sesión';
+  end if;
+  select coalesce(jsonb_agg(jsonb_build_object(
+           'periodo', periodo, 'llamado', llamado, 'origen', origen, 'nota_extracto', nota_extracto,
+           'semestre_opuesto', semestre_opuesto, 'evaluacion_id', evaluacion_id)), '[]'::jsonb)
+    into viejos
+    from public.examenes_finales
+   where usuario_id = u and materia_id = p_materia and not cursada_anterior
+     and llamado is not null and periodo = any(p_periodos);
+  delete from public.examenes_finales
+   where usuario_id = u and materia_id = p_materia and not cursada_anterior
+     and llamado is not null and periodo = any(p_periodos);
+  insert into public.examenes_finales (materia_id, periodo, llamado, tipo, nota, porcentaje, fecha,
+                                       origen, nota_extracto, semestre_opuesto, evaluacion_id)
+  select p_materia, x.periodo, x.llamado, x.tipo, x.nota, x.porcentaje, x.fecha,
+         coalesce(v.origen, 'manual'), v.nota_extracto, coalesce(v.semestre_opuesto, false), v.evaluacion_id
+    from jsonb_to_recordset(coalesce(p_filas, '[]'::jsonb))
+      as x(periodo text, llamado smallint, tipo text, nota smallint, porcentaje numeric, fecha date)
+    left join jsonb_to_recordset(viejos)
+      as v(periodo text, llamado smallint, origen text, nota_extracto smallint, semestre_opuesto boolean, evaluacion_id uuid)
+      on v.periodo = x.periodo and v.llamado = x.llamado;
+end;
+$$;
+revoke execute on function public.guardar_llamados(uuid, text[], jsonb) from public, anon;
+grant execute on function public.guardar_llamados(uuid, text[], jsonb) to authenticated;
 
 -- ---------------------------------------------------------------- permisos
 revoke execute on function public.guardar_final(uuid, uuid, integer, jsonb, uuid, integer) from public, anon;

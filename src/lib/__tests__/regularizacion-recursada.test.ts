@@ -137,6 +137,9 @@ test('importados sin ubicar: el saldo de finales queda sin calcular', async () =
   // Ubicados en esta cursada: queda uno.
   const ubicados = [{ llamado: 1, nota: 1, tipo: 'final', periodo: '2026-1' }, { llamado: 2, nota: 1, tipo: 'final', periodo: '2026-1' }];
   assert.equal(llamadosRestantes(ubicados), 1);
+  // Tres aplazos importados sin ubicar no obligan a recursar (pueden ser de otra cursada).
+  const { aplazosDeLaCursada } = await import('../finales.ts');
+  assert.deepEqual(aplazosDeLaCursada([...importados, { ...importados[0] }]), { aplazos: 0, debeRecursar: false });
   // Uno pasado a una cursada anterior ya no cuenta.
   assert.equal(llamadosRestantes([ubicados[0], { ...importados[0], cursada_anterior: true }]), 2);
 });

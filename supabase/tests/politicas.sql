@@ -787,6 +787,36 @@ select pg_temp.debe_ser('y la evaluación', (select count(*) from public.evaluac
 insert into public.examenes_finales (materia_id, nota, origen) values ('30000000-0000-0000-0000-000000000001', 1, 'extracto'), ('30000000-0000-0000-0000-000000000001', 1, 'extracto');
 select pg_temp.debe_fallar('semestre opuesto con importados sin ubicar', $$select public.cursar_semestre_opuesto('30000000-0000-0000-0000-000000000001')$$);
 delete from public.examenes_finales;
+-- APK viejo: importar sin origen lo marca igual como del extracto.
+insert into public.examenes_finales (materia_id, nota, fecha) values ('30000000-0000-0000-0000-000000000002', 2, '2024-12-01');
+select pg_temp.debe_ser('import viejo queda como extracto', (select count(*) from public.examenes_finales where origen = 'extracto' and nota_extracto = 2), 1);
+delete from public.examenes_finales;
+-- guardar_llamados (APK viejo) conserva origen, nota del extracto y semestre opuesto.
+insert into public.examenes_finales (materia_id, periodo, llamado, nota, origen, nota_extracto, semestre_opuesto)
+  values ('30000000-0000-0000-0000-000000000002', '2026-1', 1, 3, 'extracto', 4, true);
+select public.guardar_llamados('30000000-0000-0000-0000-000000000002', array['2026-1'], '[{"periodo":"2026-1","llamado":1,"tipo":"final","nota":3}]'::jsonb);
+select pg_temp.debe_ser('guardar_llamados conserva lo del intento',
+  (select count(*) from public.examenes_finales where origen = 'extracto' and nota_extracto = 4 and semestre_opuesto), 1);
+delete from public.examenes_finales;
+-- Con más de 3 de antes (la app vieja no limitaba), se pueden corregir igual.
+reset role;
+alter table public.examenes_finales disable trigger examenes_finales_tope;
+select pg_temp.como('00000000-0000-0000-0000-00000000000a');
+insert into public.examenes_finales (materia_id, periodo, llamado, tipo, nota) values
+  ('30000000-0000-0000-0000-000000000002', '2026-1', 1, 'final', 1), ('30000000-0000-0000-0000-000000000002', '2026-1', 2, 'final', 1),
+  ('30000000-0000-0000-0000-000000000002', '2026-1', 3, 'final', 1), ('30000000-0000-0000-0000-000000000002', '2026-2', 1, 'pendiente', null);
+reset role;
+alter table public.examenes_finales enable trigger examenes_finales_tope;
+select pg_temp.como('00000000-0000-0000-0000-00000000000a');
+select public.guardar_final('30000000-0000-0000-0000-000000000002', (select id from public.examenes_finales where tipo = 'pendiente'), 1,
+  '{"periodo":"2026-2","llamado":1,"tipo":"final","nota":2}'::jsonb);
+select pg_temp.debe_ser('completar la nota con 4 viejos se puede', (select count(*) from public.examenes_finales where periodo = '2026-2' and nota = 2), 1);
+delete from public.examenes_finales;
+-- La Regu no se convierte en final por guardar_final.
+insert into public.examenes_finales (materia_id, periodo, llamado, tipo) values ('30000000-0000-0000-0000-000000000002', '2026-1', 1, 'regularizacion');
+select pg_temp.debe_fallar('Regu a final por la API',
+  $$select public.guardar_final('30000000-0000-0000-0000-000000000002', (select id from public.examenes_finales limit 1), 1, '{"periodo":"2026-1","llamado":1,"tipo":"final","nota":1}'::jsonb)$$);
+delete from public.examenes_finales;
 -- Plan de otra carrera.
 select pg_temp.debe_fallar('plan que no es de la carrera',
   $$update public.perfiles set carrera_id = null, plan_id = '20000000-0000-0000-0000-000000000001' where id = auth.uid()$$);
