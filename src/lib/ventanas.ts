@@ -127,11 +127,11 @@ export const ESPERA_TOQUE_AFUERA_MS = 1000;
 
 /**
  * ¿Tocar afuera (o el botón Atrás de Android) cierra la ventana? La cruz
- * siempre está; `cerrable` es "también tocando afuera". La de pantalla
- * completa no tiene afuera.
+ * siempre está; `cerrable` es "también tocando afuera" (en la de pantalla
+ * completa, que no tiene afuera, queda solo el botón Atrás).
  */
 export function cierraTocandoAfuera(v: { cerrable: boolean; forma: string }, msDesdeQueAparecio: number): boolean {
-  return v.cerrable && v.forma !== 'pantalla' && msDesdeQueAparecio >= ESPERA_TOQUE_AFUERA_MS;
+  return v.cerrable && msDesdeQueAparecio >= ESPERA_TOQUE_AFUERA_MS;
 }
 
 export interface FormularioVentana {

@@ -86,6 +86,6 @@ test('tocar afuera solo cierra si está permitido y pasó un momento', () => {
   assert.equal(cierraTocandoAfuera(v, ESPERA_TOQUE_AFUERA_MS), true);
   assert.equal(cierraTocandoAfuera(v, 200), false);
   assert.equal(cierraTocandoAfuera({ ...v, cerrable: false }, 60_000), false);
-  assert.equal(cierraTocandoAfuera({ ...v, forma: 'pantalla' }, 60_000), false);
+  assert.equal(cierraTocandoAfuera({ ...v, forma: 'pantalla' }, 60_000), true);
   assert.equal(cierraTocandoAfuera({ ...v, forma: 'abajo' }, 60_000), true);
 });

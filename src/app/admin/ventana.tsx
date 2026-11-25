@@ -316,7 +316,7 @@ export default function EditarVentana() {
         <Fila
           icono="close-circle-outline"
           titulo="Cerrar tocando afuera"
-          detalle={cerrable ? 'Se cierra con la cruz o tocando afuera.' : 'Se cierra solo con la cruz.'}
+          detalle={!cerrable ? 'Se cierra solo con la cruz.' : forma === 'pantalla' ? 'Ocupa toda la pantalla: se cierra con la cruz o con Atrás.' : 'Se cierra con la cruz o tocando afuera.'}
           derecha={<Switch value={cerrable} onValueChange={setCerrable} accessibilityLabel="Cerrar también tocando afuera" trackColor={{ true: fondos.marino, false: colores.linea }} thumbColor={colores.blanco} />}
         />
         <Fila

@@ -6,7 +6,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, usePathname } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Animated, Image, Modal, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRecorrido } from '../context/RecorridoProvider';
@@ -131,7 +131,7 @@ export function VentanasDelCeq() {
     return () => clearTimeout(t);
   }, [lista, vistas, enInicio, actual, recorrido, perfil?.carrera_id]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (actual && montado) aparecio.current = Date.now();
   }, [actual, montado]);
 
@@ -152,6 +152,7 @@ export function VentanasDelCeq() {
     setVistas(nuevas);
     guardarVistas(uid, nuevas);
     luego.current = despues ?? null;
+    aparecio.current = Number.MAX_SAFE_INTEGER;
     setCerrando(true);
   };
 
