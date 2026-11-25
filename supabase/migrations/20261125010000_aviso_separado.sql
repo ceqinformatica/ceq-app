@@ -16,12 +16,12 @@ update public.horarios_clases h set avisado_en = h.publicado_en
 where h.publicado_en is not null and h.avisado_en is null
   and exists (select 1 from public.notificaciones n
               where n.carrera_id = h.carrera_id and n.titulo = 'Salió el horario de clases'
-                and n.cuerpo like '%(' || btrim(h.titulo) || ')%');
+                and position('(' || btrim(h.titulo) || ')' in n.cuerpo) > 0);
 update public.horarios_finales h set avisado_en = h.publicado_en
 where h.publicado_en is not null and h.avisado_en is null
   and exists (select 1 from public.notificaciones n
               where n.carrera_id = h.carrera_id and n.titulo = 'Salieron las fechas de finales'
-                and n.cuerpo like '%(' || btrim(h.titulo) || ')%');
+                and position('(' || btrim(h.titulo) || ')' in n.cuerpo) > 0);
 
 create or replace function public.publicar_horario_clases(p_id uuid, p_notificar boolean default true)
 returns integer language plpgsql security definer set search_path = public as $$

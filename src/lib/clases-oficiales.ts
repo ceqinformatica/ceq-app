@@ -85,7 +85,8 @@ export interface HorarioPublicado {
 
 /**
  * Qué horario publicado le corresponde al estudiante. Prefiere el de su plan;
- * si no hay, acepta uno general de la carrera (sin plan), marcado como tal.
+ * si no hay (o si hay uno general más nuevo), acepta el general de la carrera
+ * (sin plan), marcado como tal.
  * Nunca ofrece el horario de otro plan: una materia con el mismo nombre puede
  * tener otro día, hora o aula. Si no se sabe el plan del estudiante, solo
  * sirve un horario general.
@@ -93,7 +94,8 @@ export interface HorarioPublicado {
 export function elegirHorarioPublicado<H extends HorarioPublicado>(horarios: H[], planAnio: number | null | undefined): { horario: H; general: boolean } | null {
   const recientes = [...horarios].sort((a, b) => (b.publicado_en ?? '').localeCompare(a.publicado_en ?? ''));
   const propio = planAnio != null ? recientes.find((h) => h.plan_anio === planAnio) : undefined;
-  if (propio) return { horario: propio, general: false };
   const general = recientes.find((h) => h.plan_anio == null);
+  // Un horario general publicado después reemplaza al del plan (es de un periodo más nuevo).
+  if (propio && !(general && (general.publicado_en ?? '') > (propio.publicado_en ?? ''))) return { horario: propio, general: false };
   return general ? { horario: general, general: true } : null;
 }

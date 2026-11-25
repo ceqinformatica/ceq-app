@@ -331,10 +331,15 @@ export function leerHorarioFinales(texto: string, materias: string[], referencia
         agregar(null, sueltas, horas, aula, crudo);
         sinUsar.push(crudo);
       }
+      let sinFecha = false;
       encontradas.forEach((e, i) => {
         const hasta = inicios[i + 1] ?? Infinity;
-        agregar(e.patron, fechas.filter((f) => f.pos >= inicios[i] && f.pos < hasta), horas, aula, crudo);
+        const propias = fechas.filter((f) => f.pos >= inicios[i] && f.pos < hasta);
+        if (!propias.length) sinFecha = true;
+        agregar(e.patron, propias, horas, aula, crudo);
       });
+      // Una materia del renglón sin fecha propia (¿fecha compartida?): que el admin lo revise.
+      if (sinFecha && !sueltas.length) sinUsar.push(crudo);
       pendiente = null;
       previo = '';
       continue;

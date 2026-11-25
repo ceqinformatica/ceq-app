@@ -41,3 +41,9 @@ test('horario publicado: el del plan del estudiante, o uno general, nunca el de 
   assert.equal(elegirHorarioPublicado([h2018, h2026], null), null);
   assert.deepEqual(elegirHorarioPublicado([h2026, general], null), { horario: general, general: true });
 });
+
+test('horario publicado: uno general más nuevo reemplaza al viejo del plan', () => {
+  const marzo2018 = { id: 'a', plan_anio: 2018, publicado_en: '2026-03-01' };
+  const agostoGeneral = { id: 'c', plan_anio: null, publicado_en: '2026-08-01' };
+  assert.deepEqual(elegirHorarioPublicado([marzo2018, agostoGeneral], 2018), { horario: agostoGeneral, general: true });
+});

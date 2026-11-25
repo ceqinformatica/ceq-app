@@ -179,3 +179,8 @@ test('dos materias en un renglón: una fecha antes de la primera materia queda p
   assert.ok(resumen(r).includes('Matemática I|1|2026-12-15|null'));
   assert.equal(r.sinUsar.length, 1);
 });
+
+test('dos materias con una fecha compartida: el renglón queda para revisar', () => {
+  const r = leerHorarioFinales('Química General y Matemática I 01/12/2026', ['Química General', 'Matemática I'], REF);
+  assert.equal(r.sinUsar.length, 1);
+});

@@ -349,8 +349,8 @@ export default function HorarioClasesAdmin() {
         <Fila
           icono="notifications-outline"
           titulo="Avisar a los estudiantes"
-          detalle={TEXTO_AVISO[estadoAviso(horario)]}
-          derecha={<Switch value={notificar && estadoAviso(horario) === 'pendiente'} disabled={estadoAviso(horario) !== 'pendiente'} onValueChange={setNotificar} accessibilityLabel="Avisar a los estudiantes" trackColor={{ true: fondos.marino, false: colores.linea }} thumbColor={colores.blanco} />}
+          detalle={horario?.publicado && estadoAviso(horario) === 'pendiente' ? 'Publicado sin aviso: para avisar, ocultalo y volvé a publicarlo.' : TEXTO_AVISO[estadoAviso(horario)]}
+          derecha={<Switch value={notificar && estadoAviso(horario) === 'pendiente'} disabled={estadoAviso(horario) !== 'pendiente' || Boolean(horario?.publicado)} onValueChange={setNotificar} accessibilityLabel="Avisar a los estudiantes" trackColor={{ true: fondos.marino, false: colores.linea }} thumbColor={colores.blanco} />}
           ultima
         />
       </Tarjeta>

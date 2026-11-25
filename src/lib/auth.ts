@@ -229,6 +229,13 @@ export async function confirmarConProveedor(proveedor: Proveedor): Promise<strin
 
 export const confirmarConGoogle = () => confirmarConProveedor('google');
 
+const oyentesFalloSalida = new Set<() => void>();
+/** Avisa cuando un cierre de sesión dio de baja el celular pero la sesión siguió abierta. */
+export function alFallarSalida(f: () => void): () => void {
+  oyentesFalloSalida.add(f);
+  return () => oyentesFalloSalida.delete(f);
+}
+
 /**
  * Cierra la sesión. Devuelve null si salió, o el mensaje de error. Si algo
  * falla (por ejemplo, sin conexión), no se toca el PIN: la cuenta sigue
@@ -242,7 +249,11 @@ export async function salir(): Promise<string | null> {
     return 'No pudimos cerrar la sesión: revisá tu conexión e intentá de nuevo.';
   }
   const { error } = await supabase.auth.signOut();
-  if (error) return 'No pudimos cerrar la sesión: revisá tu conexión e intentá de nuevo.';
+  if (error) {
+    // El celular ya se dio de baja pero la sesión sigue: hay que volver a registrarlo.
+    oyentesFalloSalida.forEach((f) => f());
+    return 'No pudimos cerrar la sesión: revisá tu conexión e intentá de nuevo.';
+  }
   await cerrarGoogleNativo();
   // El PIN es de esta cuenta en este dispositivo: así, si alguien lo olvidó,
   // cierra sesión, vuelve a entrar con Google y puede crear otro.

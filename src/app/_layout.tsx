@@ -4,6 +4,7 @@ import { router, Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useLayoutEffect, useRef } from 'react';
 import { StatusBar } from 'expo-status-bar';
+import { alFallarSalida } from '../lib/auth';
 import { ActivityIndicator, AppState, Image, Platform, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Bloqueo } from '../components/Bloqueo';
@@ -44,9 +45,15 @@ function useNotificaciones(uid: string | null, lista: boolean) {
     const sub = AppState.addEventListener('change', (estado) => {
       if (estado === 'active' && registrado.current !== uid) intentar();
     });
+    // Un cierre de sesión que falló a medias pudo borrar el registro: se vuelve a registrar.
+    const fallo = alFallarSalida(() => {
+      registrado.current = null;
+      intentar();
+    });
     return () => {
       activo = false;
       sub.remove();
+      fallo();
     };
   }, [uid, lista]);
 
