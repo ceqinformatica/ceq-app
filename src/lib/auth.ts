@@ -5,7 +5,8 @@ import { supabase } from './supabase';
 import { olvidarEsteCelular } from './notificaciones';
 import { desactivarBiometria } from './biometria';
 import { borrarPin } from './pinGuardado';
-import { leerEnlacePin, olvidarEnlacePin, procesarEnlacePin } from './enlace-pin';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { estadoAlPedir, leerEnlacePin, leerEstadoEnlace, olvidarEnlacePin, procesarEnlacePin, type MemoriaEnlace } from './enlace-pin';
 import { traducirErrorClave } from './recuperacion';
 import { NOMBRE_PROVEEDOR, proveedoresVisibles, resultadoRegistro, type Proveedor } from './acceso';
 
@@ -195,6 +196,8 @@ const paraPin = (m: string) => m.replace('"¿Olvidaste tu contraseña?"', '"¿Ol
  * celular (PKCE: el verificador queda guardado acá).
  */
 export async function pedirEnlacePin(correo: string): Promise<string | null> {
+  // Desde ahora se espera el enlace (antes de mandarlo, por si llega enseguida).
+  await memoriaEnlace.leer().then((e) => memoriaEnlace.guardar(estadoAlPedir(e))).catch(() => {});
   const { error } = await supabase.auth.signInWithOtp({
     email: correo.trim(),
     options: { shouldCreateUser: false, emailRedirectTo: urlEnlacePin() },
@@ -224,10 +227,21 @@ export async function confirmarConEnlace(code: string, flowId: string | null = n
   return null;
 }
 
-/** Si la dirección es un enlace de recuperar PIN, lo canjea (una sola vez por código). */
+/** Enlaces pedidos y ya atendidos en este celular (sobrevive a cerrar la app). */
+const CLAVE_ENLACE = 'ceq.enlacePin';
+const memoriaEnlace: MemoriaEnlace = {
+  leer: async () => leerEstadoEnlace(await AsyncStorage.getItem(CLAVE_ENLACE)),
+  guardar: (e) => AsyncStorage.setItem(CLAVE_ENLACE, JSON.stringify(e)),
+};
+
+/**
+ * Si la dirección es un enlace de recuperar PIN, lo canjea: una sola vez por
+ * código (también entre aperturas de la app) y solo si se pidió en este
+ * celular hace menos de una hora.
+ */
 export function recibirEnlacePin(url: string | null | undefined) {
   const e = leerEnlacePin(url);
-  if (e) void procesarEnlacePin(e, confirmarConEnlace);
+  if (e) void procesarEnlacePin(e, confirmarConEnlace, undefined, memoriaEnlace);
 }
 
 /**
@@ -268,6 +282,8 @@ export async function salir(): Promise<string | null> {
   }
   await cerrarGoogleNativo();
   olvidarEnlacePin();
+  // Un enlace pedido por esta cuenta no se espera más (los ya usados se siguen recordando).
+  await memoriaEnlace.leer().then((e) => memoriaEnlace.guardar({ ...e, pedido: null })).catch(() => {});
   // El PIN es de esta cuenta en este dispositivo: así, si alguien lo olvidó,
   // cierra sesión, vuelve a entrar con Google y puede crear otro.
   await borrarPin().catch(() => {});
