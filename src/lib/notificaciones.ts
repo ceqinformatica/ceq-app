@@ -27,9 +27,9 @@ export async function tieneServiciosDeGoogle(): Promise<boolean | null> {
     const { GoogleSignin } = require('@react-native-google-signin/google-signin') as typeof import('@react-native-google-signin/google-signin');
     return await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: false });
   } catch (e) {
-    // Sin el módulo nativo (Expo Go) no se sabe; si el módulo respondió con
-    // error, es que faltan o no andan los servicios de Google.
-    return (e as { code?: string })?.code ? false : null;
+    // Solo PLAY_SERVICES_NOT_AVAILABLE dice que faltan (o no andan) los
+    // servicios de Google; sin el módulo nativo (Expo Go) u otro error, no se sabe.
+    return (e as { code?: string })?.code === 'PLAY_SERVICES_NOT_AVAILABLE' ? false : null;
   }
 }
 
