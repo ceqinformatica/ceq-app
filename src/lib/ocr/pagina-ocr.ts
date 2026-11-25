@@ -38,6 +38,8 @@ export const URLS_OCR = {
 
 /** Lado más largo de la página dibujada, en píxeles (≈ 250 ppp en A4). */
 const LADO_MAXIMO = 2900;
+/** Ancho de la copia de cada página que se guarda para mostrar recortes. */
+const ANCHO_MINIATURA = 1400;
 
 export const HTML_OCR = `<!doctype html>
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width">
@@ -97,6 +99,16 @@ function limpiar(ctx, w, h) {
   const borrar = new Uint8Array(w * h);
   const largoH = Math.max(40, Math.round(w / 22));
   const largoV = Math.max(40, Math.round(h / 30));
+  // Las líneas de la tabla se guardan (juntando los tramos de 1 px de grosor
+  // vecinos) para rearmar las filas y celdas después.
+  const lineasH = [], lineasV = [];
+  const sumar = (lista, pos, a, b) => {
+    for (let i = lista.length - 1; i >= 0 && i >= lista.length - 40; i--) {
+      const l = lista[i];
+      if (pos - l[3] <= 3 && a < l[2] && l[1] < b) { l[1] = Math.min(l[1], a); l[2] = Math.max(l[2], b); l[3] = pos; return; }
+    }
+    lista.push([pos, a, b, pos]);
+  };
   // Tramos horizontales largos (permitiendo cortes de 2 px por el escaneo).
   for (let y = 0; y < h; y++) {
     let inicio = -1, huecos = 0;
@@ -105,7 +117,7 @@ function limpiar(ctx, w, h) {
       if (n) { if (inicio < 0) inicio = x; huecos = 0; }
       else if (inicio >= 0 && ++huecos > 2) {
         const fin = x - huecos;
-        if (fin - inicio >= largoH) for (let k = inicio; k <= fin; k++) borrar[y * w + k] = 1;
+        if (fin - inicio >= largoH) { for (let k = inicio; k <= fin; k++) borrar[y * w + k] = 1; sumar(lineasH, y, inicio, fin); }
         inicio = -1; huecos = 0;
       }
     }
@@ -117,7 +129,7 @@ function limpiar(ctx, w, h) {
       if (n) { if (inicio < 0) inicio = y; huecos = 0; }
       else if (inicio >= 0 && ++huecos > 2) {
         const fin = y - huecos;
-        if (fin - inicio >= largoV) for (let k = inicio; k <= fin; k++) borrar[k * w + x] = 1;
+        if (fin - inicio >= largoV) { for (let k = inicio; k <= fin; k++) borrar[k * w + x] = 1; sumar(lineasV, x, inicio, fin); }
         inicio = -1; huecos = 0;
       }
     }
@@ -129,6 +141,114 @@ function limpiar(ctx, w, h) {
     d[i + 3] = 255;
   }
   ctx.putImageData(img, 0, 0);
+  // [posición media, desde, hasta]; con 2000 de cada una alcanza para cualquier planilla.
+  const medio = (l) => [Math.round((l[0] + l[3]) / 2), l[1], l[2]];
+  return { h: lineasH.slice(0, 2000).map(medio), v: lineasV.slice(0, 2000).map(medio) };
+}
+
+/** Copia chica de la página (JPEG) para mostrar en el panel lo que no se pudo leer. */
+function miniatura(lienzo) {
+  try {
+    const ancho = Math.min(${ANCHO_MINIATURA}, lienzo.width);
+    const c = document.createElement('canvas');
+    c.width = ancho;
+    c.height = Math.round((lienzo.height * ancho) / lienzo.width);
+    c.getContext('2d').drawImage(lienzo, 0, 0, c.width, c.height);
+    const url = c.toDataURL('image/jpeg', 0.6);
+    c.width = c.height = 0;
+    return url.startsWith('data:image/jpeg') ? url : undefined;
+  } catch (e) {
+    return undefined;
+  }
+}
+
+function palabrasDe(data, dx, dy) {
+  const salida = [];
+  for (const b of data.blocks || []) for (const p of b.paragraphs || []) for (const l of p.lines || []) for (const w of l.words || []) {
+    const t = (w.text || '').trim();
+    if (!t) continue;
+    salida.push({ t, x0: w.bbox.x0 + dx, y0: w.bbox.y0 + dy, x1: w.bbox.x1 + dx, y1: w.bbox.y1 + dy, c: Math.round(w.confidence) });
+  }
+  return salida;
+}
+
+/**
+ * Segunda pasada: busca manchas de tinta con forma de texto que el OCR no
+ * leyó (números sueltos en una celda, como el "9" del nivel, o una hora
+ * aislada) y las lee de nuevo, recortadas, como un solo renglón.
+ */
+async function rescatar(ctx, w, h, palabras, worker, alVivo) {
+  const alturas = palabras.map((p) => p.y1 - p.y0).sort((a, b) => a - b);
+  const alto = alturas[Math.floor(alturas.length / 2)] || 30;
+  const K = 4;
+  const gw = Math.ceil(w / K), gh = Math.ceil(h / K);
+  const d = ctx.getImageData(0, 0, w, h).data;
+  const tinta = new Uint8Array(gw * gh);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (d[(y * w + x) * 4] < 110) tinta[((y / K) | 0) * gw + ((x / K) | 0)] = 1;
+  // Lo que ya se leyó no cuenta.
+  for (const p of palabras) {
+    for (let y = Math.max(0, ((p.y0 - 4) / K) | 0); y <= Math.min(gh - 1, ((p.y1 + 4) / K) | 0); y++)
+      for (let x = Math.max(0, ((p.x0 - 4) / K) | 0); x <= Math.min(gw - 1, ((p.x1 + 4) / K) | 0); x++) tinta[y * gw + x] = 0;
+  }
+  // Manchas conectadas (en la grilla reducida, con un salto de 1 celda).
+  const vista = new Uint8Array(gw * gh);
+  const manchas = [];
+  const pila = [];
+  for (let i = 0; i < tinta.length; i++) {
+    if (!tinta[i] || vista[i]) continue;
+    let x0 = gw, y0 = gh, x1 = 0, y1 = 0, n = 0;
+    pila.push(i); vista[i] = 1;
+    while (pila.length) {
+      const j = pila.pop();
+      const x = j % gw, y = (j / gw) | 0;
+      n++;
+      if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
+      for (let yy = Math.max(0, y - 1); yy <= Math.min(gh - 1, y + 1); yy++)
+        for (let xx = Math.max(0, x - 2); xx <= Math.min(gw - 1, x + 2); xx++) {
+          const k = yy * gw + xx;
+          if (tinta[k] && !vista[k]) { vista[k] = 1; pila.push(k); }
+        }
+    }
+    const ancho = (x1 - x0 + 1) * K, altura = (y1 - y0 + 1) * K;
+    // Del alto de una letra, no más largo que una hora o una palabra, y con tinta suficiente.
+    if (altura < alto * 0.55 || altura > alto * 2.2 || ancho > alto * 14 || n < 4) continue;
+    manchas.push({ x0: x0 * K, y0: y0 * K, x1: (x1 + 1) * K, y1: (y1 + 1) * K });
+    if (manchas.length >= 60) break;
+  }
+  if (!manchas.length) return;
+  await worker.setParameters({ tessedit_pageseg_mode: '7' });
+  const nuevas = [];
+  const inicio = Date.now();
+  try {
+    for (const m of manchas) {
+      // Sin pasarse de tiempo en celulares lentos (y avisando que sigue vivo).
+      if (Date.now() - inicio > 25000) break;
+      if (alVivo) alVivo();
+      const margen = Math.round(alto * 0.6);
+      const ax = Math.max(0, m.x0 - margen), ay = Math.max(0, m.y0 - margen);
+      const bw = Math.min(w, m.x1 + margen) - ax, bh = Math.min(h, m.y1 + margen) - ay;
+      const c = document.createElement('canvas');
+      c.width = bw; c.height = bh;
+      c.getContext('2d').drawImage(ctx.canvas, ax, ay, bw, bh, 0, 0, bw, bh);
+      const { data } = await worker.recognize(c, {}, { blocks: true, text: false });
+      // Solo lo nuevo: el recorte tiene margen y puede volver a leer pedazos de palabras vecinas.
+      for (const p of palabrasDe(data, ax, ay)) if (p.c >= 45 && /[\\p{L}\\p{N}]/u.test(p.t) && !pisaA(p, palabras)) nuevas.push(p);
+      c.width = c.height = 0;
+    }
+  } finally {
+    await worker.setParameters({ tessedit_pageseg_mode: PSM });
+  }
+  palabras.push(...nuevas);
+}
+
+/** Si la palabra cae en más de la mitad sobre otra ya leída. */
+function pisaA(p, palabras) {
+  const area = Math.max(1, (p.x1 - p.x0) * (p.y1 - p.y0));
+  return palabras.some((q) => {
+    const a = Math.min(p.x1, q.x1) - Math.max(p.x0, q.x0);
+    const b = Math.min(p.y1, q.y1) - Math.max(p.y0, q.y0);
+    return a > 0 && b > 0 && (a * b) / area > 0.3;
+  });
 }
 
 async function leer(bytes) {
@@ -162,15 +282,12 @@ async function leer(bytes) {
       ctx.fillStyle = '#fff';
       ctx.fillRect(0, 0, lienzo.width, lienzo.height);
       await pag.render({ canvasContext: ctx, viewport: vista }).promise;
-      limpiar(ctx, lienzo.width, lienzo.height);
+      const imagen = miniatura(lienzo);
+      const lineas = limpiar(ctx, lienzo.width, lienzo.height);
       const { data } = await worker.recognize(lienzo, {}, { blocks: true, text: false });
-      const palabras = [];
-      for (const b of data.blocks || []) for (const p of b.paragraphs || []) for (const l of p.lines || []) for (const w of l.words || []) {
-        const t = (w.text || '').trim();
-        if (!t) continue;
-        palabras.push({ t, x0: w.bbox.x0, y0: w.bbox.y0, x1: w.bbox.x1, y1: w.bbox.y1, c: Math.round(w.confidence) });
-      }
-      paginas.push({ ancho: lienzo.width, alto: lienzo.height, palabras });
+      const palabras = palabrasDe(data, 0, 0);
+      await rescatar(ctx, lienzo.width, lienzo.height, palabras, worker, () => enviar({ tipo: 'progreso', fase: 'leyendo', pagina: n, paginas: total }));
+      paginas.push({ ancho: lienzo.width, alto: lienzo.height, palabras, lineas, imagen });
       lienzo.width = lienzo.height = 0;
       pag.cleanup();
     }

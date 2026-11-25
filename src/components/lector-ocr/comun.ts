@@ -40,7 +40,8 @@ export function atender(m: MensajeOcr, pedido: Pedido, rearmar: () => void): boo
       pedido.progreso?.({ fase: m.fase, pagina: m.pagina, paginas: m.paginas });
       return false;
     case 'resultado':
-      pedido.ok(m.paginas);
+      // La imagen solo puede ser un JPEG embebido (nunca una dirección de afuera ni un archivo).
+      pedido.ok(m.paginas.map((p) => (p.imagen && !/^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(p.imagen) ? { ...p, imagen: undefined } : p)));
       return true;
     case 'error':
       pedido.mal(new Error(traducirError(m.mensaje)));

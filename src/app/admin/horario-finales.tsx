@@ -2,11 +2,12 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import * as DocumentPicker from 'expo-document-picker';
 import { router, useLocalSearchParams } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Pressable, Switch, Text, View } from 'react-native';
 import { Columnas } from '../../components/disposicion';
 import { textoProgreso, useLectorOcr } from '../../components/LectorOcr';
 import { CampoFechaHora } from '../../components/fecha';
+import { RecorteOcr, type PaginaVista } from '../../components/RecorteOcr';
 import { BarraSuperior, Boton, Campo, Cargando, Chip, Fila, Hoja, Insignia, Mensaje, Pantalla, s, Seccion, Tarjeta } from '../../components/ui';
 import { useTema } from '../../context/TemaProvider';
 import { cargarCarreras } from '../../datos/admin';
@@ -17,7 +18,7 @@ import {
 import { estadoAviso, TEXTO_AVISO } from '../../lib/aviso-publicacion';
 import { textoError } from '../../lib/errores';
 import { detectarCarrera, detectarPlan, isoATexto, leerHorarioFinales, textoAIso, textoLlamado, tituloSugerido, type FichaMateria } from '../../lib/horario-finales';
-import { confianzaMedia, textoDeOcr } from '../../lib/ocr/documento';
+import { confianzaMedia, filasDeOcr, textoDeFilas, ubicar, type FilaDoc, type Zona } from '../../lib/ocr/documento';
 import { textoDePdfGeneral } from '../../lib/pdf-texto';
 import type { Carrera, HorarioFinalesDb } from '../../lib/tipos-db';
 import { colores, espacio, fondos } from '../../tema';
@@ -25,7 +26,7 @@ import { colores, espacio, fondos } from '../../tema';
 const volver = () => (router.canGoBack() ? router.back() : router.replace('/admin/horarios-finales'));
 
 /** Fila en edición: la materia puede faltar hasta que el admin la elija. */
-type Fila = Omit<FechaEditable, 'materia'> & { clave: string; materia: string | null; origen?: string };
+type Fila = Omit<FechaEditable, 'materia'> & { clave: string; materia: string | null; origen?: string; zona?: Zona | null };
 
 let contador = 0;
 const nuevaClave = () => `f${++contador}`;
@@ -52,6 +53,8 @@ export default function HorarioFinalesAdmin() {
   const [materias, setMaterias] = useState<string[]>([]);
   const [fichas, setFichas] = useState<FichaMateria[]>([]);
   const [texto, setTexto] = useState<string | null>(null);
+  // PDF escaneado: renglones con su lugar en la página y la imagen de cada página, para los recortes.
+  const [escaneo, setEscaneo] = useState<{ filas: FilaDoc[]; vistas: PaginaVista[] } | null>(null);
   const [pdf, setPdf] = useState<{ bytes: Uint8Array; nombre: string } | null>(null);
   const [filas, setFilas] = useState<Fila[]>([]);
   const [leyendo, setLeyendo] = useState(false);
@@ -106,8 +109,8 @@ export default function HorarioFinalesAdmin() {
     if (texto == null || !materias.length) return;
     // Con un plan elegido quedan solo sus filas (en planillas con "IQ2018" / "IQ2026" por fila).
     const r = leerHorarioFinales(texto, materias, new Date(), { fichas, plan });
-    setFilas(r.filas.map((f) => ({ clave: nuevaClave(), materia: f.materia, llamado: f.llamado, fecha: f.fecha, hora: f.hora, aula: f.aula, origen: f.origen })));
-  }, [texto, materias, fichas, plan]);
+    setFilas(r.filas.map((f) => ({ clave: nuevaClave(), materia: f.materia, llamado: f.llamado, fecha: f.fecha, hora: f.hora, aula: f.aula, origen: f.origen, zona: escaneo ? ubicar(escaneo.filas, f.origen) : null })));
+  }, [texto, materias, fichas, plan, escaneo]);
 
   const elegirPdf = async () => {
     setError(null);
@@ -123,13 +126,17 @@ export default function HorarioFinalesAdmin() {
       await new Promise((ok) => setTimeout(ok, 50));
       let t = textoDePdfGeneral(bytes);
       setEscaneado(false);
+      setEscaneo(null);
       if (!t.trim()) {
         // PDF escaneado: se lee la imagen con OCR (en el dispositivo).
         setProgreso(textoProgreso(null));
         try {
           const paginas = await lector.leer(bytes, (p) => setProgreso(textoProgreso(p)));
-          t = textoDeOcr(paginas);
+          // Una fila de la planilla por renglón: se arma con las líneas de la tabla.
+          const filasDoc = filasDeOcr(paginas, { tablas: true });
+          t = textoDeFilas(filasDoc);
           setEscaneado(true);
+          setEscaneo({ filas: filasDoc, vistas: paginas.map((p) => ({ ancho: p.ancho, alto: p.alto, imagen: p.imagen })) });
           if (t.trim() && confianzaMedia(paginas) < 65) setAviso('El escaneo se ve borroso: revisá bien cada fecha antes de publicar.');
         } catch (e) {
           setAviso(`${textoError(e, 'No se pudo leer el PDF escaneado.')} Podés cargar las fechas a mano y el PDF queda para que lo vean los estudiantes.`);
@@ -158,6 +165,18 @@ export default function HorarioFinalesAdmin() {
   };
 
   const sinMateria = filas.filter((f) => !f.materia);
+  const vistas = escaneo?.vistas ?? null;
+  // Lo que conviene mirar antes de publicar, cada cosa con su motivo.
+  const dudosas = useMemo(() => {
+    const enMalla = new Set(materias);
+    const l: { fila: Fila; motivo: string }[] = [];
+    for (const f of filas) {
+      if (!f.materia) l.push({ fila: f, motivo: 'No reconocimos la materia. Elegila (o borrá la fecha).' });
+      else if (materias.length && !enMalla.has(f.materia)) l.push({ fila: f, motivo: `"${f.materia}" no está en la malla. Elegí la materia correcta.` });
+      else if (!f.hora) l.push({ fila: f, motivo: `${f.materia}: no leímos la hora.` });
+    }
+    return l;
+  }, [filas, materias]);
   const porMateria = useMemo(() => {
     const m = new Map<string, Fila[]>();
     for (const f of filas) if (f.materia) m.set(f.materia, [...(m.get(f.materia) ?? []), f]);
@@ -282,7 +301,7 @@ export default function HorarioFinalesAdmin() {
               : pdf
                 ? texto
                   ? carreraId
-                    ? `${escaneado ? 'PDF escaneado leído. ' : ''}Encontramos ${filas.length} fechas${sinMateria.length ? `, ${sinMateria.length} para revisar` : ''}.`
+                    ? `${escaneado ? 'PDF escaneado leído. ' : ''}Encontramos ${filas.length} fechas${dudosas.length ? `, ${dudosas.length} para revisar` : ''}.`
                     : 'Elegí la carrera para ver las fechas.'
                   : 'Sin texto para leer.'
                 : 'El horario o anteproyecto de exámenes finales que publica la Dirección Académica. Si está escaneado (con firmas), lo leemos igual.'}
@@ -377,11 +396,19 @@ export default function HorarioFinalesAdmin() {
           <Text style={s.filaDetalle}>{texto === '' ? 'Cargá las fechas a mano con "Agregar".' : 'No hay fechas todavía.'}</Text>
         </Tarjeta>
       )}
-      {sinMateria.length > 0 && (
+      {dudosas.length > 0 && (
         <>
-          <Text style={[s.etiqueta, { color: colores.rojo }]}>Para revisar: no reconocimos la materia</Text>
+          <Text style={[s.etiqueta, { color: colores.rojo }]}>Para revisar ({dudosas.length})</Text>
+          <Text style={[s.filaDetalle, { marginBottom: espacio.s }]}>
+            {vistas ? 'Lo que no pudimos leer bien, con el renglón del PDF marcado en rojo.' : 'Lo que no pudimos leer bien.'}
+          </Text>
           <Tarjeta estilo={{ paddingVertical: espacio.xs, borderWidth: 1, borderColor: colores.rojo }}>
-            {sinMateria.map((f, i) => <FilaFecha key={f.clave} f={f} ultima={i === sinMateria.length - 1} onPress={() => setEditando(f)} mostrarOrigen />)}
+            {dudosas.map(({ fila, motivo }, i) => (
+              <ItemRevision key={fila.clave} motivo={motivo} ultima={i === dudosas.length - 1}>
+                <FilaFecha f={fila} ultima onPress={() => setEditando(fila)} mostrarOrigen={!(fila.zona && vistas?.[fila.zona.pagina]?.imagen)} />
+                <RecorteOcr paginas={vistas} zona={fila.zona} titulo={null} />
+              </ItemRevision>
+            ))}
           </Tarjeta>
         </>
       )}
@@ -402,9 +429,21 @@ export default function HorarioFinalesAdmin() {
         izquierda={<>{datosGenerales}{acciones}</>}
         derecha={<>{lista}</>}
       />
-      <EditorFecha fila={editando} materias={materias} onListo={aplicarEdicion} onCerrar={() => setEditando(null)} />
+      <EditorFecha fila={editando} materias={materias} vistas={vistas} onListo={aplicarEdicion} onCerrar={() => setEditando(null)} />
       {lector.vista}
     </Pantalla>
+  );
+}
+
+function ItemRevision({ motivo, ultima, children }: { motivo: string; ultima: boolean; children: ReactNode }) {
+  return (
+    <View style={{ paddingVertical: espacio.s, borderBottomWidth: ultima ? 0 : 1, borderBottomColor: colores.linea }}>
+      <View style={{ flexDirection: 'row', gap: espacio.s, alignItems: 'flex-start' }}>
+        <Ionicons name="alert-circle" size={16} color={colores.rojo} style={{ marginTop: 2 }} />
+        <Text style={[s.filaDetalle, { flex: 1, color: colores.texto }]}>{motivo}</Text>
+      </View>
+      {children}
+    </View>
   );
 }
 
@@ -423,7 +462,7 @@ function FilaFecha({ f, ultima, onPress, mostrarOrigen }: { f: Fila; ultima: boo
 }
 
 /** Hoja para corregir (o agregar) una fecha: materia, llamado, día, hora y aula. */
-function EditorFecha({ fila, materias, onListo, onCerrar }: { fila: Fila | null; materias: string[]; onListo: (f: Fila | null) => void; onCerrar: () => void }) {
+function EditorFecha({ fila, materias, vistas, onListo, onCerrar }: { fila: Fila | null; materias: string[]; vistas: PaginaVista[] | null; onListo: (f: Fila | null) => void; onCerrar: () => void }) {
   const [materia, setMateria] = useState<string | null>(null);
   const [busca, setBusca] = useState('');
   const [llamado, setLlamado] = useState(1);
@@ -459,7 +498,11 @@ function EditorFecha({ fila, materias, onListo, onCerrar }: { fila: Fila | null;
 
   return (
     <Hoja visible={Boolean(fila)} titulo={fila?.materia ? 'Editar fecha' : 'Fecha de final'} onCerrar={onCerrar}>
-      {fila?.origen ? <Mensaje tipo="info" texto={`En el PDF: "${fila.origen}"`} /> : null}
+      {fila?.zona && vistas?.[fila.zona.pagina]?.imagen ? (
+        <RecorteOcr paginas={vistas} zona={fila.zona} />
+      ) : fila?.origen ? (
+        <Mensaje tipo="info" texto={`En el PDF: "${fila.origen}"`} />
+      ) : null}
       <Text style={s.etiqueta}>Materia</Text>
       {materia ? (
         <View style={{ flexDirection: 'row', marginBottom: espacio.m }}>
