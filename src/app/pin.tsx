@@ -153,7 +153,7 @@ export default function PantallaPin() {
           />
         )}
       </View>
-      <Mensaje texto={error} />
+      <Mensaje texto={error} forma="linea" />
       {paso === 'actual' && largoActual != null && (
         <Boton
           texto={trabado ? 'Crear un PIN nuevo' : '¿Olvidaste tu PIN?'}

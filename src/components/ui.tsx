@@ -521,18 +521,47 @@ export function Contador({ valor, onCambio, min = 0, max = 999, etiqueta }: { va
 /* Mensajes y estados                                                  */
 /* ------------------------------------------------------------------ */
 
-export function Mensaje({ texto: t, tipo = 'error' }: { texto: string | null; tipo?: 'error' | 'info' | 'exito' }) {
+/**
+ * Aviso dentro de una pantalla (error, información o éxito). Una ficha blanca
+ * con el ícono en un círculo de color suave y el texto en el color normal:
+ * se distingue sin pintar todo de rojo. `forma="linea"` es la versión sin
+ * ficha, centrada, para debajo del teclado del PIN.
+ */
+export function Mensaje({ texto: t, tipo = 'error', titulo, forma = 'tarjeta' }: {
+  texto: string | null;
+  tipo?: 'error' | 'info' | 'exito';
+  titulo?: string;
+  forma?: 'tarjeta' | 'linea';
+}) {
   if (!t) return null;
   const estilos = {
     error: { color: colores.rojo, fondo: fondos.rojoFondo, icono: 'alert-circle' as NombreIcono },
-    info: { color: colores.marino, fondo: fondos.tarjeta, icono: 'information-circle' as NombreIcono },
-    exito: { color: colores.verde, fondo: fondos.verdeFondo, icono: 'checkmark-circle' as NombreIcono },
+    info: { color: colores.marino, fondo: fondos.cielo, icono: 'information-circle' as NombreIcono },
+    exito: { color: colores.azul, fondo: fondos.verdeFondo, icono: 'checkmark-circle' as NombreIcono },
   }[tipo];
+  const rol = tipo === 'error' ? 'alert' : 'text';
+  if (forma === 'linea') {
+    return (
+      <View style={s.mensajeLinea} accessibilityRole={rol} accessibilityLiveRegion="polite">
+        <Aparecer key={t} distancia={4}>
+          <Text style={s.mensajeLineaTexto}>
+            <Ionicons name={estilos.icono} size={15} color={estilos.color} />
+            {`  ${titulo ? `${titulo} ` : ''}${t}`}
+          </Text>
+        </Aparecer>
+      </View>
+    );
+  }
   return (
-    <View style={[s.mensaje, { backgroundColor: estilos.fondo }]} accessibilityRole={tipo === 'error' ? 'alert' : 'text'} accessibilityLiveRegion="polite">
-      <Aparecer key={t} distancia={6} estilo={{ flex: 1, flexDirection: 'row', alignItems: 'flex-start', gap: espacio.s }}>
-        <Ionicons name={estilos.icono} size={18} color={estilos.color} />
-        <Text style={[s.mensajeTexto, { color: estilos.color }]}>{t}</Text>
+    <View style={s.mensaje} accessibilityRole={rol} accessibilityLiveRegion="polite">
+      <Aparecer key={t} distancia={6} estilo={{ flex: 1, flexDirection: 'row', alignItems: titulo ? 'flex-start' : 'center', gap: espacio.m }}>
+        <View style={[s.mensajeIcono, { backgroundColor: estilos.fondo }]}>
+          <Ionicons name={estilos.icono} size={18} color={estilos.color} />
+        </View>
+        <View style={{ flex: 1 }}>
+          {titulo ? <Text style={s.mensajeTitulo}>{titulo}</Text> : null}
+          <Text style={[s.mensajeTexto, titulo ? { color: colores.textoSuave } : null]}>{t}</Text>
+        </View>
       </Aparecer>
     </View>
   );
@@ -743,8 +772,16 @@ export const s = crearEstilos(() => ({
   contadorBoton: { width: 34, height: 34, borderRadius: 9, backgroundColor: fondos.superficieBlanca, alignItems: 'center', justifyContent: 'center' },
   contadorValor: { minWidth: 40, textAlign: 'center', fontFamily: fuentes.bold, fontSize: 16, color: colores.marino },
 
-  mensaje: { flexDirection: 'row', alignItems: 'flex-start', gap: espacio.s, padding: espacio.m, borderRadius: radio.m, marginVertical: espacio.s },
-  mensajeTexto: { flex: 1, fontFamily: fuentes.regular, fontSize: 14, lineHeight: 20 },
+  mensaje: {
+    flexDirection: 'row', alignItems: 'center', gap: espacio.s, paddingVertical: espacio.m, paddingHorizontal: espacio.m,
+    borderRadius: radio.l, marginVertical: espacio.s, backgroundColor: fondos.superficieBlanca, borderWidth: 1, borderColor: colores.lineaSuave,
+    ...sombras.suave,
+  },
+  mensajeIcono: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  mensajeTitulo: { fontFamily: fuentes.semibold, fontSize: 14.5, color: colores.texto, marginBottom: 2 },
+  mensajeTexto: { flex: 1, fontFamily: fuentes.regular, fontSize: 14, lineHeight: 20, color: colores.texto },
+  mensajeLinea: { alignSelf: 'center', maxWidth: 340, marginVertical: espacio.s, paddingHorizontal: espacio.s },
+  mensajeLineaTexto: { fontFamily: fuentes.medium, fontSize: 14, lineHeight: 20, color: colores.texto, textAlign: 'center' },
 
   vacio: { alignItems: 'center', paddingVertical: espacio.l, paddingHorizontal: espacio.m },
   vacioIcono: { width: 58, height: 58, borderRadius: 18, backgroundColor: fondos.tarjeta, alignItems: 'center', justifyContent: 'center', marginBottom: espacio.m },

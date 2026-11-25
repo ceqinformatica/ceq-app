@@ -6,7 +6,7 @@ import { olvidarEsteCelular } from './notificaciones';
 import { desactivarBiometria } from './biometria';
 import { borrarPin } from './pinGuardado';
 import { leerEnlacePin, olvidarEnlacePin, procesarEnlacePin } from './enlace-pin';
-import { resultadoGoogle, traducirErrorClave } from './recuperacion';
+import { traducirErrorClave } from './recuperacion';
 import { NOMBRE_PROVEEDOR, proveedoresVisibles, resultadoRegistro, type Proveedor } from './acceso';
 
 WebBrowser.maybeCompleteAuthSession();
@@ -238,43 +238,6 @@ export async function confirmarConClave(correo: string, clave: string): Promise<
   if (error || !data.session) return traducirErrorClave(error?.message ?? 'Invalid login credentials');
   return null;
 }
-
-/**
- * Como entrarConGoogle() o entrarConMicrosoft(), pero distingue "entró" de
- * "cerró la ventana" y exige que sea la MISMA cuenta de la sesión. Si eligió
- * otra cuenta, Supabase ya cambió la sesión: se cierra como un cierre de
- * sesión normal (borra el celular, la caché y el PIN) y se devuelve el error.
- */
-export async function confirmarConProveedor(proveedor: Proveedor): Promise<string | 'cancelado' | null> {
-  const actual = (await supabase.auth.getSession()).data.session;
-  const uidAntes = actual?.user.id ?? null;
-  const tokenAntes = actual?.access_token ?? null;
-  let resultado: 'misma' | 'otra' | null = null;
-  const { data: sub } = supabase.auth.onAuthStateChange((evento, sesion) => {
-    const r = resultadoGoogle(uidAntes, tokenAntes, evento, sesion);
-    // Si en algún momento entró otra cuenta, eso manda aunque después llegue otro aviso.
-    if (r && resultado !== 'otra') resultado = r;
-  });
-  let error: string | null;
-  try {
-    error = await (proveedor === 'microsoft' ? entrarConMicrosoft() : entrarConGoogle());
-  } finally {
-    sub.subscription.unsubscribe();
-  }
-  if (resultado === 'otra') {
-    // Es otra cuenta: si el cierre normal falla, igual se cierra en este
-    // celular para no dejar la otra cuenta abierta detrás del PIN.
-    if (await salir()) {
-      await supabase.auth.signOut({ scope: 'local' }).catch(() => undefined);
-      await borrarPin().catch(() => {});
-    }
-    return `Esa cuenta de ${NOMBRE_PROVEEDOR[proveedor]} no es la de esta sesión. Cerramos la sesión por seguridad: entrá de nuevo con tu cuenta.`;
-  }
-  if (error) return error;
-  return resultado === 'misma' ? null : 'cancelado';
-}
-
-export const confirmarConGoogle = () => confirmarConProveedor('google');
 
 const oyentesFalloSalida = new Set<() => void>();
 /** Avisa cuando un cierre de sesión dio de baja el celular pero la sesión siguió abierta. */

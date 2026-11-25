@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { correoEnmascarado, correoValido, resultadoGoogle, metodosDeCuenta, problemaClaveNueva, traducirErrorClave } from '../recuperacion.ts';
+import { correoEnmascarado, mismoCorreo, correoValido, metodosDeCuenta, problemaClaveNueva, traducirErrorClave } from '../recuperacion.ts';
 
 test('cuenta de Google sola: confirma con Google, no con contraseña', () => {
   const m = metodosDeCuenta({ email: 'a@gmail.com', app_metadata: { provider: 'google', providers: ['google'] } });
@@ -54,18 +54,16 @@ test('traduce los errores de Supabase', () => {
   assert.match(traducirErrorClave(null), /Probá de nuevo/);
 });
 
-test('confirmar con Google exige la misma cuenta', () => {
-  const ses = (id: string, t: string) => ({ access_token: t, user: { id } });
-  assert.equal(resultadoGoogle('u1', 't0', 'SIGNED_IN', ses('u1', 't1')), 'misma');
-  assert.equal(resultadoGoogle('u1', 't0', 'SIGNED_IN', ses('u2', 't1')), 'otra');
-  assert.equal(resultadoGoogle(null, null, 'SIGNED_IN', ses('u2', 't1')), 'otra');
-  assert.equal(resultadoGoogle('u1', 't0', 'SIGNED_IN', ses('u1', 't0')), null);
-  assert.equal(resultadoGoogle('u1', 't0', 'TOKEN_REFRESHED', ses('u1', 't1')), null);
-  assert.equal(resultadoGoogle('u1', 't0', 'SIGNED_IN', null), null);
-});
-
 test('correo enmascarado al recuperar el PIN', () => {
   assert.equal(correoEnmascarado('ana.gimenez@gmail.com'), 'an•••••••••@gmail.com');
   assert.equal(correoEnmascarado('a@b.com'), 'a•••@b.com');
   assert.equal(correoEnmascarado(null), '');
+});
+
+test('el correo escrito tiene que ser el de la cuenta (sin importar mayúsculas ni espacios)', () => {
+  assert.equal(mismoCorreo(' Ana.Gimenez@Gmail.com ', 'ana.gimenez@gmail.com'), true);
+  assert.equal(mismoCorreo('ana@gmail.com', 'ana.gimenez@gmail.com'), false);
+  assert.equal(mismoCorreo('', ''), false);
+  assert.equal(mismoCorreo('  ', null), false);
+  assert.equal(mismoCorreo('ana@gmail.com', null), false);
 });

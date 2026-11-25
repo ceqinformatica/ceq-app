@@ -178,7 +178,7 @@ export function Bloqueo() {
             />
           </View>
           <View style={est.abajo}>
-            <Mensaje texto={error} />
+            <Mensaje texto={error} forma="linea" />
             <Pressable onPress={sinPin} accessibilityRole="button" style={{ alignSelf: 'center', padding: espacio.m, marginTop: espacio.s }}>
               <Text style={est.enlace}>{metodos?.bio ? `Seguir solo con la ${metodos.nombreBio}` : 'Seguir sin PIN'}</Text>
             </Pressable>
@@ -200,7 +200,7 @@ export function Bloqueo() {
 
   const pie = (
         <View style={est.abajo}>
-          <Mensaje texto={error} />
+          <Mensaje texto={error} forma="linea" />
           {metodos && !conPinActivo && <Boton texto="Desbloquear" onPress={conBiometria} />}
           {conPinActivo && bloqueoTotal && <Boton texto="Crear un PIN nuevo" onPress={() => { setError(null); setVista('recuperar'); }} />}
           {conPinActivo && !bloqueoTotal && (
