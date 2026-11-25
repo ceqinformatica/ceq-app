@@ -1,11 +1,10 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import * as Linking from 'expo-linking';
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { useSesion } from '../context/SesionProvider';
 import { db as demo, MODO_DEMO } from '../datos/demo';
 import { confirmarConClave, confirmarConEnlace, confirmarConProveedor, pedirEnlacePin, salir } from '../lib/auth';
-import { entregarEnlacePin, escucharEnlacePin, leerEnlacePin } from '../lib/enlace-pin';
+import { abrirPantallaPin, escucharResultadoPin, tomarResultadoPin } from '../lib/enlace-pin';
 import type { Proveedor } from '../lib/acceso';
 import { BotonProveedor } from './BotonProveedor';
 import { biometriaActiva, biometriaDisponible, verificarIdentidad } from '../lib/biometria';
@@ -50,29 +49,31 @@ export function ConfirmarCuenta({ onConfirmado, onCancelar }: { onConfirmado: ()
   const confirmarRef = useRef(onConfirmado);
   confirmarRef.current = onConfirmado;
   useEffect(() => {
-    const dejar = escucharEnlacePin((e) => {
-      if ('error' in e) {
-        setError('El enlace venció o ya se usó. Pedí uno nuevo.');
+    const atender = () => {
+      const r = tomarResultadoPin();
+      if (!r) return;
+      if (r.tipo === 'canjeando') {
+        setEnviado(true);
+        setCargando('enlace');
         return;
       }
-      setCargando('enlace');
-      setError(null);
-      confirmarConEnlace(e.code)
-        .catch(() => 'No se pudo confirmar. Probá de nuevo.')
-        .then((r) => {
-          setCargando(null);
-          if (r === null) confirmarRef.current();
-          else setError(r);
-        });
-    });
-    const sub = Linking.addEventListener('url', ({ url }) => {
-      const e = leerEnlacePin(url);
-      if (e) entregarEnlacePin(e);
-    });
+      setCargando(null);
+      if (r.tipo === 'confirmado') confirmarRef.current();
+      else setError(r.mensaje);
+    };
+    const cerrar = abrirPantallaPin();
+    atender();
+    const dejar = escucharResultadoPin(atender);
     return () => {
       dejar();
-      sub.remove();
+      cerrar();
     };
+  }, []);
+
+  // Demo: el enlace "llega" solo; se cancela si se cierra la pantalla.
+  const demoRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (demoRef.current) clearTimeout(demoRef.current);
   }, []);
 
   const pedirEnlace = async () => {
@@ -82,7 +83,7 @@ export function ConfirmarCuenta({ onConfirmado, onCancelar }: { onConfirmado: ()
       await new Promise((r) => setTimeout(r, 400));
       setCargando(null);
       setEnviado(true);
-      setTimeout(() => confirmarRef.current(), 1200);
+      demoRef.current = setTimeout(() => confirmarRef.current(), 1200);
       return;
     }
     const r = await pedirEnlacePin(metodos.correo ?? '').catch(() => 'No se pudo mandar el correo. Probá de nuevo.');
@@ -136,7 +137,7 @@ export function ConfirmarCuenta({ onConfirmado, onCancelar }: { onConfirmado: ()
               tipo="exito"
               texto={cargando === 'enlace'
                 ? 'Comprobando el enlace…'
-                : `Te mandamos un enlace a ${correoEnmascarado(metodos.correo)}. Abrilo desde este celular para elegir un PIN nuevo. Revisá también la carpeta de spam.`}
+                : `Te mandamos un enlace a ${correoEnmascarado(metodos.correo)}. Abrilo desde este celular para elegir un PIN nuevo. Revisá también la carpeta de spam. Si pedís otro, el anterior deja de servir.`}
             />
           ) : null}
           <Boton

@@ -7,6 +7,7 @@ import { TecladoPin } from '../components/TecladoPin';
 import { BarraSuperior, Boton, Mensaje, Pantalla, s } from '../components/ui';
 import { useTema } from '../context/TemaProvider';
 import { problemaPin } from '../lib/pin';
+import { resultadoPin } from '../lib/enlace-pin';
 import { borrarPin, comprobarPin, guardarPin, largoPin, reiniciarIntentosPin } from '../lib/pinGuardado';
 import { colores, espacio, fondos, texto } from '../tema';
 
@@ -30,7 +31,7 @@ export default function PantallaPin() {
   const [ocupado, setOcupado] = useState(false);
   const [intento, setIntento] = useState(0);
   // recuperar=1: viene del enlace del correo (lo canjea ConfirmarCuenta).
-  const [recuperando, setRecuperando] = useState(params.recuperar === '1');
+  const [recuperando, setRecuperando] = useState(params.recuperar === '1' || resultadoPin() != null);
 
   useEffect(() => {
     largoPin().then((l) => {

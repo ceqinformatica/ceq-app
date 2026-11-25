@@ -1,11 +1,10 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import * as Linking from 'expo-linking';
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { Pressable, ScrollView, Text, View, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSesion } from '../context/SesionProvider';
 import { salir } from '../lib/auth';
-import { entregarEnlacePin, hayEnlacePinPendiente, leerEnlacePin } from '../lib/enlace-pin';
+import { escucharResultadoPin, resultadoPin } from '../lib/enlace-pin';
 import { biometriaActiva, biometriaDisponible } from '../lib/biometria';
 import { problemaPin } from '../lib/pin';
 import { esperaPin, largoPin, reiniciarIntentosPin } from '../lib/pinGuardado';
@@ -31,19 +30,15 @@ export function Bloqueo() {
   const [bloqueoTotal, setBloqueoTotal] = useState(false);
   const [intento, setIntento] = useState(0);
 
-  // El bloqueo tapa las rutas: el enlace del correo para recuperar el PIN
-  // llega acá (con la app abierta o al abrirla desde el enlace). Se guarda y
-  // se abre "¿Olvidaste tu PIN?", que lo canjea.
+  // Llegó (o se está canjeando) el enlace del correo para recuperar el PIN:
+  // se abre "¿Olvidaste tu PIN?", que toma el resultado. También si llegó
+  // justo antes de que la app se bloqueara.
   useEffect(() => {
-    const recibir = (url: string | null) => {
-      const e = leerEnlacePin(url);
-      if (!e) return;
-      entregarEnlacePin(e);
-      if (hayEnlacePinPendiente()) setVista((v) => (v === 'pin' ? 'recuperar' : v));
+    const ver = () => {
+      if (resultadoPin()) setVista((v) => (v === 'pin' ? 'recuperar' : v));
     };
-    Linking.getInitialURL().then(recibir).catch(() => {});
-    const sub = Linking.addEventListener('url', ({ url }) => recibir(url));
-    return () => sub.remove();
+    ver();
+    return escucharResultadoPin(ver);
   }, []);
   const [comprobando, setComprobando] = useState(false);
 
