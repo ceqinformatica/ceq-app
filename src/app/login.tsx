@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BotonProveedor } from '../components/BotonProveedor';
 import { movimientoReducido } from '../components/movimiento';
 import { LogoAcceso } from '../components/LogoAcceso';
-import { Boton, Campo, EvitaTeclado, Mensaje, s } from '../components/ui';
+import { Boton, Campo, EvitaTeclado, Mensaje, s, useBarraEstado } from '../components/ui';
 import { problemaRegistro, type ModoAcceso, type Proveedor } from '../lib/acceso';
 import { entrarConCorreo, entrarConGoogle, entrarConMicrosoft, pedirRecuperarClave, proveedoresDisponibles, registrarseConCorreo } from '../lib/auth';
 import { CLAVE_MINIMA, correoValido } from '../lib/recuperacion';
@@ -28,6 +28,8 @@ const NIVEL: Record<ModoAcceso, number> = { portada: 0, entrar: 1, registro: 1, 
  */
 export default function Login() {
   useTema();
+  // Íconos oscuros: arriba es celeste claro (portada) o blanco (formularios).
+  useBarraEstado('dark');
   const insets = useSafeAreaInsets();
   const [modo, setModo] = useState<ModoAcceso>('portada');
   // Transición: la pantalla que se va y cuánto avanzó el deslizamiento (0 → 1).
@@ -162,7 +164,7 @@ export default function Login() {
     <>
       <View style={est.separador}>
         <View style={est.linea} />
-        <Text style={s.filaDetalle}>o</Text>
+        <Text style={[s.filaDetalle, { color: colores.marinoOscuro }]}>o</Text>
         <View style={est.linea} />
       </View>
       {proveedores.map((p) => (
@@ -213,7 +215,7 @@ export default function Login() {
             )
           }
         />
-        <Text style={[s.filaDetalle, { marginTop: espacio.m }]}>Si entrás con Google o Microsoft, recuperá tu contraseña desde esa cuenta.</Text>
+        <Text style={[s.filaDetalle, { marginTop: espacio.m, color: colores.marinoOscuro }]}>Si entrás con Google o Microsoft, recuperá tu contraseña desde esa cuenta.</Text>
         {mensajes}
       </>
     );
@@ -235,7 +237,7 @@ export default function Login() {
           onPress={() => ejecutar('correo', () => entrarConCorreo(correo, clave))}
         />
         <Pressable onPress={() => cambiarModo('recuperar')} accessibilityRole="button" hitSlop={8} style={{ alignSelf: 'center', padding: espacio.s, marginTop: espacio.xs }}>
-          <Text style={s.enlace}>¿Olvidaste tu contraseña?</Text>
+          <Text style={[s.enlace, { color: colores.marino }]}>¿Olvidaste tu contraseña?</Text>
         </Pressable>
         {mensajes}
         {otrasCuentas}
@@ -368,6 +370,6 @@ const est = crearEstilos(() => ({
     paddingHorizontal: espacio.xl, paddingTop: espacio.xl + espacio.s,
   },
   separador: { flexDirection: 'row', alignItems: 'center', gap: espacio.m, marginVertical: espacio.l },
-  linea: { flex: 1, height: 1, backgroundColor: fondos.linea },
+  linea: { flex: 1, height: 1, backgroundColor: colores.regla },
   ojo: { position: 'absolute', right: 14, top: 38 },
 }));
