@@ -125,7 +125,8 @@ export default function HorarioClasesAdmin() {
     const texto = elegido != null
       ? `Este PDF trae hojas de los planes ${cuales}. Ahora ves las del plan ${elegido}: guardalo y, para otro plan, subí el mismo PDF en un horario nuevo y elegí ese plan.`
       : `Este PDF trae hojas de los planes ${cuales}, que no están cargados en esta carrera: revisá que sea la carrera correcta.`;
-    setAviso((v) => (v && !v.startsWith('Este PDF trae hojas') ? `${v} ${texto}` : v?.includes('El escaneo') ? `${v.split(' Este PDF trae hojas')[0]} ${texto}` : texto));
+    // Se suma al aviso que ya hubiera (escaneo borroso), reemplazando el de planes anterior.
+    setAviso((v) => [v?.split('Este PDF trae hojas')[0].trim(), texto].filter(Boolean).join(' '));
   }, [planesDoc, planes]);
 
   useEffect(() => {
