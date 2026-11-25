@@ -181,6 +181,44 @@ export async function cambiarClave(nueva: string): Promise<string | null> {
   return error ? traducirErrorClave(error.message) : null;
 }
 
+/** Dirección del enlace del correo para recuperar el PIN. */
+export const urlEnlacePin = () => Linking.createURL('auth/pin');
+
+const paraPin = (m: string) => m.replace('"¿Olvidaste tu contraseña?"', '"¿Olvidaste tu PIN?"');
+
+/**
+ * Manda a la cuenta con la que hay sesión un enlace de un solo uso para
+ * recuperar el PIN. No crea cuentas. El enlace solo sirve en este mismo
+ * celular (PKCE: el verificador queda guardado acá).
+ */
+export async function pedirEnlacePin(correo: string): Promise<string | null> {
+  const { error } = await supabase.auth.signInWithOtp({
+    email: correo.trim(),
+    options: { shouldCreateUser: false, emailRedirectTo: urlEnlacePin() },
+  });
+  return error ? paraPin(traducirErrorClave(error.message)) : null;
+}
+
+/**
+ * Canjea el código del enlace del PIN. Devuelve null si el enlace es de la
+ * MISMA cuenta de la sesión. Si es de otra cuenta, Supabase ya cambió la
+ * sesión: se cierra (como con Google de otra cuenta) y se devuelve el error.
+ */
+export async function confirmarConEnlace(code: string): Promise<string | null> {
+  const uidAntes = (await supabase.auth.getSession()).data.session?.user.id ?? null;
+  const e = await canjearCodigo(code);
+  if (e) return paraPin(traducirErrorClave(e));
+  const uid = (await supabase.auth.getSession()).data.session?.user.id ?? null;
+  if (!uidAntes || uid !== uidAntes) {
+    if (await salir()) {
+      await supabase.auth.signOut({ scope: 'local' }).catch(() => undefined);
+      await borrarPin().catch(() => {});
+    }
+    return 'Ese enlace es de otra cuenta. Cerramos la sesión por seguridad: entrá de nuevo con tu cuenta.';
+  }
+  return null;
+}
+
 /**
  * Confirma que quien tiene el celular es el dueño de la cuenta, para poder
  * crear un PIN nuevo si lo olvidó. Devuelve null si la contraseña es la de

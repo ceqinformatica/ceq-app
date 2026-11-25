@@ -20,7 +20,7 @@ const TITULOS: Record<Modo, string> = { crear: 'Crear PIN', cambiar: 'Cambiar PI
 /** Crear, cambiar o quitar el PIN de la app (desde Mi perfil > Seguridad). */
 export default function PantallaPin() {
   useTema();
-  const params = useLocalSearchParams<{ modo?: string }>();
+  const params = useLocalSearchParams<{ modo?: string; recuperar?: string }>();
   const modo: Modo = params.modo === 'cambiar' || params.modo === 'quitar' ? params.modo : 'crear';
   const [paso, setPaso] = useState<Paso>(modo === 'crear' ? 'nuevo' : 'actual');
   const [largoActual, setLargoActual] = useState<number | null>(null);
@@ -29,7 +29,8 @@ export default function PantallaPin() {
   const [trabado, setTrabado] = useState(false);
   const [ocupado, setOcupado] = useState(false);
   const [intento, setIntento] = useState(0);
-  const [recuperando, setRecuperando] = useState(false);
+  // recuperar=1: viene del enlace del correo (lo canjea ConfirmarCuenta).
+  const [recuperando, setRecuperando] = useState(params.recuperar === '1');
 
   useEffect(() => {
     largoPin().then((l) => {
