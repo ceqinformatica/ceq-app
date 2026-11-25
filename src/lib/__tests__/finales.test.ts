@@ -1,7 +1,7 @@
 /// <reference types="node" />
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { intentosDe, notaAprobada, notaDelLlamado, periodoDe, promedios, type IntentoFinal } from '../finales.ts';
+import { intentosDe, llamadosUsados, nombreLlamado, nombreSemestre, notaAprobada, notaDelLlamado, periodoDe, promedios, recuReguDespuesDeFinal, tituloResultado, type IntentoFinal } from '../finales.ts';
 import { calificacionFinal } from '../reglamento-fcq.ts';
 import type { EstadoEstudiante } from '../progreso.ts';
 
@@ -64,4 +64,33 @@ test('ejemplos de Josie: llamados vacíos no cuentan, los aplazos sí', () => {
   assert.equal(p.sinAplazos, 3.5); // (5 + 2) / 2
   assert.equal(p.conAplazos, 2.67); // (5 + 1 + 2) / 3
   assert.equal(p.aplazos, 1);
+});
+
+test('pendiente gasta un final; ausente no', () => {
+  const fs = [
+    { llamado: 1, tipo: 'pendiente' },
+    { llamado: 2, tipo: 'ausente' },
+    { llamado: 3, tipo: 'final' },
+  ];
+  assert.equal(llamadosUsados(fs), 2);
+});
+
+test('la Regu después de un final pendiente está fuera de orden; después de un ausente no', () => {
+  assert.ok(recuReguDespuesDeFinal([
+    { periodo: '2026-1', llamado: 1, tipo: 'pendiente' },
+    { periodo: '2026-1', llamado: 2, tipo: 'regularizacion' },
+  ]));
+  assert.equal(recuReguDespuesDeFinal([
+    { periodo: '2026-1', llamado: 1, tipo: 'ausente' },
+    { periodo: '2026-1', llamado: 2, tipo: 'regularizacion' },
+  ]), null);
+});
+
+test('nombres de semestre, llamado y resultado', () => {
+  assert.equal(nombreSemestre('2026-2'), 'Segundo semestre de 2026');
+  assert.equal(nombreLlamado(1), 'Primer llamado');
+  assert.equal(tituloResultado({ tipo: 'final', nota: 1 }), 'Aplazo · 1');
+  assert.equal(tituloResultado({ tipo: 'final', nota: 4 }), 'Aprobada · 4');
+  assert.equal(tituloResultado({ tipo: 'pendiente', nota: null }), 'Resultado pendiente');
+  assert.equal(tituloResultado({ tipo: 'regularizacion', nota: null }), 'Regu · Regularización');
 });

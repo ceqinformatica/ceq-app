@@ -2,13 +2,14 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Text, View } from 'react-native';
-import { nombreEstadoMateria, nombreNivel, SelectorEstado, type VistaMateria } from '../../components/academico';
+import { nombreEstadoMateria, nombreNivel, pct, SelectorEstado, type VistaMateria } from '../../components/academico';
 import { TarjetaFinales, TarjetaNotaNecesaria } from '../../components/finales';
 import { esSeminario } from '../../lib/finales';
 import { AvisoSinConexion, BarraSuperior, Boton, Campo, Cargando, EstadoVacio, Fila, Insignia, Mensaje, Pantalla, s, Seccion, Tarjeta } from '../../components/ui';
 import { useSesion } from '../../context/SesionProvider';
-import { aAsistencia, cargarFirmas, cargarMalla, deshacerRecursada, guardarEstadoMateria, guardarFirma, REGLA_POR_DEFECTO, reglaDe, tieneLab } from '../../datos/academico';
-import { evaluarFirma, promedioFirma } from '../../lib/firma';
+import { aAsistencia, aEvaluacion, cargarFirmas, cargarMalla, deshacerRecursada, guardarEstadoMateria, guardarFirma, REGLA_POR_DEFECTO, reglaDe, tieneLab } from '../../datos/academico';
+import { evaluarFirma, porcentajeEvaluacion, promedioFirma } from '../../lib/firma';
+import type { EvaluacionDb } from '../../lib/tipos-db';
 import { promedioGeneralFcq } from '../../lib/reglamento-fcq';
 import { usarDatos } from '../../datos/usarDatos';
 import { cumpleRequisito, requisitosFaltantes, seDesbloquean, type EstadoMateria } from '../../lib/progreso';
@@ -79,15 +80,20 @@ export default function DetalleMateria() {
   }, [malla, id]);
 
   const firmaGuardada = actual?.promedioFirma ?? null;
-  const estimar = vista === 'firmada' && !seminario && firmaGuardada == null;
+  const verParciales = vista === 'firmada' && !seminario;
+  const estimar = verParciales && firmaGuardada == null;
+  // Las evaluaciones cargadas, para la lista de la pestaña Parciales.
+  const [evaluaciones, setEvaluaciones] = useState<{ id: string; lista: EvaluacionDb[] } | null>(null);
 
   useEffect(() => {
-    if (!estimar || !malla || !id) return;
+    if (!verParciales || !malla || !id) return;
     let vivo = true;
     cargarFirmas([id])
       .then((firmas) => {
         const f = firmas.get(id);
         if (!vivo || !f) return;
+        setEvaluaciones({ id, lista: f.evaluacionesDb });
+        if (!estimar) return;
         const regla = reglaDe(malla.reglas, id) ?? REGLA_POR_DEFECTO;
         const r = evaluarFirma({
           regla,
@@ -106,17 +112,17 @@ export default function DetalleMateria() {
         const parcial = promedioGeneralFcq(r.teoria.actual, r.laboratorio?.actual ?? null);
         const debajo = [r.teoria, r.laboratorio].filter((c) => c != null && c.actual != null && c.actual < c.minimo) as { minimo: number }[];
         const aviso = r.teoria.imposible || r.laboratorio?.imposible
-          ? 'Con lo que llevás ya no llegás a la firma. Fijate en "Calcular mi firma" si te corresponde el Recu o la Regu.'
+          ? 'Con lo que llevás ya no llegás a la firma. Fijate en "Ver parciales" si te corresponde el Recu o la Regu.'
           : debajo.length
             ? `Con lo que llevás todavía no llegás a la firma (teoría ${r.teoria.minimo} %${r.laboratorio ? `, laboratorio ${r.laboratorio.minimo} %` : ''}). La tabla es para cuando firmes.`
             : undefined;
         setFirmaEstimada({ id, valor: promedioFirma(r, { recuperado: f.recuperado }) ?? (parcial == null ? null : Math.round(parcial + 1e-9)), aviso });
       })
-      .catch(() => vivo && setFirmaEstimada({ id, valor: null, error: true }));
+      .catch(() => vivo && estimar && setFirmaEstimada({ id, valor: null, error: true }));
     return () => {
       vivo = false;
     };
-  }, [estimar, malla, id]);
+  }, [verParciales, estimar, malla, id]);
   const notaNum = seminario || notaTxt.trim() === '' ? null : Number(notaTxt.replace(',', '.'));
   const notaValida = notaNum == null || (Number.isFinite(notaNum) && notaNum >= 1 && notaNum <= 5);
   // Deja de estar aprobada con un final aprobado cargado: ese final se borra al guardar.
@@ -192,7 +198,7 @@ export default function DetalleMateria() {
       {/* Finales: se cargan los finales; con uno aprobado la materia queda aprobada sola. */}
       {vista === 'finales' && !soloNota && (
         <>
-          <TarjetaFinales key={versionFinales} materiaId={materia.id} semestreOpuesto={actual?.semestreOpuesto} anioPlan={malla?.plan?.anio} firma={firmaGuardada} aprobada={actual?.estado === 'aprobada'} onGuardado={() => recargar()} />
+          <TarjetaFinales key={versionFinales} materiaId={materia.id} periodoFirma={actual?.periodo} semestreOpuesto={actual?.semestreOpuesto} anioPlan={malla?.plan?.anio} firma={firmaGuardada} aprobada={actual?.estado === 'aprobada'} onGuardado={() => recargar()} />
           {sinFinalesCargados && <Boton texto="La aprobé y no tengo los finales: cargar solo la nota" variante="fantasma" compacto onPress={() => elegirSoloNota(true)} />}
         </>
       )}
@@ -213,7 +219,7 @@ export default function DetalleMateria() {
         </>
       )}
 
-      {vista !== 'finales' && (
+      {vista !== 'finales' && !verParciales && (
         <>
           {finalesAprobados.length > 0 && (
             <Mensaje
@@ -226,9 +232,9 @@ export default function DetalleMateria() {
       )}
       {msg && <Mensaje texto={msg.texto} tipo={msg.tipo} />}
 
-      {/* Cursando: la calculadora de la firma. */}
+      {/* Cursando: los parciales y cuánto le falta para la firma. */}
       {vista === 'cursando' && !seminario && (
-        <Boton texto="Calcular mi firma" variante="secundario" icono="calculator-outline" onPress={() => router.push(`/firma/${materia.id}`)} />
+        <Boton texto="Ver parciales" variante="secundario" icono="calculator-outline" onPress={() => router.push(`/firma/${materia.id}`)} />
       )}
       {actual?.puedeDeshacerRecursada && vista === 'cursando' && (
         <Tarjeta estilo={{ marginTop: espacio.m }}>
@@ -268,9 +274,43 @@ export default function DetalleMateria() {
       )}
 
 
-      {/* Firma: una aproximación de cuánto necesita en el final para cada nota. */}
-      {vista === 'firmada' && !seminario && (
+      {/* Parciales: las evaluaciones, registrar la firma y cuánto necesita en el final. */}
+      {verParciales && (
         <>
+          <Seccion accion={{ texto: 'Ver y agregar', onPress: () => router.push(`/firma/${materia.id}`) }}>Evaluaciones</Seccion>
+          <Tarjeta estilo={{ paddingVertical: espacio.xs }} onPress={() => router.push(`/firma/${materia.id}`)} etiqueta="Ver y agregar evaluaciones">
+            {evaluaciones?.id !== materia.id ? (
+              <Text style={[s.filaDetalle, { paddingVertical: espacio.m }]}>Cargando…</Text>
+            ) : evaluaciones.lista.length === 0 ? (
+              <Text style={[s.filaDetalle, { paddingVertical: espacio.m }]}>Todavía no cargaste parciales. Tocá para agregarlos.</Text>
+            ) : (
+              evaluaciones.lista.map((e, i) => {
+                const p = porcentajeEvaluacion(aEvaluacion(e));
+                return (
+                  <View key={e.id} style={{ paddingVertical: espacio.m, borderTopWidth: i === 0 ? 0 : 1, borderTopColor: colores.lineaSuave }}>
+                    <Text style={s.filaTitulo}>{e.nombre}</Text>
+                    <Text style={s.filaDetalle}>{e.rendida && p != null ? pct(Math.round(p * 10) / 10) : 'Pendiente'}</Text>
+                  </View>
+                );
+              })
+            )}
+          </Tarjeta>
+          {guardado !== 'firmada' && (
+            <Boton
+              texto="Registrar firma obtenida"
+              icono="checkmark"
+              onPress={guardar}
+              cargando={guardando}
+              deshabilitado={!cambio}
+              estilo={{ marginTop: espacio.m }}
+            />
+          )}
+          {guardado !== 'firmada' && finalesAprobados.length > 0 && (
+            <Mensaje
+              tipo="info"
+              texto={`Al registrar la firma se borra ${finalesAprobados.length === 1 ? `el final aprobado que cargaste (nota ${finalesAprobados[0].nota})` : 'los finales aprobados que cargaste'} y deja de contar en tu promedio. Los aplazos se conservan.`}
+            />
+          )}
           <Seccion estilo={{ marginTop: espacio.l }}>¿Cuánto necesitás en el final?</Seccion>
           <TarjetaNotaNecesaria
             firma={firmaGuardada ?? (firmaEstimada?.id === materia.id ? firmaEstimada.valor : null)}
@@ -283,7 +323,6 @@ export default function DetalleMateria() {
               recargar();
             }}
           />
-          <Boton texto="Ver mi firma" variante="secundario" icono="calculator-outline" onPress={() => router.push(`/firma/${materia.id}`)} />
         </>
       )}
 

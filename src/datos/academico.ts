@@ -334,6 +334,7 @@ export async function guardarFinales(materiaId: string, periodo: string, llamado
     tipo: l.tipo ?? ('final' as const),
     nota: l.tipo && l.tipo !== 'final' ? null : l.nota,
     porcentaje: l.tipo && l.tipo !== 'final' ? null : l.porcentaje,
+    fecha: l.fecha ?? null,
   }));
   // Después de rendir un final ya no se rinde Recu ni Regu (en este semestre ni en los anteriores).
   const fueraDeOrden = (otros: { periodo: string | null; llamado: number | null; tipo?: string | null }[]) => {
@@ -347,7 +348,7 @@ export async function guardarFinales(materiaId: string, periodo: string, llamado
     if (otro && filas.some((f) => f.tipo !== 'final')) throw new Error('Ya usaste el Recu o la Regu en otro semestre de esta cursada. Se usa uno solo.');
     db.finales = db.finales.filter((f) => !(f.materia_id === materiaId && f.periodo === periodo && !f.cursada_anterior));
     const hoy = new Date().toISOString();
-    for (const f of filas) db.finales.push({ id: idDemo(), usuario_id: UID_DEMO, fecha: null, created_at: hoy, cursada_anterior: false, ...f });
+    for (const f of filas) db.finales.push({ id: idDemo(), usuario_id: UID_DEMO, created_at: hoy, cursada_anterior: false, ...f });
     // Igual que el trigger de la base.
     const notas = db.finales.filter((f) => f.materia_id === materiaId && (f.tipo ?? 'final') === 'final' && !f.cursada_anterior && f.nota != null).map((f) => f.nota as number);
     const mejor = Math.max(0, ...notas);
@@ -615,3 +616,44 @@ export function tipoEvaluacion(e: { componente: ComponenteDb; nombre: string }):
 
 /** La materia tiene laboratorio si el estudiante cargó al menos una nota de laboratorio. */
 export const tieneLab = (evals: { componente: ComponenteDb }[]) => evals.some((e) => e.componente === 'laboratorio');
+
+/** Una fila guardada como llamado para volver a guardarla tal cual. */
+const aLlamado = (f: ExamenFinalDb): LlamadoCargado => ({
+  llamado: f.llamado as 1 | 2 | 3,
+  tipo: f.tipo ?? 'final',
+  nota: f.nota,
+  porcentaje: f.porcentaje ?? null,
+  fecha: f.fecha,
+});
+
+/**
+ * Guarda un solo llamado de un periodo (el resultado de una mesa) sin tocar
+ * los demás. Con `reemplaza`, esa fila se quita antes (al editarla, aunque
+ * cambie de llamado o de semestre). Con `llamado` null solo se borra.
+ */
+export async function guardarUnLlamado(materiaId: string, periodo: string, llamado: LlamadoCargado | null, reemplaza?: ExamenFinalDb | null) {
+  const finales = (await cargarFinales(materiaId)).filter((f) => !f.cursada_anterior);
+  // Si la fila editada estaba en otro semestre, se saca de ahí primero.
+  if (reemplaza?.periodo && reemplaza.periodo !== periodo) {
+    await guardarFinales(materiaId, reemplaza.periodo, finales.filter((f) => f.periodo === reemplaza.periodo && f.llamado != null && f.id !== reemplaza.id).map(aLlamado));
+  }
+  const quedan = finales.filter((f) => f.periodo === periodo && f.llamado != null && f.id !== reemplaza?.id && f.llamado !== llamado?.llamado);
+  await guardarFinales(materiaId, periodo, [...quedan.map(aLlamado), ...(llamado ? [llamado] : [])]);
+}
+
+/**
+ * El Recu o la Regu cargado en Parciales usa un llamado de finales: queda en
+ * el historial de Finales (sin nota, conserva los 3 finales). Mueve el que
+ * ya estaba si cambió de semestre o de llamado; con `uso` null lo quita.
+ */
+export async function registrarLlamadoParcial(materiaId: string, uso: { tipo: 'recuperatorio' | 'regularizacion'; periodo: string; llamado: 1 | 2 } | null) {
+  const finales = (await cargarFinales(materiaId)).filter((f) => !f.cursada_anterior);
+  const anterior = finales.find((f) => f.tipo === 'recuperatorio' || f.tipo === 'regularizacion') ?? null;
+  if (!uso) {
+    if (anterior?.periodo) await guardarUnLlamado(materiaId, anterior.periodo, null, anterior);
+    return;
+  }
+  const ocupado = finales.find((f) => f.periodo === uso.periodo && f.llamado === uso.llamado && f.id !== anterior?.id);
+  if (ocupado) throw new Error('En ese llamado ya cargaste un resultado de final. Elegí otro llamado o cambiá ese resultado en Finales.');
+  await guardarUnLlamado(materiaId, uso.periodo, { llamado: uso.llamado, tipo: uso.tipo, nota: null, porcentaje: null }, anterior?.periodo ? anterior : null);
+}

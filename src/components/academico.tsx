@@ -106,8 +106,8 @@ export function resumenFirma(r: ResultadoFirma): string {
 export const nombreEstadoMateria = (e: EstadoMateria | 'bloqueada', nombre: string) => (e === 'firmada' ? 'Firma' : nombre);
 
 /**
- * Lo que se ve de una materia: los estados y, en vez de "Aprobada", la
- * pestaña "Finales" (ahí se cargan los finales; con uno aprobado la materia
+ * Lo que se ve de una materia: Pendiente, Cursando, Parciales (la firma) y,
+ * en vez de "Aprobada", la pestaña "Finales" (ahí se cargan los finales; con uno aprobado la materia
  * queda aprobada sola). Los seminarios no tienen firma ni final.
  */
 export type VistaMateria = EstadoMateria | 'finales';
@@ -126,7 +126,8 @@ export function SelectorEstado({ valor, onCambio, bloqueada, sinFirma }: {
     <View style={est.selector}>
       {opciones.map((o) => {
         const c = o === 'finales' ? FINALES_VISTA : coloresEstado[o];
-        const nombre = o === 'finales' ? 'Finales' : nombreEstadoMateria(o, c.nombre);
+        // La firma se consigue con los parciales: la pestaña se llama "Parciales".
+        const nombre = o === 'finales' ? 'Finales' : o === 'firmada' ? 'Parciales' : nombreEstadoMateria(o, c.nombre);
         const activo = o === valor;
         const deshabilitado = bloqueada && o !== 'pendiente' && !activo;
         return (
