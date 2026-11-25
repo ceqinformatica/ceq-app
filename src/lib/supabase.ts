@@ -17,6 +17,9 @@ export const supabase = createClient<Database>(url || 'https://sin-configurar.su
     persistSession: true,
     detectSessionInUrl: false,
     flowType: 'pkce',
+    // Cada enlace trae el id de su flujo (sb_flow_id): así el enlace del PIN
+    // no depende de que no se haya empezado otro inicio de sesión después.
+    experimental: { appendPkceFlowIdToRedirects: true },
   },
 });
 

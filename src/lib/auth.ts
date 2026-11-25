@@ -5,6 +5,7 @@ import { supabase } from './supabase';
 import { olvidarEsteCelular } from './notificaciones';
 import { desactivarBiometria } from './biometria';
 import { borrarPin } from './pinGuardado';
+import { leerEnlacePin, olvidarEnlacePin, procesarEnlacePin } from './enlace-pin';
 import { resultadoGoogle, traducirErrorClave } from './recuperacion';
 import { NOMBRE_PROVEEDOR, proveedoresVisibles, resultadoRegistro, type Proveedor } from './acceso';
 
@@ -109,10 +110,10 @@ async function entrarConNavegador(proveedor: Proveedor): Promise<string | null> 
  * porque el segundo intento fallaría y mostraría un error falso.
  */
 const canjes = new Map<string, Promise<string | null>>();
-export function canjearCodigo(code: string): Promise<string | null> {
+export function canjearCodigo(code: string, flowId: string | null = null): Promise<string | null> {
   let canje = canjes.get(code);
   if (!canje) {
-    canje = supabase.auth.exchangeCodeForSession(code).then(({ error }) => (error ? error.message : null));
+    canje = supabase.auth.exchangeCodeForSession(code, flowId ? { flowId } : undefined).then(({ error }) => (error ? error.message : null));
     canjes.set(code, canje);
   }
   return canje;
@@ -179,6 +180,52 @@ export async function pedirRecuperarClave(correo: string): Promise<string | null
 export async function cambiarClave(nueva: string): Promise<string | null> {
   const { error } = await supabase.auth.updateUser({ password: nueva });
   return error ? traducirErrorClave(error.message) : null;
+}
+
+/** Dirección del enlace del correo para recuperar el PIN. */
+export const urlEnlacePin = () => Linking.createURL('auth/pin');
+
+const paraPin = (m: string) => m.replace('"¿Olvidaste tu contraseña?"', '"¿Olvidaste tu PIN?"');
+
+/**
+ * Manda a la cuenta con la que hay sesión un enlace de un solo uso para
+ * recuperar el PIN. No crea cuentas. El enlace solo sirve en este mismo
+ * celular (PKCE: el verificador queda guardado acá).
+ */
+export async function pedirEnlacePin(correo: string): Promise<string | null> {
+  const { error } = await supabase.auth.signInWithOtp({
+    email: correo.trim(),
+    options: { shouldCreateUser: false, emailRedirectTo: urlEnlacePin() },
+  });
+  return error ? paraPin(traducirErrorClave(error.message)) : null;
+}
+
+/**
+ * Canjea el código del enlace del PIN. Devuelve null si el enlace es de la
+ * MISMA cuenta de la sesión. Si es de otra cuenta, Supabase ya cambió la
+ * sesión: se cierra (como con Google de otra cuenta) y se devuelve el error.
+ */
+export async function confirmarConEnlace(code: string, flowId: string | null = null): Promise<string | null> {
+  const uidAntes = (await supabase.auth.getSession()).data.session?.user.id ?? null;
+  // Sin sesión no hay PIN que recuperar: no se canjea (abriría otra sesión).
+  if (!uidAntes) return 'Abrí el enlace con la sesión iniciada en este celular.';
+  const e = await canjearCodigo(code, flowId);
+  if (e) return paraPin(traducirErrorClave(e));
+  const uid = (await supabase.auth.getSession()).data.session?.user.id ?? null;
+  if (uid !== uidAntes) {
+    if (await salir()) {
+      await supabase.auth.signOut({ scope: 'local' }).catch(() => undefined);
+      await borrarPin().catch(() => {});
+    }
+    return 'Ese enlace es de otra cuenta. Cerramos la sesión por seguridad: entrá de nuevo con tu cuenta.';
+  }
+  return null;
+}
+
+/** Si la dirección es un enlace de recuperar PIN, lo canjea (una sola vez por código). */
+export function recibirEnlacePin(url: string | null | undefined) {
+  const e = leerEnlacePin(url);
+  if (e) void procesarEnlacePin(e, confirmarConEnlace);
 }
 
 /**
@@ -255,6 +302,7 @@ export async function salir(): Promise<string | null> {
     return 'No pudimos cerrar la sesión: revisá tu conexión e intentá de nuevo.';
   }
   await cerrarGoogleNativo();
+  olvidarEnlacePin();
   // El PIN es de esta cuenta en este dispositivo: así, si alguien lo olvidó,
   // cierra sesión, vuelve a entrar con Google y puede crear otro.
   await borrarPin().catch(() => {});

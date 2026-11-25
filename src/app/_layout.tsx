@@ -4,7 +4,8 @@ import { router, Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { alFallarSalida } from '../lib/auth';
+import * as Linking from 'expo-linking';
+import { alFallarSalida, recibirEnlacePin } from '../lib/auth';
 import { ActivityIndicator, AppState, Image, Platform, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Bloqueo } from '../components/Bloqueo';
@@ -155,6 +156,13 @@ function Navegacion() {
 }
 
 export default function RootLayout() {
+  // El enlace del correo para recuperar el PIN se canjea acá, siempre montado:
+  // así no se pierde si la app se bloquea o si todavía no hay pantalla esperando.
+  useEffect(() => {
+    Linking.getInitialURL().then(recibirEnlacePin).catch(() => {});
+    const sub = Linking.addEventListener('url', ({ url }) => recibirEnlacePin(url));
+    return () => sub.remove();
+  }, []);
   useOrientacionPorDispositivo();
   const tema = useCargarPreferenciaTema();
   const [fuentesListas, errorFuentes] = useFonts({ Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold });

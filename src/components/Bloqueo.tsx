@@ -4,6 +4,7 @@ import { Pressable, ScrollView, Text, View, type ViewStyle } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSesion } from '../context/SesionProvider';
 import { salir } from '../lib/auth';
+import { escucharResultadoPin, resultadoPin } from '../lib/enlace-pin';
 import { biometriaActiva, biometriaDisponible } from '../lib/biometria';
 import { problemaPin } from '../lib/pin';
 import { esperaPin, largoPin, reiniciarIntentosPin } from '../lib/pinGuardado';
@@ -28,6 +29,17 @@ export function Bloqueo() {
   const [espera, setEspera] = useState(0);
   const [bloqueoTotal, setBloqueoTotal] = useState(false);
   const [intento, setIntento] = useState(0);
+
+  // Llegó (o se está canjeando) el enlace del correo para recuperar el PIN:
+  // se abre "¿Olvidaste tu PIN?", que toma el resultado. También si llegó
+  // justo antes de que la app se bloqueara.
+  useEffect(() => {
+    const ver = () => {
+      if (resultadoPin()) setVista((v) => (v === 'pin' ? 'recuperar' : v));
+    };
+    ver();
+    return escucharResultadoPin(ver);
+  }, []);
   const [comprobando, setComprobando] = useState(false);
 
   const conBiometria = useCallback(async () => {

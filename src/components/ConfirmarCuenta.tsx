@@ -1,9 +1,10 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { useSesion } from '../context/SesionProvider';
 import { db as demo, MODO_DEMO } from '../datos/demo';
-import { confirmarConClave, confirmarConProveedor, salir } from '../lib/auth';
+import { confirmarConClave, confirmarConEnlace, confirmarConProveedor, pedirEnlacePin, salir } from '../lib/auth';
+import { abrirPantallaPin, escucharResultadoPin, tomarResultadoPin } from '../lib/enlace-pin';
 import type { Proveedor } from '../lib/acceso';
 import { BotonProveedor } from './BotonProveedor';
 import { biometriaActiva, biometriaDisponible, verificarIdentidad } from '../lib/biometria';
@@ -13,8 +14,9 @@ import { Boton, Campo, Mensaje, s } from './ui';
 
 /**
  * "Olvidé mi PIN": la persona confirma que es la dueña de la cuenta (con la
- * huella del celular, con Google o con la contraseña de su cuenta) y después
- * puede crear un PIN nuevo. No se borra ningún dato.
+ * huella del celular, con un enlace al correo de la cuenta, con Google o
+ * Microsoft, o con la contraseña) y después puede crear un PIN nuevo. No se
+ * borra ningún dato. El enlace del correo solo sirve en este mismo celular.
  */
 export function ConfirmarCuenta({ onConfirmado, onCancelar }: { onConfirmado: () => void; onCancelar: () => void }) {
   const { sesion } = useSesion();
@@ -22,7 +24,8 @@ export function ConfirmarCuenta({ onConfirmado, onCancelar }: { onConfirmado: ()
   const [huella, setHuella] = useState<string | null>(null);
   const [clave, setClave] = useState('');
   const [verClave, setVerClave] = useState(false);
-  const [cargando, setCargando] = useState<'huella' | Proveedor | 'clave' | null>(null);
+  const [cargando, setCargando] = useState<'huella' | Proveedor | 'clave' | 'enlace' | 'pedir' | null>(null);
+  const [enviado, setEnviado] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // La huella sirve solo si la persona ya la usa para abrir la app.
@@ -32,13 +35,61 @@ export function ConfirmarCuenta({ onConfirmado, onCancelar }: { onConfirmado: ()
       .catch(() => setHuella(null));
   }, []);
 
-  const intentar = async (tipo: 'huella' | Proveedor | 'clave', accion: () => Promise<string | null>) => {
+  const intentar = async (tipo: 'huella' | Proveedor | 'clave' | 'enlace', accion: () => Promise<string | null>) => {
     setCargando(tipo);
     setError(null);
     const r = await accion().catch(() => 'No se pudo confirmar. Probá de nuevo.');
     setCargando(null);
     if (r === null) onConfirmado();
     else if (r !== 'cancelado') setError(r);
+  };
+
+  // El enlace del correo puede llegar con esta pantalla abierta (o haber
+  // llegado antes de abrirla): se canjea y, si es de esta cuenta, sigue.
+  const confirmarRef = useRef(onConfirmado);
+  confirmarRef.current = onConfirmado;
+  useEffect(() => {
+    const atender = () => {
+      const r = tomarResultadoPin();
+      if (!r) return;
+      if (r.tipo === 'canjeando') {
+        setEnviado(true);
+        setCargando('enlace');
+        return;
+      }
+      setCargando(null);
+      if (r.tipo === 'confirmado') confirmarRef.current();
+      else setError(r.mensaje);
+    };
+    const cerrar = abrirPantallaPin();
+    atender();
+    const dejar = escucharResultadoPin(atender);
+    return () => {
+      dejar();
+      cerrar();
+    };
+  }, []);
+
+  // Demo: el enlace "llega" solo; se cancela si se cierra la pantalla.
+  const demoRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (demoRef.current) clearTimeout(demoRef.current);
+  }, []);
+
+  const pedirEnlace = async () => {
+    setCargando('pedir');
+    setError(null);
+    if (MODO_DEMO) {
+      await new Promise((r) => setTimeout(r, 400));
+      setCargando(null);
+      setEnviado(true);
+      demoRef.current = setTimeout(() => confirmarRef.current(), 1200);
+      return;
+    }
+    const r = await pedirEnlacePin(metodos.correo ?? '').catch(() => 'No se pudo mandar el correo. Probá de nuevo.');
+    setCargando(null);
+    if (r) setError(r);
+    else setEnviado(true);
   };
 
   const conHuella = () =>
@@ -54,7 +105,7 @@ export function ConfirmarCuenta({ onConfirmado, onCancelar }: { onConfirmado: ()
       return confirmarConClave(metodos.correo ?? '', clave);
     });
 
-  const ninguno = !huella && !conOtraCuenta && !metodos.clave;
+  const ninguno = !huella && !conOtraCuenta && !metodos.clave && !metodos.correo;
 
   return (
     <View>
@@ -76,6 +127,30 @@ export function ConfirmarCuenta({ onConfirmado, onCancelar }: { onConfirmado: ()
         />
       )}
 
+      {metodos.correo && (
+        <View style={{ marginTop: huella ? espacio.s : 0, marginBottom: espacio.s }}>
+          <Text style={[s.filaDetalle, { marginBottom: espacio.s }]} numberOfLines={1}>
+            Cuenta: <Text style={{ fontFamily: fuentes.semibold, color: colores.marino }}>{correoEnmascarado(metodos.correo)}</Text>
+          </Text>
+          {enviado ? (
+            <Mensaje
+              tipo="exito"
+              texto={cargando === 'enlace'
+                ? 'Comprobando el enlace…'
+                : `Te mandamos un enlace a ${correoEnmascarado(metodos.correo)}. Abrilo desde este celular para elegir un PIN nuevo. Revisá también la carpeta de spam. Si pedís otro, el anterior deja de servir.`}
+            />
+          ) : null}
+          <Boton
+            texto={enviado ? 'Mandar otro enlace' : 'Mandarme un enlace por correo'}
+            icono="mail-outline"
+            variante={huella ? 'secundario' : 'primario'}
+            onPress={pedirEnlace}
+            cargando={cargando === 'pedir' || cargando === 'enlace'}
+            deshabilitado={cargando != null}
+          />
+        </View>
+      )}
+
       {(['google', 'microsoft'] as const).map((p) =>
         metodos[p] ? (
           <BotonProveedor key={p} proveedor={p} accion="Confirmar" onPress={() => conProveedor(p)} cargando={cargando === p} deshabilitado={cargando != null} />
@@ -83,11 +158,8 @@ export function ConfirmarCuenta({ onConfirmado, onCancelar }: { onConfirmado: ()
       )}
 
       {metodos.clave && (
-        <View style={{ marginTop: huella || conOtraCuenta ? espacio.l : 0 }}>
-          {(huella || conOtraCuenta) && <Text style={[s.filaDetalle, { textAlign: 'center', marginBottom: espacio.m }]}>o con la contraseña de tu cuenta</Text>}
-          <Text style={[s.filaDetalle, { marginBottom: espacio.s }]} numberOfLines={1}>
-            Cuenta: <Text style={{ fontFamily: fuentes.semibold, color: colores.marino }}>{correoEnmascarado(metodos.correo)}</Text>
-          </Text>
+        <View style={{ marginTop: espacio.l }}>
+          {(huella || conOtraCuenta || metodos.correo) && <Text style={[s.filaDetalle, { textAlign: 'center', marginBottom: espacio.m }]}>o con la contraseña de tu cuenta</Text>}
           <View>
             <Campo
               etiqueta="Contraseña"
@@ -109,7 +181,7 @@ export function ConfirmarCuenta({ onConfirmado, onCancelar }: { onConfirmado: ()
       {ninguno && <Mensaje tipo="info" texto="No encontramos otra forma de confirmar tu cuenta. Cerrá sesión y volvé a entrar para crear un PIN nuevo." />}
       <Mensaje texto={error} />
 
-      <Boton texto="Volver al PIN" variante="fantasma" onPress={onCancelar} deshabilitado={cargando != null} estilo={{ marginTop: espacio.s }} />
+      <Boton texto="Volver al PIN" variante="fantasma" onPress={onCancelar} deshabilitado={cargando != null && cargando !== 'enlace'} estilo={{ marginTop: espacio.s }} />
       <Pressable onPress={async () => setError(await salir())} accessibilityRole="button" style={{ alignSelf: 'center', padding: espacio.s }}>
         <Text style={[s.filaDetalle, { textAlign: 'center' }]}>
           ¿Tampoco podés entrar a tu cuenta? <Text style={s.enlace}>Cerrar sesión</Text>
