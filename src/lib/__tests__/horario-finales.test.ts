@@ -159,3 +159,23 @@ test('largo del flujo en otro objeto con número de 2 dígitos', () => {
     `12 0 obj\n${flujo.length}\nendobj\n%%EOF`].join('');
   assert.equal(textoDePdfGeneral(new Uint8Array(Buffer.from(pdf, 'latin1'))), 'Microbiologia 07/12/2026');
 });
+
+test('dos materias en un renglón: cada fecha queda con la materia que la precede', () => {
+  const materias = ['Química General', 'Matemática I'];
+  const r = leerHorarioFinales('Química General 01/12/2026 08/12/2026 Matemática I 15/12/2026', materias, REF);
+  assert.deepEqual(resumen(r), [
+    'Química General|1|2026-12-01|null',
+    'Química General|2|2026-12-08|null',
+    'Matemática I|1|2026-12-15|null',
+  ]);
+  assert.deepEqual(r.sinUsar, []);
+});
+
+test('dos materias en un renglón: una fecha antes de la primera materia queda para revisar', () => {
+  const materias = ['Química General', 'Matemática I'];
+  const r = leerHorarioFinales('20/11/2026 Química General 01/12/2026 Matemática I 15/12/2026', materias, REF);
+  assert.ok(resumen(r).includes('null|1|2026-11-20|null'));
+  assert.ok(resumen(r).includes('Química General|1|2026-12-01|null'));
+  assert.ok(resumen(r).includes('Matemática I|1|2026-12-15|null'));
+  assert.equal(r.sinUsar.length, 1);
+});

@@ -123,3 +123,24 @@ test('optativas debajo de los niveles', () => {
   assert.deepEqual(conOpt.optativas, { aprobadas: 1, total: 1, promedio: 4.5 });
   assert.equal(calcularEstadisticas(materias.filter((m) => !m.grupoOptativaId), [], estados, intentos).optativas, null);
 });
+
+test('una materia devuelta a firmada no cuenta su aprobado en ningún dato', () => {
+  const ms: Materia[] = [
+    { id: 'x', nombre: 'Química General', semestre: 1, creditos: 6 },
+    { id: 'y', nombre: 'Matemática I', semestre: 1, creditos: 6 },
+  ];
+  const es = est({ x: { estado: 'firmada' }, y: { estado: 'aprobada', notaFinal: 4 } });
+  const is: IntentoFinal[] = [
+    { materiaId: 'x', nota: 5, periodo: '2025-1', llamado: 1 },
+    { materiaId: 'y', nota: 4, periodo: '2025-1', llamado: 1 },
+  ];
+  const r = calcularEstadisticas(ms, [], es, is, 'creditos');
+  assert.equal(r.promedio, 4);
+  assert.equal(r.promedioConAplazos, 4);
+  assert.equal(r.promedioPonderado, 4);
+  assert.deepEqual(r.distribucion.find((d) => d.nota === 5)?.cantidad, 0);
+  assert.equal(r.porNivel[0].promedio, 4);
+  assert.equal(r.finalesAprobados, 1);
+  assert.equal(r.porPeriodo[0].promedio, 4);
+  assert.equal(notasAprobadas(ms, es, is).has('x'), false);
+});
