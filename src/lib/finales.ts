@@ -112,9 +112,14 @@ export interface LlamadoCargado {
   tipo?: TipoExamen;
   /** Porcentaje del examen final (0 a 100), si lo cargó así. */
   porcentaje: number | null;
-  /** Nota del llamado (1 a 5); null si se usó para regularizar. */
+  /** Nota del llamado (1 a 5); null si se usó para regularizar, espera la nota o estuvo ausente. */
   nota: number | null;
+  /** Día del examen (AAAA-MM-DD), opcional. */
+  fecha?: string | null;
 }
+
+/** Final rendido: con nota o esperando la nota. Gasta uno de los 3 llamados de la materia. */
+export const esFinalRendido = (tipo: string | null | undefined) => (tipo ?? 'final') === 'final' || tipo === 'pendiente';
 
 /**
  * Nota de un llamado: con el porcentaje del final y el promedio de firma
@@ -225,7 +230,9 @@ export function recuReguDespuesDeFinal<T extends { periodo: string | null; llama
   let rindioFinal = false;
   for (const l of orden) {
     const tipo = l.tipo ?? 'final';
-    if (tipo === 'final') rindioFinal = true;
+    // Estar ausente no es rendir: no cambia nada.
+    if (tipo === 'ausente') continue;
+    if (esFinalRendido(tipo)) rindioFinal = true;
     else if (rindioFinal) return l;
   }
   return null;
@@ -234,9 +241,12 @@ export function recuReguDespuesDeFinal<T extends { periodo: string | null; llama
 /** Llamados por materia: se comparten entre el semestre normal y el opuesto. */
 export const LLAMADOS_POR_MATERIA = 3;
 
-/** Finales rendidos en la cursada actual. El Recu y la Regu son parciales: no gastan un final. */
+/**
+ * Finales rendidos en la cursada actual (con nota o esperando la nota). El
+ * Recu y la Regu son parciales y estar ausente no es rendir: no gastan un final.
+ */
 export function llamadosUsados(finales: { llamado?: number | null; tipo?: string | null; cursada_anterior?: boolean | null }[]): number {
-  return finales.filter((f) => f.llamado != null && !f.cursada_anterior && (f.tipo ?? 'final') === 'final').length;
+  return finales.filter((f) => f.llamado != null && !f.cursada_anterior && esFinalRendido(f.tipo)).length;
 }
 
 export type MotivoSinOpuesto = 'llamados' | 'aplazos' | 'vencida' | 'aprobada' | 'plan';
@@ -274,3 +284,23 @@ export const TEXTO_SIN_OPUESTO: Record<MotivoSinOpuesto, string> = {
   aprobada: 'Ya aprobaste esta materia.',
   plan: 'Las materias del plan 2018 no se ofrecen en semestre opuesto (Art. 23).',
 };
+
+/** "2026-2" → "Segundo semestre de 2026". */
+export function nombreSemestre(p: string): string {
+  const [anio, n] = p.split('-');
+  return `${n === '1' ? 'Primer' : 'Segundo'} semestre de ${anio}`;
+}
+
+/** 1 → "Primer llamado". */
+export const nombreLlamado = (n: number) => `${['Primer', 'Segundo', 'Tercer'][n - 1] ?? `${n}.º`} llamado`;
+
+/** Cómo se ve un resultado en el historial de Finales. */
+export function tituloResultado(f: { tipo?: string | null; nota: number | null }): string {
+  switch (f.tipo ?? 'final') {
+    case 'pendiente': return 'Resultado pendiente';
+    case 'ausente': return 'Ausente';
+    case 'regularizacion': return 'Regu · Regularización';
+    case 'recuperatorio': return 'Recu · Recuperación';
+    default: return f.nota != null && f.nota >= 2 ? `Aprobada · ${f.nota}` : `Aplazo · ${f.nota ?? 1}`;
+  }
+}

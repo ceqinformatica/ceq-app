@@ -108,8 +108,12 @@ export type SugerenciaDb = {
 export type EncuestaDb = { id: string; pregunta: string; abierta: boolean; cierra_en: string | null; created_at: string; resultados_publicos: boolean }
 export type OpcionEncuestaDb = { id: string; encuesta_id: string; texto: string; orden: number }
 export type YaVotaronDb = { encuesta_id: string; usuario_id: string }
-/** Para qué se usó un llamado: final, regularización (1.º o 2.º) o recuperatorio (1.º). */
-export type TipoExamen = 'final' | 'regularizacion' | 'recuperatorio';
+/**
+ * Para qué se usó un llamado: final (con nota), regularización (1.º o 2.º),
+ * recuperatorio (1.º), final rendido esperando la nota ('pendiente') o
+ * ausente a la mesa ('ausente'). Solo 'final' lleva nota.
+ */
+export type TipoExamen = 'final' | 'regularizacion' | 'recuperatorio' | 'pendiente' | 'ausente';
 export type ExamenFinalDb = {
   id: string; usuario_id: string; materia_id: string; periodo: string | null; llamado: number | null; fecha: string | null;
   nota: number | null; created_at: string; porcentaje?: number | null;
@@ -196,6 +200,7 @@ export type Database = {
       votar: { Args: { p_encuesta: string; p_opcion: string }; Returns: undefined };
       recursar_materia: { Args: { p_materia: string }; Returns: undefined };
       cursar_semestre_opuesto: { Args: { p_materia: string }; Returns: undefined };
+      guardar_llamados: { Args: { p_materia: string; p_periodos: string[]; p_filas: unknown[] }; Returns: undefined };
       deshacer_recursada: { Args: { p_materia: string }; Returns: undefined };
       es_admin: { Args: Record<string, never>; Returns: boolean };
       registrar_dispositivo: { Args: { p_token: string; p_plataforma?: string | null }; Returns: undefined };

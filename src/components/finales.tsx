@@ -1,44 +1,36 @@
 /**
- * Tarjeta de finales de una materia: los tres llamados de un periodo.
+ * Finales de una materia (rediseño de Josie, 2026-11-25): un resumen de
+ * cómo va ("Mis finales", "Resultado pendiente", "Recursada pendiente"…),
+ * los aplazos registrados, el botón para registrar el resultado de una mesa
+ * y el historial de todo lo que rindió.
  *
- * Cada llamado se marca como "No rendí", "Final", "Recu" (recuperatorio,
- * solo 1.er llamado) o "Regu" (regularización, 1.º o 2.º llamado). Recu y
- * Regu: uno solo por cursada (Regu si faltó a un parcial; Recu si no).
- * Con el promedio de firma guardado, en un final se carga el porcentaje
- * del examen y la nota sale sola (0,4 × firma + 0,6 × final, Art. 57); sin
- * firma, o si lo prefiere, se carga la nota directo.
+ * Cada resultado se carga en una hoja: semestre, llamado y qué pasó en esa
+ * mesa (rendí y tengo la nota, rendí y espero la nota, estuve ausente). Con
+ * el promedio de firma guardado, el final se carga en porcentaje y la nota
+ * sale sola (0,4 × firma + 0,6 × final, Art. 57); si no, la nota directa.
  *
- * Un llamado usado para la regularización (Art. 40–41) no lleva nota y no
- * cuenta para los promedios. Con tres aplazos en la cursada actual hay que
- * volver a cursar (Art. 62): recién ahí la tarjeta ofrece recursar (se
- * puede deshacer desde la materia), que
- * conserva el laboratorio (Art. 45).
+ * El Recu y la Regu se cargan en Parciales: acá aparecen en el historial
+ * y no gastan un final. Con tres aplazos en la cursada (Art. 62) o la firma
+ * vencida hay que volver a cursar: el botón pasa a "Recursar materia" (se
+ * puede deshacer desde la materia). El laboratorio se conserva (Art. 45).
  */
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useEffect, useMemo, useState } from 'react';
+import { router } from 'expo-router';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
-import { cargarFinales, guardarFinales, guardarFirma } from '../datos/academico';
-import { VolverACursar } from './volver-a-cursar';
-import { aplazosDeLaCursada, firmaVencida, LLAMADOS_POR_MATERIA, llamadosUsados, notaDelLlamado, periodoDe, recuReguDespuesDeFinal, type LlamadoCargado } from '../lib/finales';
+import { cargarFinales, guardarFirma, guardarUnLlamado, recursarMateria } from '../datos/academico';
+import { sinOpuestoEnPlan, VolverACursar } from './volver-a-cursar';
+import {
+  aplazosDeLaCursada, firmaVencida, LLAMADOS_POR_MATERIA, llamadosUsados, nombreLlamado, nombreSemestre, notaDelLlamado, periodoDe,
+  periodosParaFinales, semestreOpuesto as calcularOpuesto, tituloResultado, type LlamadoCargado,
+} from '../lib/finales';
 import { calificacionFinal, CONCEPTO, FINAL_MINIMO, finalesNecesarios, finalNecesario, type Nota } from '../lib/reglamento-fcq';
 import type { ExamenFinalDb } from '../lib/tipos-db';
-import { colores, espacio, fondos, fuentes } from '../tema';
+import { colores, espacio, fondos, fuentes, radio } from '../tema';
 import { pct } from './academico';
-import { Boton, Campo, Mensaje, s, Segmentado, Tarjeta } from './ui';
+import { Boton, Campo, Hoja, Mensaje, Opcion, s, Segmentado, Tarjeta } from './ui';
+import { vibrar } from './movimiento';
 import { textoError } from '../lib/errores';
-
-const LLAMADOS = [1, 2, 3] as const;
-const NOMBRE_LLAMADO = { 1: '1.er llamado', 2: '2.º llamado', 3: '3.er llamado' } as const;
-type Tipo = 'no' | 'final' | 'recu' | 'regu';
-const TEXTO_TIPO: Record<Tipo, string> = { no: 'No rendí', final: 'Final', recu: 'Recu', regu: 'Regu' };
-// El recuperatorio solo se rinde en el 1.er llamado; la regularización, en el 1.º o el 2.º.
-const TIPOS_DEL_LLAMADO: Record<1 | 2 | 3, Tipo[]> = {
-  1: ['no', 'final', 'recu', 'regu'],
-  2: ['no', 'final', 'regu'],
-  3: ['no', 'final'],
-};
-const A_DB = { recu: 'recuperatorio', regu: 'regularizacion' } as const;
-const esRecuORegu = (t: Tipo) => t === 'recu' || t === 'regu';
 
 /** Porcentaje con dos decimales: junto al límite de aprobación, uno solo engaña (65,84 se vería 65,8). */
 const pct2 = (n: number) => `${Number.isInteger(n) ? n : n.toFixed(2).replace('.', ',').replace(/0$/, '')} %`;
@@ -51,21 +43,30 @@ const firmaValida = (t: string) => {
   return f != null && Number.isFinite(f) && f >= 0 && f <= 100;
 };
 
-/** Periodo anterior: "2026-1" → "2025-2". */
-function anterior(p: string): string {
-  const [a, n] = p.split('-').map(Number);
-  return n === 2 ? `${a}-1` : `${a - 1}-2`;
-}
+const fechaValida = (t: string) => {
+  if (!t.trim()) return true;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(t.trim())) return false;
+  const d = new Date(`${t.trim()}T12:00:00`);
+  return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === t.trim();
+};
 
-const nombrePeriodo = (p: string) => `${p.split('-')[1]}.º semestre ${p.split('-')[0]}`;
+const esParcialEnFinales = (f: Pick<ExamenFinalDb, 'tipo'>) => f.tipo === 'recuperatorio' || f.tipo === 'regularizacion';
 
-export function TarjetaFinales({ materiaId, firma: firmaGuardadaEnMateria, aprobada, onGuardado, semestreOpuesto, anioPlan, sinResumenFirma }: {
+/** Del más nuevo al más viejo. */
+const ordenHistorial = (a: ExamenFinalDb, b: ExamenFinalDb) =>
+  (b.periodo ?? '').localeCompare(a.periodo ?? '') || (b.llamado ?? 0) - (a.llamado ?? 0) || b.created_at.localeCompare(a.created_at);
+
+type QuePaso = 'nota' | 'espera' | 'ausente';
+/** Hoja de resultado: null cerrada; `fila` null para uno nuevo. */
+type HojaAbierta = { fila: ExamenFinalDb | null } | null;
+
+export function TarjetaFinales({ materiaId, firma: firmaGuardadaEnMateria, aprobada, onGuardado, semestreOpuesto, anioPlan, periodoFirma }: {
   materiaId: string;
-  /** La firma (y el campo para cargarla) ya está arriba, en la tabla de notas. */
-  sinResumenFirma?: boolean;
   /** Cursa en el semestre opuesto: sin Recu y con los llamados que le quedan. */
   semestreOpuesto?: boolean;
   anioPlan?: number | null;
+  /** Semestre en que firmó (para ofrecer los semestres de finales). */
+  periodoFirma?: string | null;
   /** Promedio de firma guardado (0 a 100), o null. */
   firma: number | null;
   /** Ya aprobada: no se ofrece volver a cursar. */
@@ -76,308 +77,454 @@ export function TarjetaFinales({ materiaId, firma: firmaGuardadaEnMateria, aprob
   // La firma recién guardada acá aparece al toque, sin esperar la recarga.
   const [firmaNueva, setFirmaNueva] = useState<number | null>(null);
   const firma = firmaGuardadaEnMateria ?? firmaNueva;
-  const [todos, setFinales] = useState<ExamenFinalDb[] | null>(null);
-  // Solo los de la cursada actual: los de antes de recursar no se editan.
-  const finales = useMemo(() => todos?.filter((f) => !f.cursada_anterior) ?? null, [todos]);
-  const anteriores = useMemo(() => todos?.filter((f) => f.cursada_anterior && f.nota != null) ?? [], [todos]);
-  const [periodo, setPeriodo] = useState(periodoDe());
-  const [tipos, setTipos] = useState<Record<number, Tipo>>({});
-  const [valores, setValores] = useState<Record<number, string>>({});
-  // Llamados cargados con la nota directa aunque haya firma.
-  const [conNota, setConNota] = useState<Record<number, boolean>>({});
-  const [firmaTxt, setFirmaTxt] = useState('');
-  const [guardando, setGuardando] = useState(false);
-  const [verRecursar, setVerRecursar] = useState(false);
-  const [eligiendoPeriodo, setEligiendoPeriodo] = useState(false);
+  const [todos, setTodos] = useState<ExamenFinalDb[] | null>(null);
   const [msg, setMsg] = useState<{ texto: string; tipo: 'error' | 'exito' } | null>(null);
+  const [hoja, setHoja] = useState<HojaAbierta>(null);
+  const [hojaFirma, setHojaFirma] = useState(false);
+  const [hojaRecursar, setHojaRecursar] = useState<'obligatoria' | 'elegir' | null>(null);
 
+  const recargar = useCallback(
+    () => cargarFinales(materiaId).then(setTodos).catch((e) => setMsg({ tipo: 'error', texto: textoError(e, 'No se pudieron cargar los finales.') })),
+    [materiaId],
+  );
   useEffect(() => {
-    cargarFinales(materiaId).then(setFinales).catch((e) => setMsg({ tipo: 'error', texto: textoError(e, 'No se pudieron cargar los finales.') }));
-  }, [materiaId]);
+    recargar();
+  }, [recargar]);
 
-  // Solo este semestre y los que ya tienen finales cargados. El semestre
-  // pasado aparece solo si el estudiante dice que rindió ahí.
-  // El elegido siempre está en la lista, aunque se le borren los finales.
-  const periodos = useMemo(() => {
-    const lista = new Set([periodoDe(), periodo, ...(finales ?? []).map((f) => f.periodo).filter((p): p is string => !!p)]);
-    return [...lista].sort().reverse();
-  }, [finales, periodo]);
-  useEffect(() => {
-    if (periodos.length <= 1) setEligiendoPeriodo(false);
-  }, [periodos.length]);
-  // Resumen de lo cargado en cada periodo, para la lista de periodos.
-  const resumen = (p: string) => {
-    const delPeriodo = (finales ?? []).filter((f) => f.periodo === p && f.llamado != null).sort((a, b) => (a.llamado ?? 0) - (b.llamado ?? 0));
-    if (!delPeriodo.length) return 'Sin finales cargados';
-    return delPeriodo.map((f) => `${f.llamado}.º: ${f.tipo === 'recuperatorio' ? 'Recu' : f.tipo === 'regularizacion' ? 'Regu' : f.nota}`).join(' · ');
-  };
-
-  // Carga lo guardado del periodo elegido.
-  useEffect(() => {
-    if (!finales) return;
-    const t: Record<number, Tipo> = {};
-    const v: Record<number, string> = {};
-    const n: Record<number, boolean> = {};
-    for (const f of finales.filter((x) => x.periodo === periodo)) {
-      if (f.llamado == null) continue;
-      if (f.tipo === 'regularizacion' || f.tipo === 'recuperatorio') {
-        const tipo: Tipo = f.tipo === 'recuperatorio' ? 'recu' : 'regu';
-        // Si quedó en un llamado donde no se permite, se muestra como "No rendí".
-        // Y solo uno de los dos por cursada.
-        if (TIPOS_DEL_LLAMADO[f.llamado as 1 | 2 | 3]?.includes(tipo) && !Object.values(t).some(esRecuORegu)) t[f.llamado] = tipo;
-        continue;
-      }
-      t[f.llamado] = 'final';
-      const usaPct = firma != null && f.porcentaje != null;
-      n[f.llamado] = !usaPct;
-      v[f.llamado] = usaPct ? String(Number(f.porcentaje)) : String(f.nota);
-    }
-    setTipos(t);
-    setValores(v);
-    setConNota(n);
-  }, [finales, periodo, firma]);
-
-  useEffect(() => {
-    setMsg(null);
-    setVerRecursar(false);
-  }, [periodo]);
-
-  const filas = LLAMADOS.map((ll) => {
-    const tipo = tipos[ll] ?? 'no';
-    const conPorcentaje = firma != null && !conNota[ll];
-    const v = tipo === 'final' ? num(valores[ll] ?? '') : null;
-    const valido = v == null || (Number.isFinite(v) && (conPorcentaje ? v >= 0 && v <= 100 : Number.isInteger(v) && v >= 1 && v <= 5));
-    const nota = valido && v != null ? notaDelLlamado(firma, conPorcentaje ? v : null, conPorcentaje ? null : v, calificacionFinal) : null;
-    const rendimiento = conPorcentaje && v != null && valido ? calificacionFinal(firma!, v).rendimiento : null;
-    return { llamado: ll, tipo, v, valido, nota, rendimiento, conPorcentaje };
-  });
-  // Un final marcado pero sin nota todavía no se puede guardar.
-  const falta = filas.some((f) => f.tipo === 'final' && f.v == null);
-  const todoValidoSinOrden = filas.every((f) => f.valido) && !falta;
-  // En el semestre opuesto los 3 finales son los mismos de la materia: no se pasa de 3 en la cursada (Recu y Regu no cuentan).
-  const usadosEnTotal = llamadosUsados((finales ?? []).filter((f) => f.periodo !== periodo)) + filas.filter((f) => f.tipo === 'final').length;
-  const pasaDeLlamados = !!semestreOpuesto && usadosEnTotal > LLAMADOS_POR_MATERIA;
-  // Después de aprobar no se rinde de nuevo: avisa si cargó un llamado posterior.
-  const primeraAprobada = filas.find((f) => f.nota != null && f.nota >= 2)?.llamado ?? null;
-  const despuesDeAprobar = primeraAprobada != null && filas.some((f) => f.llamado > primeraAprobada && f.tipo !== 'no');
-  const necesario = firma != null ? finalNecesario(firma) : null;
-  const cursada = aplazosDeLaCursada(finales ?? []);
+  // Solo los de la cursada actual se editan; los de antes de recursar quedan como dato.
+  const finales = useMemo(() => todos?.filter((f) => !f.cursada_anterior) ?? [], [todos]);
+  const anteriores = useMemo(() => todos?.filter((f) => f.cursada_anterior && f.nota != null) ?? [], [todos]);
+  const historial = useMemo(() => [...finales].sort(ordenHistorial), [finales]);
+  const cursada = aplazosDeLaCursada(finales);
   // Art. 49 y 62: dos periodos sin aprobar vencen la firma.
-  const vencida = !cursada.debeRecursar && (firmaVencida(finales ?? [], periodo) || firmaVencida(finales ?? [], periodoDe()));
+  const vencida = !aprobada && !cursada.debeRecursar && firmaVencida(finales, periodoDe());
+  const recursar = !aprobada && (cursada.debeRecursar || vencida);
+  const pendiente = historial.find((f) => f.tipo === 'pendiente') ?? null;
+  const opuesto = calcularOpuesto({ finales, aprobada, sinOpuestoEnPlan: sinOpuestoEnPlan(anioPlan) });
+  const necesario = firma != null ? finalNecesario(firma) : null;
 
-  // Recu o Regu: uno solo por cursada. Si ya se usó en otro semestre, no se
-  // ofrece ninguno; si se marcó en otro llamado de este, tampoco.
-  const recuReguEnOtroPeriodo = (finales ?? []).find((f) => f.periodo !== periodo && (f.tipo === 'recuperatorio' || f.tipo === 'regularizacion'));
-  // Después de rendir un final (en un llamado anterior o en un semestre
-  // anterior) ya no se rinde Recu ni Regu: al final se llega con la firma.
-  const finalEnPeriodoAnterior = (finales ?? []).some((f) => f.periodo != null && f.periodo < periodo && (f.tipo ?? 'final') === 'final');
-  const finalAntesDe = (ll: number) => finalEnPeriodoAnterior || filas.some((f) => f.llamado < ll && f.tipo === 'final');
-  const opcionesDe = (ll: 1 | 2 | 3) => TIPOS_DEL_LLAMADO[ll].filter((t) => (t !== 'recu' || !semestreOpuesto || tipos[ll] === t)).filter((t) => !esRecuORegu(t)
-    || tipos[ll] === t
-    || (!recuReguEnOtroPeriodo && !finalAntesDe(ll) && !filas.some((f) => f.llamado !== ll && esRecuORegu(f.tipo))));
-  // Si marcó la Regu y después puso un final en un llamado anterior: no se puede guardar.
-  const fueraDeOrden = recuReguDespuesDeFinal([
-    ...(finales ?? []).filter((f) => f.periodo !== periodo),
-    ...filas.filter((f) => f.tipo !== 'no').map((f) => ({ periodo, llamado: f.llamado, tipo: f.tipo === 'final' ? 'final' : A_DB[f.tipo as 'recu' | 'regu'] })),
-  ]);
+  const titulo = aprobada
+    ? 'Materia aprobada'
+    : recursar
+      ? 'Recursada pendiente'
+      : pendiente
+        ? 'Resultado pendiente'
+        : cursada.aplazos > 0 && opuesto.puede
+          ? 'Podés rendir el final en semestre opuesto.'
+          : 'Mis finales';
 
-  const cambiarTipo = (ll: number, t: Tipo) => {
-    setTipos({ ...tipos, [ll]: t });
-    if (t !== 'final') setValores({ ...valores, [ll]: '' });
+  const alGuardar = (texto: string) => {
+    setHoja(null);
+    vibrar('exito');
+    setMsg({ tipo: 'exito', texto });
+    recargar();
+    onGuardado(firma);
   };
+
+  return (
+    <>
+      <Tarjeta>
+        <Text style={{ fontFamily: fuentes.semibold, fontSize: 16, color: colores.texto }} accessibilityRole="header">{titulo}</Text>
+        <Text style={[s.filaDetalle, { marginTop: 2 }]}>Según tus registros</Text>
+        <Text style={[s.cuerpo, { marginTop: 2 }]}>
+          {todos == null ? 'Cargando…' : `${cursada.aplazos} ${cursada.aplazos === 1 ? 'aplazo registrado' : 'aplazos registrados'}`}
+        </Text>
+
+        {!aprobada && !recursar && cursada.aplazos === LLAMADOS_POR_MATERIA - 1 && (
+          <Mensaje tipo="info" texto="Si volvés a aplazar, te corresponde recursar la materia completa." />
+        )}
+        {vencida && <Mensaje tipo="info" texto="Pasaron dos periodos sin aprobar y tu firma venció: te corresponde volver a cursar la materia (Art. 62)." />}
+
+        {!aprobada && !recursar && (
+          <Boton
+            texto={firma == null ? 'Cargar tu firma' : `Firma vigente (${pct(firma)}) · Editar`}
+            variante="fantasma"
+            compacto
+            onPress={() => setHojaFirma(true)}
+            estilo={{ marginTop: espacio.s }}
+          />
+        )}
+
+        {recursar ? (
+          <Boton texto="Recursar materia" onPress={() => setHojaRecursar('obligatoria')} estilo={{ marginTop: espacio.s }} />
+        ) : pendiente ? (
+          <Boton texto="Completar nota" icono="create-outline" onPress={() => setHoja({ fila: pendiente })} estilo={{ marginTop: espacio.s }} />
+        ) : !aprobada ? (
+          <Boton texto="Registrar resultado" icono="add" onPress={() => setHoja({ fila: null })} deshabilitado={todos == null} estilo={{ marginTop: espacio.s }} />
+        ) : null}
+        {msg && <Mensaje texto={msg.texto} tipo={msg.tipo} />}
+
+        <Text style={{ fontFamily: fuentes.semibold, fontSize: 15, color: colores.texto, marginTop: espacio.l }}>Historial</Text>
+        {todos != null && historial.length === 0 && (
+          <Text style={[s.filaDetalle, { marginTop: espacio.xs }]}>Todavía no registraste ningún final.</Text>
+        )}
+        {historial.map((f, i) => (
+          <FilaResultado
+            key={f.id}
+            f={f}
+            opuesto={!!semestreOpuesto && f.periodo === periodoDe()}
+            ultima={i === historial.length - 1}
+            // El Recu y la Regu se cambian desde Parciales.
+            onPress={() => (esParcialEnFinales(f) ? router.push(`/firma/${materiaId}`) : setHoja({ fila: f }))}
+          />
+        ))}
+        {anteriores.length > 0 && (
+          <Text style={[s.filaDetalle, { marginTop: espacio.m }]}>
+            Notas de la cursada anterior: {anteriores.map((f) => f.nota).join(', ')}. Cuentan para el promedio con aplazos.
+          </Text>
+        )}
+      </Tarjeta>
+
+      {/* Con algún aplazo se puede elegir volver a cursar antes, por ejemplo en el semestre opuesto. */}
+      {!aprobada && !recursar && cursada.aplazos > 0 && (
+        <Enlace texto="¿Preferís volver a cursarla (semestre normal u opuesto)?" onPress={() => setHojaRecursar('elegir')} />
+      )}
+
+      <HojaResultado
+        abierta={hoja}
+        materiaId={materiaId}
+        finales={finales}
+        firma={firma}
+        semestreOpuesto={semestreOpuesto}
+        periodoFirma={periodoFirma}
+        onCerrar={() => setHoja(null)}
+        onGuardado={alGuardar}
+      />
+
+      <HojaFirma
+        visible={hojaFirma}
+        materiaId={materiaId}
+        firma={firma}
+        onCerrar={() => setHojaFirma(false)}
+        onGuardada={(f) => {
+          setFirmaNueva(f);
+          setHojaFirma(false);
+          setMsg({ tipo: 'exito', texto: `Listo. Tu firma es ${pct(f)}.` });
+          onGuardado(f);
+        }}
+      />
+
+      <Hoja visible={hojaRecursar === 'obligatoria'} titulo="¿Recursar materia?" onCerrar={() => setHojaRecursar(null)}>
+        <ConfirmarRecursada
+          materiaId={materiaId}
+          onCancelar={() => setHojaRecursar(null)}
+          onHecho={() => {
+            setHojaRecursar(null);
+            setFirmaNueva(null);
+            onGuardado(null);
+          }}
+        />
+      </Hoja>
+      <Hoja visible={hojaRecursar === 'elegir'} titulo="Volver a cursar" onCerrar={() => setHojaRecursar(null)}>
+        <VolverACursar
+          materiaId={materiaId}
+          anioPlan={anioPlan}
+          onHecho={() => {
+            setHojaRecursar(null);
+            setFirmaNueva(null);
+            onGuardado(null);
+          }}
+        />
+        <View style={{ height: espacio.l }} />
+      </Hoja>
+    </>
+  );
+}
+
+function FilaResultado({ f, opuesto, ultima, onPress }: { f: ExamenFinalDb; opuesto: boolean; ultima: boolean; onPress: () => void }) {
+  const partes = [
+    opuesto ? 'Semestre opuesto' : null,
+    f.periodo ? nombreSemestre(f.periodo) : null,
+    f.llamado ? nombreLlamado(f.llamado) : null,
+    f.tipo === 'pendiente' ? 'Completar nota' : null,
+  ].filter(Boolean);
+  const titulo = tituloResultado(f);
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`${titulo}. ${partes.join(', ')}`}
+      onPress={onPress}
+      style={({ pressed }) => ({
+        flexDirection: 'row', alignItems: 'center', gap: espacio.s, paddingVertical: espacio.m,
+        borderBottomWidth: ultima ? 0 : 1, borderBottomColor: colores.lineaSuave, opacity: pressed ? 0.7 : 1,
+      })}
+    >
+      <View style={{ flex: 1 }}>
+        <Text style={{ fontFamily: fuentes.semibold, fontSize: 15, color: colores.texto }}>{titulo}</Text>
+        <Text style={[s.filaDetalle, { marginTop: 2 }]}>{partes.join(' · ')}</Text>
+      </View>
+      <Ionicons name="chevron-forward" size={18} color={colores.textoSuave} />
+    </Pressable>
+  );
+}
+
+/** Hoja para registrar (o corregir) el resultado de una mesa. */
+function HojaResultado({ abierta, materiaId, finales, firma, semestreOpuesto, periodoFirma, onCerrar, onGuardado }: {
+  abierta: HojaAbierta;
+  materiaId: string;
+  finales: ExamenFinalDb[];
+  firma: number | null;
+  semestreOpuesto?: boolean;
+  periodoFirma?: string | null;
+  onCerrar: () => void;
+  onGuardado: (mensaje: string) => void;
+}) {
+  const fila = abierta?.fila ?? null;
+  const [periodo, setPeriodo] = useState(periodoDe());
+  const [llamado, setLlamado] = useState<1 | 2 | 3>(1);
+  const [quePaso, setQuePaso] = useState<QuePaso>('nota');
+  const [valor, setValor] = useState('');
+  // Nota directa aunque haya firma (por ejemplo, si no sabe el porcentaje).
+  const [conNota, setConNota] = useState(false);
+  const [fecha, setFecha] = useState('');
+  const [eligiendoSemestre, setEligiendoSemestre] = useState(false);
+  const [guardando, setGuardando] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Al abrir: lo de la fila que se corrige, o el primer llamado libre de este semestre.
+  useEffect(() => {
+    if (!abierta) return;
+    const f = abierta.fila;
+    const p = f?.periodo ?? periodoDe();
+    setPeriodo(p);
+    const libre = ([1, 2, 3] as const).find((n) => !finales.some((x) => x.periodo === p && x.llamado === n)) ?? 1;
+    setLlamado(f?.llamado === 1 || f?.llamado === 2 || f?.llamado === 3 ? f.llamado : libre);
+    setQuePaso(f?.tipo === 'ausente' ? 'ausente' : 'nota');
+    const usaPct = firma != null && f?.porcentaje != null;
+    setConNota(f != null && (f.tipo ?? 'final') === 'final' && !usaPct);
+    setValor(f && (f.tipo ?? 'final') === 'final' ? String(usaPct ? Number(f.porcentaje) : f.nota) : '');
+    setFecha(f?.fecha ?? '');
+    setEligiendoSemestre(false);
+    setError(null);
+    // Solo al abrir.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [abierta]);
+
+  const periodos = periodosParaFinales(periodoFirma, periodoDe(), finales.map((f) => f.periodo).filter((p): p is string => !!p));
+  const ocupado = finales.find((f) => f.periodo === periodo && f.llamado === llamado && f.id !== fila?.id) ?? null;
+  const conPorcentaje = firma != null && !conNota;
+  const v = quePaso === 'nota' ? num(valor) : null;
+  const valorValido = v != null && Number.isFinite(v) && (conPorcentaje ? v >= 0 && v <= 100 : Number.isInteger(v) && v >= 1 && v <= 5);
+  const nota = valorValido ? notaDelLlamado(firma, conPorcentaje ? v : null, conPorcentaje ? null : v, calificacionFinal) : null;
+  const rendimiento = conPorcentaje && valorValido ? calificacionFinal(firma!, v!).rendimiento : null;
+  // En el semestre opuesto los 3 finales son los de la materia (estar ausente no gasta uno).
+  const otros = finales.filter((f) => f.id !== fila?.id && f.id !== ocupado?.id);
+  const pasaDeLlamados = !!semestreOpuesto && quePaso !== 'ausente' && llamadosUsados(otros) + 1 > LLAMADOS_POR_MATERIA;
+  const yaAprobo = otros.some((f) => (f.tipo ?? 'final') === 'final' && f.nota != null && f.nota >= 2);
+  const valido = (quePaso !== 'nota' || valorValido) && fechaValida(fecha) && !(ocupado && esParcialEnFinales(ocupado)) && !pasaDeLlamados;
 
   const guardar = async () => {
+    if (!valido) return;
     setGuardando(true);
-    setMsg(null);
+    setError(null);
+    const base = { llamado, fecha: fecha.trim() || null };
+    const cargado: LlamadoCargado = quePaso === 'nota'
+      ? { ...base, tipo: 'final', nota: nota!, porcentaje: conPorcentaje ? v : null }
+      : { ...base, tipo: quePaso === 'espera' ? 'pendiente' : 'ausente', nota: null, porcentaje: null };
     try {
-      const llamados: LlamadoCargado[] = filas
-        .filter((f) => f.tipo === 'regu' || f.tipo === 'recu' || f.nota != null)
-        .map((f) => (f.tipo === 'regu' || f.tipo === 'recu'
-          ? { llamado: f.llamado, tipo: A_DB[f.tipo], nota: null, porcentaje: null }
-          : { llamado: f.llamado, tipo: 'final' as const, nota: f.nota!, porcentaje: f.conPorcentaje ? f.v : null }));
-      await guardarFinales(materiaId, periodo, llamados);
-      setFinales(await cargarFinales(materiaId));
-      const aprobo = llamados.find((l) => l.nota != null && l.nota >= 2);
-      setMsg({ tipo: 'exito', texto: aprobo ? `Guardado. Aprobaste con ${aprobo.nota} (${CONCEPTO[aprobo.nota as Nota]}).` : 'Guardado.' });
-      onGuardado(firma);
+      await guardarUnLlamado(materiaId, periodo, cargado, fila);
+      onGuardado(
+        quePaso === 'nota' && nota != null && nota >= 2
+          ? `Guardado. Aprobaste con ${nota} (${CONCEPTO[nota as Nota]}).`
+          : quePaso === 'espera' ? 'Guardado. Cuando salga la nota, tocá "Completar nota".' : 'Guardado.',
+      );
     } catch (e) {
-      setMsg({ tipo: 'error', texto: textoError(e, 'No se pudo guardar.') });
+      setError(textoError(e, 'No se pudo guardar.'));
     } finally {
       setGuardando(false);
     }
   };
 
-  const guardarMiFirma = async () => {
-    const f = num(firmaTxt);
-    if (f == null || !Number.isFinite(f) || f < 0 || f > 100) return;
+  const borrar = async () => {
+    if (!fila?.periodo) return;
     setGuardando(true);
+    setError(null);
     try {
-      // La firma es un entero: desde 0,5 se redondea para arriba (90,5 → 91).
-      const entera = Math.round(f + 1e-9);
-      await guardarFirma(materiaId, entera);
-      setFirmaNueva(entera);
-      onGuardado(entera);
+      await guardarUnLlamado(materiaId, fila.periodo, null, fila);
+      onGuardado('Listo, lo quitamos del historial.');
     } catch (e) {
-      setMsg({ tipo: 'error', texto: textoError(e, 'No se pudo guardar la firma.') });
+      setError(textoError(e, 'No se pudo borrar.'));
     } finally {
       setGuardando(false);
     }
   };
 
   return (
-    <Tarjeta>
-      {/* Firma: con ella la nota del final sale sola. */}
-      {sinResumenFirma ? null : firma == null ? (
-        <View style={{ marginBottom: espacio.m }}>
-          <View style={{ flexDirection: 'row', gap: espacio.s, alignItems: 'flex-end' }}>
-            <Campo etiqueta="Firma (%)" value={firmaTxt} onChangeText={setFirmaTxt} keyboardType="decimal-pad" placeholder="Ej. 72" estilo={{ flex: 1, marginBottom: 0 }} />
-            <Boton texto="Guardar" compacto onPress={guardarMiFirma} deshabilitado={!firmaValida(firmaTxt)} cargando={guardando} />
-          </View>
-          <Text style={[s.filaDetalle, { marginTop: 6 }]}>Con tu firma, en cada final ponés el porcentaje y la nota sale sola.</Text>
-        </View>
-      ) : (
-        <View style={{ marginBottom: espacio.m }}>
-          <Text style={{ fontFamily: fuentes.semibold, fontSize: 16, color: colores.marino }}>Firma {pct(firma)}</Text>
-          <Text style={s.filaDetalle}>{necesario == null ? 'Con esta firma no alcanza para aprobar.' : `Para aprobar necesitás ${pct2(necesario)} en el final.`}</Text>
-        </View>
+    <Hoja visible={abierta != null} titulo={fila?.tipo === 'pendiente' ? 'Completar nota' : fila ? 'Editar resultado' : 'Registrar resultado'} onCerrar={onCerrar}>
+      <Text style={s.filaDetalle}>{periodo === periodoDe() ? 'Este semestre' : 'Semestre'}</Text>
+      <Text style={{ fontFamily: fuentes.semibold, fontSize: 16, color: colores.texto }}>{nombreSemestre(periodo)}</Text>
+      {semestreOpuesto && periodo === periodoDe() && <Text style={s.filaDetalle}>Semestre opuesto para esta materia</Text>}
+      {periodos.length > 1 && (
+        <Boton texto={eligiendoSemestre ? 'Listo' : 'Cambiar semestre'} variante="fantasma" compacto onPress={() => setEligiendoSemestre(!eligiendoSemestre)} />
       )}
-
-      {/* Periodo: el de ahora por defecto; los anteriores se eligen de una lista. */}
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: espacio.s }}>
-        <View style={{ flex: 1 }}>
-          <Text style={s.filaDetalle}>Finales de</Text>
-          <Text style={{ fontFamily: fuentes.semibold, fontSize: 16, color: colores.marino }}>{nombrePeriodo(periodo)}{periodo === periodoDe() ? ' (este semestre)' : ''}</Text>
-        </View>
-        {periodos.length > 1 && <Enlace texto={eligiendoPeriodo ? 'Cerrar' : 'Ver otro semestre'} onPress={() => setEligiendoPeriodo(!eligiendoPeriodo)} />}
-      </View>
-      {periodos.length === 1 && !periodos.includes(anterior(periodoDe())) && (
-        <Enlace
-          texto={`¿Rendiste en el ${nombrePeriodo(anterior(periodoDe()))}?`}
-          onPress={() => setPeriodo(anterior(periodoDe()))}
-        />
-      )}
-      {eligiendoPeriodo && (
-        <View style={{ borderWidth: 1, borderColor: colores.linea, borderRadius: 12, marginBottom: espacio.m }}>
-          {periodos.map((p, i) => (
-            <Pressable
+      {eligiendoSemestre && (
+        <View style={{ marginBottom: espacio.s }}>
+          {periodos.map((p) => (
+            <Opcion
               key={p}
-              accessibilityRole="radio"
-              accessibilityState={{ checked: p === periodo }}
+              texto={nombreSemestre(p)}
+              detalle={p === periodoDe() ? 'Este semestre' : undefined}
+              elegida={p === periodo}
               onPress={() => {
                 setPeriodo(p);
-                setEligiendoPeriodo(false);
+                setEligiendoSemestre(false);
               }}
-              style={{ flexDirection: 'row', alignItems: 'center', gap: espacio.s, padding: espacio.m, borderTopWidth: i === 0 ? 0 : 1, borderTopColor: colores.linea, backgroundColor: p === periodo ? fondos.grisFondo : 'transparent' }}
-            >
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontFamily: p === periodo ? fuentes.semibold : fuentes.regular, fontSize: 15, color: colores.texto }}>{nombrePeriodo(p)}</Text>
-                <Text style={s.filaDetalle}>{resumen(p)}</Text>
-              </View>
-              {p === periodo && <Ionicons name="checkmark" size={20} color={colores.marino} />}
-            </Pressable>
+            />
           ))}
         </View>
       )}
 
-      {filas.map((f, i) => (
-        <View key={f.llamado} style={{ paddingVertical: espacio.m, borderTopWidth: i === 0 ? 0 : 1, borderTopColor: colores.linea }}>
-          <Text style={{ fontFamily: fuentes.semibold, fontSize: 15, color: colores.texto, marginBottom: espacio.s }}>{NOMBRE_LLAMADO[f.llamado]}</Text>
-          <Segmentado opciones={opcionesDe(f.llamado).map((valor) => ({ valor, texto: TEXTO_TIPO[valor] }))} valor={f.tipo} onCambio={(t) => cambiarTipo(f.llamado, t)} />
-          {f.tipo === 'final' && (
-            <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: espacio.m }}>
-              <Campo
-                etiqueta={f.conPorcentaje ? '¿Cuánto sacaste en el final? (%)' : 'Nota (1 a 5)'}
-                value={valores[f.llamado] ?? ''}
-                onChangeText={(t) => setValores({ ...valores, [f.llamado]: t })}
-                keyboardType="decimal-pad"
-                placeholder={f.conPorcentaje ? 'Ej. 75' : 'Ej. 4'}
-                maxLength={5}
-                estilo={{ flex: 1, marginBottom: 0 }}
-              />
-              <View style={{ width: 96, alignItems: 'flex-end', paddingBottom: 4 }}>
-                {f.nota != null ? (
-                  <>
-                    <Text style={{ fontFamily: fuentes.bold, fontSize: 24, color: f.nota >= 2 ? colores.verde : colores.rojo }}>{f.nota}</Text>
-                    <Text style={s.filaDetalle}>{CONCEPTO[f.nota as Nota]}</Text>
-                  </>
-                ) : !f.valido ? (
-                  <Text style={[s.filaDetalle, { color: colores.rojo }]}>{f.conPorcentaje ? 'De 0 a 100' : 'De 1 a 5'}</Text>
-                ) : null}
-              </View>
+      <Text style={[s.etiqueta, { marginTop: espacio.s, marginBottom: espacio.s }]}>Llamado</Text>
+      <Segmentado
+        opciones={([1, 2, 3] as const).map((n) => ({ valor: String(n) as '1' | '2' | '3', texto: nombreLlamado(n) }))}
+        valor={String(llamado) as '1' | '2' | '3'}
+        onCambio={(t) => setLlamado(Number(t) as 1 | 2 | 3)}
+      />
+      {ocupado && esParcialEnFinales(ocupado) && (
+        <Mensaje texto={`Ese llamado lo usaste para ${ocupado.tipo === 'recuperatorio' ? 'el Recu' : 'la Regu'}. Elegí otro, o cambialo desde Parciales.`} />
+      )}
+      {ocupado && !esParcialEnFinales(ocupado) && (
+        <Mensaje tipo="info" texto={`En ese llamado ya tenés "${tituloResultado(ocupado)}". Al guardar se reemplaza.`} />
+      )}
+
+      <Text style={[s.etiqueta, { marginBottom: espacio.s }]}>¿Qué pasó en esa mesa?</Text>
+      <Opcion texto="Rendí y tengo la nota" elegida={quePaso === 'nota'} onPress={() => setQuePaso('nota')} />
+      <Opcion texto="Rendí y espero la nota" elegida={quePaso === 'espera'} onPress={() => setQuePaso('espera')} />
+      <Opcion texto="Estuve ausente" detalle="No es aplazo y no gasta uno de tus 3 finales." elegida={quePaso === 'ausente'} onPress={() => setQuePaso('ausente')} />
+
+      {quePaso === 'nota' && (
+        <>
+          <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: espacio.m, marginTop: espacio.s }}>
+            <Campo
+              etiqueta={conPorcentaje ? '¿Cuánto sacaste en el final? (%)' : 'Nota (1 a 5)'}
+              value={valor}
+              onChangeText={setValor}
+              keyboardType="decimal-pad"
+              placeholder={conPorcentaje ? 'Ej. 75' : 'Ej. 4'}
+              maxLength={5}
+              estilo={{ flex: 1, marginBottom: 0 }}
+            />
+            <View style={{ width: 96, alignItems: 'flex-end', paddingBottom: 4 }}>
+              {nota != null ? (
+                <>
+                  <Text style={{ fontFamily: fuentes.bold, fontSize: 24, color: nota >= 2 ? colores.verde : colores.rojo }}>{nota}</Text>
+                  <Text style={s.filaDetalle}>{CONCEPTO[nota as Nota]}</Text>
+                </>
+              ) : valor.trim() && !valorValido ? (
+                <Text style={[s.filaDetalle, { color: colores.rojo }]}>{conPorcentaje ? 'De 0 a 100' : 'De 1 a 5'}</Text>
+              ) : null}
             </View>
-          )}
-          {f.tipo === 'final' && f.rendimiento != null && (
-            <Text style={[s.filaDetalle, { marginTop: 4 }]}>Nota final {pct2(f.rendimiento)} (40 % firma + 60 % final)</Text>
-          )}
-          {f.tipo === 'final' && firma != null && (
+          </View>
+          {rendimiento != null && <Text style={[s.filaDetalle, { marginTop: 4 }]}>Nota final {pct2(rendimiento)} (40 % firma + 60 % final)</Text>}
+          {firma != null && (
             <Enlace
-              texto={f.conPorcentaje ? 'Sé la nota, no el porcentaje' : 'Cargar el porcentaje'}
+              texto={conPorcentaje ? 'Sé la nota, no el porcentaje' : 'Cargar el porcentaje'}
               onPress={() => {
-                setConNota({ ...conNota, [f.llamado]: f.conPorcentaje });
-                setValores({ ...valores, [f.llamado]: '' });
+                setConNota(conPorcentaje);
+                setValor('');
               }}
             />
           )}
-          {f.llamado === 1 && semestreOpuesto && (
-            <Text style={[s.filaDetalle, { marginTop: espacio.s }]}>Semestre opuesto: no hay recuperatorio y rendís los finales que te quedan (son 3 por materia; la Regu no cuenta).</Text>
-          )}
-          {f.llamado === 1 && !semestreOpuesto && !recuReguEnOtroPeriodo && !finalEnPeriodoAnterior && f.tipo !== 'final' && !filas.some((x) => esRecuORegu(x.tipo)) && (
-            <Text style={[s.filaDetalle, { marginTop: espacio.s }]}>Recu o Regu, uno solo por cursada. Regu: si faltaste a un parcial; la podés rendir en el 1.er o en el 2.º llamado. Recu: si rendiste todos los parciales y no llegaste a la firma; solo en el 1.er llamado.</Text>
-          )}
-          {recuReguEnOtroPeriodo && f.llamado === 1 && (
-            <Text style={[s.filaDetalle, { marginTop: espacio.s }]}>Ya usaste {recuReguEnOtroPeriodo.tipo === 'recuperatorio' ? 'el Recu' : 'la Regu'}{recuReguEnOtroPeriodo.periodo ? ` en el ${nombrePeriodo(recuReguEnOtroPeriodo.periodo)}` : ''}. Solo se puede uno por cursada.</Text>
-          )}
-          {f.tipo === 'regu' && (
-            <Text style={[s.filaDetalle, { marginTop: espacio.s }]}>Regularización: rendiste el parcial al que faltaste (se puede en el 1.er o en el 2.º llamado). Este llamado queda usado y no lleva nota. Cargá la nota en la calculadora de firma.</Text>
-          )}
-          {f.tipo === 'recu' && (
-            <Text style={[s.filaDetalle, { marginTop: espacio.s }]}>Recuperatorio: rendiste para levantar tu promedio de teoría. Este llamado queda usado y no lleva nota. Cargá la nota en la calculadora de firma.</Text>
-          )}
-        </View>
-      ))}
-
-      {fueraDeOrden && (
-        <Mensaje texto={`Ya rendiste un final antes del ${fueraDeOrden.llamado}.º llamado${fueraDeOrden.periodo !== periodo ? ` del ${nombrePeriodo(fueraDeOrden.periodo ?? periodo)}` : ''}: después de un final no se puede rendir ${fueraDeOrden.tipo === 'recuperatorio' ? 'el Recu' : 'la Regu'}. Si te equivocaste, cambiá ese llamado a "No rendí".`} />
-      )}
-      {pasaDeLlamados && <Mensaje texto={`En el semestre opuesto usás los mismos 3 finales de la materia, y ya cargaste ${usadosEnTotal}. Dejá en "No rendí" los que no rendiste.`} />}
-      {despuesDeAprobar && <Mensaje tipo="info" texto="Marcaste un llamado después del que aprobaste. ¿Seguro que lo rendiste?" />}
-      <Boton texto="Guardar finales" icono="checkmark" onPress={guardar} cargando={guardando} deshabilitado={!todoValidoSinOrden || fueraDeOrden != null || pasaDeLlamados || finales == null} />
-      {msg && <Mensaje texto={msg.texto} tipo={msg.tipo} />}
-
-      {anteriores.length > 0 && (
-        <Text style={[s.filaDetalle, { marginTop: espacio.m }]}>
-          Notas de la cursada anterior: {anteriores.map((f) => f.nota).join(', ')}. Cuentan para el promedio con aplazos.
-        </Text>
+        </>
       )}
 
-      {/* Volver a cursar: obligatorio con 3 aplazos o la firma vencida (Art. 62);
-          con algún aplazo se puede elegir antes, por ejemplo en el semestre opuesto. */}
-      {!aprobada && (cursada.debeRecursar || vencida) && (
-        <View style={{ marginTop: espacio.m }}>
-          <VolverACursar
-            materiaId={materiaId}
-            anioPlan={anioPlan}
-            motivo={cursada.debeRecursar
-              ? `Usaste tus ${cursada.aplazos} oportunidades sin aprobar: tenés que volver a cursar la materia.`
-              : 'Pasaron dos periodos sin aprobar y tu firma venció: tenés que volver a cursar la materia.'}
-            onHecho={() => {
-              setFirmaNueva(null);
-              onGuardado(null);
-            }}
-          />
-        </View>
-      )}
-      {!aprobada && !cursada.debeRecursar && !vencida && cursada.aplazos > 0 && (
-        verRecursar ? (
-          <View style={{ marginTop: espacio.m }}>
-            <VolverACursar materiaId={materiaId} anioPlan={anioPlan} onHecho={() => { setFirmaNueva(null); onGuardado(null); }} />
-            <Enlace texto="Cerrar" onPress={() => setVerRecursar(false)} />
-          </View>
-        ) : (
-          <Enlace texto="¿Preferís volver a cursarla (semestre normal u opuesto)?" onPress={() => setVerRecursar(true)} />
-        )
-      )}
-    </Tarjeta>
+      <Campo
+        etiqueta="Fecha del examen (opcional)"
+        value={fecha}
+        onChangeText={setFecha}
+        placeholder="AAAA-MM-DD"
+        maxLength={10}
+        keyboardType="numbers-and-punctuation"
+        estilo={{ marginTop: espacio.m }}
+      />
+      {!fechaValida(fecha) && <Mensaje texto="Escribí la fecha así: 2026-12-04." />}
+      {pasaDeLlamados && <Mensaje texto={`En el semestre opuesto usás los mismos ${LLAMADOS_POR_MATERIA} finales de la materia, y ya los cargaste todos.`} />}
+      {yaAprobo && quePaso !== 'ausente' && <Mensaje tipo="info" texto="Ya tenés un final aprobado en esta materia. ¿Seguro que rendiste este?" />}
+      <Mensaje texto={error} />
+      <Boton texto="Guardar" icono="checkmark" onPress={guardar} cargando={guardando} deshabilitado={!valido} />
+      {/* Las filas viejas sin llamado no se borran desde acá. */}
+      {fila?.llamado != null && <Boton texto="Eliminar" variante="peligro" icono="trash-outline" onPress={borrar} deshabilitado={guardando} estilo={{ marginTop: espacio.s }} />}
+      <View style={{ height: espacio.l }} />
+    </Hoja>
+  );
+}
+
+/** Cargar o corregir el promedio de firma: con él la nota del final sale sola. */
+function HojaFirma({ visible, materiaId, firma, onCerrar, onGuardada }: {
+  visible: boolean; materiaId: string; firma: number | null; onCerrar: () => void; onGuardada: (f: number) => void;
+}) {
+  const [txt, setTxt] = useState('');
+  const [guardando, setGuardando] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => {
+    if (!visible) return;
+    setTxt(firma != null ? String(firma) : '');
+    setError(null);
+  }, [visible, firma]);
+  const f = num(txt);
+  const necesario = firmaValida(txt) ? finalNecesario(Math.round(f! + 1e-9)) : null;
+
+  const guardar = async () => {
+    if (!firmaValida(txt)) return;
+    setGuardando(true);
+    setError(null);
+    try {
+      // La firma es un entero: desde 0,5 se redondea para arriba (90,5 → 91).
+      const entera = Math.round(f! + 1e-9);
+      await guardarFirma(materiaId, entera);
+      onGuardada(entera);
+    } catch (e) {
+      setError(textoError(e, 'No se pudo guardar la firma.'));
+    } finally {
+      setGuardando(false);
+    }
+  };
+
+  return (
+    <Hoja visible={visible} titulo="Tu firma" onCerrar={onCerrar}>
+      <Campo etiqueta="Promedio de firma (%)" value={txt} onChangeText={setTxt} keyboardType="decimal-pad" placeholder="Ej. 72" />
+      <Text style={[s.filaDetalle, { marginBottom: espacio.m }]}>
+        {firmaValida(txt)
+          ? necesario == null ? 'Con esta firma no alcanza para aprobar el final.' : `Para aprobar necesitás ${pct2(necesario)} en el final.`
+          : 'Con tu firma, en cada final ponés el porcentaje y la nota sale sola.'}
+      </Text>
+      <Mensaje texto={error} />
+      <Boton texto="Guardar" icono="checkmark" onPress={guardar} cargando={guardando} deshabilitado={!firmaValida(txt)} />
+      <View style={{ height: espacio.l }} />
+    </Hoja>
+  );
+}
+
+/** Con 3 aplazos o la firma vencida: volver a cursar (Art. 45 y 62). */
+function ConfirmarRecursada({ materiaId, onCancelar, onHecho }: { materiaId: string; onCancelar: () => void; onHecho: () => void }) {
+  const [guardando, setGuardando] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  return (
+    <View>
+      <Text style={[s.cuerpo, { marginBottom: espacio.l }]}>
+        Empezás una nueva cursada de teoría: se borran tus parciales, tu asistencia de teoría y tu firma. Tu laboratorio se conserva (Art. 45). Tus finales anteriores quedan en el historial y los aplazos siguen contando en tu promedio con aplazos. Si te equivocás, lo podés deshacer desde la materia.
+      </Text>
+      <Mensaje texto={error} />
+      <Boton
+        texto="Confirmar recursada"
+        cargando={guardando}
+        onPress={async () => {
+          setGuardando(true);
+          setError(null);
+          try {
+            await recursarMateria(materiaId);
+            vibrar('exito');
+            onHecho();
+          } catch (e) {
+            setError(textoError(e, 'No se pudo marcar para volver a cursar.'));
+          } finally {
+            setGuardando(false);
+          }
+        }}
+      />
+      <Boton texto="Cancelar" variante="fantasma" onPress={onCancelar} estilo={{ marginTop: espacio.s }} />
+      <View style={{ height: espacio.l }} />
+    </View>
   );
 }
 

@@ -9,7 +9,7 @@ import {
 } from '../../components/ui';
 import { useSesion } from '../../context/SesionProvider';
 import {
-  aAsistencia, aEvaluacion, borrarEvaluacion, cargarFirmas, cargarMalla, guardarAsistencia, guardarEvaluacion, guardarFirma, REGLA_POR_DEFECTO, reglaDe,
+  aAsistencia, aEvaluacion, borrarEvaluacion, cargarFinales, cargarFirmas, registrarLlamadoParcial, cargarMalla, guardarAsistencia, guardarEvaluacion, guardarFirma, REGLA_POR_DEFECTO, reglaDe,
   tieneLab, tipoEvaluacion, type NuevaEvaluacion, type TipoEvaluacion,
 } from '../../datos/academico';
 import { usarDatos } from '../../datos/usarDatos';
@@ -22,6 +22,7 @@ import { vibrar } from '../../components/movimiento';
 import { useTema } from '../../context/TemaProvider';
 import { textoError } from '../../lib/errores';
 import { VolverACursar } from '../../components/volver-a-cursar';
+import { nombreSemestre, periodoAnterior, periodoDe, periodoSiguiente } from '../../lib/finales';
 import { ASISTENCIA_CUMPLIDA, ASISTENCIA_VACIA, esAsistenciaContada, esAsistenciaCumplida, esPredefinida } from '../../lib/firma-carga';
 
 const ICONO_TIPO: Record<TipoEvaluacion, 'document-text-outline' | 'create-outline' | 'flask-outline' | 'refresh-outline' | 'swap-horizontal-outline'> = {
@@ -37,8 +38,8 @@ const ICONO_TIPO: Record<TipoEvaluacion, 'document-text-outline' | 'create-outli
 const TIPOS: { valor: TipoEvaluacion; texto: string; icono: 'document-text' | 'flask' | 'refresh' | 'swap-horizontal'; nombre: string }[] = [
   { valor: 'parcial', texto: 'Parcial', icono: 'document-text', nombre: '' },
   { valor: 'laboratorio', texto: 'Laboratorio', icono: 'flask', nombre: 'Laboratorio' },
-  { valor: 'recuperatorio', texto: 'Recuperatorio', icono: 'refresh', nombre: 'Recuperatorio' },
-  { valor: 'regularizacion', texto: 'Regularización', icono: 'swap-horizontal', nombre: 'Regularización' },
+  { valor: 'recuperatorio', texto: 'Recuperación (Recu)', icono: 'refresh', nombre: 'Recuperatorio' },
+  { valor: 'regularizacion', texto: 'Regularización (Regu)', icono: 'swap-horizontal', nombre: 'Regularización' },
 ];
 
 /** Parcial teórico común (no recuperatorio ni regularización). */
@@ -65,7 +66,7 @@ async function cargar(planId: string, materiaId: string) {
   };
 }
 
-export default function CalculadoraFirma() {
+export default function Parciales() {
   useTema();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { perfil } = useSesion();
@@ -91,11 +92,11 @@ export default function CalculadoraFirma() {
     });
   }, [datos]);
 
-  if (cargando && !datos) return <Pantalla><BarraSuperior titulo="Firma" onVolver={volver} /><Cargando /></Pantalla>;
+  if (cargando && !datos) return <Pantalla><BarraSuperior titulo="Parciales" onVolver={volver} /><Cargando /></Pantalla>;
   if (!datos?.materia || !resultado) {
     return (
       <Pantalla>
-        <BarraSuperior titulo="Firma" onVolver={volver} />
+        <BarraSuperior titulo="Parciales" onVolver={volver} />
         <EstadoVacio icono="help-circle-outline" titulo="No encontramos esta materia" texto={error ?? undefined} accion={{ texto: 'Reintentar', onPress: recargar }} />
       </Pantalla>
     );
@@ -165,7 +166,7 @@ export default function CalculadoraFirma() {
 
   return (
     <Pantalla>
-      <BarraSuperior titulo="Calculadora de firma" onVolver={volver} />
+      <BarraSuperior titulo="Parciales" onVolver={volver} />
       <AvisoSinConexion texto={sinConexion && datos ? error : null} />
 
       <View style={{ backgroundColor: fondos.marino, borderRadius: radio.l + 4, padding: espacio.l, overflow: 'hidden', marginBottom: espacio.m }}>
@@ -186,6 +187,42 @@ export default function CalculadoraFirma() {
       {datos.semestreOpuesto && (
         <Mensaje tipo="info" texto="Cursás esta materia en el semestre opuesto: solo parciales y finales, sin recuperatorio. Tu laboratorio y tu asistencia siguen valiendo." />
       )}
+      <Seccion accion={{ texto: '+ Agregar', onPress: () => setEditando('nueva') }}>Evaluaciones</Seccion>
+      <Tarjeta estilo={{ paddingVertical: espacio.xs }}>
+        {datos.evaluacionesDb.length === 0 ? (
+          <EstadoVacio
+            icono="document-text-outline"
+            titulo="Sin evaluaciones"
+            texto={`Agregá tus parciales${materia.tiene_laboratorio ? ' y el laboratorio' : ' y, si tiene, el laboratorio'}. Todos pesan lo mismo: con tres parciales, cada uno vale un tercio.`}
+            accion={{ texto: 'Agregar evaluación', onPress: () => setEditando('nueva') }}
+          />
+        ) : (
+          datos.evaluacionesDb.map((e, i) => {
+            const p = porcentajeEvaluacion(aEvaluacion(e));
+            const reemplazado = regularizado && esParcialTeorico(e) && (!e.rendida || p == null);
+            const ok = p != null && p >= (esRecuperatorio(e) ? RECUPERACION_MINIMO : e.componente === 'laboratorio' ? regla.minimoLaboratorio ?? regla.minimoTeoria : regla.minimoTeoria);
+            return (
+              <Fila
+                key={e.id}
+                icono={ICONO_TIPO[tipoEvaluacion(e)]}
+                titulo={e.nombre}
+                detalle={esPredefinida(e) ? 'Toda cátedra toma al menos dos parciales. Tocá para cargar tu nota' : esRegularizacion(e) ? (regularizado ? 'Ocupó el lugar del parcial que faltaste' : MOTIVO_REGULARIZACION[datos.regularizacion.motivo ?? 'sin-nota']) : reemplazado ? 'Lo cubre tu regularización' : esRecuperatorio(e) ? (datos.recuperado ? 'Reemplazó tu parcial más bajo' : 'No cuenta: hace falta 60 % y un promedio teórico entre 30 y 50 %') : e.componente === 'laboratorio' ? `Pesa ${pct(Math.round(1000 / cantLab) / 10)} del laboratorio` : `Pesa ${pct(Math.round(1000 / cantTeoria) / 10)} del teórico`}
+                derecha={
+                  reemplazado ? (
+                    <Insignia texto="Regularizado" color={colores.marino} fondo={fondos.grisFondo} />
+                  ) : e.rendida && p != null ? (
+                    <Text style={{ fontFamily: fuentes.bold, fontSize: 16, color: ok ? colores.verde : colores.amarillo }}>{pct(p)}</Text>
+                  ) : (
+                    <Insignia texto="Pendiente" color={colores.gris} fondo={fondos.grisFondo} />
+                  )
+                }
+                onPress={() => setEditando(e)}
+                ultima={i === datos.evaluacionesDb.length - 1}
+              />
+            );
+          })
+        )}
+      </Tarjeta>
       <Tarjeta>
         <BloqueComponente titulo={combinado ? 'Nota final (teoría + laboratorio)' : 'Teoría'} r={resultado.teoria} />
         {resultado.laboratorio && <View style={{ height: 1, backgroundColor: fondos.lineaSuave, marginVertical: espacio.m }} />}
@@ -228,42 +265,6 @@ export default function CalculadoraFirma() {
       )}
       {msgFirma && <Mensaje texto={msgFirma.texto} tipo={msgFirma.tipo} />}
 
-      <Seccion accion={{ texto: '+ Agregar', onPress: () => setEditando('nueva') }}>Evaluaciones</Seccion>
-      <Tarjeta estilo={{ paddingVertical: espacio.xs }}>
-        {datos.evaluacionesDb.length === 0 ? (
-          <EstadoVacio
-            icono="document-text-outline"
-            titulo="Sin evaluaciones"
-            texto={`Agregá tus parciales${materia.tiene_laboratorio ? ' y el laboratorio' : ' y, si tiene, el laboratorio'}. Todos pesan lo mismo: con tres parciales, cada uno vale un tercio.`}
-            accion={{ texto: 'Agregar evaluación', onPress: () => setEditando('nueva') }}
-          />
-        ) : (
-          datos.evaluacionesDb.map((e, i) => {
-            const p = porcentajeEvaluacion(aEvaluacion(e));
-            const reemplazado = regularizado && esParcialTeorico(e) && (!e.rendida || p == null);
-            const ok = p != null && p >= (esRecuperatorio(e) ? RECUPERACION_MINIMO : e.componente === 'laboratorio' ? regla.minimoLaboratorio ?? regla.minimoTeoria : regla.minimoTeoria);
-            return (
-              <Fila
-                key={e.id}
-                icono={ICONO_TIPO[tipoEvaluacion(e)]}
-                titulo={e.nombre}
-                detalle={esPredefinida(e) ? 'Toda cátedra toma al menos dos parciales. Tocá para cargar tu nota' : esRegularizacion(e) ? (regularizado ? 'Ocupó el lugar del parcial que faltaste' : MOTIVO_REGULARIZACION[datos.regularizacion.motivo ?? 'sin-nota']) : reemplazado ? 'Lo cubre tu regularización' : esRecuperatorio(e) ? (datos.recuperado ? 'Reemplazó tu parcial más bajo' : 'No cuenta: hace falta 60 % y un promedio teórico entre 30 y 50 %') : e.componente === 'laboratorio' ? `Pesa ${pct(Math.round(1000 / cantLab) / 10)} del laboratorio` : `Pesa ${pct(Math.round(1000 / cantTeoria) / 10)} del teórico`}
-                derecha={
-                  reemplazado ? (
-                    <Insignia texto="Regularizado" color={colores.marino} fondo={fondos.grisFondo} />
-                  ) : e.rendida && p != null ? (
-                    <Text style={{ fontFamily: fuentes.bold, fontSize: 16, color: ok ? colores.verde : colores.amarillo }}>{pct(p)}</Text>
-                  ) : (
-                    <Insignia texto="Pendiente" color={colores.gris} fondo={fondos.grisFondo} />
-                  )
-                }
-                onPress={() => setEditando(e)}
-                ultima={i === datos.evaluacionesDb.length - 1}
-              />
-            );
-          })
-        )}
-      </Tarjeta>
       {/* Art. 46 a): para optar al recuperatorio hay que haber cumplido la asistencia. */}
       {!combinado && !datos.semestreOpuesto && !datos.recuperado && !tieneRecuperatorio && !pendientesTeoria && puedeRecuperar(resultado.teoria) && sinFaltaDeAsistencia && (
         <Mensaje tipo="info" texto={`Tu promedio teórico está entre ${RECUPERACION_DESDE} y ${regla.minimoTeoria} %: podés rendir el recuperatorio en el 1.er llamado de finales (ese llamado queda usado). Si sacás ${RECUPERACION_MINIMO} % o más, reemplaza tu parcial más bajo. Cargalo como "Recuperatorio".`} />
@@ -311,6 +312,7 @@ export default function CalculadoraFirma() {
         }}
         materiaId={materia.id}
         sinRecuperatorio={datos.semestreOpuesto}
+        otrasRecuRegu={datos.evaluacionesDb.filter((e) => (esRecuperatorio(e) || esRegularizacion(e)) && e.rendida && (editando === 'nueva' || e.id !== editando?.id)).length}
       />
 
       <Hoja visible={clasesEnAgenda > 0} titulo="¿Terminaron tus clases?" onCerrar={() => setClasesEnAgenda(0)}>
@@ -485,8 +487,10 @@ function FilaContador({ texto: t, ayuda, valor, onCambio, max }: { texto: string
   );
 }
 
-function FormEvaluacion({ visible, evaluacion, materiaId, onCerrar, onGuardado, sinRecuperatorio }: {
+function FormEvaluacion({ visible, evaluacion, materiaId, onCerrar, onGuardado, sinRecuperatorio, otrasRecuRegu }: {
   visible: boolean; evaluacion: EvaluacionDb | null; materiaId: string; onCerrar: () => void; onGuardado: () => void;
+  /** Otras evaluaciones de Recu o Regu ya rendidas: se usa uno solo por cursada. */
+  otrasRecuRegu: number;
   /** Semestre opuesto: no hay examen de recuperación (Art. 23). */
   sinRecuperatorio?: boolean;
 }) {
@@ -499,6 +503,15 @@ function FormEvaluacion({ visible, evaluacion, materiaId, onCerrar, onGuardado, 
   const [rendida, setRendida] = useState<'si' | 'no'>('si');
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Recu y Regu usan un llamado de finales: en qué semestre y cuál.
+  const [periodo, setPeriodo] = useState(periodoDe());
+  const [llamado, setLlamado] = useState<1 | 2>(1);
+  // Hasta saber si ya había un Recu o una Regu en Finales, no se guarda (se movería sin querer).
+  const [finalesLeidos, setFinalesLeidos] = useState(false);
+  const usaLlamado = tipo === 'recuperatorio' || tipo === 'regularizacion';
+  // El Recu solo se rinde en el 1.er llamado.
+  const llamadoUsado: 1 | 2 = tipo === 'recuperatorio' ? 1 : llamado;
+  const masViejo = periodoAnterior(periodoAnterior(periodoDe()));
 
   useEffect(() => {
     if (!visible) return;
@@ -511,7 +524,25 @@ function FormEvaluacion({ visible, evaluacion, materiaId, onCerrar, onGuardado, 
     setTotal(e?.puntaje_total != null ? String(Number(e.puntaje_total)) : '');
     setRendida(e && !e.rendida ? 'no' : 'si');
     setError(null);
-  }, [visible, evaluacion]);
+    setPeriodo(periodoDe());
+    setLlamado(1);
+    setFinalesLeidos(false);
+    // Si ya había un Recu o una Regu en Finales, arranca con ese semestre y llamado.
+    let vivo = true;
+    cargarFinales(materiaId)
+      .then((fs) => {
+        const usado = fs.find((f) => !f.cursada_anterior && (f.tipo === 'recuperatorio' || f.tipo === 'regularizacion'));
+        if (!vivo) return;
+        setFinalesLeidos(true);
+        if (!usado) return;
+        if (usado.periodo) setPeriodo(usado.periodo);
+        if (usado.llamado === 1 || usado.llamado === 2) setLlamado(usado.llamado);
+      })
+      .catch(() => vivo && setFinalesLeidos(true));
+    return () => {
+      vivo = false;
+    };
+  }, [visible, evaluacion, materiaId]);
 
   const num = (t: string) => (t.trim() === '' ? null : Number(t.replace(',', '.')));
   const valido =
@@ -521,7 +552,15 @@ function FormEvaluacion({ visible, evaluacion, materiaId, onCerrar, onGuardado, 
 
   const vistaPrevia = modo === 'puntaje' && num(obtenido) != null && num(total) ? (num(obtenido)! / num(total)!) * 100 : null;
 
+  const eraRecuORegu = evaluacion != null && (esRecuperatorio(evaluacion) || esRegularizacion(evaluacion));
+  const registraLlamado = usaLlamado && rendida === 'si';
+
   const guardar = async () => {
+    // Recu o Regu: uno solo por cursada (antes de guardar nada).
+    if (registraLlamado && otrasRecuRegu > 0) {
+      setError('Ya cargaste un Recu o una Regu rendido en esta cursada: se usa uno solo. Editá ese en vez de agregar otro.');
+      return;
+    }
     setGuardando(true);
     setError(null);
     const datos: NuevaEvaluacion = {
@@ -541,6 +580,15 @@ function FormEvaluacion({ visible, evaluacion, materiaId, onCerrar, onGuardado, 
     };
     try {
       await guardarEvaluacion(materiaId, datos, evaluacion && !esPredefinida(evaluacion) ? evaluacion.id : undefined);
+      // Rendido el Recu o la Regu: el llamado queda en el historial de Finales.
+      // Si dejó de ser un Recu o Regu rendido, el llamado se libera.
+      try {
+        if (registraLlamado) await registrarLlamadoParcial(materiaId, { tipo: tipo as 'recuperatorio' | 'regularizacion', periodo, llamado: llamadoUsado });
+        else if (eraRecuORegu && otrasRecuRegu === 0) await registrarLlamadoParcial(materiaId, null);
+      } catch (e) {
+        setError(`La nota se guardó, pero no pudimos actualizar el llamado en Finales: ${textoError(e, 'probá de nuevo.')}`);
+        return;
+      }
       onGuardado();
     } catch (e) {
       setError(textoError(e, 'No se pudo guardar.'));
@@ -554,6 +602,8 @@ function FormEvaluacion({ visible, evaluacion, materiaId, onCerrar, onGuardado, 
     setGuardando(true);
     try {
       await borrarEvaluacion(evaluacion.id);
+      // Sin Recu ni Regu cargado, el llamado deja de estar usado en Finales.
+      if (eraRecuORegu && otrasRecuRegu === 0) await registrarLlamadoParcial(materiaId, null).catch(() => {});
       onGuardado();
     } catch (e) {
       setError(textoError(e, 'No se pudo borrar.'));
@@ -580,6 +630,23 @@ function FormEvaluacion({ visible, evaluacion, materiaId, onCerrar, onGuardado, 
           />
         ))}
       </View>
+      {usaLlamado && (
+        <View style={{ marginBottom: espacio.m }}>
+          <Text style={s.etiqueta}>Semestre del llamado</Text>
+          <Text style={[s.cuerpo, { marginTop: 2, marginBottom: espacio.s }]}>{nombreSemestre(periodo)}</Text>
+          <View style={{ flexDirection: 'row', gap: espacio.s, marginBottom: espacio.m }}>
+            <Chip texto="Anterior" onPress={periodo > masViejo ? () => setPeriodo(periodoAnterior(periodo)) : undefined} />
+            <Chip texto="Siguiente" onPress={periodo < periodoDe() ? () => setPeriodo(periodoSiguiente(periodo)) : undefined} />
+          </View>
+          <Text style={[s.etiqueta, { marginBottom: espacio.s }]}>Llamado utilizado</Text>
+          {tipo === 'regularizacion' ? (
+            <Segmentado opciones={[{ valor: '1', texto: 'Primer llamado' }, { valor: '2', texto: 'Segundo llamado' }]} valor={String(llamado) as '1' | '2'} onCambio={(v) => setLlamado(v === '2' ? 2 : 1)} />
+          ) : (
+            <Text style={[s.cuerpo, { marginBottom: espacio.xs }]}>Primer llamado</Text>
+          )}
+          <Text style={s.filaDetalle}>Al guardar, aparecerá en el historial de Finales como parcial. Conservás tus oportunidades de final.</Text>
+        </View>
+      )}
       <Campo etiqueta="Nombre" value={nombre} onChangeText={setNombre} placeholder={tipo === 'laboratorio' ? 'Laboratorio' : tipo === 'recuperatorio' ? 'Recuperatorio' : 'Ej. Primer parcial'} />
       <Text style={[s.etiqueta, { marginBottom: espacio.s }]}>¿Ya la rendiste?</Text>
       <Segmentado opciones={[{ valor: 'si', texto: 'Sí, tengo la nota' }, { valor: 'no', texto: 'Todavía no o falté' }]} valor={rendida} onCambio={setRendida} />
@@ -598,7 +665,7 @@ function FormEvaluacion({ visible, evaluacion, materiaId, onCerrar, onGuardado, 
         </>
       )}
       <Mensaje texto={error} />
-      <Boton texto="Guardar" icono="checkmark" onPress={guardar} cargando={guardando} deshabilitado={!valido} />
+      <Boton texto="Guardar" icono="checkmark" onPress={guardar} cargando={guardando} deshabilitado={!valido || (usaLlamado && !finalesLeidos)} />
       {evaluacion && !esPredefinida(evaluacion) && <Boton texto="Eliminar" variante="peligro" icono="trash-outline" onPress={borrar} deshabilitado={guardando} />}
       <View style={{ height: espacio.l }} />
     </Hoja>

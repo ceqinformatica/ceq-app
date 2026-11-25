@@ -40,7 +40,7 @@ async function cargar(planId: string, carreraId?: string | null) {
   });
 }
 
-export default function Firma() {
+export default function Parciales() {
   useTema();
   const { perfil } = useSesion();
   const planId = perfil?.plan_id ?? '';
@@ -50,7 +50,7 @@ export default function Firma() {
   return (
     <Pantalla
       cabecera={
-        <CabeceraMarca titulo="Firma" sub="Cuánto te falta para firmar cada materia" sinConexion={sinConexion && datos ? error : null} />
+        <CabeceraMarca titulo="Parciales" sub="Tus evaluaciones y el avance de tu firma" sinConexion={sinConexion && datos ? error : null} />
       }
       refrescando={refrescando}
       onRefrescar={recargar}

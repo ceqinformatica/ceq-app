@@ -6,20 +6,23 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import * as Linking from 'expo-linking';
 import { alFallarSalida, recibirEnlacePin } from '../lib/auth';
-import { ActivityIndicator, AppState, Image, Platform, View } from 'react-native';
+import { AppState, Platform, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Bloqueo } from '../components/Bloqueo';
 import { Recorrido } from '../components/Recorrido';
-import { Hexagono } from '../components/graficos';
-import { Boton, EstadoVacio, logoCeq, Mensaje } from '../components/ui';
+import { Arranque } from '../components/Arranque';
+import { Boton, EstadoVacio, Mensaje } from '../components/ui';
 import { SesionProvider, useSesion } from '../context/SesionProvider';
 import { configurarNotificaciones, registrarEsteCelular, rutaDeNotificacion } from '../lib/notificaciones';
-import { colores, fondos } from '../tema';
+import { fondos } from '../tema';
 import { RecorridoProvider } from '../context/RecorridoProvider';
 import { TemaProvider, useCargarPreferenciaTema, useTema } from '../context/TemaProvider';
 import { useOrientacionPorDispositivo } from '../components/disposicion';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
+
+/** Cuánto se ve como mínimo la animación de arranque (ms). */
+const DURACION_ARRANQUE = 1400;
 configurarNotificaciones();
 
 /**
@@ -88,18 +91,16 @@ function Navegacion() {
   useLayoutEffect(() => {
     fijarSoloClaro(soloClaro);
   }, [soloClaro, fijarSoloClaro]);
-  useNotificaciones(sesion?.user.id ?? null, !cargando && !bloqueado && Boolean(perfil?.plan_id));
+  const [arranqueVisto, setArranqueVisto] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setArranqueVisto(true), DURACION_ARRANQUE);
+    return () => clearTimeout(t);
+  }, []);
+  // Recién con las pantallas montadas (después del arranque) se puede abrir la de una notificación.
+  useNotificaciones(sesion?.user.id ?? null, !cargando && arranqueVisto && !bloqueado && Boolean(perfil?.plan_id));
 
-  if (cargando) {
-    return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: fondos.celesteMarca, gap: 28 }}>
-        <Hexagono tamano={104} relleno={fondos.blanco}>
-          <Image source={logoCeq} style={{ width: 70, height: 70 }} accessibilityLabel="Logo del CEQ" />
-        </Hexagono>
-        <ActivityIndicator color={colores.blanco} />
-      </View>
-    );
-  }
+  // La animación de arranque se ve al menos un momento, aunque la sesión cargue al toque.
+  if (cargando || !arranqueVisto) return <Arranque />;
   if (sesion && bloqueado) return <Bloqueo />;
 
   // Sin perfil por un error de red: reintentar en vez de mandar al onboarding.
