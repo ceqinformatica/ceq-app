@@ -30,14 +30,14 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 90
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
 
-      - uses: expo/expo-github-action@v8
+      - uses: expo/expo-github-action@v9
         with:
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
@@ -48,7 +48,7 @@ jobs:
 
       - run: npm test
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: 17
@@ -61,7 +61,7 @@ jobs:
           ext=apk; [ "$perfil" = production ] && ext=aab
           eas build --platform android --profile "$perfil" --local --non-interactive --output "ceq-$perfil.$ext"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: ceq-${{ inputs.perfil || 'preview' }}-${{ github.sha }}
           path: ceq-*.*
