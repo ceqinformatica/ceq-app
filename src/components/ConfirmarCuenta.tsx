@@ -64,7 +64,11 @@ export function ConfirmarCuenta({ onConfirmado, onCancelar }: { onConfirmado: ()
       }
       setCargando(null);
       if (r.tipo === 'confirmado') confirmarRef.current();
-      else setErrorCorreo(r.mensaje);
+      else {
+        // El enlace no sirvió: se vuelve a pedir el correo (sin el aviso de "enviado").
+        setEnviado(null);
+        setErrorCorreo(r.mensaje);
+      }
     };
     const cerrar = abrirPantallaPin();
     atender();
@@ -83,6 +87,7 @@ export function ConfirmarCuenta({ onConfirmado, onCancelar }: { onConfirmado: ()
 
   // Primero se comprueba que el correo escrito sea el de la cuenta; si no, no se manda nada.
   const pedirEnlace = async () => {
+    if (cargando != null) return;
     setError(null);
     setErrorCorreo(null);
     if (!correoValido(correo)) return setErrorCorreo('Escribí tu correo completo, por ejemplo nombre@gmail.com.');
@@ -92,6 +97,7 @@ export function ConfirmarCuenta({ onConfirmado, onCancelar }: { onConfirmado: ()
       await new Promise((r) => setTimeout(r, 400));
       setCargando(null);
       setEnviado(metodos.correo ?? correo.trim());
+      if (demoRef.current) clearTimeout(demoRef.current);
       demoRef.current = setTimeout(() => confirmarRef.current(), 2500);
       return;
     }
@@ -99,6 +105,13 @@ export function ConfirmarCuenta({ onConfirmado, onCancelar }: { onConfirmado: ()
     setCargando(null);
     if (r) setErrorCorreo(r);
     else setEnviado(metodos.correo ?? correo.trim());
+  };
+
+  const otroEnlace = () => {
+    if (demoRef.current) clearTimeout(demoRef.current);
+    demoRef.current = null;
+    setEnviado(null);
+    setErrorCorreo(null);
   };
 
   const conHuella = () =>
@@ -167,7 +180,7 @@ export function ConfirmarCuenta({ onConfirmado, onCancelar }: { onConfirmado: ()
             texto={enviado != null ? 'Mandar otro enlace' : 'Mandarme un enlace'}
             icono="mail-outline"
             variante={huella ? 'secundario' : 'primario'}
-            onPress={enviado != null ? () => { setEnviado(null); setErrorCorreo(null); } : pedirEnlace}
+            onPress={enviado != null ? otroEnlace : pedirEnlace}
             cargando={cargando === 'pedir' || cargando === 'enlace'}
             deshabilitado={cargando != null || (enviado == null && !correo.trim())}
           />
@@ -188,7 +201,7 @@ export function ConfirmarCuenta({ onConfirmado, onCancelar }: { onConfirmado: ()
               secureTextEntry={!verClave}
               autoComplete="current-password"
               textContentType="password"
-              onSubmitEditing={() => clave && conClave()}
+              onSubmitEditing={() => clave && cargando == null && conClave()}
             />
             <Pressable onPress={() => setVerClave((v) => !v)} accessibilityRole="button" accessibilityLabel={verClave ? 'Ocultar contraseña' : 'Mostrar contraseña'} style={est.ojo} hitSlop={8}>
               <Ionicons name={verClave ? 'eye-off-outline' : 'eye-outline'} size={20} color={colores.textoSuave} />
