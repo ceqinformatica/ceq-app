@@ -4,7 +4,7 @@
  */
 import { Platform } from 'react-native';
 import { supabase } from '../lib/supabase';
-import { mismaMateria, textoLlamado, type FilaFinal } from '../lib/horario-finales';
+import { mismaMateria, textoLlamado, type FichaMateria, type FilaFinal } from '../lib/horario-finales';
 import type { EstadoMateriaDb, FechaFinalDb, HorarioFinalesDb } from '../lib/tipos-db';
 import { db, esperar, idDemo, MODO_DEMO, UID_DEMO } from './demo';
 import { lanzar } from '../lib/errores';
@@ -58,6 +58,26 @@ export async function materiasDeCarrera(carreraId: string, anioPlan?: number | n
   const { data, error: e2 } = await supabase.from('materias').select('nombre').in('plan_id', ids).limit(2000);
   lanzar(e2);
   return [...new Set((data ?? []).map((m) => m.nombre))].sort((a, b) => a.localeCompare(b, 'es'));
+}
+
+/**
+ * Materias de una carrera con su plan, su número de orden (el que usa el
+ * código de la planilla: IQ010 / IQ-07) y su nivel. Sirve para reconocer la
+ * materia por el código cuando el OCR lee mal el nombre ("Cálculo Il"), y
+ * para deducir el nivel de una hoja que no lo dice.
+ */
+export async function fichasDeMaterias(carreraId: string): Promise<FichaMateria[]> {
+  if (MODO_DEMO) {
+    return db.materias.map((m) => ({ nombre: m.nombre, plan: db.planes.find((p) => p.id === m.plan_id)?.anio ?? null, orden: m.orden ?? null, nivel: m.semestre ?? null }));
+  }
+  const { data: planes, error } = await supabase.from('planes').select('id, anio').eq('carrera_id', carreraId);
+  lanzar(error);
+  const ids = (planes ?? []).map((p) => p.id);
+  if (!ids.length) return [];
+  const { data, error: e2 } = await supabase.from('materias').select('nombre, plan_id, orden, semestre').in('plan_id', ids).limit(3000);
+  lanzar(e2);
+  const anio = new Map((planes ?? []).map((p) => [p.id, p.anio]));
+  return (data ?? []).map((m) => ({ nombre: m.nombre, plan: anio.get(m.plan_id) ?? null, orden: m.orden ?? null, nivel: m.semestre ?? null }));
 }
 
 /** Años de los planes de una carrera (para elegir a qué plan corresponde un horario). */

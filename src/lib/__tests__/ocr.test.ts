@@ -10,8 +10,9 @@ import { readFileSync } from 'node:fs';
 import { celdasDeRenglon, filasDeOcr, renglones, textoDeOcr, type PaginaOcr, type PalabraOcr, type RenglonOcr } from '../ocr/documento.ts';
 const textoDeRenglon = (r: RenglonOcr) => celdasDeRenglon(r).map((c) => c.texto).join('   ');
 import { categoriaDe, leerCalendarioPdf } from '../calendario-pdf.ts';
-import { detectarPlan, leerHorarioFinales } from '../horario-finales.ts';
-import { diaDe, leerHorarioClases, nivelEn, rangoEn, seccionEn, tipoEn } from '../horario-clases.ts';
+import { detectarPlan, fechasCortasEn, leerHorarioFinales, romanosOcr } from '../horario-finales.ts';
+import { HTML_OCR, URLS_OCR } from '../ocr/pagina-ocr.ts';
+import { diaDe, leerHorarioClases, limpiarNombre, nivelEn, planesDeHojas, planesEn, rangoEn, seccionEn, tipoEn } from '../horario-clases.ts';
 import type { FilaDoc } from '../ocr/documento.ts';
 
 const ocr = (n: string): PaginaOcr[] => JSON.parse(readFileSync(new URL(`./fixtures/ocr-${n}.json`, import.meta.url), 'utf8'));
@@ -209,4 +210,113 @@ test('nivelEn no confunde el semestre del año con el nivel', () => {
   assert.equal(nivelEn('Horario de clases · Primer semestre 2027'), null);
   assert.equal(nivelEn('Quinto semestre'), 5);
   assert.equal(nivelEn('3er. curso'), 3);
+});
+
+// ── PDF reales de la FCQ (Ingeniería Química, 2.º semestre 2026) ──
+// Fixtures recortadas: sin la tabla de docentes ni los nombres de las mesas.
+const IQ = ['IQ-2018', 'IQ-2026'].map((f) => JSON.parse(readFileSync(new URL(`../../../supabase/datos-fcq/${f}.json`, import.meta.url), 'utf8')));
+const FICHAS_IQ = IQ.flatMap((d) => [
+  ...d.materias.map((m: unknown[], i: number) => ({ nombre: m[1] as string, plan: d.anio as number, orden: i + 1, nivel: m[0] as number })),
+  ...(d.optativas?.materias ?? []).map((m: unknown[]) => ({ nombre: m[1] as string, plan: d.anio as number, orden: null, nivel: null })),
+]);
+const MATERIAS_IQ = [...new Set(FICHAS_IQ.map((f) => f.nombre))];
+
+test('horario de clases FCQ: grilla por materia con De/A, teoría/práctica, plan y nivel por hoja', () => {
+  const filas = filasDeOcr(ocr('horario-fcq'));
+  const { clases } = leerHorarioClases(filas, MATERIAS_IQ, null, FICHAS_IQ);
+  const t = (c: { plan?: number | null; nivel: number | null; dia: number; inicio: string; fin: string; tipo: string | null; materia: string | null }) =>
+    `${c.plan} n${c.nivel} ${c.dia} ${c.inicio}-${c.fin} ${c.tipo ?? '-'} ${c.materia}`;
+  const lista = clases.map(t).sort();
+  // Hoja 1: plan 2018, nivel 2 (12 clases, todas como en el PDF).
+  for (const esperada of [
+    '2018 n2 1 11:00-12:00 teoria Seminario II',
+    '2018 n2 1 13:00-14:00 rp Química Inorgánica',
+    '2018 n2 1 14:00-16:00 teoria Química Inorgánica',
+    '2018 n2 1 16:00-19:00 teoria Álgebra Lineal',
+    '2018 n2 2 10:00-12:00 rp Física I',
+    '2018 n2 2 13:00-16:00 - Química Inorgánica',
+    '2018 n2 3 14:00-16:00 laboratorio Física I',
+    '2018 n2 3 16:00-18:00 - Álgebra Lineal',
+    '2018 n2 5 08:00-11:00 teoria Física I',
+    // Plan 2008, nivel 5: "NIE" (miércoles mal leído) se ubica entre martes y jueves.
+    '2008 n5 1 13:00-16:00 teoria Microbiología Industrial',
+    '2008 n5 1 10:00-12:00 - Microbiología Industrial',
+    '2008 n5 3 11:00-12:00 - Microbiología Industrial',
+    '2008 n5 2 13:00-16:00 - Análisis Industrial',
+    '2008 n5 3 08:00-10:00 teoria Análisis Industrial',
+    '2008 n5 5 14:00-18:00 teoria Portugués',
+  ]) assert.ok(lista.includes(esperada), `falta: ${esperada}\n${lista.join('\n')}`);
+  // Cálculo II: el OCR perdió el "II", pero las tres clases quedan (para revisar el nombre).
+  assert.equal(clases.filter((c) => c.plan === 2018 && /^Cálculo/.test(c.materia ?? '')).length, 3);
+  // Con un plan elegido, solo sus hojas.
+  const solo2008 = leerHorarioClases(filas, MATERIAS_IQ, 2008, FICHAS_IQ).clases;
+  assert.ok(solo2008.length >= 7 && solo2008.every((c) => c.plan === 2008));
+  assert.deepEqual([...planesDeHojas(filas).entries()].sort(), [[2008, 1], [2018, 1]]);
+});
+
+test('horario de clases FCQ: hoja sin nivel legible toma el de sus materias', () => {
+  const filas = filasDeOcr(ocr('horario-fcq')).map((f) => ({ ...f, celdas: f.celdas.map((c) => ({ ...c, texto: c.texto.replace(/^2$/, '') })) }));
+  const { clases } = leerHorarioClases(filas, MATERIAS_IQ, 2018, FICHAS_IQ);
+  assert.ok(clases.length >= 9 && clases.every((c) => c.nivel === 2), clases.map((c) => `${c.nivel} ${c.materia}`).join('\n'));
+});
+
+test('finales FCQ: fechas "25-nov", plan por fila, llamados por fecha y código de materia', () => {
+  const texto = textoDeOcr(ocr('finales-fcq'));
+  assert.equal(detectarPlan(texto), null); // filas de los planes 2018 y 2026
+  const r = leerHorarioFinales(texto, MATERIAS_IQ, new Date(2026, 6, 1), { fichas: FICHAS_IQ });
+  const de = (m: string) => [...new Set(r.filas.filter((f) => f.materia === m).map((f) => `${f.llamado} ${f.fecha} ${f.hora}`))].sort();
+  // El año sale de "SEGUNDO SEMESTRE 2026": febrero es de 2027.
+  assert.deepEqual(de('Química General'), ['1 2026-11-25 14:00', '2 2026-12-09 14:00', '3 2027-02-03 14:00']);
+  assert.deepEqual(de('Cálculo I'), ['1 2026-11-27 14:00', '2 2026-12-11 14:00', '3 2027-02-05 14:00']);
+  assert.deepEqual(de('Geometría Analítica'), ['1 2026-12-03 08:00', '2 2026-12-17 08:00', '3 2027-02-11 08:00']);
+  assert.deepEqual(de('Computación y Algoritmia para Ingeniería'), ['1 2026-11-30 14:00', '2 2026-12-14 14:00', '3 2027-02-08 14:00']);
+  // Los códigos "10-01" / "IQ-03" no se toman como fechas.
+  assert.ok(r.filas.every((f) => f.fecha >= '2026-11-01' && f.fecha <= '2027-03-31'));
+  // Con plan elegido, solo sus filas.
+  const s2026 = leerHorarioFinales(texto, MATERIAS_IQ, new Date(2026, 6, 1), { fichas: FICHAS_IQ, plan: 2026 });
+  assert.ok(s2026.filas.length >= 10 && s2026.filas.every((f) => f.plan === 2026 || f.plan == null));
+});
+
+test('finales: el código desempata "Cálculo" con el número de la malla', () => {
+  const texto = 'HORARIO DE EXÁMENES FINALES SEGUNDO SEMESTRE 2026\n10010   Cálculo   102018   2   PLAN 2018   27-nov   14:00\n10-07   Cálculo 1   102026   2   PLAN 2026   11-dic   14:00\n10003   Cálculo I   102018   1   PLAN 2018   05-feb   14:00';
+  const r = leerHorarioFinales(texto, MATERIAS_IQ, new Date(2026, 6, 1), { fichas: FICHAS_IQ });
+  assert.deepEqual(r.filas.map((f) => `${f.materia} ${f.fecha}`), ['Cálculo II 2026-11-27', 'Cálculo II 2026-12-11', 'Cálculo I 2027-02-05']);
+});
+
+test('fechas cortas y romanos del OCR', () => {
+  const ref = new Date(2026, 9, 1);
+  assert.deepEqual(fechasCortasEn('o3-dic 11--dic 14dic 27-n0v 23-no0v 05-feb', ref).map((f) => f.fecha), ['2026-12-03', '2026-12-11', '2026-12-14', '2026-11-27', '2026-11-23', '2027-02-05']);
+  assert.equal(romanosOcr('Cálculo Il'), 'Cálculo II');
+  assert.equal(romanosOcr('Seminario Ill'), 'Seminario III');
+  assert.equal(romanosOcr('Termodinámica li'), 'Termodinámica II');
+  assert.equal(limpiarNombre('Si Seminario Il'), 'Seminario II');
+  assert.equal(limpiarNombre('A del De Optativa: Recursos Naturales'), 'Optativa: Recursos Naturales');
+  assert.deepEqual(planesEn('l2008__ y 12018'), [2008, 2018]);
+});
+
+test('página OCR: usa pdf.js "legacy" y rellena Promise.withResolvers para WebView viejas', () => {
+  assert.match(URLS_OCR.pdfjs, /\/legacy\/build\/pdf\.min\.mjs$/);
+  assert.match(URLS_OCR.pdfjsWorker, /\/legacy\/build\/pdf\.worker\.min\.mjs$/);
+  const i = HTML_OCR.indexOf('Promise.withResolvers =');
+  assert.ok(i > 0 && i < HTML_OCR.indexOf(URLS_OCR.tesseract) && i < HTML_OCR.indexOf('type="module"'));
+});
+
+test('finales: un año suelto o una fecha no son el plan de la fila (formato viejo con plan elegido)', () => {
+  const texto = 'Mesas de examen final - Plan 2018\nQuímica General   15 de diciembre de 2025   08:00\nFísica I   22/12/2025   08:00\nBiología General   del 2025 al 2026   18/12/2025';
+  const r = leerHorarioFinales(texto, ['Química General', 'Física I', 'Biología General'], new Date(2025, 10, 1), { plan: 2018 });
+  assert.deepEqual(r.filas.map((f) => f.materia).sort(), ['Biología General', 'Física I', 'Química General']);
+  assert.ok(r.filas.every((f) => f.plan == null));
+});
+
+test('finales: 2018 y 2026 en días distintos de la misma semana son el mismo llamado', () => {
+  const texto = 'SEGUNDO SEMESTRE 2026\nIQ001   Química General   IQ2018   25-nov   14:00\nIQ-05   Química General   IQ2026   27-nov   14:00\nIQ001   Química General   IQ2018   09-dic   14:00\nIQ-05   Química General   IQ2026   11-dic   14:00';
+  const r = leerHorarioFinales(texto, ['Química General'], new Date(2026, 6, 1));
+  assert.deepEqual(r.filas.map((f) => `${f.plan} ${f.llamado} ${f.fecha}`).sort(), ['2018 1 2026-11-25', '2018 2 2026-12-09', '2026 1 2026-11-27', '2026 2 2026-12-11']);
+});
+
+test('limpiarNombre no corta la primera letra con tilde', () => {
+  assert.equal(limpiarNombre('Álgebra Lineal'), 'Álgebra Lineal');
+  assert.equal(limpiarNombre('1 Ética Profesional'), 'Ética Profesional');
+  assert.equal(limpiarNombre('Óptica'), 'Óptica');
+  assert.equal(limpiarNombre('2 Análisis Industrial'), 'Análisis Industrial');
 });

@@ -11,12 +11,12 @@ import { BarraSuperior, Boton, Campo, Cargando, Chip, Fila, Hoja, Insignia, Mens
 import { useTema } from '../../context/TemaProvider';
 import { cargarCarreras } from '../../datos/admin';
 import {
-  borrarHorario, bytesDeArchivo, cargarHorario, crearHorario, guardarFechas, materiasDeCarrera, ocultarHorario, publicarHorario, renombrarHorario,
+  borrarHorario, bytesDeArchivo, cargarHorario, crearHorario, fichasDeMaterias, guardarFechas, materiasDeCarrera, ocultarHorario, publicarHorario, renombrarHorario,
   urlPdfHorario, type FechaEditable,
 } from '../../datos/finales-oficiales';
 import { estadoAviso, TEXTO_AVISO } from '../../lib/aviso-publicacion';
 import { textoError } from '../../lib/errores';
-import { detectarCarrera, detectarPlan, isoATexto, leerHorarioFinales, textoAIso, textoLlamado, tituloSugerido } from '../../lib/horario-finales';
+import { detectarCarrera, detectarPlan, isoATexto, leerHorarioFinales, textoAIso, textoLlamado, tituloSugerido, type FichaMateria } from '../../lib/horario-finales';
 import { confianzaMedia, textoDeOcr } from '../../lib/ocr/documento';
 import { textoDePdfGeneral } from '../../lib/pdf-texto';
 import type { Carrera, HorarioFinalesDb } from '../../lib/tipos-db';
@@ -50,6 +50,7 @@ export default function HorarioFinalesAdmin() {
   const [detectada, setDetectada] = useState(false);
   const [titulo, setTitulo] = useState('');
   const [materias, setMaterias] = useState<string[]>([]);
+  const [fichas, setFichas] = useState<FichaMateria[]>([]);
   const [texto, setTexto] = useState<string | null>(null);
   const [pdf, setPdf] = useState<{ bytes: Uint8Array; nombre: string } | null>(null);
   const [filas, setFilas] = useState<Fila[]>([]);
@@ -87,6 +88,11 @@ export default function HorarioFinalesAdmin() {
 
   // Materias de la carrera elegida (para reconocer y para elegir a mano).
   useEffect(() => {
+    if (!carreraId) return setFichas([]);
+    fichasDeMaterias(carreraId).then(setFichas).catch(() => setFichas([]));
+  }, [carreraId]);
+
+  useEffect(() => {
     if (!carreraId) return setMaterias([]);
     let activo = true;
     materiasDeCarrera(carreraId, plan).then((m) => activo && setMaterias(m)).catch(() => {});
@@ -98,9 +104,10 @@ export default function HorarioFinalesAdmin() {
   // Al tener el texto y las materias, se detecta todo (y se vuelve a detectar si cambia la carrera).
   useEffect(() => {
     if (texto == null || !materias.length) return;
-    const r = leerHorarioFinales(texto, materias);
+    // Con un plan elegido quedan solo sus filas (en planillas con "IQ2018" / "IQ2026" por fila).
+    const r = leerHorarioFinales(texto, materias, new Date(), { fichas, plan });
     setFilas(r.filas.map((f) => ({ clave: nuevaClave(), materia: f.materia, llamado: f.llamado, fecha: f.fecha, hora: f.hora, aula: f.aula, origen: f.origen })));
-  }, [texto, materias]);
+  }, [texto, materias, fichas, plan]);
 
   const elegirPdf = async () => {
     setError(null);

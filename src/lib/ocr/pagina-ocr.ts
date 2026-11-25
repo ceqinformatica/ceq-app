@@ -26,8 +26,10 @@ export const VERSIONES_OCR = {
 const V = VERSIONES_OCR;
 
 export const URLS_OCR = {
-  pdfjs: `${CDN}/pdfjs-dist@${V.pdfjs}/build/pdf.min.mjs`,
-  pdfjsWorker: `${CDN}/pdfjs-dist@${V.pdfjs}/build/pdf.worker.min.mjs`,
+  // Versión "legacy": trae sus propios rellenos (Promise.withResolvers y otros)
+  // para los navegadores y WebView de Android que todavía no los tienen.
+  pdfjs: `${CDN}/pdfjs-dist@${V.pdfjs}/legacy/build/pdf.min.mjs`,
+  pdfjsWorker: `${CDN}/pdfjs-dist@${V.pdfjs}/legacy/build/pdf.worker.min.mjs`,
   tesseract: `${CDN}/tesseract.js@${V.tesseract}/dist/tesseract.min.js`,
   tesseractWorker: `${CDN}/tesseract.js@${V.tesseract}/dist/worker.min.js`,
   core: `${CDN}/tesseract.js-core@${V.core}`,
@@ -39,6 +41,12 @@ const LADO_MAXIMO = 2900;
 
 export const HTML_OCR = `<!doctype html>
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width">
+<script>
+// Navegadores viejos: pdf.js usa Promise.withResolvers (Chrome 119+).
+if (typeof Promise.withResolvers !== 'function') {
+  Promise.withResolvers = function () { let resolve, reject; const promise = new this((a, b) => { resolve = a; reject = b; }); return { promise, resolve, reject }; };
+}
+</script>
 <script src="${URLS_OCR.tesseract}"></script>
 </head><body>
 <script type="module">

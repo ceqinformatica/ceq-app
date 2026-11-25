@@ -24,8 +24,25 @@ export interface FilaFinal {
   /** HH:MM o null */
   hora: string | null;
   aula: string | null;
+  /** Plan de la fila ("IQ2018", "PLAN 2018"), si lo dice. */
+  plan?: number | null;
   /** Renglón del PDF de donde salió (para revisar). */
   origen: string;
+}
+
+/** Materia con su plan, su número de orden (el del código "IQ010") y su nivel. */
+export interface FichaMateria {
+  nombre: string;
+  plan: number | null;
+  orden: number | null;
+  nivel: number | null;
+}
+
+export interface OpcionesLectura {
+  /** Para reconocer la materia por el código de la planilla. */
+  fichas?: FichaMateria[];
+  /** Con un plan elegido, solo las filas de ese plan (y las que no lo dicen). */
+  plan?: number | null;
 }
 
 export interface LecturaHorario {
@@ -184,6 +201,55 @@ export function parecida(texto: string, lista: Patron[]): Patron | null {
   return puntaje >= 0.5 ? mejor : null;
 }
 
+/** Números romanos que el OCR lee con eles o unos: "Cálculo Il", "Seminario (I", "Física lll". */
+export function romanosOcr(t: string): string {
+  return t
+    .replace(/(^|\s)[il1|]{3}(?=$|[\s:,.;)-])/gi, '$1III')
+    .replace(/(^|\s)(?:[(]?[il|][il1|]|[il|]1|tl|h)(?=$|[\s:,.;)-])/gi, '$1II');
+}
+
+const MESES_CORTOS: Record<string, number> = { ene: 1, feb: 2, mar: 3, abr: 4, may: 5, jun: 6, jul: 7, ago: 8, sep: 9, set: 9, oct: 10, nov: 11, dic: 12 };
+
+/** "25-nov", "03-dic", "05-feb" (y como los lee el OCR: "O3-dic", "11--dic", "14dic", "27-n0v", "23-no0v"). */
+export function fechasCortasEn(texto: string, ref: Date): FechaEncontrada[] {
+  const out: FechaEncontrada[] = [];
+  const re = /(?:^|[^\d:])([0-3o]?[\do])\s*-{0,2}\s*(ene|feb|mar|abr|may|jun|jul|ago|sep|set|oct|n[o0]{1,2}v|dic)\b/gi;
+  for (const m of texto.matchAll(re)) {
+    const d = Number(m[1].replace(/o/gi, '0'));
+    const mes = MESES_CORTOS[m[2].toLowerCase().replace(/[o0]+/, 'o').replace(/^no+v$/, 'nov')];
+    if (!mes) continue;
+    const a = anioPara(mes, d, ref);
+    if (valida(a, mes, d)) out.push({ fecha: `${a}-${dos(mes)}-${dos(d)}`, pos: (m.index ?? 0) + m[0].indexOf(m[1]) });
+  }
+  return out;
+}
+
+/** Año al que se refiere la planilla: "SEGUNDO SEMESTRE 2026" → fechas de nov 2026 a mar 2027. */
+function referenciaDelDocumento(texto: string): Date | null {
+  const n = normalizar(texto.slice(0, 3000));
+  const m = /\b(primer|1\s*er|segundo|2\s*do)\s+semestre\s*(?:del?\s*)?(?:ano\s*)?(20\d\d)\b/.exec(n);
+  if (!m) return null;
+  return /^(primer|1)/.test(m[1]) ? new Date(Number(m[2]), 4, 1) : new Date(Number(m[2]), 9, 1);
+}
+
+/**
+ * Plan de una fila: "PLAN 2026" o el año pegado a la sigla de la carrera:
+ * "IQ2018" (el OCR lo lee "102018"), "IQ2008-10". Un año suelto ("15 de
+ * diciembre de 2025", "2025-12-18") no es un plan.
+ */
+function planDeFila(crudo: string): number | null {
+  const m = /\bplan\s*:?\s*(20(?:0[5-9]|[1-3]\d))(?!\d)/i.exec(crudo) ?? /(?:^|\s)[a-z|][a-z0-9|]{0,2}(20(?:0[5-9]|[1-3]\d))(?=\s|-\d{1,2}(?:\s|$)|$)|(?:^|\s)\d[a-z0-9|]?(20(?:0[5-9]|[1-3]\d))(?=\s|-\d{1,2}(?:\s|$)|$)/i.exec(crudo);
+  return m ? Number(m[1] ?? m[2]) : null;
+}
+
+/** Número del código de la materia al principio de la fila: "IQ010", "IQ-07" (OCR: "10010", "10-07", "1Q009"). */
+function numeroDeCodigo(crudo: string): number | null {
+  const m = /^\W*[a-z0-9|]{1,2}\s?[-.]?\s?([0-9o]{2,3})\b/i.exec(crudo);
+  if (!m) return null;
+  const v = Number(m[1].replace(/o/gi, '0').slice(-2));
+  return v >= 1 && v <= 99 ? v : null;
+}
+
 export interface FechaEncontrada {
   fecha: string;
   pos: number;
@@ -264,8 +330,13 @@ export function aulaEn(texto: string): string | null {
  * `materias`: nombres de las materias de la carrera (de todos sus planes).
  * `referencia`: cuándo se sube (para completar el año de fechas sin año).
  */
-export function leerHorarioFinales(texto: string, materias: string[], referencia = new Date()): LecturaHorario {
+export function leerHorarioFinales(texto: string, materias: string[], referencia = new Date(), opciones: OpcionesLectura = {}): LecturaHorario {
   const lista = patrones(materias);
+  referencia = referenciaDelDocumento(texto) ?? referencia;
+  // Planilla con fechas "25-nov": los "10-07" son códigos de materia, no fechas.
+  const cortas = fechasCortasEn(normalizar(texto), referencia).length >= 3;
+  const fechasDe = (n: string) => (cortas ? fechasCortasEn(n, referencia) : fechasEn(n, referencia));
+  let vioLlamados = false;
   const filas: FilaFinal[] = [];
   const sinUsar: string[] = [];
   let columnas = 0; // tabla con una columna por llamado
@@ -274,7 +345,7 @@ export function leerHorarioFinales(texto: string, materias: string[], referencia
   let previo = ''; // texto del renglón anterior sin fechas
   let horaGeneral: string | null = null; // "Hora: 08:00" del encabezado
 
-  const agregar = (p: Patron | null, fechas: FechaEncontrada[], horas: { hora: string; pos: number }[], aula: string | null, origen: string) => {
+  const agregar = (p: Patron | null, fechas: FechaEncontrada[], horas: { hora: string; pos: number }[], aula: string | null, origen: string, plan: number | null = null) => {
     fechas.forEach((f, i) => {
       // Hora: la que está después de esta fecha (y antes de la siguiente), o la única del renglón.
       const siguiente = fechas[i + 1]?.pos ?? Infinity;
@@ -282,7 +353,7 @@ export function leerHorarioFinales(texto: string, materias: string[], referencia
       const unica = horas.length === 1 || new Set(horas.map((h) => h.hora)).size === 1 ? horas[0]?.hora : undefined;
       const hora = propia?.hora ?? unica ?? horaGeneral;
       const llamado = fechas.length > 1 ? Math.min(i + 1, 5) : seccion;
-      filas.push({ materia: p?.nombre ?? null, llamado, fecha: f.fecha, hora, aula, origen });
+      filas.push({ materia: p?.nombre ?? null, llamado, fecha: f.fecha, hora, aula, plan, origen });
     });
   };
 
@@ -291,7 +362,8 @@ export function leerHorarioFinales(texto: string, materias: string[], referencia
     if (!crudo) continue;
     const n = normalizar(crudo);
     const llamados = llamadosEn(n);
-    const fechas = fechasEn(n, referencia);
+    const fechas = fechasDe(n);
+    if (llamados.length) vioLlamados = true;
     if (llamados.length >= 2) {
       columnas = llamados.length;
       pendiente = null;
@@ -345,23 +417,95 @@ export function leerHorarioFinales(texto: string, materias: string[], referencia
       continue;
     }
     const unido = previo ? `${previo} ${k}` : '';
-    const p = encontradas[0]?.patron ?? parecida(k, lista) ?? (unido ? materiasEn(unido, lista).pop()?.patron ?? parecida(unido, lista) : null) ?? pendiente;
+    const kr = clave(romanosOcr(crudo));
+    let p = materiasEn(kr, lista)[0]?.patron ?? encontradas[0]?.patron ?? parecida(kr, lista) ?? (unido ? materiasEn(unido, lista).pop()?.patron ?? parecida(unido, lista) : null) ?? pendiente;
+    const plan = planDeFila(crudo);
+    // El código de la planilla (IQ010 = materia 10 del plan) desempata "Cálculo" / "Cálculo 1" / "Cálculo Il".
+    const porCodigo = codigoAMateria(crudo, plan, opciones.fichas, lista, kr);
+    if (porCodigo) p = porCodigo;
     previo = '';
-    if (!p) sinUsar.push(crudo);
+    if (!p) {
+      sinUsar.push(crudo);
+      // Planilla con código y plan por fila: el nombre es lo que está entre los dos ("10070 Inglés Técnico I 102018").
+      const leido = plan != null ? nombreEntreCodigoYPlan(crudo) : null;
+      if (leido) p = { nombre: leido, clave: clave(leido), palabras: clave(leido).split(' ') };
+    }
     // Si hay tabla de columnas y el renglón trae más fechas que columnas, se ignoran las de más.
-    agregar(p, columnas ? fechas.slice(0, Math.max(columnas, 1)) : fechas, horas, aula, crudo);
+    agregar(p, columnas ? fechas.slice(0, Math.max(columnas, 1)) : fechas, horas, aula, crudo, plan);
     pendiente = null;
   }
 
+  let elegidas = opciones.plan == null ? filas : filas.filter((f) => f.plan == null || f.plan === opciones.plan);
+  // Sin "1er llamado" en el documento (una fila por mesa): el llamado sale del orden de las fechas de cada materia.
+  if (!vioLlamados && !columnas) elegidas = numerarLlamados(elegidas);
   // Sin duplicados (misma materia, llamado y fecha).
   const vistas = new Set<string>();
-  const unicas = filas.filter((f) => {
+  const unicas = elegidas.filter((f) => {
     const k = `${f.materia ?? f.origen}|${f.llamado}|${f.fecha}`;
     if (vistas.has(k)) return false;
     vistas.add(k);
     return true;
   });
   return { filas: unicas, sinUsar };
+}
+
+function nombreEntreCodigoYPlan(crudo: string): string | null {
+  crudo = crudo.slice(0, 400).replace(/\s{3,}/g, '   ');
+  const m = /^\W*[a-z0-9|]{1,5}[-.]?\d{0,3}\.?\s+(.+?)\s{2,}(?:[-|]\s+)*[a-z0-9|]{0,3}\s?20\d\d/i.exec(crudo);
+  if (!m) return null;
+  // "Optativa 1: Inglés Técnico I" / "Optativa E Inglés Técnico": el nombre es lo de después.
+  const t = romanosOcr(
+    m[1]
+      .replace(/^optativa\s*\S{0,2}\s*:?\s*/i, '')
+      .replace(/[\s\-–]+$/, '')
+      .replace(/\s{2,}/g, ' ')
+      .replace(/\s1$/, ' I')
+      .trim(),
+  );
+  return (t.match(/\p{L}/gu) ?? []).length >= 4 ? t : null;
+}
+
+/**
+ * Llamado de cada fecha, por materia: las fechas se agrupan en tandas (las
+ * de un mismo llamado caen en la misma semana aunque el plan 2018 y el 2026
+ * rindan en días distintos) y cada tanda es un llamado. Así una fila que el
+ * OCR perdió no corre la numeración de las demás.
+ */
+function numerarLlamados(filas: FilaFinal[]): FilaFinal[] {
+  const porMateria = new Map<string, Set<string>>();
+  for (const f of filas) {
+    if (!f.materia) continue;
+    const m = clave(f.materia);
+    if (!porMateria.has(m)) porMateria.set(m, new Set());
+    porMateria.get(m)!.add(f.fecha);
+  }
+  const llamadoDe = new Map<string, number>();
+  for (const [m, fechas] of porMateria) {
+    let n = 0;
+    let inicio = -Infinity;
+    for (const fecha of [...fechas].sort()) {
+      const t = Date.parse(`${fecha}T12:00:00Z`);
+      if (t - inicio > 6 * 86400000) {
+        n++;
+        inicio = t;
+      }
+      llamadoDe.set(`${m}|${fecha}`, Math.min(n, 5));
+    }
+  }
+  return filas.map((f) => (f.materia ? { ...f, llamado: llamadoDe.get(`${clave(f.materia)}|${f.fecha}`) ?? f.llamado } : f));
+}
+
+/** Materia que nombra el código de la fila, si su nombre se parece a lo que leyó el OCR. */
+function codigoAMateria(crudo: string, plan: number | null, fichas: FichaMateria[] | undefined, lista: Patron[], leido: string): Patron | null {
+  if (!fichas?.length || plan == null) return null;
+  const num = numeroDeCodigo(crudo);
+  if (num == null) return null;
+  const ficha = fichas.find((f) => f.plan === plan && f.orden === num);
+  if (!ficha) return null;
+  // Confirmación: la primera palabra del nombre tiene que estar en la fila ("calculo" en "10010 Cálculo Il").
+  const primera = clave(ficha.nombre).split(' ').find((w) => w.length >= 4);
+  if (!primera || !new RegExp(`(^| )${escapar(primera)}`).test(leido)) return null;
+  return lista.find((p) => p.nombre === ficha.nombre) ?? { nombre: ficha.nombre, clave: clave(ficha.nombre), palabras: clave(ficha.nombre).split(' ') };
 }
 
 /** Las filas que pertenecen a una materia de la lista (para el estudiante). */
@@ -397,6 +541,9 @@ export function detectarCarrera(texto: string, carreras: { id: string; nombre: s
  * 2026", "Proyecto Académico 2018". Devuelve el año o null.
  */
 export function detectarPlan(texto: string): number | null {
+  // Planilla con filas de varios planes ("PLAN 2018" y "PLAN 2026"): no hay un plan único.
+  const todos = new Set([...normalizar(texto).matchAll(/\bplan\s*(20[0-4]\d)\b/g)].map((m) => m[1]));
+  if (todos.size > 1) return null;
   const n = normalizar(texto.split('\n').slice(0, 25).join(' '));
   const m = /\b(?:plan(?: de estudios?)?|proyecto academico|malla(?: curricular)?)\s*(?:n\s*)?:?\s*(20[0-4]\d)\b/.exec(n);
   return m ? Number(m[1]) : null;
