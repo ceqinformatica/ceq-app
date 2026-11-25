@@ -157,7 +157,7 @@ export const db = {
   ] as OpcionEncuestaDb[],
   votos: { o1: 12, o2: 31, o3: 24 } as Record<string, number>,
   horariosFinales: [
-    { id: 'hf1', carrera_id: 'car-1', titulo: 'Anteproyecto diciembre ' + ahora.getFullYear(), pdf_path: null, publicado: true, publicado_en: enDias(-1), creado_por: null, created_at: enDias(-1), updated_at: enDias(-1) },
+    { id: 'hf1', carrera_id: 'car-1', titulo: 'Anteproyecto diciembre ' + ahora.getFullYear(), pdf_path: null, publicado: true, publicado_en: enDias(-1), avisado_en: enDias(-1), creado_por: null, created_at: enDias(-1), updated_at: enDias(-1) },
   ] as HorarioFinalesDb[],
   fechasFinales: ([
     ['Química Analítica I', 1, 8, '08:00', 'Aula 12'], ['Fisicoquímica I', 1, 10, '13:30', null], ['Bioquímica', 1, 12, '08:00', 'Aula 7'],
@@ -167,7 +167,7 @@ export const db = {
     id: `ff${i + 1}`, horario_id: 'hf1', materia, llamado, fecha: enDias(dias).slice(0, 10), hora, aula, created_at: enDias(-1),
   })),
   horariosClases: [
-    { id: 'hc1', carrera_id: 'car-1', plan_anio: 2018, titulo: 'Horario de clases · 2.º periodo ' + ahora.getFullYear(), pdf_path: null, publicado: true, publicado_en: enDias(-3), creado_por: null, created_at: enDias(-3), updated_at: enDias(-3) },
+    { id: 'hc1', carrera_id: 'car-1', plan_anio: 2018, titulo: 'Horario de clases · 2.º periodo ' + ahora.getFullYear(), pdf_path: null, publicado: true, publicado_en: enDias(-3), avisado_en: enDias(-3), creado_por: null, created_at: enDias(-3), updated_at: enDias(-3) },
   ] as HorarioClasesDb[],
   clasesOficiales: ([
     ['Química Analítica I', 3, 'A', 1, '07:30', '09:30', 'Aula 12', 'teoria'], ['Química Analítica I', 3, 'A', 3, '13:30', '17:30', 'Lab. 2', 'laboratorio'],

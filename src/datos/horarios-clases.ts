@@ -71,7 +71,7 @@ export async function crearHorarioClases(carreraId: string, planAnio: number | n
     await esperar(400);
     const id = idDemo();
     const ahora = new Date().toISOString();
-    db.horariosClases.unshift({ id, carrera_id: carreraId, plan_anio: planAnio, titulo, pdf_path: null, publicado: false, publicado_en: null, creado_por: UID_DEMO, created_at: ahora, updated_at: ahora });
+    db.horariosClases.unshift({ id, carrera_id: carreraId, plan_anio: planAnio, titulo, pdf_path: null, publicado: false, publicado_en: null, avisado_en: null, creado_por: UID_DEMO, created_at: ahora, updated_at: ahora });
     db.clasesOficiales.push(...clases.map((c) => ({ ...paraGuardar(c), hora_inicio: c.hora_inicio.slice(0, 5) + ':00', hora_fin: c.hora_fin.slice(0, 5) + ':00', id: idDemo(), horario_id: id, created_at: ahora })));
     return id;
   }
@@ -121,7 +121,7 @@ export async function actualizarHorarioClases(id: string, cambios: { titulo: str
 export async function publicarHorarioClases(id: string, notificar: boolean): Promise<number> {
   if (MODO_DEMO) {
     await esperar(300);
-    db.horariosClases = db.horariosClases.map((h) => (h.id === id ? { ...h, publicado: true, publicado_en: h.publicado_en ?? new Date().toISOString() } : h));
+    db.horariosClases = db.horariosClases.map((h) => (h.id === id ? { ...h, publicado: true, publicado_en: h.publicado_en ?? new Date().toISOString(), avisado_en: h.avisado_en ?? (notificar ? new Date().toISOString() : null) } : h));
     return db.clasesOficiales.filter((c) => c.horario_id === id).length;
   }
   const { data, error } = await supabase.rpc('publicar_horario_clases', { p_id: id, p_notificar: notificar });

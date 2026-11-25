@@ -84,7 +84,7 @@ export async function crearHorario(carreraId: string, titulo: string, pdf: Uint8
     await esperar(400);
     const id = idDemo();
     const ahora = new Date().toISOString();
-    db.horariosFinales.unshift({ id, carrera_id: carreraId, titulo, pdf_path: null, publicado: false, publicado_en: null, creado_por: UID_DEMO, created_at: ahora, updated_at: ahora });
+    db.horariosFinales.unshift({ id, carrera_id: carreraId, titulo, pdf_path: null, publicado: false, publicado_en: null, avisado_en: null, creado_por: UID_DEMO, created_at: ahora, updated_at: ahora });
     db.fechasFinales.push(...fechas.map((f) => ({ ...f, id: idDemo(), horario_id: id, created_at: ahora })));
     return id;
   }
@@ -138,7 +138,7 @@ export async function renombrarHorario(id: string, titulo: string) {
 export async function publicarHorario(id: string, notificar: boolean): Promise<number> {
   if (MODO_DEMO) {
     await esperar(300);
-    db.horariosFinales = db.horariosFinales.map((h) => (h.id === id ? { ...h, publicado: true, publicado_en: h.publicado_en ?? new Date().toISOString() } : h));
+    db.horariosFinales = db.horariosFinales.map((h) => (h.id === id ? { ...h, publicado: true, publicado_en: h.publicado_en ?? new Date().toISOString(), avisado_en: h.avisado_en ?? (notificar ? new Date().toISOString() : null) } : h));
     return db.fechasFinales.filter((f) => f.horario_id === id).length;
   }
   const { data, error } = await supabase.rpc('publicar_horario_finales', { p_id: id, p_notificar: notificar });
