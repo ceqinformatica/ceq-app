@@ -196,7 +196,7 @@ export function Bloqueo() {
               <Text style={[est.enlace, { fontFamily: fuentes.bold, fontSize: 15, textDecorationLine: 'underline' }]}>¿Olvidaste tu PIN?</Text>
             </Pressable>
           )}
-          <Pressable onPress={salir} accessibilityRole="button" style={{ alignSelf: 'center', padding: espacio.m, marginTop: espacio.xs }}>
+          <Pressable onPress={async () => setError(await salir())} accessibilityRole="button" style={{ alignSelf: 'center', padding: espacio.m, marginTop: espacio.xs }}>
             <Text style={est.enlace}>Cerrar sesión</Text>
           </Pressable>
         </View>

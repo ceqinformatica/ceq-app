@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { crearClases, DIAS, hora, type Agenda } from '../datos/agenda';
 import { horarioOficialDe, PERIODO_HORARIOS_FCQ } from '../datos/horario-oficial';
-import { cargarHorarioClasesPublicado } from '../datos/horarios-clases';
+import { cargarHorarioClasesPublicado, urlPdfHorarioClases } from '../datos/horarios-clases';
 import { clasesDeMisMaterias, seccionSugerida } from '../lib/clases-oficiales';
 import { textoError } from '../lib/errores';
 import { infoTipoClase } from '../lib/tipo-clase';
@@ -17,20 +17,41 @@ import { Boton, Chip, Fila, Hoja, Mensaje, s, Tarjeta } from './ui';
  * publicó el horario de clases, te deja cargar las de tus materias con un
  * toque; si no, abre el PDF de la facultad para copiarlas a mano.
  */
-export function HorarioOficial({ carreraId, datos, onCargadas }: { carreraId: string | null | undefined; datos: Agenda | null | undefined; onCargadas: () => void }) {
-  const [oficial, setOficial] = useState<{ horario: HorarioClasesDb; clases: ClaseOficialDb[] } | null>(null);
+export function HorarioOficial({ carreraId, planId, datos, onCargadas }: {
+  carreraId: string | null | undefined; planId: string | null | undefined; datos: Agenda | null | undefined; onCargadas: () => void;
+}) {
+  const [oficial, setOficial] = useState<{ horario: HorarioClasesDb; clases: ClaseOficialDb[]; general: boolean } | null>(null);
   const [abierta, setAbierta] = useState(false);
+  const [errorPdf, setErrorPdf] = useState<string | null>(null);
   const { url, deTuCarrera } = horarioOficialDe(carreraId);
 
   useEffect(() => {
     let activo = true;
-    cargarHorarioClasesPublicado(carreraId)
+    cargarHorarioClasesPublicado(carreraId, planId)
       .then((r) => activo && setOficial(r))
       .catch(() => activo && setOficial(null));
     return () => {
       activo = false;
     };
-  }, [carreraId]);
+  }, [carreraId, planId]);
+
+  // Con un horario publicado que trae su PDF, se abre ese (y se nombra su
+  // periodo); si no, el enlace fijo de la facultad con su periodo.
+  const conPdf = !!oficial?.horario.pdf_path;
+  const abrirPdf = async () => {
+    setErrorPdf(null);
+    if (!oficial?.horario.pdf_path) {
+      WebBrowser.openBrowserAsync(url);
+      return;
+    }
+    try {
+      const firmado = await urlPdfHorarioClases(oficial.horario.pdf_path);
+      if (!firmado) throw new Error('No se pudo abrir el PDF');
+      await WebBrowser.openBrowserAsync(firmado);
+    } catch (e) {
+      setErrorPdf(textoError(e));
+    }
+  };
 
   return (
     <>
@@ -39,17 +60,18 @@ export function HorarioOficial({ carreraId, datos, onCargadas }: { carreraId: st
           <Fila
             icono="download-outline"
             titulo="Cargar mis clases del horario oficial"
-            detalle={`${oficial.horario.titulo}. Elegí tus materias y se agregan a la agenda.`}
+            detalle={`${oficial.horario.titulo}${oficial.general ? ' (horario general de la carrera, no de tu plan)' : ''}. Elegí tus materias y se agregan a la agenda.`}
             onPress={() => setAbierta(true)}
           />
         ) : null}
         <Fila
           icono="document-text-outline"
-          titulo={deTuCarrera ? 'PDF del horario de tu carrera' : 'Horarios oficiales de la FCQ'}
-          detalle={oficial ? 'El original que publica la facultad.' : `${PERIODO_HORARIOS_FCQ}. Abrilo y copiá tus clases con el botón Clase.`}
-          onPress={() => WebBrowser.openBrowserAsync(url)}
+          titulo={conPdf ? 'PDF original del horario' : deTuCarrera ? 'PDF del horario de tu carrera' : 'Horarios oficiales de la FCQ'}
+          detalle={conPdf ? `${oficial!.horario.titulo}. El original que subió el CEQ.` : `${PERIODO_HORARIOS_FCQ}. Abrilo y copiá tus clases con el botón Clase.`}
+          onPress={abrirPdf}
           ultima
         />
+        {errorPdf ? <Mensaje tipo="error" texto={errorPdf} /> : null}
       </Tarjeta>
       {oficial ? (
         <HojaCargarClases

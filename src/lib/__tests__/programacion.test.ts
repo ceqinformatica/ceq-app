@@ -79,3 +79,9 @@ test('solo abre rutas internas', () => {
   assert.equal(rutaSegura('/aviso?x=1'), null);
   assert.equal(rutaSegura(42), null);
 });
+
+test('29/02 sin año, ya pasado en un año bisiesto: no se corre al 1 de marzo', () => {
+  const r = leerFechaHora('29/02', '10:00', new Date(2028, 2, 1, 9, 0));
+  assert.ok('error' in r);
+  assert.match(r.error, /no existe en 2029/);
+});

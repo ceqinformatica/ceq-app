@@ -44,9 +44,15 @@ export type Proveedor = keyof typeof NOMBRE_PROVEEDOR;
 
 /**
  * Qué botones de otras cuentas mostrar según la configuración pública de
- * Supabase (GET /auth/v1/settings). Google se muestra siempre; Microsoft solo
- * cuando está habilitado, así nadie toca un botón que todavía no anda.
+ * Supabase (GET /auth/v1/settings). Con la configuración a mano, cada botón
+ * aparece solo si su proveedor está habilitado, así nadie toca un botón que
+ * no anda. Si no se pudo leer (sin internet o falla del servidor), no se sabe:
+ * se muestra Google, que es lo habitual.
  */
 export function proveedoresVisibles(ajustes: { external?: Record<string, unknown> } | null | undefined): Proveedor[] {
-  return ajustes?.external?.azure === true ? ['google', 'microsoft'] : ['google'];
+  if (!ajustes?.external) return ['google'];
+  const lista: Proveedor[] = [];
+  if (ajustes.external.google === true) lista.push('google');
+  if (ajustes.external.azure === true) lista.push('microsoft');
+  return lista;
 }

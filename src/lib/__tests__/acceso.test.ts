@@ -19,6 +19,8 @@ test('Microsoft aparece solo cuando está habilitado en Supabase', () => {
   assert.deepEqual(proveedoresVisibles({ external: { google: true, azure: true } }), ['google', 'microsoft']);
   assert.deepEqual(proveedoresVisibles({ external: { google: true, azure: false } }), ['google']);
   assert.deepEqual(proveedoresVisibles(null), ['google']);
+  assert.deepEqual(proveedoresVisibles({ external: { google: false, azure: false } }), []);
+  assert.deepEqual(proveedoresVisibles({ external: { google: false, azure: true } }), ['microsoft']);
 });
 
 test('valida los datos de Creá tu cuenta', () => {

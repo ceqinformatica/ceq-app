@@ -80,3 +80,13 @@ export function traducirErrorClave(mensaje: string | null | undefined): string {
   if (m.includes('fetch') || m.includes('network')) return 'No hay conexión. Revisá tu internet y probá de nuevo.';
   return mensaje ?? 'No se pudo completar. Probá de nuevo.';
 }
+
+/** "ana.gimenez@gmail.com" → "an•••••••@gmail.com": se reconoce sin mostrarlo entero. */
+export function correoEnmascarado(correo: string | null | undefined): string {
+  const c = (correo ?? '').trim();
+  const arroba = c.lastIndexOf('@');
+  if (arroba < 1) return c ? '•••' : '';
+  const usuario = c.slice(0, arroba);
+  const visible = usuario.length <= 2 ? usuario.slice(0, 1) : usuario.slice(0, 2);
+  return `${visible}${'•'.repeat(Math.max(3, usuario.length - visible.length))}${c.slice(arroba)}`;
+}

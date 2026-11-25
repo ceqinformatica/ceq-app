@@ -7,6 +7,7 @@ import { supabase } from '../lib/supabase';
 import { lanzar } from '../lib/errores';
 import type { TipoClase } from '../lib/tipo-clase';
 import type { ClaseOficialDb, HorarioClasesDb } from '../lib/tipos-db';
+import { elegirHorarioPublicado } from '../lib/clases-oficiales';
 import { db, esperar, idDemo, MODO_DEMO, UID_DEMO } from './demo';
 
 const BUCKET = 'horarios-clases';
@@ -70,7 +71,7 @@ export async function crearHorarioClases(carreraId: string, planAnio: number | n
     await esperar(400);
     const id = idDemo();
     const ahora = new Date().toISOString();
-    db.horariosClases.unshift({ id, carrera_id: carreraId, plan_anio: planAnio, titulo, pdf_path: null, publicado: false, publicado_en: null, creado_por: UID_DEMO, created_at: ahora, updated_at: ahora });
+    db.horariosClases.unshift({ id, carrera_id: carreraId, plan_anio: planAnio, titulo, pdf_path: null, publicado: false, publicado_en: null, avisado_en: null, creado_por: UID_DEMO, created_at: ahora, updated_at: ahora });
     db.clasesOficiales.push(...clases.map((c) => ({ ...paraGuardar(c), hora_inicio: c.hora_inicio.slice(0, 5) + ':00', hora_fin: c.hora_fin.slice(0, 5) + ':00', id: idDemo(), horario_id: id, created_at: ahora })));
     return id;
   }
@@ -120,7 +121,7 @@ export async function actualizarHorarioClases(id: string, cambios: { titulo: str
 export async function publicarHorarioClases(id: string, notificar: boolean): Promise<number> {
   if (MODO_DEMO) {
     await esperar(300);
-    db.horariosClases = db.horariosClases.map((h) => (h.id === id ? { ...h, publicado: true, publicado_en: h.publicado_en ?? new Date().toISOString() } : h));
+    db.horariosClases = db.horariosClases.map((h) => (h.id === id ? { ...h, publicado: true, publicado_en: h.publicado_en ?? new Date().toISOString(), avisado_en: h.avisado_en ?? (notificar ? new Date().toISOString() : null) } : h));
     return db.clasesOficiales.filter((c) => c.horario_id === id).length;
   }
   const { data, error } = await supabase.rpc('publicar_horario_clases', { p_id: id, p_notificar: notificar });
@@ -158,30 +159,39 @@ export async function urlPdfHorarioClases(path: string | null): Promise<string |
 /* ---------------- Estudiante ---------------- */
 
 /**
- * El horario de clases publicado más reciente de tu carrera, con sus clases.
- * null si no hay (o si la migración todavía no está aplicada).
+ * El horario de clases publicado que le corresponde a tu plan (o uno general
+ * de la carrera, marcado `general`), con sus clases. null si no hay (o si la
+ * migración todavía no está aplicada).
  */
-export async function cargarHorarioClasesPublicado(carreraId: string | null | undefined): Promise<{ horario: HorarioClasesDb; clases: ClaseOficialDb[] } | null> {
+export async function cargarHorarioClasesPublicado(
+  carreraId: string | null | undefined,
+  planId: string | null | undefined,
+): Promise<{ horario: HorarioClasesDb; clases: ClaseOficialDb[]; general: boolean } | null> {
   if (!carreraId) return null;
   if (MODO_DEMO) {
     await esperar();
-    const horario = db.horariosClases.filter((h) => h.publicado && h.carrera_id === carreraId).sort((a, b) => (b.publicado_en ?? '').localeCompare(a.publicado_en ?? ''))[0];
-    return horario ? { horario, clases: db.clasesOficiales.filter((c) => c.horario_id === horario.id) } : null;
+    const planAnio = db.planes.find((p) => p.id === planId)?.anio ?? null;
+    const elegido = elegirHorarioPublicado(db.horariosClases.filter((h) => h.publicado && h.carrera_id === carreraId), planAnio);
+    return elegido ? { ...elegido, clases: db.clasesOficiales.filter((c) => c.horario_id === elegido.horario.id) } : null;
   }
-  const { data: h, error } = await supabase
-    .from('horarios_clases')
-    .select('*')
-    .eq('carrera_id', carreraId)
-    .eq('publicado', true)
-    .order('publicado_en', { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  if (error) {
-    if (faltaMigracion(error)) return null;
-    lanzar(error);
+  const [rPlan, rH] = await Promise.all([
+    planId ? supabase.from('planes').select('anio').eq('id', planId).maybeSingle() : Promise.resolve({ data: null, error: null }),
+    supabase
+      .from('horarios_clases')
+      .select('*')
+      .eq('carrera_id', carreraId)
+      .eq('publicado', true)
+      .order('publicado_en', { ascending: false })
+      .limit(20),
+  ]);
+  if (rH.error) {
+    if (faltaMigracion(rH.error)) return null;
+    lanzar(rH.error);
   }
-  if (!h) return null;
-  const { data: clases, error: e2 } = await supabase.from('clases_oficiales').select('*').eq('horario_id', h.id).order('dia_semana').order('hora_inicio');
+  lanzar(rPlan.error);
+  const elegido = elegirHorarioPublicado(rH.data ?? [], rPlan.data?.anio ?? null);
+  if (!elegido) return null;
+  const { data: clases, error: e2 } = await supabase.from('clases_oficiales').select('*').eq('horario_id', elegido.horario.id).order('dia_semana').order('hora_inicio');
   lanzar(e2);
-  return { horario: h, clases: clases ?? [] };
+  return { ...elegido, clases: clases ?? [] };
 }

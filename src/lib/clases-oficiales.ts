@@ -77,3 +77,25 @@ export function seccionSugerida(m: MateriaConClases): string | null {
   const cargada = m.secciones.find((s) => s.clases.some((c) => c.yaEsta));
   return (cargada ?? m.secciones[0])?.seccion ?? null;
 }
+
+export interface HorarioPublicado {
+  plan_anio: number | null;
+  publicado_en: string | null;
+}
+
+/**
+ * Qué horario publicado le corresponde al estudiante. Prefiere el de su plan;
+ * si no hay (o si hay uno general más nuevo), acepta el general de la carrera
+ * (sin plan), marcado como tal.
+ * Nunca ofrece el horario de otro plan: una materia con el mismo nombre puede
+ * tener otro día, hora o aula. Si no se sabe el plan del estudiante, solo
+ * sirve un horario general.
+ */
+export function elegirHorarioPublicado<H extends HorarioPublicado>(horarios: H[], planAnio: number | null | undefined): { horario: H; general: boolean } | null {
+  const recientes = [...horarios].sort((a, b) => (b.publicado_en ?? '').localeCompare(a.publicado_en ?? ''));
+  const propio = planAnio != null ? recientes.find((h) => h.plan_anio === planAnio) : undefined;
+  const general = recientes.find((h) => h.plan_anio == null);
+  // Un horario general publicado después reemplaza al del plan (es de un periodo más nuevo).
+  if (propio && !(general && (general.publicado_en ?? '') > (propio.publicado_en ?? ''))) return { horario: propio, general: false };
+  return general ? { horario: general, general: true } : null;
+}

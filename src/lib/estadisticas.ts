@@ -3,7 +3,7 @@
  * nivel y evolución por semestre. Funciones puras, sobre los mismos datos
  * que ya carga "Mi carrera" (malla, estados e intentos de final).
  */
-import { notaAprobada, promedios, type IntentoFinal } from './finales.ts';
+import { intentosQueCuentan, notaAprobada, promedios, type IntentoFinal } from './finales.ts';
 import { calcularProgreso, esSeminario, type EstadoEstudiante, type GrupoOptativas, type Materia, type Progreso, type UnidadAvance } from './progreso.ts';
 
 export interface DatosNivel {
@@ -74,6 +74,7 @@ export function notasAprobadas(
   intentos: IntentoFinal[],
 ): Map<string, number> {
   const notas = new Map<string, number>();
+  intentos = intentosQueCuentan(intentos, estados);
   for (const m of materias) {
     if (esSeminario(m.nombre)) continue;
     const e = estados.get(m.id);
@@ -91,6 +92,8 @@ export function calcularEstadisticas(
   unidad: UnidadAvance = 'materias',
 ): Estadisticas {
   const progreso = calcularProgreso(materias, grupos, estados, unidad);
+  // Un aprobado de una materia que volvió a firmada no cuenta en ningún lado.
+  intentos = intentosQueCuentan(intentos, estados);
   const prom = promedios(materias, estados, intentos);
   const notas = notasAprobadas(materias, estados, intentos);
   const estado = (id: string) => estados.get(id)?.estado ?? 'pendiente';

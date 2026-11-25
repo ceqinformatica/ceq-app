@@ -116,6 +116,20 @@ export function materiasEn(texto: string, lista: Patron[]): { patron: Patron; de
   return encontradas.sort((a, b) => a.desde - b.desde);
 }
 
+/**
+ * Posición en el texto normalizado donde empieza la palabra que, en la versión
+ * "clave" del mismo texto, está en `desdeClave` (las dos versiones no tienen
+ * el mismo largo: la clave quita artículos y expande abreviaturas).
+ */
+function posicionEnNormalizado(normalizado: string, desdeClave: number): number {
+  const palabras = [...normalizado.matchAll(/\S+/g)];
+  for (let i = 0; i < palabras.length; i++) {
+    const prefijo = palabras.slice(0, i + 1).map((m) => m[0]).join(' ');
+    if (clave(prefijo).length > desdeClave) return palabras[i].index ?? 0;
+  }
+  return normalizado.length;
+}
+
 /** La materia más parecida al texto, si se parece bastante (para nombres cortados o con errores). */
 /** Distancia de edición, cortando en cuanto pasa del máximo. */
 function distancia(a: string, b: string, max: number): number {
@@ -308,10 +322,24 @@ export function leerHorarioFinales(texto: string, materias: string[], referencia
       continue;
     }
     if (encontradas.length > 1) {
-      // Dos materias en el mismo renglón: cada una con las fechas que le siguen.
-      // Las posiciones son de la versión "clave"; se reparten en orden.
-      const porMateria = Math.max(1, Math.floor(fechas.length / encontradas.length));
-      encontradas.forEach((e, i) => agregar(e.patron, fechas.slice(i * porMateria, (i + 1) * porMateria), horas, aula, crudo));
+      // Dos materias en el mismo renglón: cada una se queda con las fechas que
+      // están entre su nombre y el de la siguiente. Las fechas antes de la
+      // primera materia no se pueden asociar: quedan sin materia, para revisar.
+      const inicios = encontradas.map((e) => posicionEnNormalizado(n, e.desde));
+      const sueltas = fechas.filter((f) => f.pos < inicios[0]);
+      if (sueltas.length) {
+        agregar(null, sueltas, horas, aula, crudo);
+        sinUsar.push(crudo);
+      }
+      let sinFecha = false;
+      encontradas.forEach((e, i) => {
+        const hasta = inicios[i + 1] ?? Infinity;
+        const propias = fechas.filter((f) => f.pos >= inicios[i] && f.pos < hasta);
+        if (!propias.length) sinFecha = true;
+        agregar(e.patron, propias, horas, aula, crudo);
+      });
+      // Una materia del renglón sin fecha propia (¿fecha compartida?): que el admin lo revise.
+      if (sinFecha && !sueltas.length) sinUsar.push(crudo);
       pendiente = null;
       previo = '';
       continue;

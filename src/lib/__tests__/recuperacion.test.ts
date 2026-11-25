@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { correoValido, resultadoGoogle, metodosDeCuenta, problemaClaveNueva, traducirErrorClave } from '../recuperacion.ts';
+import { correoEnmascarado, correoValido, resultadoGoogle, metodosDeCuenta, problemaClaveNueva, traducirErrorClave } from '../recuperacion.ts';
 
 test('cuenta de Google sola: confirma con Google, no con contraseña', () => {
   const m = metodosDeCuenta({ email: 'a@gmail.com', app_metadata: { provider: 'google', providers: ['google'] } });
@@ -62,4 +62,10 @@ test('confirmar con Google exige la misma cuenta', () => {
   assert.equal(resultadoGoogle('u1', 't0', 'SIGNED_IN', ses('u1', 't0')), null);
   assert.equal(resultadoGoogle('u1', 't0', 'TOKEN_REFRESHED', ses('u1', 't1')), null);
   assert.equal(resultadoGoogle('u1', 't0', 'SIGNED_IN', null), null);
+});
+
+test('correo enmascarado al recuperar el PIN', () => {
+  assert.equal(correoEnmascarado('ana.gimenez@gmail.com'), 'an•••••••••@gmail.com');
+  assert.equal(correoEnmascarado('a@b.com'), 'a•••@b.com');
+  assert.equal(correoEnmascarado(null), '');
 });

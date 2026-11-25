@@ -58,12 +58,17 @@ export async function registrarEsteCelular({ pedirPermiso = true } = {}): Promis
   }
 }
 
-/** Al cerrar sesión: este celular deja de recibir lo de esta cuenta. */
+/**
+ * Al cerrar sesión: este celular deja de recibir lo de esta cuenta. Si el
+ * servidor no confirma la baja, lanza el error y conserva el token guardado
+ * para poder reintentar (el cierre de sesión no sigue adelante).
+ */
 export async function olvidarEsteCelular() {
   if (MODO_DEMO) return;
   const token = await AsyncStorage.getItem(CLAVE_TOKEN).catch(() => null);
   if (!token) return;
-  await supabase.from('dispositivos').delete().eq('token', token);
+  const { error } = await supabase.from('dispositivos').delete().eq('token', token);
+  if (error) throw error;
   await AsyncStorage.removeItem(CLAVE_TOKEN).catch(() => {});
 }
 

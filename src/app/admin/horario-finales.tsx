@@ -14,6 +14,7 @@ import {
   borrarHorario, bytesDeArchivo, cargarHorario, crearHorario, guardarFechas, materiasDeCarrera, ocultarHorario, publicarHorario, renombrarHorario,
   urlPdfHorario, type FechaEditable,
 } from '../../datos/finales-oficiales';
+import { estadoAviso, TEXTO_AVISO } from '../../lib/aviso-publicacion';
 import { textoError } from '../../lib/errores';
 import { detectarCarrera, detectarPlan, isoATexto, leerHorarioFinales, textoAIso, textoLlamado, tituloSugerido } from '../../lib/horario-finales';
 import { confianzaMedia, textoDeOcr } from '../../lib/ocr/documento';
@@ -215,9 +216,11 @@ export default function HorarioFinalesAdmin() {
       const hid = await guardar();
       if (!hid) return;
       if (tipo === 'publicar') {
-        const n = await publicarHorario(hid, notificar && !horario?.publicado_en);
-        setHorario((h) => (h ? { ...h, publicado: true, publicado_en: h.publicado_en ?? new Date().toISOString() } : h));
-        setAviso(`Publicado: ${n} fechas.${notificar && !horario?.publicado_en ? ' Les avisamos a los estudiantes de la carrera.' : ''}`);
+        const avisar = notificar && estadoAviso(horario) === 'pendiente';
+        const n = await publicarHorario(hid, avisar);
+        const ahora = new Date().toISOString();
+        setHorario((h) => (h ? { ...h, publicado: true, publicado_en: h.publicado_en ?? ahora, avisado_en: avisar ? ahora : h.avisado_en } : h));
+        setAviso(`Publicado: ${n} fechas.${avisar ? ' Les avisamos a los estudiantes de la carrera.' : ''}`);
       } else {
         setAviso(horario?.publicado ? 'Cambios guardados: los estudiantes ya los ven.' : 'Borrador guardado. Todavía no lo ven los estudiantes.');
       }
@@ -327,8 +330,8 @@ export default function HorarioFinalesAdmin() {
         <Fila
           icono="notifications-outline"
           titulo="Avisar a los estudiantes"
-          detalle={horario?.publicado_en ? 'Ya se avisó cuando se publicó.' : 'Les llega una notificación al publicar.'}
-          derecha={<Switch value={notificar && !horario?.publicado_en} disabled={Boolean(horario?.publicado_en)} onValueChange={setNotificar} accessibilityLabel="Avisar a los estudiantes" trackColor={{ true: fondos.marino, false: colores.linea }} thumbColor={colores.blanco} />}
+          detalle={horario?.publicado && estadoAviso(horario) === 'pendiente' ? 'Publicado sin aviso: para avisar, ocultalo y volvé a publicarlo.' : TEXTO_AVISO[estadoAviso(horario)]}
+          derecha={<Switch value={notificar && estadoAviso(horario) === 'pendiente'} disabled={estadoAviso(horario) !== 'pendiente' || Boolean(horario?.publicado)} onValueChange={setNotificar} accessibilityLabel="Avisar a los estudiantes" trackColor={{ true: fondos.marino, false: colores.linea }} thumbColor={colores.blanco} />}
           ultima
         />
       </Tarjeta>

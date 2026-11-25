@@ -25,6 +25,7 @@ export default function Perfil() {
   const [bio, setBio] = useState<{ disponible: boolean; nombre: string; activa: boolean } | null>(null);
   const [conPin, setConPin] = useState<boolean | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [errorSalir, setErrorSalir] = useState<string | null>(null);
   const [push, setPush] = useState<EstadoRegistro | null>(null);
   const [borrando, setBorrando] = useState(false);
   // Solo las cuentas creadas con correo tienen contraseña propia (las de Google usan la de Google).
@@ -139,8 +140,9 @@ export default function Perfil() {
             recorrido.iniciar();
           }}
         />
-        <Fila simple icono="log-out-outline" titulo="Cerrar sesión" onPress={salir} ultima />
+        <Fila simple icono="log-out-outline" titulo="Cerrar sesión" onPress={async () => setErrorSalir(await salir())} ultima />
       </Tarjeta>
+      <Mensaje texto={errorSalir} />
 
       <Seccion icono="school-outline" estilo={{ marginTop: espacio.l }}>Situación académica</Seccion>
       <Tarjeta estilo={{ paddingVertical: espacio.xs }}>

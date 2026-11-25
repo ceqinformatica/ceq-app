@@ -48,6 +48,24 @@ export interface Promedios {
 }
 
 /**
+ * Intentos que cuentan según el estado de cada materia. Si una materia tiene
+ * un final aprobado cargado pero el estudiante la devolvió a firmada (o a otro
+ * estado que no es aprobada), ese aprobado se tomó por error: no cuenta en
+ * promedios, gráficos ni efectividad. Los aplazos sí se conservan. Una
+ * materia sin estado guardado se juzga solo por sus intentos.
+ */
+export function intentosQueCuentan(
+  intentos: IntentoFinal[],
+  estados: Map<string, Pick<EstadoEstudiante, 'estado'>>,
+): IntentoFinal[] {
+  return intentos.filter((i) => {
+    if (i.nota < 2) return true;
+    const e = estados.get(i.materiaId);
+    return !e || e.estado === 'aprobada';
+  });
+}
+
+/**
  * Promedios de la carrera. Las materias aprobadas sin intentos cargados
  * (por ejemplo, marcadas en bloque con su nota) cuentan su nota final una vez.
  */
@@ -61,11 +79,10 @@ export function promedios(
   const notasAprobadas: number[] = [];
   const todas: number[] = [];
   let aplazos = 0;
+  const validos = intentosQueCuentan(intentos, estados);
   for (const id of delPlan) {
     const e = estados.get(id);
-    // Un final aprobado solo cuenta si la materia sigue aprobada: si después
-    // la volvió a marcar como firmada (porque lo cargó por error), no entra.
-    const propios = intentos.filter((i) => i.materiaId === id && esFinal(i) && (i.nota < 2 || !e || e.estado === 'aprobada'));
+    const propios = validos.filter((i) => i.materiaId === id && esFinal(i));
     for (const i of propios) {
       todas.push(i.nota);
       if (i.nota < 2) aplazos++;

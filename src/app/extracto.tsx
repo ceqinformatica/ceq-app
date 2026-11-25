@@ -6,7 +6,7 @@ import { Platform, Pressable, Text, View } from 'react-native';
 import { nombreNivel, nota as fmtNota } from '../components/academico';
 import { BarraSuperior, Boton, Campo, Cargando, Dato, EstadoVacio, Hoja, Insignia, Mensaje, Pantalla, s, Seccion, Tarjeta } from '../components/ui';
 import { useSesion } from '../context/SesionProvider';
-import { cargarMalla, cargarParaImportar, importarExtracto } from '../datos/academico';
+import { cargarMalla, cargarParaImportar, ImportacionParcial, importarExtracto } from '../datos/academico';
 import { usarDatos } from '../datos/usarDatos';
 import { emparejar, leerExtracto, normalizar, planDeImportacion, UMBRAL_SEGURO, type Extracto, type FilaExtracto } from '../lib/extracto-ealu';
 import { textoDePdf } from '../lib/texto-pdf';
@@ -122,7 +122,8 @@ export default function ImportarExtracto() {
       await importarExtracto(plan);
       setPaso({ tipo: 'listo', finales: plan.intentos.length, aprobadas: plan.aprobadasSinNota.length, repetidas: plan.repetidas });
     } catch (e) {
-      setError(textoError(e, 'No se pudo importar.'));
+      // A medias: se dice exactamente qué quedó guardado.
+      setError(e instanceof ImportacionParcial ? e.message : textoError(e, 'No se pudo importar.'));
     } finally {
       enCurso.current = false;
       setImportando(false);

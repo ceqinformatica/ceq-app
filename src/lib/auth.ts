@@ -147,8 +147,8 @@ export async function registrarseConCorreo(
 }
 
 /**
- * Botones de otras cuentas que se pueden mostrar (Google siempre; Microsoft
- * solo si ya está habilitado en Supabase). Sin internet, solo Google.
+ * Botones de otras cuentas que se pueden mostrar (cada uno solo si está
+ * habilitado en Supabase). Sin internet, solo Google.
  */
 export async function proveedoresDisponibles(): Promise<Proveedor[]> {
   const url = process.env.EXPO_PUBLIC_SUPABASE_URL;
@@ -215,7 +215,12 @@ export async function confirmarConProveedor(proveedor: Proveedor): Promise<strin
     sub.subscription.unsubscribe();
   }
   if (resultado === 'otra') {
-    await salir();
+    // Es otra cuenta: si el cierre normal falla, igual se cierra en este
+    // celular para no dejar la otra cuenta abierta detrás del PIN.
+    if (await salir()) {
+      await supabase.auth.signOut({ scope: 'local' }).catch(() => undefined);
+      await borrarPin().catch(() => {});
+    }
     return `Esa cuenta de ${NOMBRE_PROVEEDOR[proveedor]} no es la de esta sesión. Cerramos la sesión por seguridad: entrá de nuevo con tu cuenta.`;
   }
   if (error) return error;
@@ -224,14 +229,36 @@ export async function confirmarConProveedor(proveedor: Proveedor): Promise<strin
 
 export const confirmarConGoogle = () => confirmarConProveedor('google');
 
-export async function salir() {
+const oyentesFalloSalida = new Set<() => void>();
+/** Avisa cuando un cierre de sesión dio de baja el celular pero la sesión siguió abierta. */
+export function alFallarSalida(f: () => void): () => void {
+  oyentesFalloSalida.add(f);
+  return () => oyentesFalloSalida.delete(f);
+}
+
+/**
+ * Cierra la sesión. Devuelve null si salió, o el mensaje de error. Si algo
+ * falla (por ejemplo, sin conexión), no se toca el PIN: la cuenta sigue
+ * abierta y protegida igual que antes, y se puede volver a intentar.
+ */
+export async function salir(): Promise<string | null> {
   // Primero se borra el celular (después ya no hay sesión para hacerlo).
-  await olvidarEsteCelular().catch(() => {});
+  try {
+    await olvidarEsteCelular();
+  } catch {
+    return 'No pudimos cerrar la sesión: revisá tu conexión e intentá de nuevo.';
+  }
+  const { error } = await supabase.auth.signOut();
+  if (error) {
+    // El celular ya se dio de baja pero la sesión sigue: hay que volver a registrarlo.
+    oyentesFalloSalida.forEach((f) => f());
+    return 'No pudimos cerrar la sesión: revisá tu conexión e intentá de nuevo.';
+  }
   await cerrarGoogleNativo();
   // El PIN es de esta cuenta en este dispositivo: así, si alguien lo olvidó,
   // cierra sesión, vuelve a entrar con Google y puede crear otro.
   await borrarPin().catch(() => {});
-  await supabase.auth.signOut();
+  return null;
 }
 
 /** Olvida la cuenta elegida en el selector nativo (para poder elegir otra). */

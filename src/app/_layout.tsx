@@ -2,9 +2,10 @@ import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold, us
 import * as Notifications from 'expo-notifications';
 import { router, Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect, useLayoutEffect, useRef } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { ActivityIndicator, Image, Platform, View } from 'react-native';
+import { alFallarSalida } from '../lib/auth';
+import { ActivityIndicator, AppState, Image, Platform, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Bloqueo } from '../components/Bloqueo';
 import { Recorrido } from '../components/Recorrido';
@@ -26,13 +27,42 @@ configurarNotificaciones();
  */
 function useNotificaciones(uid: string | null, lista: boolean) {
   const registrado = useRef<string | null>(null);
+  const [reintento, setReintento] = useState(0);
   useEffect(() => {
     // Al cerrar sesión se borra el celular: al volver a entrar hay que registrarlo de nuevo.
     if (!uid) registrado.current = null;
     if (!uid || !lista || registrado.current === uid) return;
-    registrado.current = uid;
-    registrarEsteCelular().catch(() => {});
-  }, [uid, lista]);
+    let activo = true;
+    const intentar = () =>
+      registrarEsteCelular()
+        .catch(() => 'error' as const)
+        .then((r) => {
+          // Solo se da por registrado si el servidor lo confirmó (o si no hay
+          // nada que registrar). Si falló, se reintenta al volver a la app.
+          if (activo && r !== 'error') registrado.current = uid;
+          return r;
+        });
+    intentar();
+    const sub = AppState.addEventListener('change', (estado) => {
+      if (estado === 'active' && registrado.current !== uid) intentar();
+    });
+    return () => {
+      activo = false;
+      sub.remove();
+    };
+  }, [uid, lista, reintento]);
+
+  // Un cierre de sesión que falló a medias (incluso desde el bloqueo) pudo borrar
+  // el registro: se olvida y el efecto de arriba vuelve a registrar el celular
+  // en cuanto haya sesión lista. Se escucha siempre, sin depender del registro.
+  useEffect(
+    () =>
+      alFallarSalida(() => {
+        registrado.current = null;
+        setReintento((n) => n + 1);
+      }),
+    [],
+  );
 
   useEffect(() => {
     if (!lista || Platform.OS === 'web') return;

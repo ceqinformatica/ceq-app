@@ -15,6 +15,7 @@ import {
   actualizarHorarioClases, borrarHorarioClases, cargarHorarioClases, crearHorarioClases, guardarClasesOficiales, ocultarHorarioClases, publicarHorarioClases,
   urlPdfHorarioClases, type ClaseEditable,
 } from '../../datos/horarios-clases';
+import { estadoAviso, TEXTO_AVISO } from '../../lib/aviso-publicacion';
 import { textoError } from '../../lib/errores';
 import { leerHorarioClases, NOMBRE_DIA, textoNivel } from '../../lib/horario-clases';
 import { detectarCarrera, detectarPlan, normalizar } from '../../lib/horario-finales';
@@ -70,6 +71,7 @@ export default function HorarioClasesAdmin() {
   const [progreso, setProgreso] = useState<string | null>(null);
   const [editando, setEditando] = useState<FilaClase | null>(null);
   const [notificar, setNotificar] = useState(true);
+  const [manual, setManual] = useState(false);
   const [guardando, setGuardando] = useState<null | 'guardar' | 'publicar' | 'ocultar' | 'borrar'>(null);
   const [confirmarBorrar, setConfirmarBorrar] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -150,7 +152,8 @@ export default function HorarioClasesAdmin() {
       if (!titulo) setTitulo(tituloDeHorario(texto));
       setCambios(true);
     } catch (e) {
-      setError(`${textoError(e, 'No se pudo leer el PDF.')} Podés cargar las clases a mano.`);
+      setError(`${textoError(e, 'No se pudo leer el PDF.')} Podés cargar las clases a mano con "Agregar".`);
+      setManual(true);
     } finally {
       setLeyendo(false);
       setProgreso(null);
@@ -223,9 +226,10 @@ export default function HorarioClasesAdmin() {
       const hid = await guardar();
       if (!hid) return;
       if (tipo === 'publicar') {
-        const avisar = notificar && !horario?.publicado_en;
+        const avisar = notificar && estadoAviso(horario) === 'pendiente';
         const n = await publicarHorarioClases(hid, avisar);
-        setHorario((h) => (h ? { ...h, publicado: true, publicado_en: h.publicado_en ?? new Date().toISOString() } : h));
+        const ahora = new Date().toISOString();
+        setHorario((h) => (h ? { ...h, publicado: true, publicado_en: h.publicado_en ?? ahora, avisado_en: avisar ? ahora : h.avisado_en } : h));
         setAviso(`Publicado: ${n} clases.${avisar ? ' Les avisamos a los estudiantes de la carrera.' : ''}`);
       } else {
         setAviso(horario?.publicado ? 'Cambios guardados: los estudiantes ya los ven.' : 'Borrador guardado. Todavía no lo ven los estudiantes.');
@@ -270,7 +274,8 @@ export default function HorarioClasesAdmin() {
   }
 
   const nuevo = !horario;
-  const hayAlgo = Boolean(pdf || horario);
+  // Sin PDF leído también se puede armar el borrador a mano (por ejemplo, si el lector falló).
+  const hayAlgo = Boolean(pdf || horario || manual);
 
   const datosGenerales = (
     <>
@@ -297,6 +302,9 @@ export default function HorarioClasesAdmin() {
             cargando={leyendo}
             estilo={{ marginTop: espacio.m, alignSelf: 'flex-start' }}
           />
+          {!pdf && !manual && !leyendo && (
+            <Boton texto="Cargar a mano, sin PDF" icono="create-outline" variante="fantasma" compacto onPress={() => setManual(true)} estilo={{ marginTop: espacio.s, alignSelf: 'flex-start' }} />
+          )}
         </Tarjeta>
       )}
       {hayAlgo && (
@@ -341,8 +349,8 @@ export default function HorarioClasesAdmin() {
         <Fila
           icono="notifications-outline"
           titulo="Avisar a los estudiantes"
-          detalle={horario?.publicado_en ? 'Ya se avisó cuando se publicó.' : 'Les llega una notificación al publicar.'}
-          derecha={<Switch value={notificar && !horario?.publicado_en} disabled={Boolean(horario?.publicado_en)} onValueChange={setNotificar} accessibilityLabel="Avisar a los estudiantes" trackColor={{ true: fondos.marino, false: colores.linea }} thumbColor={colores.blanco} />}
+          detalle={horario?.publicado && estadoAviso(horario) === 'pendiente' ? 'Publicado sin aviso: para avisar, ocultalo y volvé a publicarlo.' : TEXTO_AVISO[estadoAviso(horario)]}
+          derecha={<Switch value={notificar && estadoAviso(horario) === 'pendiente'} disabled={estadoAviso(horario) !== 'pendiente' || Boolean(horario?.publicado)} onValueChange={setNotificar} accessibilityLabel="Avisar a los estudiantes" trackColor={{ true: fondos.marino, false: colores.linea }} thumbColor={colores.blanco} />}
           ultima
         />
       </Tarjeta>
