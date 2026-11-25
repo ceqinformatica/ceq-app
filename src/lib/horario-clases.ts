@@ -40,6 +40,8 @@ export interface ClaseLeida {
   origen: string;
   /** Dónde está en el PDF escaneado (para mostrar el recorte). */
   zona?: Zona | null;
+  /** Hoja del PDF (empieza en 0), en la grilla por materia. */
+  pagina?: number;
 }
 
 /** Algo del PDF que no se pudo convertir en una clase completa, con el motivo. */
@@ -502,8 +504,8 @@ function leerGrillaPorMateria(filas: FilaDoc[], lista: Patron[], fichas: FichaMa
       }
       libres.splice(mejor, 1);
       const tipo: TipoClase | null = ini.marca ?? fin.marca ?? (col.teoria ? 'teoria' : null);
-      const clase: ClaseLeida & { hoja?: number } = { materia, dia: col.dia, inicio: ini.hora, fin: fin.hora, aula: null, tipo, nivel, seccion: null, plan, origen: `${nombre} · ${actual.origen} → ${origen}`.slice(0, 200), zona };
-      clase.hoja = pagina;
+      const clase: ClaseLeida = { materia, dia: col.dia, inicio: ini.hora, fin: fin.hora, aula: null, tipo, nivel, seccion: null, plan, origen: `${nombre} · ${actual.origen} → ${origen}`.slice(0, 200), zona };
+      clase.pagina = pagina;
       clases.push(clase);
     }
     if (!reconocida && actual.inicios.length) revisar.push({ motivo: 'materia', texto: nombre, materia, plan, zona });
@@ -514,7 +516,7 @@ function leerGrillaPorMateria(filas: FilaDoc[], lista: Patron[], fichas: FichaMa
     if (f.pagina !== pagina) {
       cerrar([], '', '');
       if (nivel == null && pagina >= 0) {
-        sinNivel.push(clases.filter((c) => c.nivel == null && (c as ClaseLeida & { hoja?: number }).hoja === pagina));
+        sinNivel.push(clases.filter((c) => c.nivel == null && c.pagina === pagina));
         hojasSinNivel.push({ pagina, plan, zona: zonaHoja });
       }
       pagina = f.pagina;
@@ -620,7 +622,7 @@ function leerGrillaPorMateria(filas: FilaDoc[], lista: Patron[], fichas: FichaMa
   }
   cerrar([], '', '');
   if (nivel == null && pagina >= 0) {
-    sinNivel.push(clases.filter((c) => c.nivel == null && (c as ClaseLeida & { hoja?: number }).hoja === pagina));
+    sinNivel.push(clases.filter((c) => c.nivel == null && c.pagina === pagina));
     hojasSinNivel.push({ pagina, plan, zona: zonaHoja });
   }
   sinNivel.forEach((hoja, i) => {
@@ -629,7 +631,6 @@ function leerGrillaPorMateria(filas: FilaDoc[], lista: Patron[], fichas: FichaMa
     // Ni en la hoja ni por sus materias: que el admin lo elija.
     else if (hoja.length) revisar.push({ motivo: 'nivel', texto: `Hoja ${hojasSinNivel[i].pagina + 1}${hojasSinNivel[i].plan ? ` (plan ${hojasSinNivel[i].plan})` : ''}: no leímos el nivel`, plan: hojasSinNivel[i].plan, pagina: hojasSinNivel[i].pagina, zona: hojasSinNivel[i].zona });
   });
-  for (const c of clases) delete (c as ClaseLeida & { hoja?: number }).hoja;
   return { clases, revisar };
 }
 
@@ -703,21 +704,6 @@ function armarColumnas(dias: Map<number, number>, marcas: { x: number; teoria: b
     }
   }
   return { subcols, paso, borde: a + b - b / 2 - paso * 0.6 };
-}
-
-/** Días que el OCR no leyó ("NIE" por "MIE"): su lugar se calcula entre los vecinos. */
-function completarDias(centros: [number, number][]): [number, number][] {
-  if (centros.length < 2) return centros;
-  const porDia = new Map(centros);
-  const primero = centros[0][0];
-  const ultimo = centros[centros.length - 1][0];
-  for (let d = primero + 1; d < ultimo; d++) {
-    if (porDia.has(d)) continue;
-    const antes = [...porDia.entries()].filter(([k]) => k < d).sort((a, b) => b[0] - a[0])[0];
-    const despues = [...porDia.entries()].filter(([k]) => k > d).sort((a, b) => a[0] - b[0])[0];
-    porDia.set(d, antes[1] + ((despues[1] - antes[1]) * (d - antes[0])) / (despues[0] - antes[0]));
-  }
-  return [...porDia.entries()].sort((a, b) => a[1] - b[1]);
 }
 
 function subcolumnaDe(x: number, subcols: Subcolumna[], paso: number): Subcolumna | null {

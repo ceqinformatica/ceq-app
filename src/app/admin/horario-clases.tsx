@@ -29,7 +29,7 @@ import { colores, espacio, fondos } from '../../tema';
 const volver = () => (router.canGoBack() ? router.back() : router.replace('/admin/horarios-clases'));
 
 /** Clase en edición: la materia puede faltar hasta que el admin la elija. */
-type FilaClase = Omit<ClaseEditable, 'materia'> & { clave: string; materia: string | null; origen?: string; zona?: Zona | null };
+type FilaClase = Omit<ClaseEditable, 'materia'> & { clave: string; materia: string | null; origen?: string; zona?: Zona | null; pagina?: number };
 
 let contador = 0;
 const nuevaClave = () => `k${++contador}`;
@@ -72,6 +72,8 @@ export default function HorarioClasesAdmin() {
   // Páginas escaneadas (con su imagen) para mostrar el recorte de lo que hay que revisar.
   const [vistas, setVistas] = useState<PaginaVista[] | null>(null);
   const [revisar, setRevisar] = useState<(ParaRevisar & { clave: string })[]>([]);
+  // Ítem "sin hora de fin" que se está completando en el editor.
+  const pendiente = useRef<string | null>(null);
   const [pdf, setPdf] = useState<{ bytes: Uint8Array; nombre: string } | null>(null);
   const [filas, setFilas] = useState<FilaClase[]>([]);
   const [leyendo, setLeyendo] = useState(false);
@@ -146,7 +148,7 @@ export default function HorarioClasesAdmin() {
   useEffect(() => {
     if (!doc || !materias.length) return;
     const r = leerHorarioClases(doc, materias, plan, fichas);
-    setFilas(r.clases.map((c) => ({ clave: nuevaClave(), materia: c.materia, nivel: c.nivel, seccion: c.seccion, dia_semana: c.dia, hora_inicio: c.inicio, hora_fin: c.fin, aula: c.aula, tipo_clase: c.tipo, origen: c.origen, zona: c.zona })));
+    setFilas(r.clases.map((c) => ({ clave: nuevaClave(), materia: c.materia, nivel: c.nivel, seccion: c.seccion, dia_semana: c.dia, hora_inicio: c.inicio, hora_fin: c.fin, aula: c.aula, tipo_clase: c.tipo, origen: c.origen, zona: c.zona, pagina: c.pagina })));
     // Las materias fuera de la malla ya aparecen como clases para revisar.
     setRevisar(r.revisar.filter((x) => x.motivo !== 'materia').map((x) => ({ ...x, clave: nuevaClave() })));
   }, [doc, materias, plan, fichas]);
@@ -213,11 +215,12 @@ export default function HorarioClasesAdmin() {
   const resolver = (clave: string) => setRevisar((l) => l.filter((x) => x.clave !== clave));
   const completarClase = (r: ParaRevisar & { clave: string }) => {
     const ultima = filas[filas.length - 1];
-    resolver(r.clave);
+    // Se quita de la lista solo si la clase se guarda (ver aplicarEdicion).
+    pendiente.current = r.clave;
     setEditando({ clave: nuevaClave(), materia: r.materia && materias.includes(r.materia) ? r.materia : null, nivel: ultima?.nivel ?? null, seccion: null, dia_semana: r.dia ?? 1, hora_inicio: r.inicio ?? '07:00', hora_fin: '', aula: null, tipo_clase: null, origen: r.texto, zona: r.zona });
   };
   const ponerNivel = (r: ParaRevisar & { clave: string }, nivel: number) => {
-    setFilas((l) => l.map((f) => (f.nivel == null && f.zona?.pagina === r.pagina ? { ...f, nivel } : f)));
+    setFilas((l) => l.map((f) => (f.nivel == null && f.pagina != null && f.pagina === r.pagina ? { ...f, nivel } : f)));
     resolver(r.clave);
     setCambios(true);
   };
@@ -237,6 +240,11 @@ export default function HorarioClasesAdmin() {
   const aplicarEdicion = (f: FilaClase | null) => {
     const original = editando;
     setEditando(null);
+    if (pendiente.current) {
+      const clave = pendiente.current;
+      pendiente.current = null;
+      setRevisar((l) => l.filter((x) => x.clave !== clave));
+    }
     if (!original) return;
     setFilas((l) => {
       const existe = l.some((x) => x.clave === original.clave);
@@ -501,7 +509,7 @@ export default function HorarioClasesAdmin() {
     <Pantalla>
       <BarraSuperior titulo={nuevo ? 'Subir horario de clases' : 'Horario de clases'} onVolver={volver} />
       <Columnas proporcion={1} izquierda={<>{datosGenerales}{acciones}</>} derecha={<>{lista}</>} />
-      <EditorClase fila={editando} materias={materias} vistas={vistas} onListo={aplicarEdicion} onCerrar={() => setEditando(null)} />
+      <EditorClase fila={editando} materias={materias} vistas={vistas} onListo={aplicarEdicion} onCerrar={() => { pendiente.current = null; setEditando(null); }} />
       {lector.vista}
     </Pantalla>
   );

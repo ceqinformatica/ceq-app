@@ -129,7 +129,7 @@ function agrupar(palabras: PalabraOcr[], altoTipico: number): RenglonOcr[] {
 }
 
 /** Texto de una celda de varios renglones: de arriba abajo y de izquierda a derecha. */
-function textoDeCelda(palabras: PalabraOcr[], alto: number): string {
+function textoDeCelda(palabras: PalabraOcr[]): string {
   // Mismo renglón si se superponen en vertical (una palabra con una mancha puede medir el doble).
   const lineas: { y0: number; y1: number; palabras: PalabraOcr[] }[] = [];
   const solape = (a0: number, a1: number, b0: number, b1: number) => (Math.min(a1, b1) - Math.max(a0, b0)) / Math.max(1, Math.min(a1 - a0, b1 - b0));
@@ -139,7 +139,6 @@ function textoDeCelda(palabras: PalabraOcr[], alto: number): string {
     else lineas.push({ y0: p.y0, y1: p.y1, palabras: [p] });
   }
   lineas.sort((a, b) => a.y0 + a.y1 - b.y0 - b.y1);
-  void alto;
   return lineas.map((l) => l.palabras.sort((a, b) => a.x0 - b.x0).map((p) => p.t).join(' ')).join(' ');
 }
 
@@ -244,7 +243,7 @@ function filasDeTabla(palabras: PalabraOcr[], lineas: LineasOcr | undefined, alt
         grupos.push({ col, palabras: [p], x0: p.x0, x1: p.x1 });
       }
     }
-    const celdas: Celda[] = grupos.map((c) => ({ texto: textoDeCelda(c.palabras, alto), x0: c.x0, x1: c.x1 }));
+    const celdas: Celda[] = grupos.map((c) => ({ texto: textoDeCelda(c.palabras), x0: c.x0, x1: c.x1 }));
     celdas.sort((a, b) => a.x0 - b.x0);
     filas.push({
       palabras: todas.sort((a, b) => a.x0 - b.x0),
@@ -417,7 +416,7 @@ export function filasDeOcr(paginas: PaginaOcr[], opciones: OpcionesOcr = {}): Fi
       celdas: celdasDeRenglon(r),
       y: r.y,
       alto: r.alto,
-      zona: {
+      zona: !r.palabras.length ? undefined : {
         pagina: i,
         x0: Math.min(...r.palabras.map((w) => w.x0)),
         y0: Math.min(...r.palabras.map((w) => w.y0)),

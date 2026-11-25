@@ -377,3 +377,18 @@ test('página del lector: manda líneas, miniatura y relee lo que se saltó', ()
   assert.match(HTML_OCR, /lineas, imagen/);
   assert.ok(HTML_OCR.includes('/[\\p{L}\\p{N}]/u'), 'la expresión con \\p tiene que llegar entera a la página');
 });
+
+test('lector: una imagen que no es un JPEG embebido se descarta', async () => {
+  const { atender } = await import('../../components/lector-ocr/comun.ts');
+  let recibidas: PaginaOcr[] = [];
+  const pedido = { bytes: new Uint8Array(), ok: (p: PaginaOcr[]) => (recibidas = p), mal: () => {} };
+  const base = { ancho: 10, alto: 10, palabras: [] };
+  atender({ tipo: 'resultado', total: 2, paginas: [{ ...base, imagen: 'data:image/jpeg;base64,AAAA' }, { ...base, imagen: 'https://malo.example/x.jpg' }] }, pedido, () => {});
+  assert.equal(recibidas[0].imagen, 'data:image/jpeg;base64,AAAA');
+  assert.equal(recibidas[1].imagen, undefined);
+});
+
+test('grilla FCQ: cada clase sabe de qué hoja es (para elegir el nivel de la hoja)', () => {
+  const r = leerHorarioClases(filasDeOcr(ocr('horario-fcq')), MATERIAS_IQ, null, FICHAS_IQ);
+  for (const c of r.clases) assert.equal(typeof c.pagina, 'number');
+});

@@ -177,7 +177,7 @@ function palabrasDe(data, dx, dy) {
  * leyó (números sueltos en una celda, como el "9" del nivel, o una hora
  * aislada) y las lee de nuevo, recortadas, como un solo renglón.
  */
-async function rescatar(ctx, w, h, palabras, worker) {
+async function rescatar(ctx, w, h, palabras, worker, alVivo) {
   const alturas = palabras.map((p) => p.y1 - p.y0).sort((a, b) => a - b);
   const alto = alturas[Math.floor(alturas.length / 2)] || 30;
   const K = 4;
@@ -217,8 +217,13 @@ async function rescatar(ctx, w, h, palabras, worker) {
   }
   if (!manchas.length) return;
   await worker.setParameters({ tessedit_pageseg_mode: '7' });
+  const nuevas = [];
+  const inicio = Date.now();
   try {
     for (const m of manchas) {
+      // Sin pasarse de tiempo en celulares lentos (y avisando que sigue vivo).
+      if (Date.now() - inicio > 25000) break;
+      if (alVivo) alVivo();
       const margen = Math.round(alto * 0.6);
       const ax = Math.max(0, m.x0 - margen), ay = Math.max(0, m.y0 - margen);
       const bw = Math.min(w, m.x1 + margen) - ax, bh = Math.min(h, m.y1 + margen) - ay;
@@ -226,12 +231,24 @@ async function rescatar(ctx, w, h, palabras, worker) {
       c.width = bw; c.height = bh;
       c.getContext('2d').drawImage(ctx.canvas, ax, ay, bw, bh, 0, 0, bw, bh);
       const { data } = await worker.recognize(c, {}, { blocks: true, text: false });
-      for (const p of palabrasDe(data, ax, ay)) if (p.c >= 45 && /[\\p{L}\\p{N}]/u.test(p.t)) palabras.push(p);
+      // Solo lo nuevo: el recorte tiene margen y puede volver a leer pedazos de palabras vecinas.
+      for (const p of palabrasDe(data, ax, ay)) if (p.c >= 45 && /[\\p{L}\\p{N}]/u.test(p.t) && !pisaA(p, palabras)) nuevas.push(p);
       c.width = c.height = 0;
     }
   } finally {
     await worker.setParameters({ tessedit_pageseg_mode: PSM });
   }
+  palabras.push(...nuevas);
+}
+
+/** Si la palabra cae en más de la mitad sobre otra ya leída. */
+function pisaA(p, palabras) {
+  const area = Math.max(1, (p.x1 - p.x0) * (p.y1 - p.y0));
+  return palabras.some((q) => {
+    const a = Math.min(p.x1, q.x1) - Math.max(p.x0, q.x0);
+    const b = Math.min(p.y1, q.y1) - Math.max(p.y0, q.y0);
+    return a > 0 && b > 0 && (a * b) / area > 0.3;
+  });
 }
 
 async function leer(bytes) {
@@ -269,7 +286,7 @@ async function leer(bytes) {
       const lineas = limpiar(ctx, lienzo.width, lienzo.height);
       const { data } = await worker.recognize(lienzo, {}, { blocks: true, text: false });
       const palabras = palabrasDe(data, 0, 0);
-      await rescatar(ctx, lienzo.width, lienzo.height, palabras, worker);
+      await rescatar(ctx, lienzo.width, lienzo.height, palabras, worker, () => enviar({ tipo: 'progreso', fase: 'leyendo', pagina: n, paginas: total }));
       paginas.push({ ancho: lienzo.width, alto: lienzo.height, palabras, lineas, imagen });
       lienzo.width = lienzo.height = 0;
       pag.cleanup();

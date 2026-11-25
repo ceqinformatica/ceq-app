@@ -405,7 +405,7 @@ export default function HorarioFinalesAdmin() {
           <Tarjeta estilo={{ paddingVertical: espacio.xs, borderWidth: 1, borderColor: colores.rojo }}>
             {dudosas.map(({ fila, motivo }, i) => (
               <ItemRevision key={fila.clave} motivo={motivo} ultima={i === dudosas.length - 1}>
-                <FilaFecha f={fila} ultima onPress={() => setEditando(fila)} mostrarOrigen={!fila.zona} />
+                <FilaFecha f={fila} ultima onPress={() => setEditando(fila)} mostrarOrigen={!(fila.zona && vistas?.[fila.zona.pagina]?.imagen)} />
                 <RecorteOcr paginas={vistas} zona={fila.zona} titulo={null} />
               </ItemRevision>
             ))}
