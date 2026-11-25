@@ -13,7 +13,7 @@ import { useRecorrido } from '../context/RecorridoProvider';
 import { useSesion } from '../context/SesionProvider';
 import { cargarVentanasParaMi, guardarVistas, leerVistas } from '../datos/ventanas';
 import type { VentanaDb } from '../lib/tipos-db';
-import { coloresVentana, elegirVentana, esColorTema, marcarVista, type Vistas } from '../lib/ventanas';
+import { cierraTocandoAfuera, coloresVentana, elegirVentana, esColorTema, marcarVista, type Vistas } from '../lib/ventanas';
 import { useTema } from '../context/TemaProvider';
 import { useEntradaFlotante } from './movimiento';
 import { espacio, fuentes, radio, sombras } from '../tema';
@@ -22,7 +22,8 @@ import type { NombreIcono } from './ui';
 type Dibujo = Pick<VentanaDb, 'titulo' | 'cuerpo' | 'imagen_url' | 'icono' | 'boton_texto' | 'boton_destino' | 'color' | 'forma' | 'alineacion' | 'cerrable'>;
 
 /**
- * El cartel en sí. `onBoton`/`onCerrar` vacíos = vista previa. `oscuro`
+ * El cartel en sí. Siempre lleva la cruz para cerrar; `cerrable` solo dice
+ * si además se cierra tocando afuera. `onBoton`/`onCerrar` vacíos = vista previa. `oscuro`
  * fuerza un modo (para mostrar las dos versiones en el panel); si no, usa
  * el tema de quien lo ve.
  */
@@ -37,7 +38,7 @@ export function TarjetaVentana({ v, onBoton, onCerrar, anchoMaximo = 420, oscuro
   return (
     <View
       style={[
-        { backgroundColor: c.fondo, borderRadius: pantalla ? 0 : radio.xl + 4, paddingHorizontal: espacio.xl, paddingTop: espacio.xl + (v.cerrable ? espacio.s : 0), paddingBottom: espacio.xl, width: '100%', maxWidth: pantalla ? undefined : anchoMaximo },
+        { backgroundColor: c.fondo, borderRadius: pantalla ? 0 : radio.xl + 4, paddingHorizontal: espacio.xl, paddingTop: espacio.xl + espacio.s, paddingBottom: espacio.xl, width: '100%', maxWidth: pantalla ? undefined : anchoMaximo },
         !pantalla && sombras.media,
         borde && { borderWidth: 1, borderColor: 'rgba(157, 191, 242, 0.18)' },
         abajo && { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 },
@@ -46,25 +47,23 @@ export function TarjetaVentana({ v, onBoton, onCerrar, anchoMaximo = 420, oscuro
       accessibilityViewIsModal
     >
       {abajo && <View style={{ alignSelf: 'center', width: 40, height: 5, borderRadius: 3, backgroundColor: c.burbuja, marginTop: -espacio.m, marginBottom: espacio.m }} />}
-      {v.cerrable && (
-        <Pressable
-          onPress={onCerrar}
-          accessibilityRole="button"
-          accessibilityLabel="Cerrar"
-          hitSlop={10}
-          style={({ pressed }) => ({ position: 'absolute', top: espacio.m, right: espacio.m, zIndex: 2, width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center', backgroundColor: c.burbuja, opacity: pressed ? 0.7 : 1 })}
-        >
-          <Ionicons name="close" size={20} color={c.texto} />
-        </Pressable>
-      )}
+      <Pressable
+        onPress={onCerrar}
+        accessibilityRole="button"
+        accessibilityLabel="Cerrar"
+        hitSlop={10}
+        style={({ pressed }) => ({ position: 'absolute', top: espacio.m, right: espacio.m, zIndex: 2, width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center', backgroundColor: c.burbuja, opacity: pressed ? 0.7 : 1 })}
+      >
+        <Ionicons name="close" size={20} color={c.texto} />
+      </Pressable>
       {v.imagen_url ? (
-        <Image source={{ uri: v.imagen_url }} style={{ width: '100%', aspectRatio: 16 / 9, borderRadius: radio.l, marginBottom: espacio.l, marginTop: v.cerrable ? espacio.l : 0 }} resizeMode="cover" accessibilityIgnoresInvertColors />
+        <Image source={{ uri: v.imagen_url }} style={{ width: '100%', aspectRatio: 16 / 9, borderRadius: radio.l, marginBottom: espacio.l, marginTop: espacio.l }} resizeMode="cover" accessibilityIgnoresInvertColors />
       ) : v.icono ? (
         <View style={{ alignSelf: centro ? 'center' : 'flex-start', width: 64, height: 64, borderRadius: 32, backgroundColor: c.burbuja, alignItems: 'center', justifyContent: 'center', marginBottom: espacio.l }}>
           <Ionicons name={v.icono as NombreIcono} size={32} color={c.icono} />
         </View>
       ) : null}
-      <Text style={{ fontFamily: fuentes.bold, fontSize: pantalla ? 26 : 21, lineHeight: pantalla ? 32 : 27, letterSpacing: -0.2, color: c.texto, textAlign: centro ? 'center' : 'left', paddingLeft: v.cerrable && centro ? 36 : 0, paddingRight: v.cerrable ? 36 : 0 }}>
+      <Text style={{ fontFamily: fuentes.bold, fontSize: pantalla ? 26 : 21, lineHeight: pantalla ? 32 : 27, letterSpacing: -0.2, color: c.texto, textAlign: centro ? 'center' : 'left', paddingLeft: centro ? 36 : 0, paddingRight: 36 }}>
         {v.titulo || 'Título'}
       </Text>
       {v.cuerpo ? (
@@ -104,6 +103,8 @@ export function VentanasDelCeq() {
   const [actual, setActual] = useState<VentanaDb | null>(null);
   const [cerrando, setCerrando] = useState(false);
   const luego = useRef<(() => void) | null>(null);
+  // Cuándo apareció la ventana actual: los toques afuera del primer momento no la cierran.
+  const aparecio = useRef(0);
   const enEstaSesion = useRef(new Set<string>());
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
@@ -130,6 +131,10 @@ export function VentanasDelCeq() {
     return () => clearTimeout(t);
   }, [lista, vistas, enInicio, actual, recorrido, perfil?.carrera_id]);
 
+  useEffect(() => {
+    if (actual && montado) aparecio.current = Date.now();
+  }, [actual, montado]);
+
   // Terminó la animación de salida: se suelta la ventana y se abre el destino del botón.
   useEffect(() => {
     if (montado || !cerrando) return;
@@ -152,6 +157,9 @@ export function VentanasDelCeq() {
 
   if (!actual || !montado) return null;
   const v = actual;
+  const cerrarDeAfuera = () => {
+    if (cierraTocandoAfuera(v, Date.now() - aparecio.current)) cerrar();
+  };
   const pantalla = v.forma === 'pantalla';
   const abajo = v.forma === 'abajo';
   const c = coloresVentana(v.color, oscuro);
@@ -167,13 +175,13 @@ export function VentanasDelCeq() {
       visible
       transparent
       animationType="none"
-      onRequestClose={() => (v.cerrable ? cerrar() : undefined)}
+      onRequestClose={cerrarDeAfuera}
       statusBarTranslucent
       navigationBarTranslucent
       supportedOrientations={['portrait', 'portrait-upside-down', 'landscape', 'landscape-left', 'landscape-right']}
     >
       <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: c.velo, opacity: opacidad }]} />
-      {v.cerrable && !pantalla && <Pressable style={StyleSheet.absoluteFill} onPress={() => cerrar()} accessibilityLabel="Cerrar" />}
+      {v.cerrable && !pantalla && <Pressable style={StyleSheet.absoluteFill} onPress={cerrarDeAfuera} accessible={false} />}
       <View
         pointerEvents="box-none"
         style={{

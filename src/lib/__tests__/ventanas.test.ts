@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { COLOR_TEMA, coloresVentana, elegirVentana, marcarVista, tocaMostrar, validarVentana, type Vistas } from '../ventanas.ts';
+import { cierraTocandoAfuera, COLOR_TEMA, coloresVentana, ESPERA_TOQUE_AFUERA_MS, elegirVentana, marcarVista, tocaMostrar, validarVentana, type Vistas } from '../ventanas.ts';
 import type { VentanaDb } from '../tipos-db.ts';
 
 const AHORA = new Date(2026, 10, 23, 10, 0);
@@ -77,5 +77,15 @@ test('validar formulario', () => {
   assert.match(validarVentana({ ...base, imagen_url: 'http://x' })!, /https/);
   assert.match(validarVentana({ ...base, color: 'rosa' })!, /color/);
   assert.equal(validarVentana({ ...base, color: '#AABBCC' }), null);
-  assert.match(validarVentana({ ...base, cerrable: false })!, /botón/);
+  // Siempre hay cruz: sin botón y cerrando solo con la cruz también vale.
+  assert.equal(validarVentana({ ...base, cerrable: false }), null);
+});
+
+test('tocar afuera solo cierra si está permitido y pasó un momento', () => {
+  const v = { cerrable: true, forma: 'centro' };
+  assert.equal(cierraTocandoAfuera(v, ESPERA_TOQUE_AFUERA_MS), true);
+  assert.equal(cierraTocandoAfuera(v, 200), false);
+  assert.equal(cierraTocandoAfuera({ ...v, cerrable: false }, 60_000), false);
+  assert.equal(cierraTocandoAfuera({ ...v, forma: 'pantalla' }, 60_000), false);
+  assert.equal(cierraTocandoAfuera({ ...v, forma: 'abajo' }, 60_000), true);
 });
