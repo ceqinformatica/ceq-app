@@ -199,6 +199,9 @@ export default function Perfil() {
       {push === 'sin_permiso' && Platform.OS !== 'web' && (
         <Boton texto="Abrir ajustes" variante="fantasma" compacto icono="settings-outline" onPress={() => Linking.openSettings()} />
       )}
+      {push === 'sin_servicios' && (
+        <Mensaje tipo="info" texto="Este celular no tiene los servicios de Google, así que no puede recibir notificaciones. Los avisos y tus fechas siguen apareciendo en la app." />
+      )}
       {push === 'error' && <Mensaje tipo="info" texto="No pudimos activar las notificaciones en este celular. Probá de nuevo más tarde." />}
 
       <Seccion icono="lock-closed-outline" estilo={{ marginTop: espacio.xl }}>Seguridad</Seccion>

@@ -45,7 +45,9 @@ async function entrarConGoogleNativo(): Promise<string | null | 'usar-navegador'
   const { GoogleSignin, isErrorWithCode, isSuccessResponse, statusCodes } = modulo;
   try {
     GoogleSignin.configure({ webClientId: CLIENTE_WEB_GOOGLE });
-    await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+    // Sin el cartel de "instalá Servicios de Google Play": en los Huawei sin
+    // Google no se puede instalar, y la app entra igual por el navegador.
+    await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: false });
     // Siempre deja elegir la cuenta, como el prompt=select_account del navegador.
     await GoogleSignin.signOut().catch(() => {});
     const respuesta = await GoogleSignin.signIn();
