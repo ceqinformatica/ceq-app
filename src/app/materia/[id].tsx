@@ -5,6 +5,7 @@ import { Pressable, Text, View } from 'react-native';
 import { nombreEstadoMateria, nombreNivel, pct, SelectorEstado, type VistaMateria } from '../../components/academico';
 import { TarjetaFinales, TarjetaNotaNecesaria } from '../../components/finales';
 import { FormEvaluacion, ICONO_TIPO } from '../../components/form-evaluacion';
+import { clasesEnAgendaDe, PreguntaFinClases } from '../../components/pregunta-fin-clases';
 import { esRecuperatorio, esRegularizacion } from '../../lib/reglamento-fcq';
 import { esSeminario } from '../../lib/finales';
 import { AvisoSinConexion, BarraSuperior, Boton, Campo, Cargando, EstadoVacio, Fila, Insignia, Mensaje, Pantalla, s, Seccion, Tarjeta } from '../../components/ui';
@@ -35,6 +36,10 @@ export default function DetalleMateria() {
   const [notaTxt, setNotaTxt] = useState('');
   const [guardando, setGuardando] = useState(false);
   const [confirmarDeshacer, setConfirmarDeshacer] = useState(false);
+  // Después de registrar la firma: clases de la materia en la agenda (para preguntar si terminaron).
+  const [clasesEnAgenda, setClasesEnAgenda] = useState(0);
+  // Lo que se avisa al quitarla de la agenda (las materias que se desbloquearon).
+  const [trasQuitar, setTrasQuitar] = useState('');
   // Cambia cuando se borran finales desde acá: la tarjeta de finales se vuelve a cargar.
   const [versionFinales, setVersionFinales] = useState(0);
   const [msg, setMsg] = useState<{ texto: string; tipo: 'error' | 'exito' } | null>(null);
@@ -163,7 +168,19 @@ export default function DetalleMateria() {
         setVersionFinales((v) => v + 1);
       }
       vibrar('exito');
-      setMsg({ tipo: 'exito', texto: nuevos.length ? `Guardado. Ahora podés cursar: ${nuevos.join(', ')}.` : 'Guardado.' });
+      const firmo = estado === 'firmada' && actual?.estado !== 'firmada' && actual?.estado !== 'aprobada';
+      const desbloqueadas = nuevos.length ? ` Ahora podés cursar: ${nuevos.join(', ')}.` : '';
+      setMsg({
+        tipo: 'exito',
+        texto: nuevos.length
+          ? `${firmo ? 'Firma registrada' : 'Guardado'}. Ahora podés cursar: ${nuevos.join(', ')}.`
+          : firmo ? `Firma registrada en ${materia?.nombre ?? 'la materia'}.` : 'Guardado.',
+      });
+      // Recién firmada: si tiene clases en la agenda, preguntar si ya terminaron.
+      if (firmo) {
+        setTrasQuitar(desbloqueadas);
+        setClasesEnAgenda(await clasesEnAgendaDe(id));
+      }
     } catch (e) {
       setMsg({ tipo: 'error', texto: textoError(e, 'No se pudo guardar.') });
     } finally {
@@ -386,8 +403,14 @@ export default function DetalleMateria() {
             sinDatos={firmaEstimada?.id !== materia.id ? 'Calculando…' : 'No pudimos calcularlo ahora. Revisá tu conexión y volvé a entrar.'}
             // Sin firma guardada ni parciales cargados: deja escribir con cuánto firmó.
             onGuardarFirma={firmaGuardada == null && (firmaEstimada?.id !== materia.id || firmaEstimada.error) ? undefined : async (f) => {
+              const yaFirmada = actual?.estado === 'firmada';
               await guardarFirma(materia.id, f);
               recargar();
+              // Recién firmada: si tiene clases en la agenda, preguntar si ya terminaron.
+              if (!yaFirmada && actual?.estado !== 'aprobada') {
+                setTrasQuitar('');
+                setClasesEnAgenda(await clasesEnAgendaDe(materia.id));
+              }
             }}
           />
         </>
@@ -435,6 +458,15 @@ export default function DetalleMateria() {
 
         </>
       )}
+
+      <PreguntaFinClases
+        materiaId={materia.id}
+        nombre={materia.nombre}
+        clases={clasesEnAgenda}
+        onCerrar={() => setClasesEnAgenda(0)}
+        onQuitada={() => setMsg({ tipo: 'exito', texto: `Firma registrada. Quitamos ${materia.nombre} de tu agenda.${trasQuitar}` })}
+        onError={(texto) => setMsg({ tipo: 'error', texto })}
+      />
 
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: espacio.s }}>
         <Ionicons name="information-circle-outline" size={15} color={colores.textoSuave} />

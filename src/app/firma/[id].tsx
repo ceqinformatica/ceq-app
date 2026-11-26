@@ -5,7 +5,7 @@ import { Pressable, Text, View } from 'react-native';
 import { pct, resumenFirma, semaforoVisible } from '../../components/academico';
 import { BarraProgreso } from '../../components/graficos';
 import {
-  AvisoSinConexion, BarraSuperior, Boton, Cargando, Contador, EstadoVacio, Fila, Hoja, Insignia, Mensaje, Pantalla, s, Seccion, Tarjeta,
+  AvisoSinConexion, BarraSuperior, Boton, Cargando, Contador, EstadoVacio, Fila, Insignia, Mensaje, Pantalla, s, Seccion, Tarjeta,
 } from '../../components/ui';
 import { useSesion } from '../../context/SesionProvider';
 import {
@@ -13,7 +13,7 @@ import {
   tieneLab, tipoEvaluacion,
 } from '../../datos/academico';
 import { usarDatos } from '../../datos/usarDatos';
-import { contarClasesDe, quitarMateriaDelHorario } from '../../datos/agenda';
+import { clasesEnAgendaDe, PreguntaFinClases } from '../../components/pregunta-fin-clases';
 import { evaluarFirma, porcentajeEvaluacion, promedioFirma, type ResultadoAsistencia, type ResultadoComponente } from '../../lib/firma';
 import { esRecuperatorio, esRegularizacion, puedeRecuperar, RECUPERACION_DESDE, RECUPERACION_MINIMO } from '../../lib/reglamento-fcq';
 import type { AsistenciaDb, ComponenteDb, EvaluacionDb } from '../../lib/tipos-db';
@@ -59,7 +59,6 @@ export default function Parciales() {
   const [msgFirma, setMsgFirma] = useState<{ texto: string; tipo: 'error' | 'exito' } | null>(null);
   // Después de guardar la firma: cuántas clases de la materia quedan en la agenda (para preguntar si quitarlas).
   const [clasesEnAgenda, setClasesEnAgenda] = useState(0);
-  const [quitando, setQuitando] = useState(false);
 
   const resultado = useMemo(() => {
     if (!datos?.materia) return null;
@@ -88,7 +87,7 @@ export default function Parciales() {
   const { materia, regla } = datos;
   const sem = semaforoVisible(resultado);
   const c = coloresSemaforo[sem];
-  const tituloEstado = resultado.firma ? '¡Tenés firma!' : c.nombre;
+  const tituloEstado = resultado.firma ? '¡Llegás a la firma!' : c.nombre;
   const conLab = tieneLab(datos.evaluacionesDb);
   const combinado = conLab && regla.modoLaboratorio === 'combinado';
   const cantTeoria = datos.evaluacionesDb.filter(esParcialTeorico).length;
@@ -120,26 +119,11 @@ export default function Parciales() {
       vibrar('exito');
       setMsgFirma({ tipo: 'exito', texto: `Listo. Tu firma en ${materia.nombre} es ${pct(promedio)}.` });
       // Si la materia tiene clases en la agenda, preguntar si ya terminaron.
-      const n = await contarClasesDe(materia.id).catch(() => 0);
-      setClasesEnAgenda(n);
+      setClasesEnAgenda(await clasesEnAgendaDe(materia.id));
     } catch (e) {
       setMsgFirma({ tipo: 'error', texto: textoError(e, 'No se pudo guardar la firma.') });
     } finally {
       setGuardandoFirma(false);
-    }
-  };
-
-  const quitarDeAgenda = async () => {
-    setQuitando(true);
-    try {
-      await quitarMateriaDelHorario(materia.id);
-      setClasesEnAgenda(0);
-      setMsgFirma({ tipo: 'exito', texto: `Listo. Tu firma en ${materia.nombre} es ${pct(promedio)} y la quitamos de tu agenda.` });
-    } catch (e) {
-      setClasesEnAgenda(0);
-      setMsgFirma({ tipo: 'error', texto: textoError(e, 'No se pudo quitar la materia de tu agenda.') });
-    } finally {
-      setQuitando(false);
     }
   };
 
@@ -299,14 +283,14 @@ export default function Parciales() {
         otrasRecuRegu={datos.evaluacionesDb.filter((e) => (esRecuperatorio(e) || esRegularizacion(e)) && e.rendida && (editando === 'nueva' || e.id !== editando?.id)).length}
       />
 
-      <Hoja visible={clasesEnAgenda > 0} titulo="¿Terminaron tus clases?" onCerrar={() => setClasesEnAgenda(0)}>
-        <Text style={[s.cuerpo, { marginBottom: espacio.l }]}>
-          {`Tenés ${clasesEnAgenda === 1 ? 'una clase' : `${clasesEnAgenda} clases`} de ${materia.nombre} en tu agenda. ¿Querés eliminar esta materia de tu agenda? Tus fechas de exámenes no se borran.`}
-        </Text>
-        <Boton texto="Sí, terminé las clases" icono="checkmark" onPress={quitarDeAgenda} cargando={quitando} />
-        <Boton texto="No, aún no terminaron" variante="secundario" onPress={() => setClasesEnAgenda(0)} estilo={{ marginTop: espacio.s }} />
-        <View style={{ height: espacio.l }} />
-      </Hoja>
+      <PreguntaFinClases
+        materiaId={materia.id}
+        nombre={materia.nombre}
+        clases={clasesEnAgenda}
+        onCerrar={() => setClasesEnAgenda(0)}
+        onQuitada={() => setMsgFirma({ tipo: 'exito', texto: `Listo. Tu firma en ${materia.nombre} es ${pct(promedio)} y la quitamos de tu agenda.` })}
+        onError={(texto) => setMsgFirma({ tipo: 'error', texto })}
+      />
     </Pantalla>
   );
 }

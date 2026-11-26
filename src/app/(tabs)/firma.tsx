@@ -3,7 +3,7 @@ import { router } from 'expo-router';
 import { Text, View } from 'react-native';
 import { InsigniaSemaforo, pct, resumenFirma, semaforoVisible } from '../../components/academico';
 import { BarraProgreso } from '../../components/graficos';
-import { CabeceraMarca, Cargando, EstadoVacio, Insignia, Pantalla, s, Seccion, Tarjeta } from '../../components/ui';
+import { CabeceraMarca, Cargando, EstadoVacio, Fila, Insignia, Pantalla, s, Seccion, Tarjeta } from '../../components/ui';
 import { useSesion } from '../../context/SesionProvider';
 import { aAsistencia, cargarFirmas, cargarMalla, REGLA_POR_DEFECTO, reglaDe, tieneLab } from '../../datos/academico';
 import { usarDatos } from '../../datos/usarDatos';
@@ -17,14 +17,23 @@ import { Grilla } from '../../components/disposicion';
 
 async function cargar(planId: string, carreraId?: string | null) {
   const malla = await cargarMalla(planId, carreraId);
-  // Las que cursa y las que firmó este semestre: siguen acá hasta aprobarlas.
-  // Las firmas de semestres anteriores no, para no llenar la pantalla.
-  // Los seminarios no tienen firma.
+  // Las mismas materias que Mi carrera muestra "Cursando" o "Firma": las que cursa
+  // y las firmadas que todavía no aprobó. Las de este semestre (o sin semestre
+  // guardado) van con el detalle de sus parciales; las de semestres anteriores,
+  // en una lista corta al final. Los seminarios no tienen firma.
   const estadoDe = (id: string) => malla.estados.get(id)?.estado;
-  const deEsteSemestre = (id: string) => estadoDe(id) === 'firmada' && malla.estados.get(id)?.periodo === periodoDe();
-  const materias = malla.materiasDb.filter((m) => (estadoDe(m.id) === 'cursando' || deEsteSemestre(m.id)) && !esSeminario(m.nombre));
+  const firmadaAntes = (id: string) => {
+    const periodo = malla.estados.get(id)?.periodo;
+    return estadoDe(id) === 'firmada' && periodo != null && periodo !== periodoDe();
+  };
+  const conFirma = malla.materiasDb.filter((m) => (estadoDe(m.id) === 'cursando' || estadoDe(m.id) === 'firmada') && !esSeminario(m.nombre));
+  const materias = conFirma.filter((m) => !firmadaAntes(m.id));
+  const anteriores = conFirma
+    .filter((m) => firmadaAntes(m.id))
+    .map((m) => ({ materia: m, promedioFirma: malla.estados.get(m.id)?.promedioFirma ?? null, periodo: malla.estados.get(m.id)?.periodo ?? null }))
+    .sort((a, b) => (b.periodo ?? '').localeCompare(a.periodo ?? '') || a.materia.nombre.localeCompare(b.materia.nombre));
   const firmas = await cargarFirmas(materias.map((m) => m.id));
-  return materias.map((m) => {
+  const actuales = materias.map((m) => {
     const f = firmas.get(m.id)!;
     const regla = reglaDe(malla.reglas, m.id);
     const resultado = evaluarFirma({
@@ -38,7 +47,14 @@ async function cargar(planId: string, carreraId?: string | null) {
     const firmada = estadoDe(m.id) === 'firmada';
     return { materia: m, resultado, semaforo: semaforoVisible(resultado), cargadas: f.evaluaciones.length, firmada, promedioFirma: malla.estados.get(m.id)?.promedioFirma ?? null };
   });
+  return { actuales, anteriores };
 }
+
+/** "2025-2" → "2.º semestre 2025". */
+const nombrePeriodo = (p: string | null) => {
+  const [anio, sem] = (p ?? '').split('-');
+  return anio && sem ? `${sem}.º semestre ${anio}` : '';
+};
 
 export default function Parciales() {
   useTema();
@@ -60,7 +76,7 @@ export default function Parciales() {
           <Tarjeta><Cargando /></Tarjeta>
         ) : error && !datos ? (
           <Tarjeta><EstadoVacio icono="cloud-offline-outline" titulo="No pudimos cargar tus materias" texto={error} accion={{ texto: 'Reintentar', onPress: recargar }} /></Tarjeta>
-        ) : datos?.length === 0 ? (
+        ) : datos && datos.actuales.length === 0 && datos.anteriores.length === 0 ? (
           <Tarjeta>
             <EstadoVacio
               icono="calculator-outline"
@@ -70,7 +86,7 @@ export default function Parciales() {
             />
           </Tarjeta>
         ) : (
-          <Grilla>{(datos ?? []).map(({ materia, resultado, semaforo, cargadas, firmada, promedioFirma }) => {
+          <Grilla>{(datos?.actuales ?? []).map(({ materia, resultado, semaforo, cargadas, firmada, promedioFirma }) => {
             const c = coloresSemaforo[semaforo];
             const necesario = firmada && promedioFirma != null ? finalNecesario(promedioFirma) : null;
             return (
@@ -87,7 +103,7 @@ export default function Parciales() {
                     </Text>
                   </View>
                   {firmada
-                    ? <Insignia texto="Firma" icono="ribbon" color={coloresEstado.firmada.texto} fondo={coloresEstado.firmada.fondo} />
+                    ? <Insignia texto="Firma" icono={coloresEstado.firmada.icono} color={coloresEstado.firmada.texto} fondo={coloresEstado.firmada.fondo} />
                     : <InsigniaSemaforo semaforo={semaforo} firma={resultado.firma} />}
                 </View>
                 {cargadas > 0 || !firmada ? (
@@ -103,7 +119,33 @@ export default function Parciales() {
         )}
       </View>
 
-      {datos && datos.length > 0 && (
+      {datos && datos.anteriores.length > 0 && (
+        <>
+          <Seccion icono={coloresEstado.firmada.icono}>Con firma de semestres anteriores</Seccion>
+          <Tarjeta estilo={{ paddingVertical: espacio.xs }}>
+            {datos.anteriores.map(({ materia, promedioFirma, periodo }, i) => {
+              const necesario = promedioFirma != null ? finalNecesario(promedioFirma) : null;
+              return (
+                <Fila
+                  key={materia.id}
+                  icono={coloresEstado.firmada.icono}
+                  colorIcono={coloresEstado.firmada.texto}
+                  fondoIcono={fondos.cielo}
+                  titulo={materia.nombre}
+                  detalle={[
+                    nombrePeriodo(periodo),
+                    promedioFirma == null ? 'Falta el final' : `Firma ${pct(promedioFirma)}${necesario != null ? ` · necesitás ${pct(necesario)} en el final` : ''}`,
+                  ].filter(Boolean).join(' · ')}
+                  onPress={() => router.push(`/materia/${materia.id}`)}
+                  ultima={i === datos.anteriores.length - 1}
+                />
+              );
+            })}
+          </Tarjeta>
+        </>
+      )}
+
+      {datos && datos.actuales.length > 0 && (
         <>
           <Seccion icono="information-circle-outline">Cómo se calcula</Seccion>
           <Tarjeta variante="celeste">

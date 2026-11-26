@@ -564,9 +564,9 @@ export function Mensaje({ texto: t, tipo = 'error', titulo, forma = 'tarjeta' }:
         <View style={[s.mensajeIcono, { backgroundColor: estilos.fondo }]}>
           <Ionicons name={estilos.icono} size={18} color={estilos.color} />
         </View>
-        <View style={{ flex: 1 }}>
+        <View style={{ flex: 1, justifyContent: 'center' }}>
           {titulo ? <Text style={s.mensajeTitulo}>{titulo}</Text> : null}
-          <Text style={[s.mensajeTexto, titulo ? { color: colores.textoSuave } : null]}>{t}</Text>
+          <Text style={[s.mensajeTexto, titulo ? { color: colores.textoSuave, fontFamily: fuentes.regular } : null]}>{t}</Text>
         </View>
       </Aparecer>
     </View>
@@ -579,7 +579,7 @@ export function AvisoSinConexion({ texto: t }: { texto: string | null | undefine
   return (
     <View style={[s.mensaje, { backgroundColor: fondos.tarjeta, marginTop: 0, marginBottom: espacio.m }]} accessibilityRole="alert" accessibilityLiveRegion="polite">
       <Ionicons name="cloud-offline-outline" size={18} color={colores.marino} />
-      <Text style={[s.mensajeTexto, { color: colores.marino }]}>{t}</Text>
+      <Text style={[s.mensajeTexto, { flex: 1, color: colores.marino }]}>{t}</Text>
     </View>
   );
 }
@@ -785,7 +785,8 @@ export const s = crearEstilos(() => ({
   },
   mensajeIcono: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
   mensajeTitulo: { fontFamily: fuentes.semibold, fontSize: 14.5, color: colores.texto, marginBottom: 2 },
-  mensajeTexto: { flex: 1, fontFamily: fuentes.regular, fontSize: 14, lineHeight: 20, color: colores.texto },
+  // Sin flex: 1: en Android estiraba el texto a todo el alto y quedaba arriba, descentrado.
+  mensajeTexto: { flexShrink: 1, fontFamily: fuentes.medium, fontSize: 14.5, lineHeight: 20, color: colores.texto },
   mensajeLinea: { alignSelf: 'center', maxWidth: 340, marginVertical: espacio.s, paddingHorizontal: espacio.s },
   mensajeLineaTexto: { fontFamily: fuentes.medium, fontSize: 14, lineHeight: 20, color: colores.texto, textAlign: 'center' },
 
