@@ -156,6 +156,8 @@ export type HorarioFinalesDb = {
 }
 export type FechaFinalDb = {
   id: string; horario_id: string; materia: string; llamado: number; fecha: string; hora: string | null; aula: string | null; created_at: string;
+  /** Planes de la mesa ([] = todos). Antes de la migración 20261126020000 no viene. */
+  planes?: number[]; semestre_opuesto?: boolean;
 }
 export type ColorVentana = 'celeste' | 'marino' | 'rojo' | 'amarillo' | 'gris' | 'blanco' | string;
 export type FormaVentana = 'centro' | 'abajo' | 'pantalla';
@@ -232,7 +234,7 @@ export type Database = {
       publicar_horario_finales: { Args: { p_id: string; p_notificar?: boolean }; Returns: number };
       publicar_horario_clases: { Args: { p_id: string; p_notificar?: boolean }; Returns: number };
       guardar_clases_oficiales: { Args: { p_horario: string; p_clases: { materia: string; nivel: number | null; seccion: string | null; dia_semana: number; hora_inicio: string; hora_fin: string; aula: string | null; tipo_clase: string | null }[] }; Returns: number };
-      guardar_fechas_finales: { Args: { p_horario: string; p_fechas: { materia: string; llamado: number; fecha: string; hora: string | null; aula: string | null }[] }; Returns: number };
+      guardar_fechas_finales: { Args: { p_horario: string; p_fechas: { materia: string; llamado: number; fecha: string; hora: string | null; aula: string | null; planes?: number[]; semestre_opuesto?: boolean }[] }; Returns: number };
     };
     Enums: {
       rol_usuario: RolUsuario;

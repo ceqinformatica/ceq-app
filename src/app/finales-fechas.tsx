@@ -140,8 +140,9 @@ function FilaFinal({ f, ultima, enAgenda }: { f: FinalOficial; ultima: boolean; 
         <Text style={[s.filaDetalle, { marginTop: 2 }]}>
           {[f.hora ? `${f.hora.slice(0, 5)} h` : 'Hora a confirmar', f.aula].filter(Boolean).join(' · ')}
         </Text>
-        {(f.tuya || enAgenda) && (
+        {(f.tuya || enAgenda || f.semestre_opuesto) && (
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: espacio.xs, marginTop: espacio.xs }}>
+            {f.semestre_opuesto && <Insignia texto="Semestre opuesto" icono="swap-horizontal-outline" />}
             {f.estado === 'firmada' && <Insignia texto="Firmada" />}
             {f.estado === 'cursando' && <Insignia texto="Cursando" />}
             {enAgenda && <Insignia texto="En tu agenda" icono="calendar-outline" />}

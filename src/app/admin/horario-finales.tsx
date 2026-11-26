@@ -91,7 +91,7 @@ export default function HorarioFinalesAdmin() {
         setHorario(r.horario);
         setCarreraId(r.horario.carrera_id);
         setTitulo(r.horario.titulo);
-        setFilas(r.fechas.map((f) => ({ clave: nuevaClave(), materia: f.materia, llamado: f.llamado, fecha: f.fecha, hora: f.hora?.slice(0, 5) ?? null, aula: f.aula })));
+        setFilas(r.fechas.map((f) => ({ clave: nuevaClave(), materia: f.materia, llamado: f.llamado, fecha: f.fecha, hora: f.hora?.slice(0, 5) ?? null, aula: f.aula, planes: f.planes ?? [], opuesto: Boolean(f.semestre_opuesto) })));
       })
       .catch((e) => setError(textoError(e, 'No se pudo cargar el horario.')))
       .finally(() => setCargando(false));
@@ -241,7 +241,7 @@ export default function HorarioFinalesAdmin() {
       setError(e);
       return null;
     }
-    const listas = filas.filter((f): f is Fila & { materia: string } => Boolean(f.materia)).map(({ materia, llamado, fecha, hora, aula }) => ({ materia, llamado, fecha, hora, aula }));
+    const listas = filas.filter((f): f is Fila & { materia: string } => Boolean(f.materia)).map(({ materia, llamado, fecha, hora, aula, planes, opuesto }) => ({ materia, llamado, fecha, hora, aula, planes: planes ?? [], semestre_opuesto: Boolean(opuesto) }));
     if (horario) {
       if (titulo.trim() !== horario.titulo) await renombrarHorario(horario.id, titulo);
       await guardarFechas(horario.id, listas);

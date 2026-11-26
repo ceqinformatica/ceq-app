@@ -10,7 +10,7 @@ import { readFileSync } from 'node:fs';
 import { celdasDeRenglon, filasDeOcr, renglones, textoDeOcr, ubicar, type PaginaOcr, type PalabraOcr, type RenglonOcr } from '../ocr/documento.ts';
 const textoDeRenglon = (r: RenglonOcr) => celdasDeRenglon(r).map((c) => c.texto).join('   ');
 import { categoriaDe, leerCalendarioPdf } from '../calendario-pdf.ts';
-import { detectarPlan, fechasCortasEn, leerHorarioFinales, planesDelTexto, romanosOcr } from '../horario-finales.ts';
+import { detectarPlan, esDeTuPlan, fechasCortasEn, leerHorarioFinales, planesDelTexto, romanosOcr } from '../horario-finales.ts';
 import { HTML_OCR, URLS_OCR } from '../ocr/pagina-ocr.ts';
 import { diaDe, leerHorarioClases, limpiarNombre, nivelEn, planesDeHojas, planesEn, rangoEn, seccionEn, tipoEn } from '../horario-clases.ts';
 import type { FilaDoc } from '../ocr/documento.ts';
@@ -460,4 +460,12 @@ test('finales por código: sin falsos positivos', () => {
   // Una fecha al principio no es un código.
   const conFecha = leerHorarioFinales('SEGUNDO SEMESTRE 2026\n15-12 Química Orgánica Plan 2018 08:00\n15-12 Termodnmca Avnzd Plan 2018 10:00', MATERIAS_IQ, new Date(2026, 10, 25), { fichas: FICHAS_IQ });
   assert.deepEqual(conFecha.filas.map((f) => f.materia).filter(Boolean), ['Química Orgánica']);
+});
+
+test('finales del estudiante: solo las mesas de su plan (sin plan = para todos)', () => {
+  assert.equal(esDeTuPlan({ planes: [2018, 2026] }, 2026), true);
+  assert.equal(esDeTuPlan({ planes: [2018] }, 2026), false);
+  assert.equal(esDeTuPlan({ planes: [] }, 2026), true);
+  assert.equal(esDeTuPlan({}, 2026), true);
+  assert.equal(esDeTuPlan({ planes: [2018] }, null), true);
 });
