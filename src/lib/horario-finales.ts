@@ -89,13 +89,14 @@ const ABREVIATURAS: [RegExp, string][] = [
   [/\binorg\b\.?/g, 'inorganica'],
   [/\bgral\b\.?/g, 'general'],
   [/\btec\b\.?/g, 'tecnologia'],
+  [/\bing\b\.?/g, 'ingenieria'],
 ];
 
 const ROMANOS: Record<string, string> = { '1': 'i', '2': 'ii', '3': 'iii', '4': 'iv', '5': 'v', '6': 'vi' };
 
 /** Forma para comparar nombres: normalizada, sin abreviaturas ni puntos, números a romanos. */
 export function clave(t: string): string {
-  let s = normalizar(t).replace(/\./g, ' ');
+  let s = normalizar(t).replace(/\./g, ' ').replace(/([a-z])-(?=[a-z])/g, '$1 ');
   for (const [re, por] of ABREVIATURAS) s = s.replace(re, por);
   s = s.replace(/\b([1-6])\b/g, (_, n: string) => ROMANOS[n]);
   return s.replace(/\b(de|del|la|las|el|los|y|e|en|a|al)\b/g, ' ').replace(/\s+/g, ' ').trim();

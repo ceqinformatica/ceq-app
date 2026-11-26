@@ -7,10 +7,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { celdasDeRenglon, filasDeOcr, renglones, textoDeOcr, ubicar, type PaginaOcr, type PalabraOcr, type RenglonOcr } from '../ocr/documento.ts';
+import { celdasDeRenglon, filasDeOcr, inclinacion, renglones, textoDeOcr, ubicar, type PaginaOcr, type PalabraOcr, type RenglonOcr } from '../ocr/documento.ts';
 const textoDeRenglon = (r: RenglonOcr) => celdasDeRenglon(r).map((c) => c.texto).join('   ');
 import { categoriaDe, leerCalendarioPdf } from '../calendario-pdf.ts';
-import { detectarPlan, esDeTuPlan, fechasCortasEn, leerHorarioFinales, planesDelTexto, romanosOcr } from '../horario-finales.ts';
+import { clave, detectarPlan, esDeTuPlan, fechasCortasEn, leerHorarioFinales, planesDelTexto, romanosOcr } from '../horario-finales.ts';
 import { HTML_OCR, URLS_OCR } from '../ocr/pagina-ocr.ts';
 import { diaDe, leerHorarioClases, limpiarNombre, nivelEn, planesDeHojas, planesEn, rangoEn, seccionEn, tipoEn } from '../horario-clases.ts';
 import type { FilaDoc } from '../ocr/documento.ts';
@@ -468,4 +468,70 @@ test('finales del estudiante: solo las mesas de su plan (sin plan = para todos)'
   assert.equal(esDeTuPlan({ planes: [] }, 2026), true);
   assert.equal(esDeTuPlan({}, 2026), true);
   assert.equal(esDeTuPlan({ planes: [2018] }, null), true);
+});
+
+// ── Horarios de clase de todas las carreras (1.er y 2.º semestre 2026) ──
+
+/** La misma página, girada: la hoja baja `m` píxeles por píxel hacia la derecha. */
+const torcer = (paginas: PaginaOcr[], m: number): PaginaOcr[] =>
+  paginas.map((p) => ({ ...p, palabras: p.palabras.map((q) => ({ ...q, y0: q.y0 + m * q.x0, y1: q.y1 + m * q.x0 })) }));
+
+test('inclinacion: mide lo torcido de la hoja y no inventa en una derecha', () => {
+  const derecha = ocr('horario-fcq');
+  const alto = 25;
+  assert.equal(inclinacion(derecha[0].palabras, alto), 0);
+  const m = inclinacion(torcer(derecha, 0.015)[0].palabras, alto);
+  assert.ok(Math.abs(m - 0.015) < 0.003, `inclinación ${m}`);
+});
+
+test('horario de clases FCQ: una hoja escaneada torcida se lee igual que la derecha', () => {
+  const t = (c: { dia: number; inicio: string; fin: string; materia: string | null }) => `${c.dia} ${c.inicio}-${c.fin} ${c.materia}`;
+  const derecha = leerHorarioClases(filasDeOcr(ocr('horario-fcq')), MATERIAS_IQ, 2018, FICHAS_IQ).clases.map(t).sort();
+  const torcida = leerHorarioClases(filasDeOcr(torcer(ocr('horario-fcq'), 0.015)), MATERIAS_IQ, 2018, FICHAS_IQ).clases.map(t).sort();
+  assert.ok(derecha.length >= 12);
+  assert.deepEqual(torcida, derecha);
+});
+
+test('horario de clases FCQ: sin la etiqueta "A:", las dos horas de la columna son inicio y fin', () => {
+  // Las horas del renglón "A:" quedaron a la altura del "De:" (hoja torcida): se arman por columna.
+  const filas = filasDeOcr(ocr('horario-fcq')).map((f) => ({ ...f, celdas: f.celdas.filter((c) => !/^\W*A\W*$/.test(c.texto)) }));
+  const { clases } = leerHorarioClases(filas, MATERIAS_IQ, 2018, FICHAS_IQ);
+  assert.ok(clases.some((c) => c.materia === 'Física I' && c.dia === 5 && c.inicio === '08:00' && c.fin === '11:00'), clases.map((c) => `${c.dia} ${c.inicio}-${c.fin} ${c.materia}`).join('\n'));
+});
+
+test('limpiarNombre: letras de fila de Farmacia, guiones y números leídos como letras', () => {
+  assert.equal(limpiarNombre('B.QUÍMICA INORGÁNICA'), 'QUÍMICA INORGÁNICA');
+  assert.equal(limpiarNombre('A. BOTÁNICA'), 'BOTÁNICA');
+  assert.equal(limpiarNombre('3 C. ANATOMÍA HUMANA'), 'ANATOMÍA HUMANA');
+  assert.equal(limpiarNombre('B Química Analítica II'), 'Química Analítica II');
+  assert.equal(limpiarNombre('Fisica l'), 'Fisica I');
+  assert.equal(limpiarNombre('FARMACOLOGÍA!'), 'FARMACOLOGÍA I');
+});
+
+test('nombres de materia: guiones y abreviaturas de la facultad', () => {
+  assert.equal(clave('PASANTÍA PRE-PROFESIONAL'), clave('Pasantía Pre Profesional'));
+  assert.equal(clave('INTRODUCCION A LA ING. DE ALIMENTOS'), clave('Introducción a la Ingeniería de Alimentos'));
+});
+
+test('horario de clases FCQ: el número del nivel en otro renglón que "Nivel:"', () => {
+  const filas = filasDeOcr(ocr('horario-fcq')).flatMap((f) => {
+    const i = f.celdas.findIndex((c) => /^2$/.test(c.texto.trim()));
+    if (i < 0 || !f.celdas.some((c) => /nivel/i.test(c.texto))) return [f];
+    const numero = { ...f, celdas: [f.celdas[i]], y: (f.y ?? 0) - 4 };
+    return [numero, { ...f, celdas: f.celdas.filter((_, j) => j !== i) }];
+  });
+  const { clases } = leerHorarioClases(filas, [], 2018, []);
+  assert.ok(clases.length >= 9 && clases.every((c) => c.nivel === 2), clases.map((c) => `${c.nivel} ${c.materia}`).join('\n'));
+});
+
+test('horario de clases FCQ: "8:00 - 10:00" en una celda es la clase entera', () => {
+  // Física I del viernes, 08:00 a 11:00, escrita en una sola celda del renglón "De:".
+  const filas = filasDeOcr(ocr('horario-fcq'));
+  const de = filas.findIndex((f) => f.celdas.some((c) => c.texto.trim() === '08:00') && filas[filas.indexOf(f) + 1]?.celdas.some((c) => c.texto.trim() === '11:00'));
+  assert.ok(de >= 0);
+  const x = filas[de].celdas.find((c) => c.texto.trim() === '08:00')!;
+  const cambiadas = filas.map((f, i) => i === de ? { ...f, celdas: f.celdas.map((c) => c === x ? { ...c, texto: '8:00 - 11:00' } : c) }
+    : i === de + 1 ? { ...f, celdas: f.celdas.filter((c) => c.texto.trim() !== '11:00') } : f);
+  const { clases } = leerHorarioClases(cambiadas, MATERIAS_IQ, 2018, FICHAS_IQ);
+  assert.ok(clases.some((c) => c.materia === 'Física I' && c.dia === 5 && c.inicio === '08:00' && c.fin === '11:00'), clases.map((c) => `${c.dia} ${c.inicio}-${c.fin} ${c.materia}`).join('\n'));
 });

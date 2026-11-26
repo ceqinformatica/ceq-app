@@ -39,6 +39,8 @@ export interface RenglonOcr {
   alto: number;
   /** Celdas ya armadas con las líneas de la tabla (si el renglón es una fila de tabla). */
   celdas?: Celda[];
+  /** Centro vertical de cada palabra, como si la hoja estuviera derecha (mismo orden que `palabras`). */
+  centros?: number[];
 }
 
 export interface OpcionesOcr {
@@ -80,8 +82,52 @@ export function renglones(pagina: PaginaOcr, opciones: OpcionesOcr = {}): Renglo
   if (!palabras.length) return [];
   const altoTipico = mediana(palabras.map((p) => p.y1 - p.y0)) || 20;
   const { filas, sueltas } = opciones.tablas ? filasDeTabla(palabras, pagina.lineas, altoTipico) : { filas: [], sueltas: palabras };
-  const libres = unirPartidos(agrupar(sueltas, altoTipico), altoTipico).map((r) => ({ ...r, palabras: corregirRenglon(r.palabras, altoTipico) }));
+  // Hoja escaneada torcida: los renglones se arman como si estuviera derecha (la palabra conserva su lugar real).
+  const s = opciones.tablas ? 0 : inclinacion(sueltas, altoTipico);
+  const real = new Map<PalabraOcr, PalabraOcr>();
+  const derechas = s === 0 ? sueltas : sueltas.map((p) => {
+    const d = s * ((p.x0 + p.x1) / 2);
+    const q = { ...p, y0: p.y0 - d, y1: p.y1 - d };
+    real.set(q, p);
+    return q;
+  });
+  const libres = unirPartidos(agrupar(derechas, altoTipico), altoTipico).map((r) => {
+    const corregidas = corregirRenglon(r.palabras, altoTipico);
+    return {
+      ...r,
+      centros: corregidas.map((p) => (p.y0 + p.y1) / 2),
+      palabras: corregidas.map((p) => {
+        const o = real.get(p);
+        return o ? (o.t === p.t ? o : { ...o, t: p.t }) : p;
+      }),
+    };
+  });
   return [...filas, ...libres].sort((a, b) => a.y - b.y);
+}
+
+/**
+ * Inclinación de la hoja escaneada (cuánto baja el renglón por cada píxel
+ * hacia la derecha): la mediana entre palabras vecinas del mismo renglón.
+ * 0 si es casi nada o hay pocas palabras para saberlo.
+ */
+export function inclinacion(palabras: PalabraOcr[], altoTipico: number): number {
+  const normales = palabras.filter((p) => p.y1 - p.y0 >= altoTipico * 0.6 && p.y1 - p.y0 <= altoTipico * 1.5).sort((a, b) => a.x0 - b.x0);
+  const cy = (p: PalabraOcr) => (p.y0 + p.y1) / 2;
+  const cx = (p: PalabraOcr) => (p.x0 + p.x1) / 2;
+  const pendientes: number[] = [];
+  normales.forEach((p, i) => {
+    let mejor: PalabraOcr | null = null;
+    for (let j = i + 1; j < normales.length; j++) {
+      const q = normales[j];
+      if (q.x0 - p.x1 > altoTipico * 30) break;
+      if (q.x0 < p.x1 || Math.abs(cy(q) - cy(p)) > altoTipico * 0.5) continue;
+      if (!mejor || q.x0 < mejor.x0) mejor = q;
+    }
+    if (mejor && cx(mejor) - cx(p) >= altoTipico * 4) pendientes.push((cy(mejor) - cy(p)) / (cx(mejor) - cx(p)));
+  });
+  if (pendientes.length < 20) return 0;
+  const m = mediana(pendientes);
+  return Math.abs(m) < 0.002 || Math.abs(m) > 0.05 ? 0 : m;
 }
 
 /** Agrupa palabras en renglones por cómo se superponen en vertical (ver `renglones`). */
@@ -314,6 +360,8 @@ export interface Celda {
   texto: string;
   x0: number;
   x1: number;
+  /** Centro vertical de la celda (solo en escaneados; la hoja enderezada). */
+  y?: number;
 }
 
 /** Renglón de un documento (escaneado o con texto), con sus celdas de izquierda a derecha. */
@@ -397,15 +445,21 @@ export function ubicar(filas: FilaDoc[], texto: string, pagina?: number | null):
 export function celdasDeRenglon(r: RenglonOcr): Celda[] {
   if (r.celdas) return r.celdas.map((c) => ({ ...c }));
   const celdas: Celda[] = [];
-  for (const p of r.palabras) {
+  const centros: number[][] = [];
+  r.palabras.forEach((p, i) => {
     const ultima = celdas[celdas.length - 1];
+    const cy = r.centros?.[i];
     if (ultima && p.x0 - ultima.x1 <= r.alto * 1.4) {
       ultima.texto += ' ' + p.t;
       ultima.x1 = p.x1;
+      if (cy != null) centros[centros.length - 1].push(cy);
     } else {
       celdas.push({ texto: p.t, x0: p.x0, x1: p.x1 });
+      centros.push(cy != null ? [cy] : []);
     }
-  }
+  });
+  // Altura propia de cada celda: en una grilla, el nombre centrado entre dos renglones no mueve a sus horas.
+  celdas.forEach((c, i) => { if (centros[i].length) c.y = mediana(centros[i]); });
   return celdas;
 }
 
