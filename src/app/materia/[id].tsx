@@ -38,6 +38,8 @@ export default function DetalleMateria() {
   const [confirmarDeshacer, setConfirmarDeshacer] = useState(false);
   // Después de registrar la firma: clases de la materia en la agenda (para preguntar si terminaron).
   const [clasesEnAgenda, setClasesEnAgenda] = useState(0);
+  // Lo que se avisa al quitarla de la agenda (las materias que se desbloquearon).
+  const [trasQuitar, setTrasQuitar] = useState('');
   // Cambia cuando se borran finales desde acá: la tarjeta de finales se vuelve a cargar.
   const [versionFinales, setVersionFinales] = useState(0);
   const [msg, setMsg] = useState<{ texto: string; tipo: 'error' | 'exito' } | null>(null);
@@ -166,7 +168,8 @@ export default function DetalleMateria() {
         setVersionFinales((v) => v + 1);
       }
       vibrar('exito');
-      const firmo = estado === 'firmada' && actual?.estado !== 'firmada';
+      const firmo = estado === 'firmada' && actual?.estado !== 'firmada' && actual?.estado !== 'aprobada';
+      const desbloqueadas = nuevos.length ? ` Ahora podés cursar: ${nuevos.join(', ')}.` : '';
       setMsg({
         tipo: 'exito',
         texto: nuevos.length
@@ -174,7 +177,10 @@ export default function DetalleMateria() {
           : firmo ? `Firma registrada en ${materia?.nombre ?? 'la materia'}.` : 'Guardado.',
       });
       // Recién firmada: si tiene clases en la agenda, preguntar si ya terminaron.
-      if (firmo) setClasesEnAgenda(await clasesEnAgendaDe(id));
+      if (firmo) {
+        setTrasQuitar(desbloqueadas);
+        setClasesEnAgenda(await clasesEnAgendaDe(id));
+      }
     } catch (e) {
       setMsg({ tipo: 'error', texto: textoError(e, 'No se pudo guardar.') });
     } finally {
@@ -401,7 +407,10 @@ export default function DetalleMateria() {
               await guardarFirma(materia.id, f);
               recargar();
               // Recién firmada: si tiene clases en la agenda, preguntar si ya terminaron.
-              if (!yaFirmada && actual?.estado !== 'aprobada') setClasesEnAgenda(await clasesEnAgendaDe(materia.id));
+              if (!yaFirmada && actual?.estado !== 'aprobada') {
+                setTrasQuitar('');
+                setClasesEnAgenda(await clasesEnAgendaDe(materia.id));
+              }
             }}
           />
         </>
@@ -455,7 +464,7 @@ export default function DetalleMateria() {
         nombre={materia.nombre}
         clases={clasesEnAgenda}
         onCerrar={() => setClasesEnAgenda(0)}
-        onQuitada={() => setMsg({ tipo: 'exito', texto: `Firma registrada. Quitamos ${materia.nombre} de tu agenda.` })}
+        onQuitada={() => setMsg({ tipo: 'exito', texto: `Firma registrada. Quitamos ${materia.nombre} de tu agenda.${trasQuitar}` })}
         onError={(texto) => setMsg({ tipo: 'error', texto })}
       />
 
