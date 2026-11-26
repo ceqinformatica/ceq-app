@@ -8,12 +8,15 @@ import { borrarPin } from './pinGuardado';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { estadoAlPedir, leerEnlacePin, leerEstadoEnlace, olvidarEnlacePin, procesarEnlacePin, type MemoriaEnlace } from './enlace-pin';
 import { traducirErrorClave } from './recuperacion';
-import { NOMBRE_PROVEEDOR, proveedoresVisibles, resultadoRegistro, type Proveedor } from './acceso';
+import { NOMBRE_PROVEEDOR, proveedoresVisibles, resultadoRegistro, urlParaCorreo, type Proveedor } from './acceso';
 
 WebBrowser.maybeCompleteAuthSession();
 
 /** Dirección a la que Google vuelve después de iniciar sesión (ej. ceqapp://auth/callback). */
 export const urlRetorno = () => Linking.createURL('auth/callback');
+
+/** Para el correo de confirmación: pasa por la página del CEQ (ver PAGINA_ENLACES). */
+const urlConfirmacion = () => urlParaCorreo(urlRetorno(), 'auth/callback');
 
 /**
  * Cliente "web" de Google (proyecto ceq-app-515510). No es secreto: es el
@@ -141,7 +144,7 @@ export async function registrarseConCorreo(
   const { data, error } = await supabase.auth.signUp({
     email: correo.trim(),
     password: clave,
-    options: { data: { full_name: nombre.trim() }, emailRedirectTo: urlRetorno() },
+    options: { data: { full_name: nombre.trim() }, emailRedirectTo: urlConfirmacion() },
   });
   if (error) {
     if (error.message.toLowerCase().includes('already registered')) return { resultado: 'ya-existe' };
@@ -167,7 +170,7 @@ export async function proveedoresDisponibles(): Promise<Proveedor[]> {
 }
 
 /** Dirección del enlace del correo para elegir una contraseña nueva. */
-export const urlRestablecer = () => Linking.createURL('auth/restablecer');
+export const urlRestablecer = () => urlParaCorreo(Linking.createURL('auth/restablecer'), 'auth/restablecer');
 
 /**
  * Manda el correo con el enlace para elegir una contraseña nueva. Por
@@ -186,7 +189,7 @@ export async function cambiarClave(nueva: string): Promise<string | null> {
 }
 
 /** Dirección del enlace del correo para recuperar el PIN. */
-export const urlEnlacePin = () => Linking.createURL('auth/pin');
+export const urlEnlacePin = () => urlParaCorreo(Linking.createURL('auth/pin'), 'auth/pin');
 
 const paraPin = (m: string) => m.replace('"¿Olvidaste tu contraseña?"', '"¿Olvidaste tu PIN?"');
 

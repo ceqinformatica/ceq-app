@@ -63,8 +63,15 @@ test('el PIN se guarda aparte para cada cuenta (y sin cuenta no hay PIN)', () =>
   assert.equal(clavesPin(null), null);
   assert.equal(clavesPin(''), null);
   const a = clavesPin('8f14e45f-ceea-467a-9575-1a2b3c4d5e6f');
-  assert.deepEqual(a, { pin: 'ceq_pin.8f14e45f-ceea-467a-9575-1a2b3c4d5e6f', intentos: 'ceq_pin_intentos.8f14e45f-ceea-467a-9575-1a2b3c4d5e6f' });
+  assert.deepEqual(a, {
+    pin: 'ceq_pin.8f14e45f-ceea-467a-9575-1a2b3c4d5e6f',
+    intentos: 'ceq_pin_intentos.8f14e45f-ceea-467a-9575-1a2b3c4d5e6f',
+    biometria: 'ceq_biometria_activa.8f14e45f-ceea-467a-9575-1a2b3c4d5e6f',
+  });
   assert.notEqual(clavesPin('otra')?.pin, a?.pin);
+  // La huella también es de cada cuenta: otra cuenta del celular no la hereda.
+  assert.notEqual(clavesPin('otra')?.biometria, a?.biometria);
+  assert.match(clavesPin('a/b c@d')!.biometria, /^[A-Za-z0-9._-]+$/);
   // SecureStore solo acepta letras, números, '.', '-' y '_'.
   assert.match(clavesPin('a/b c@d')!.pin, /^[A-Za-z0-9._-]+$/);
 });
