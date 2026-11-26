@@ -97,13 +97,19 @@ export default function HorarioFinalesAdmin() {
 
   // Materias de la carrera elegida (para reconocer y para elegir a mano).
   useEffect(() => {
+    setPlanesCarrera([]);
     if (!carreraId) return setFichas([]);
-    fichasDeMaterias(carreraId).then(setFichas).catch(() => setFichas([]));
-    aniosDePlanes(carreraId).then(setPlanesCarrera).catch(() => setPlanesCarrera([]));
+    let activo = true;
+    fichasDeMaterias(carreraId).then((f) => activo && setFichas(f)).catch(() => activo && setFichas([]));
+    aniosDePlanes(carreraId).then((p) => activo && setPlanesCarrera(p)).catch(() => {});
+    return () => {
+      activo = false;
+    };
   }, [carreraId]);
   const unPlan = planesElegidos.length === 1 ? planesElegidos[0] : null;
-  // Tocar un plan lo suma o lo saca (2018 + 2026 = ambos); sin ninguno, van todos.
-  const elegirPlan = (p: number) => setPlanesElegidos((v) => (v.includes(p) ? v.filter((x) => x !== p) : [...v, p].sort((a, b) => a - b)));
+  // Tocar un plan lo suma o lo saca (2018 + 2026 = ambos).
+  // El último plan marcado no se desmarca (para ver todos está "Todos").
+  const elegirPlan = (p: number) => setPlanesElegidos((v) => (v.includes(p) ? (v.length > 1 ? v.filter((x) => x !== p) : v) : [...v, p].sort((a, b) => a - b)));
   // Planes para elegir: los del PDF y los de la carrera.
   const opcionesPlan = useMemo(() => [...new Set([...planesPdf, ...planesCarrera])].sort((a, b) => a - b), [planesPdf, planesCarrera]);
 

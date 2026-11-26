@@ -318,7 +318,11 @@ test('finales: la misma mesa en 2018 y 2026 queda una fila con los dos planes; "
   const texto = 'SEGUNDO SEMESTRE 2026\nIQ001   Química General   IQ2018   25-nov   14:00\nIQ-05   Química General   IQ2026   25-nov   14:00\nIQ003   Física I   IQ2018   SEMESTRE OPUESTO   26-nov   08:00\nIQ-07   Física I   IQ2026   27-nov   08:00';
   assert.deepEqual(planesDelTexto(texto), [2018, 2026]);
   // Un año leído mal en una sola fila no es un plan.
-  assert.deepEqual(planesDelTexto(`${texto}\nIQ013   Química Orgánica   102015   26-nov   14:00`), [2018, 2026]);
+  const conMal = `${texto}\nIQ013   Química Orgánica   102015   26-nov   14:00\nIQ013   Química Orgánica   IQ2018   10-dic   14:00`;
+  assert.deepEqual(planesDelTexto(conMal), [2018, 2026]);
+  // ... y esa fila no se pierde al filtrar por los planes del PDF.
+  const rm = leerHorarioFinales(conMal, ['Química General', 'Física I', 'Química Orgánica'], new Date(2026, 6, 1), { planes: planesDelTexto(conMal) });
+  assert.deepEqual(rm.filas.filter((f) => f.materia === 'Química Orgánica').map((f) => `${f.llamado} ${f.fecha}`), ['1 2026-11-26', '2 2026-12-10']);
   const r = leerHorarioFinales(texto, ['Química General', 'Física I'], new Date(2026, 6, 1), { planes: [2018, 2026] });
   const ver = r.filas.map((f) => `${f.materia} ${f.fecha} ${f.planes?.join('+')}${f.opuesto ? ' opuesto' : ''}`).sort();
   assert.deepEqual(ver, ['Física I 2026-11-26 2018 opuesto', 'Física I 2026-11-27 2026', 'Química General 2026-11-25 2018+2026']);

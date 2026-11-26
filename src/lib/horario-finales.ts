@@ -254,7 +254,7 @@ function codigoCrudo(crudo: string): string | null {
   const m = /^\W*([a-z0-9|]{1,2}\s?[-.]?\s?[0-9o]{2,3})\b/i.exec(crudo);
   if (!m) return null;
   // "15-12" es una fecha, salvo que la fila traiga el plan por sigla ("1Q2026"): ahí es "IQ-12" mal leído.
-  const conSigla = /\b[a-z0-9|]{2}\s?20[0-4]\d\b/i.test(crudo.slice(m[0].length));
+  const conSigla = /(?:^|\s)[a-z0-9|]{2}20[0-4]\d(?=[\s-]|$)/i.test(crudo.slice(m[0].length));
   if ((!conSigla && /^\d{1,2}\s?[-/.]\s?\d{1,2}$/.test(m[1].trim())) || /\b\d{1,2}[-/]\d{1,2}[-/]/.test(crudo.slice(0, 12))) return null;
   return m[1].toLowerCase().replace(/[\s.-]/g, '').replace(/o/g, '0').replace(/[|l]/g, '1');
 }
@@ -483,6 +483,14 @@ export function leerHorarioFinales(texto: string, materias: string[], referencia
     if (leido.length && leido.every((x, i) => w[i] === x)) f.materia = materia;
   }
 
+  // Un plan que aparece en una sola fila es una mala lectura ("102015" por "IQ2018"): esa fila queda sin plan.
+  const conocidos = new Set(planesDelTexto(texto));
+  for (const f of filas) {
+    if (f.plan != null && !conocidos.has(f.plan)) {
+      f.plan = null;
+      f.planes = [];
+    }
+  }
   const quiero = opciones.planes?.length ? opciones.planes : opciones.plan != null ? [opciones.plan] : null;
   let elegidas = quiero == null ? filas : filas.filter((f) => f.plan == null || quiero.includes(f.plan));
   // Sin "1er llamado" en el documento (una fila por mesa): el llamado sale del orden de las fechas de cada materia.
@@ -496,6 +504,7 @@ export function leerHorarioFinales(texto: string, materias: string[], referencia
       previa.planes = [...new Set([...(previa.planes ?? []), ...(f.planes ?? [])])].sort((a, b) => a - b);
       previa.opuesto = Boolean(previa.opuesto || f.opuesto);
       previa.hora = previa.hora ?? f.hora;
+      previa.aula = previa.aula ?? f.aula;
       return false;
     }
     vistas.set(k, f);
