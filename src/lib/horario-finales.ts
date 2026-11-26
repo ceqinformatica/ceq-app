@@ -484,7 +484,13 @@ export function leerHorarioFinales(texto: string, materias: string[], referencia
   }
 
   // Un plan que aparece en una sola fila es una mala lectura ("102015" por "IQ2018"): esa fila queda sin plan.
-  const conocidos = new Set(planesDelTexto(texto));
+  const conocidos = new Set<number>([
+    ...planesDelTexto(texto),
+    ...(opciones.fichas ?? []).flatMap((f) => (f.plan != null ? [f.plan] : [])),
+    ...(opciones.planes ?? []),
+    ...(opciones.plan != null ? [opciones.plan] : []),
+    ...(detectarPlan(texto) != null ? [detectarPlan(texto) as number] : []),
+  ]);
   for (const f of filas) {
     if (f.plan != null && !conocidos.has(f.plan)) {
       f.plan = null;

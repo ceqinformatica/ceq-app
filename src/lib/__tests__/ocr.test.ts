@@ -331,6 +331,13 @@ test('finales: la misma mesa en 2018 y 2026 queda una fila con los dos planes; "
   assert.deepEqual(s26.filas.map((f) => `${f.materia} ${f.planes?.join('+')}`).sort(), ['Física I 2026', 'Química General 2026']);
 });
 
+test('finales: un plan de la carrera nombrado en una sola fila se sigue filtrando', () => {
+  const texto = 'SEGUNDO SEMESTRE 2026\nIQ001   Química General   IQ2018   25-nov   14:00\nIQ003   Física I   IQ2018   26-nov   14:00\nIQ-05   Bioquímica   IQ2026   27-nov   08:00';
+  const fichas = [2018, 2026].map((plan) => ({ nombre: 'Química General', plan, orden: null, nivel: null }));
+  const r = leerHorarioFinales(texto, ['Química General', 'Física I', 'Bioquímica'], new Date(2026, 6, 1), { fichas, planes: [2018] });
+  assert.deepEqual(r.filas.map((f) => f.materia).sort(), ['Física I', 'Química General']);
+});
+
 test('finales: "10-01" con la sigla del plan en la fila es un código, no una fecha', () => {
   const texto = 'SEGUNDO SEMESTRE 2026\n10-01   Química General   1Q2026   25-nov   14:00\n10-02   Física I   1Q2026   26-nov   14:00\n10-01   Química General   1Q2026   09-dic   14:00';
   const r = leerHorarioFinales(texto, ['Química General', 'Física I'], new Date(2026, 6, 1));
