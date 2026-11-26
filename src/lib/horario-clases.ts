@@ -451,7 +451,24 @@ function horasDeCelda(c: Celda): HoraEnCelda[] {
 }
 
 /** Etiqueta de renglón: "De:", "A:", "¡A". */
-const ETIQUETA = /^\W*(de|a)\W*$/i;
+const ETIQUETA = /^\W*[l|1]?(de|a)\W*$/i;
+
+/** Marca de tipo suelta en la grilla: "RP", "(RP)", "R.P.", "(L)", "LAB". */
+const MARCA_SUELTA = /^\W*(r\.?\s*p\.?|lab\.?|l)\W*$/i;
+
+/** Hora, nombre o etiqueta de la hoja, con su altura en la página. */
+interface HoraEnHoja extends HoraEnCelda { y: number; zona: Zona | null }
+interface TextoEnHoja { texto: string; x: number; y: number; zona: Zona | null }
+/** Renglón de horas de la grilla ("De:" o "A:"), con las horas que tiene. */
+interface Renglon { y: number; de: boolean | null; horas: HoraEnHoja[]; zona: Zona | null }
+
+const mediana = (l: number[]) => {
+  const o = [...l].sort((a, b) => a - b);
+  return o.length ? o[Math.floor(o.length / 2)] : 0;
+};
+
+/** Zona de una celda (el alto es el del renglón). */
+const zonaDeCelda = (f: FilaDoc, c: Celda): Zona | null => (f.zona ? { ...f.zona, x0: c.x0, x1: c.x1 } : null);
 
 function leerGrillaPorMateria(filas: FilaDoc[], lista: Patron[], fichas: FichaMateria[]): { clases: ClaseLeida[]; revisar: ParaRevisar[] } {
   const clases: ClaseLeida[] = [];
@@ -469,26 +486,66 @@ function leerGrillaPorMateria(filas: FilaDoc[], lista: Patron[], fichas: FichaMa
   let enTabla = false;
   const diasVistos = new Map<number, number>();
   const marcasTP: { x: number; teoria: boolean }[] = [];
-  let actual: { nombre: string; inicios: HoraEnCelda[]; renglones: HoraEnCelda[][]; origen: string; zona: Zona | null } | null = null;
+  // Lo que hay en la tabla de la hoja; se arma al terminarla (por la posición, no por el orden de los renglones).
+  let horas: HoraEnHoja[] = [];
+  let nombres: TextoEnHoja[] = [];
+  let etiquetas: { de: boolean; y: number; zona: Zona | null }[] = [];
+  let marcas: { x: number; y: number; marca: TipoClase }[] = [];
+  // "8:00 - 10:00" en una sola celda: la clase entera, sin De/A.
+  let yEncabezado: number | null = null;
+  let numeroSuelto: { n: number; y: number; pagina: number } | null = null;
+  let rangos: { inicio: string; fin: string; x: number; y: number; zona: Zona | null }[] = [];
+  let altos: number[] = [];
 
-  const cerrar = (finales: HoraEnCelda[], resto: string, origen: string, zonaFin: Zona | null = null) => {
-    if (!actual || !subcols) return;
-    if (!finales.length) {
-      // No se leyó la "A:": las horas del último renglón con horas son las de fin.
-      const conHoras = actual.renglones.filter((r) => r.length);
-      if (conHoras.length >= 2) {
-        finales = conHoras[conHoras.length - 1];
-        actual.inicios = conHoras.slice(0, -1).flat();
-      }
-    }
-    const nombre = limpiarNombre([actual.nombre, resto].filter(Boolean).join(' '));
+  /** Arma las clases de una materia: cada hora de inicio con la de fin de su misma columna. */
+  const armar = (nombreLeido: string, inicios: HoraEnHoja[], finales: HoraEnHoja[], zona: Zona | null, completas: typeof rangos = []) => {
+    if (!subcols) return;
+    const nombre = limpiarNombre(nombreLeido);
     // Si no está en la malla (optativas, plan 2008), queda el nombre leído para revisar.
     // "Cálculo" en una hoja de nivel 2 es "Cálculo II": se desempata con la malla del plan y nivel de la hoja.
-    const reconocida = materiaDe(nombre, lista) ?? porNivel(nombre, plan, nivel, fichas, lista);
+    const limpio = sinOptativa(nombre);
+    // "QUÍMICA ORGÁNICA" sin el número en 3.er nivel es "Química Orgánica I", no "Química Inorgánica" (parecida).
+    const deLaMalla = materiaDe(nombre, lista) ?? (limpio !== nombre ? materiaDe(limpio, lista) : null);
+    const delNivel = deLaMalla && clave(deLaMalla) === clave(limpio) ? null : porNivel(limpio, plan, nivel, fichas, lista);
+    const reconocida = delNivel ?? deLaMalla;
     const materia = reconocida ?? (nombre.length >= 4 ? nombre : null);
-    const zona = unirZonas(actual.zona, zonaFin);
+    // Sin la etiqueta de un renglón, las dos filas quedan como "De:" (o "A:"):
+    // si las horas están en dos alturas, la de arriba es el inicio y la de abajo el fin.
+    if (!finales.length || !inicios.length) {
+      const todas = finales.length ? finales : inicios;
+      const [arriba, abajo] = partirEnDosFilas(todas, mediana(altos) || 20);
+      if (arriba.length && abajo.length) { inicios = arriba; finales = abajo; }
+      else {
+        // Las dos filas quedaron a la misma altura (hoja torcida): en cada columna,
+        // dos horas son el inicio (la más temprana) y el fin.
+        const ini: HoraEnHoja[] = [];
+        const fin: HoraEnHoja[] = [];
+        const usadas = new Set<HoraEnHoja>();
+        for (const h of todas) {
+          if (usadas.has(h)) continue;
+          const juntas = todas.filter((o) => !usadas.has(o) && Math.abs(o.x - h.x) <= paso * 0.5);
+          if (juntas.length === 2 && juntas[0].hora !== juntas[1].hora) {
+            juntas.sort((a, b) => (a.hora < b.hora ? -1 : 1));
+            ini.push(juntas[0]);
+            fin.push(juntas[1]);
+            juntas.forEach((o) => usadas.add(o));
+          }
+        }
+        if (ini.length) {
+          inicios = [...ini, ...todas.filter((o) => !usadas.has(o) && inicios.includes(o))];
+          finales = [...fin, ...todas.filter((o) => !usadas.has(o) && finales.includes(o))];
+        }
+      }
+    }
+    for (const r of completas) {
+      const col = subcolumnaDe(r.x, subcols, paso);
+      if (!col) continue;
+      const clase: ClaseLeida = { materia, dia: col.dia, inicio: r.inicio, fin: r.fin, aula: null, tipo: col.teoria ? 'teoria' : null, nivel, seccion: null, plan, origen: `${nombre} · ${NOMBRE_DIA[col.dia]} ${r.inicio} → ${r.fin}`.slice(0, 200), zona };
+      clase.pagina = pagina;
+      clases.push(clase);
+    }
     const libres = [...finales];
-    for (const ini of actual.inicios) {
+    for (const ini of inicios) {
       const col = subcolumnaDe(ini.x, subcols, paso);
       if (!col) continue;
       // El fin es la hora del renglón "A:" en la misma columna.
@@ -500,43 +557,155 @@ function leerGrillaPorMateria(filas: FilaDoc[], lista: Patron[], fichas: FichaMa
       });
       const fin = mejor >= 0 && dist <= paso ? libres[mejor] : null;
       if (!fin || fin.hora <= ini.hora) {
-        revisar.push({ motivo: 'sin-fin', texto: `${nombre}: ${NOMBRE_DIA[col.dia]} ${ini.hora} (sin hora de fin)`, materia, dia: col.dia, inicio: ini.hora, plan, pagina, zona });
+        revisar.push({ motivo: 'sin-fin', texto: `${nombre || 'Sin nombre'}: ${NOMBRE_DIA[col.dia]} ${ini.hora} (sin hora de fin)`, materia, dia: col.dia, inicio: ini.hora, plan, pagina, zona: unirZonas(zona, ini.zona) });
         continue;
       }
       libres.splice(mejor, 1);
       const tipo: TipoClase | null = ini.marca ?? fin.marca ?? (col.teoria ? 'teoria' : null);
-      const clase: ClaseLeida = { materia, dia: col.dia, inicio: ini.hora, fin: fin.hora, aula: null, tipo, nivel, seccion: null, plan, origen: `${nombre} · ${actual.origen} → ${origen}`.slice(0, 200), zona };
+      const clase: ClaseLeida = { materia, dia: col.dia, inicio: ini.hora, fin: fin.hora, aula: null, tipo, nivel, seccion: null, plan, origen: `${nombre} · ${NOMBRE_DIA[col.dia]} ${ini.hora} → ${fin.hora}`.slice(0, 200), zona };
       clase.pagina = pagina;
       clases.push(clase);
     }
-    if (!reconocida && actual.inicios.length) revisar.push({ motivo: 'materia', texto: nombre, materia, plan, pagina, zona });
-    actual = null;
+    // Una hora de fin sin la de inicio (el OCR no leyó la de arriba).
+    for (const f of libres) {
+      const col = subcolumnaDe(f.x, subcols, paso);
+      if (col && !inicios.some((i) => Math.abs(i.x - f.x) <= paso)) {
+        revisar.push({ motivo: 'sin-fin', texto: `${nombre || 'Sin nombre'}: ${NOMBRE_DIA[col.dia]} hasta las ${f.hora} (sin hora de inicio)`, materia, dia: col.dia, plan, pagina, zona: unirZonas(zona, f.zona) });
+      }
+    }
+    if (!reconocida && (inicios.length || finales.length || completas.length)) revisar.push({ motivo: 'materia', texto: nombre || 'Sin nombre', materia, plan, pagina, zona });
+  };
+
+  /**
+   * Arma las materias de la hoja por la posición: cada "De:" con su "A:" de
+   * abajo es una materia, y su nombre es lo que está a la izquierda entre la
+   * materia de arriba y la de abajo (aunque ocupe dos renglones o quede en
+   * el medio). Las horas van al renglón de etiqueta más cercano.
+   */
+  const procesar = () => {
+    if (subcols && (horas.length || etiquetas.length)) {
+      const alto = mediana(altos) || 20;
+      // Distancia entre renglones de la grilla ("De:" → "A:"): de las alturas de horas y etiquetas, agrupadas.
+      const ys: number[] = [];
+      for (const y of [...horas.map((h) => h.y), ...etiquetas.map((e) => e.y)].sort((a, b) => a - b)) {
+        if (!ys.length || y - ys[ys.length - 1] > alto * 0.7) ys.push(y);
+      }
+      const saltos = ys.slice(1).map((y, i) => y - ys[i]);
+      const paso_y = Math.max(alto * 1.2, mediana(saltos) || alto * 2);
+      // Renglones de horas: las horas a la misma altura.
+      const renglones: Renglon[] = [];
+      for (const h of [...horas].sort((a, b) => a.y - b.y)) {
+        const r = renglones[renglones.length - 1];
+        if (r && h.y - r.y <= paso_y * 0.45) {
+          r.horas.push(h);
+          r.y = r.horas.reduce((t, x) => t + x.y, 0) / r.horas.length;
+          r.zona = unirZonas(r.zona, h.zona);
+        } else renglones.push({ y: h.y, de: null, horas: [h], zona: h.zona });
+      }
+      // Cada renglón toma la etiqueta que tiene al lado; las etiquetas sin horas también cuentan (filas vacías).
+      for (const e of etiquetas) {
+        const r = renglones.filter((x) => Math.abs(x.y - e.y) <= paso_y * 0.6).sort((a, b) => Math.abs(a.y - e.y) - Math.abs(b.y - e.y))[0];
+        if (r) {
+          if (r.de == null) r.de = e.de;
+        } else renglones.push({ y: e.y, de: e.de, horas: [], zona: e.zona });
+      }
+      renglones.sort((a, b) => a.y - b.y);
+      const conEtiqueta = new Set(renglones.filter((r) => r.de != null));
+      // Sin etiqueta legible: alternan, "De:" y después "A:".
+      renglones.forEach((r, i) => {
+        if (r.de == null) r.de = !(i > 0 && renglones[i - 1].de === true && r.y - renglones[i - 1].y <= paso_y * 1.6);
+      });
+      // Pares "De:" + "A:".
+      const pares: { de: Renglon | null; a: Renglon | null }[] = [];
+      renglones.forEach((r, i) => {
+        // Dos "A:" seguidos sin "De:" antes: el primero era un "De:" mal leído.
+        const sig = renglones[i + 1];
+        const ult = pares[pares.length - 1];
+        if (!r.de && sig && !sig.de && r.horas.length && (!ult || ult.a || !ult.de) && sig.y - r.y <= paso_y * 1.6) r.de = true;
+      });
+      for (const r of renglones) {
+        const ult = pares[pares.length - 1];
+        // Con la etiqueta "A:" leída, la celda puede ser más alta (nombre en dos renglones).
+        if (!r.de && ult?.de && !ult.a && r.y - ult.de.y <= paso_y * (conEtiqueta.has(r) ? 2.2 : 1.6)) ult.a = r;
+        else pares.push(r.de ? { de: r, a: null } : { de: null, a: r });
+      }
+      const ini = (p: (typeof pares)[number]) => p.de?.y ?? p.a!.y - paso_y;
+      const fin = (p: (typeof pares)[number]) => p.a?.y ?? p.de!.y + paso_y;
+      const bandas = pares.map((p, i) => ({
+        par: p,
+        arriba: i === 0 ? ini(p) - paso_y : (fin(pares[i - 1]) + ini(p)) / 2,
+        abajo: i === pares.length - 1 ? fin(p) + paso_y : (fin(p) + ini(pares[i + 1])) / 2,
+        textos: [] as TextoEnHoja[],
+      }));
+      for (const n of nombres) bandas.find((b) => n.y >= b.arriba && n.y < b.abajo)?.textos.push(n);
+      for (const b of bandas) {
+        const inicios = b.par.de?.horas ?? [];
+        const finales = b.par.a?.horas ?? [];
+        // "RP 14:00" con la marca en otro renglón o en otra celda: se le pega a la hora más cercana.
+        for (const m of marcas) {
+          const cerca = [...inicios, ...finales].filter((h) => !h.marca && Math.abs(h.y - m.y) <= paso_y * 0.6 && Math.abs(h.x - m.x) <= paso * 1.5);
+          const h = cerca.sort((p, q) => Math.abs(p.x - m.x) - Math.abs(q.x - m.x))[0];
+          if (h) h.marca = m.marca;
+        }
+        const completas = rangos.filter((r) => r.y >= b.arriba && r.y < b.abajo);
+        if (!inicios.length && !finales.length && !completas.length) continue;
+        const textos = b.textos.sort((p, q) => p.y - q.y || p.x - q.x);
+        const nombre = textos.map((t) => t.texto).join(' ');
+        const zona = [...textos.map((t) => t.zona), b.par.de?.zona ?? null, b.par.a?.zona ?? null].reduce<Zona | null>((z, x) => unirZonas(z, x), null);
+        armar(nombre, inicios, finales, zona, completas);
+      }
+    }
+    horas = [];
+    nombres = [];
+    etiquetas = [];
+    marcas = [];
+    rangos = [];
   };
 
   for (const f of filas) {
     if (f.pagina !== pagina) {
-      cerrar([], '', '');
+      procesar();
       if (nivel == null && pagina >= 0) {
         sinNivel.push(clases.filter((c) => c.nivel == null && c.pagina === pagina));
         hojasSinNivel.push({ pagina, plan, zona: zonaHoja });
       }
       pagina = f.pagina;
       zonaHoja = null;
+      yEncabezado = null;
+      numeroSuelto = null;
       plan = null;
       nivel = null;
       subcols = null;
       enTabla = false;
       diasVistos.clear();
       marcasTP.length = 0;
+      altos = [];
     }
     const crudo = f.celdas.map((c) => c.texto).join(' ');
     const n = normalizar(crudo);
     if (!n) continue;
 
+    // "Nivel:" y su número en renglones separados (la casilla del número quedó más arriba o más abajo).
+    const suelto = !subcols && /^\W*(?:l\s+)?(\d{1,2})\W*$/.exec(n);
+    if (suelto && Number(suelto[1]) >= 1 && Number(suelto[1]) <= 12 && f.y != null) {
+      if (nivel == null && yEncabezado != null && Math.abs(f.y - yEncabezado) <= (f.alto ?? 20) * 1.5) nivel = Number(suelto[1]);
+      else numeroSuelto = { n: Number(suelto[1]), y: f.y, pagina: f.pagina };
+      continue;
+    }
     const hoja = encabezadoHoja(f);
     if (hoja) {
+      if (horas.length || etiquetas.length) {
+        // Otra tabla en la misma hoja: la anterior se cierra y la nueva trae su plan, nivel y días.
+        procesar();
+        plan = null;
+        nivel = null;
+        diasVistos.clear();
+        marcasTP.length = 0;
+      }
       plan = hoja.plan ?? plan;
       nivel = hoja.nivel ?? nivel;
+      yEncabezado = f.y ?? null;
+      if (nivel == null && numeroSuelto && numeroSuelto.pagina === f.pagina && f.y != null && Math.abs(f.y - numeroSuelto.y) <= (f.alto ?? 20) * 1.5) nivel = numeroSuelto.n;
       zonaHoja = unirZonas(zonaHoja, f.zona);
       continue;
     }
@@ -558,7 +727,7 @@ function leerGrillaPorMateria(filas: FilaDoc[], lista: Patron[], fichas: FichaMa
           const nw = normalizar(w);
           const centro = c.x0 + ((pos + w.length / 2) / (c.texto.length || 1)) * (c.x1 - c.x0);
           if (/^teor/.test(nw)) marcasTP.push({ x: centro, teoria: true });
-          else if (/^pract/.test(nw)) marcasTP.push({ x: centro, teoria: false });
+          else if (/^pract|^r\s*p$/.test(nw)) marcasTP.push({ x: centro, teoria: false });
           pos += w.length + 1;
         }
       }
@@ -568,60 +737,55 @@ function leerGrillaPorMateria(filas: FilaDoc[], lista: Patron[], fichas: FichaMa
       continue;
     }
     if (!enTabla || !subcols) continue;
-    if (/\bdocentes\b/.test(n)) {
-      cerrar([], '', '');
+    // Lo que sigue a la tabla: docentes, firmas y la fecha de impresión.
+    if (/\bdocentes\b/.test(n) || /^\W*clases?\b/.test(n) || /^\W*(teoria|practica)\b/.test(n) && FIRMAS.test(n)) {
+      procesar();
       enTabla = false;
       continue;
     }
     if (/\b(asignatura|dias de la semana)\b/.test(n)) continue;
+    if (FIRMAS.test(n) && !/\d[:.]\d/.test(n)) continue;
+    if (/\bimp\b|horario de clases/.test(n)) continue;
 
-    const izquierda = f.celdas.filter((c) => (c.x0 + c.x1) / 2 < borde);
-    const horas = f.celdas.filter((c) => (c.x0 + c.x1) / 2 >= borde).flatMap(horasDeCelda);
-    const etiquetas = izquierda.filter((c) => ETIQUETA.test(c.texto)).map((c) => normalizar(c.texto));
-    let nombre = izquierda.filter((c) => !ETIQUETA.test(c.texto)).map((c) => c.texto).join(' ').trim();
-    // "Bioproductos y Biocombustibles A:": la etiqueta pegada al nombre.
-    const aPegada = /\s[¡!|]?a\s*:\s*$|\s[¡!|]a\s*$/i.test(nombre) || /\s[¡!|]?a\s*:?\s*$/i.test(nombre) && horas.length > 0;
-    if (aPegada) nombre = nombre.replace(/\s+[¡!|]?a\s*:?\s*$/i, '').trim();
-    const esA = etiquetas.includes('a') || aPegada;
-    const esDe = etiquetas.includes('de');
-    const letras = (nombre.match(/\p{L}/gu) ?? []).length;
-
-    if (!actual) {
-      if (esA) continue; // "A:" suelto: fila vacía
-      if (letras < 3 && !horas.length) continue;
-      actual = { nombre, inicios: horas, renglones: [horas], origen: crudo.trim(), zona: f.zona ?? null };
-      continue;
+    const y = f.y ?? (f.zona ? (f.zona.y0 + f.zona.y1) / 2 : 0);
+    if (f.alto) altos.push(f.alto);
+    for (const c of f.celdas) {
+      const centro = (c.x0 + c.x1) / 2;
+      if (centro >= borde) {
+        const rango = rangoEn(c.texto);
+        if (rango && /\d\s*[-–]\s*\d/.test(c.texto) && horasDeCelda(c).length === 2) {
+          rangos.push({ ...rango, x: centro, y: c.y ?? y, zona: zonaDeCelda(f, c) });
+          continue;
+        }
+        const hs = horasDeCelda(c);
+        horas.push(...hs.map((h) => ({ ...h, y: c.y ?? y, zona: zonaDeCelda(f, c) })));
+        const m = MARCA_SUELTA.exec(c.texto);
+        if (!hs.length && m) marcas.push({ x: centro, y, marca: /r/i.test(m[1]) ? 'rp' : 'laboratorio' });
+        continue;
+      }
+      if (ETIQUETA.test(c.texto)) {
+        // Una "A" suelta en la columna de los nombres es una mancha, no la etiqueta.
+        if (c.x1 < borde - paso * 3) continue;
+        etiquetas.push({ de: /d/i.test(c.texto), y: c.y ?? y, zona: zonaDeCelda(f, c) });
+        continue;
+      }
+      // "Bioproductos y Biocombustibles A:" / "INTEGRAL De:": la etiqueta pegada al nombre.
+      let texto = c.texto.trim();
+      // "Control de De 15:00": la celda del nombre se comió la etiqueta y la hora de al lado.
+      const metidas = horasDeCelda(c).filter((h) => h.x >= borde - paso * 0.5);
+      if (metidas.length) {
+        horas.push(...metidas.map((h) => ({ ...h, y, zona: zonaDeCelda(f, c) })));
+        texto = texto.replace(HORA_CELDA, ' ').replace(/\s+/g, ' ').trim();
+      }
+      const pegada = /\s+[¡!|]?(de|a)\s*:\s*$/i.exec(texto) ?? (c.x1 > borde - paso * 2 ? /\s+[¡!|]?(de|a)\s*$/i.exec(texto) : null);
+      if (pegada) {
+        etiquetas.push({ de: /d/i.test(pegada[1]), y, zona: zonaDeCelda(f, c) });
+        texto = texto.slice(0, pegada.index).trim();
+      }
+      if ((texto.match(/\p{L}/gu) ?? []).length) nombres.push({ texto, x: c.x0, y, zona: zonaDeCelda(f, c) });
     }
-    if (esA) {
-      cerrar(horas, nombre, crudo.trim(), f.zona);
-      continue;
-    }
-    if (esDe && actual.inicios.length) {
-      // Empieza otra materia sin que se haya leído el "A:" de la anterior.
-      cerrar([], '', '');
-      actual = { nombre, inicios: horas, renglones: [horas], origen: crudo.trim(), zona: f.zona ?? null };
-      continue;
-    }
-    if (/^\W*\d{1,2}[.:]?\s+\p{L}{3}/u.test(nombre) && actual.inicios.length && (actual.nombre.match(/\p{L}/gu) ?? []).length >= 3) {
-      // "4 Optativa 1: Portugués": fila numerada, otra materia.
-      cerrar([], '', '');
-      actual = { nombre, inicios: horas, renglones: [horas], origen: crudo.trim(), zona: f.zona ?? null };
-      continue;
-    }
-    const mismasColumnas = horas.length > 0 && horas.every((h) => actual!.inicios.some((i) => Math.abs(i.x - h.x) <= paso));
-    if (actual.inicios.length && horas.length && (letras < 3 || mismasColumnas)) {
-      // El OCR no leyó la "A:", pero son las horas de fin (debajo de las de inicio).
-      cerrar(horas, nombre, crudo.trim(), f.zona);
-      continue;
-    }
-    // Más renglones de la misma materia (nombre en dos renglones, horas sueltas).
-    actual.nombre = [actual.nombre, nombre].filter(Boolean).join(' ');
-    actual.inicios.push(...horas);
-    actual.renglones.push(horas);
-    actual.origen = `${actual.origen} ${crudo.trim()}`;
-    actual.zona = unirZonas(actual.zona, f.zona);
   }
-  cerrar([], '', '');
+  procesar();
   if (nivel == null && pagina >= 0) {
     sinNivel.push(clases.filter((c) => c.nivel == null && c.pagina === pagina));
     hojasSinNivel.push({ pagina, plan, zona: zonaHoja });
@@ -672,10 +836,25 @@ function nivelPorMaterias(hoja: ClaseLeida[], fichas: FichaMateria[]): number | 
 export function limpiarNombre(t: string): string {
   let n = t.replace(/\s+/g, ' ').trim();
   // Número de fila ("1", "6.", "2:") o basura del borde ("Si", "uu", "[") y etiquetas sueltas al principio.
-  for (let i = 0; i < 4; i++) n = n.replace(/^(?:[^\p{L}]+|(?:s[il1]|uu|a|de|del|l|i)(?![\p{L}])[\s:.]*)\s*/iu, '').trim();
+  for (let i = 0; i < 4; i++) {
+    n = n.replace(/^(?:[^\p{L}]+|(?:s[il1]|uu|a|de|del|l|i)(?![\p{L}])[\s:.]*)\s*/iu, '').trim();
+    // Letra de la fila ("B.QUÍMICA", "D. CÁLCULO", "lA. QUÍMICA", "E PASANTÍA"), a veces con una mancha antes ("Ea B. FISIOLOGÍA").
+    n = n.replace(/^(?:\S{1,2}\s+)?[l|1¡!]?[A-J]\s*[.,)]\s*(?=\p{L}{3})/u, '').replace(/^[A-J]\s+(?=\p{Lu}\p{L}{2})/u, '').trim();
+    // Mancha corta antes del nombre en mayúsculas ("ÍA PASANTÍA", "Ea FISIOLOGÍA").
+    n = n.replace(/^\p{L}{1,2}\s+(?=\p{Lu}{4,}(?:\s|$))/u, '').trim();
+  }
   n = n.replace(/\s+(?:de|a)\s*:$/i, '').replace(/[\s:;,.\-–]+$/, '');
+  // Manchas al final ("lA", "LU", "JA", "as"): lo que no es un número romano.
+  for (let i = 0; i < 2; i++) n = n.replace(/\s+(?![IVXivx]{1,3}$|[iIl1|]{1,3}$|y$|e$)[\p{L}!|]{1,2}$/u, '').replace(/[\s:;,.\-–]+$/, '').trim();
+  // "FÍSICA!", "FISICA 11", "FARMACOLOGÍAI": el número leído como "!", "1" o pegado.
+  n = n.replace(/!$/, ' I').replace(/(\p{L}{3,})\s[l|]$/u, '$1 I').replace(/\s11$/, ' II').replace(/\s111$/, ' III').replace(/\s1$/, ' I').replace(/(\p{Lu}{4,}[ÍIA]A)(I{1,3})$/u, '$1 $2');
   // Números romanos que el OCR lee con eles: "Il", "ll", "li", "Ill".
-  return romanosOcr(n);
+  return romanosOcr(n).trim();
+}
+
+/** El nombre sin la marca de optativa ("(OPTATIVA II)", "(Opt. III)", "Optativa 4:"), para buscarlo en la malla. */
+function sinOptativa(nombre: string): string {
+  return nombre.replace(/\(\s*opt[^)]*\)?/gi, ' ').replace(/^\s*optativa\s*\d*\s*:?\s*/i, '').replace(/\s+/g, ' ').trim();
 }
 
 /** Días sueltos de un renglón ("1 ¦ SABADO" cuando la fila de días quedó partida). */
@@ -694,6 +873,20 @@ function diasSueltos(f: FilaDoc): Columna[] | null {
  * ("NIE", o "VIE" perdido) igual tiene su lugar. Las marcas TEORIA/PRACT.
  * afinan cada subcolumna.
  */
+/** Separa horas en dos filas por la altura (el mayor salto vertical), si lo hay. */
+function partirEnDosFilas(horas: HoraEnHoja[], altoTipico: number): [HoraEnHoja[], HoraEnHoja[]] {
+  if (horas.length < 2) return [horas, []];
+  const orden = [...horas].sort((a, b) => a.y - b.y);
+  let corte = -1;
+  let salto = 0;
+  for (let i = 1; i < orden.length; i++) {
+    const d = orden[i].y - orden[i - 1].y;
+    if (d > salto) { salto = d; corte = i; }
+  }
+  if (salto < altoTipico * 0.8) return [horas, []];
+  return [orden.slice(0, corte), orden.slice(corte)];
+}
+
 function armarColumnas(dias: Map<number, number>, marcas: { x: number; teoria: boolean }[]): { subcols: Subcolumna[]; paso: number; borde: number } | null {
   const puntos = [...dias.entries()].filter(([d]) => d >= 1 && d <= 6);
   let a: number;
