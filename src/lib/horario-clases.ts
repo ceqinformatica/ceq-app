@@ -641,12 +641,14 @@ function leerGrillaPorMateria(filas: FilaDoc[], lista: Patron[], fichas: FichaMa
  * Transporte III"). Solo si hay una sola.
  */
 function porNivel(nombre: string, plan: number | null, nivel: number | null, fichas: FichaMateria[], lista: Patron[]): string | null {
-  if (nivel == null || !fichas.length) return null;
-  const leido = clave(romanosOcr(nombre)).split(' ').filter(Boolean);
+  if (nivel == null || plan == null || !fichas.length) return null;
+  const leido = clave(romanosOcr(nombre.replace(MARCA_TIPO, ' '))).split(' ').filter(Boolean);
   if (!leido.length || leido.join('').length < 4) return null;
-  const candidatas = fichas.filter((f) => f.nivel === nivel && (plan == null || f.plan === plan) && lista.some((p) => p.nombre === f.nombre)).filter((f) => {
+  const candidatas = fichas.filter((f) => f.nivel === nivel && f.plan === plan && lista.some((p) => p.nombre === f.nombre)).filter((f) => {
     const w = clave(f.nombre).split(' ');
-    return leido.every((x, i) => w[i] === x);
+    if (!leido.every((x, i) => w[i] === x)) return false;
+    // Una sola palabra ("Cálculo") solo si lo que falta es el número ("Cálculo II").
+    return leido.length >= 2 || (w.length === 2 && /^(i|ii|iii|iv|v|vi)$/.test(w[1]));
   });
   const nombres = [...new Set(candidatas.map((f) => f.nombre))];
   return nombres.length === 1 ? nombres[0] : null;
