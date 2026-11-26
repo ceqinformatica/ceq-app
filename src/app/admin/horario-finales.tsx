@@ -18,6 +18,8 @@ import {
 import { estadoAviso, TEXTO_AVISO } from '../../lib/aviso-publicacion';
 import { textoError } from '../../lib/errores';
 import { detectarCarrera, detectarPlan, isoATexto, leerHorarioFinales, textoAIso, textoLlamado, tituloSugerido, type FichaMateria } from '../../lib/horario-finales';
+import { compararPorNivel, nivelesPorMateria } from '../../lib/orden-niveles';
+import { nombreNivel } from '../../components/academico';
 import { confianzaMedia, filasDeOcr, textoDeFilas, ubicar, type FilaDoc, type Zona } from '../../lib/ocr/documento';
 import { textoDePdfGeneral } from '../../lib/pdf-texto';
 import type { Carrera, HorarioFinalesDb } from '../../lib/tipos-db';
@@ -178,13 +180,16 @@ export default function HorarioFinalesAdmin() {
     const pag = (x: { fila: Fila }) => x.fila.zona?.pagina ?? 999;
     return l.sort((a, b) => pag(a) - pag(b));
   }, [filas, materias]);
+  // Nivel de cada materia (del plan elegido; si no, el primero en que aparece), para ordenar por nivel y no alfabéticamente.
+  const nivelDe = useMemo(() => nivelesPorMateria(fichas, plan), [fichas, plan]);
   const porMateria = useMemo(() => {
     const m = new Map<string, Fila[]>();
     for (const f of filas) if (f.materia) m.set(f.materia, [...(m.get(f.materia) ?? []), f]);
     return [...m.entries()]
       .map(([nombre, l]) => [nombre, l.sort((a, b) => a.llamado - b.llamado || a.fecha.localeCompare(b.fecha))] as const)
-      .sort((a, b) => a[0].localeCompare(b[0], 'es'));
-  }, [filas]);
+      .sort((a, b) => compararPorNivel(nivelDe, a[0], b[0]));
+  }, [filas, nivelDe]);
+  const materiasPorNivel = useMemo(() => [...materias].sort((a, b) => compararPorNivel(nivelDe, a, b)), [materias, nivelDe]);
 
   /** Resultado de la hoja: la fila corregida, una nueva, o null para borrarla. */
   const aplicarEdicion = (f: Fila | null) => {
@@ -413,12 +418,19 @@ export default function HorarioFinalesAdmin() {
           </Tarjeta>
         </>
       )}
-      {porMateria.map(([nombre, l]) => (
-        <Tarjeta key={nombre} estilo={{ paddingVertical: espacio.xs }}>
-          <Text style={[s.filaTitulo, { paddingTop: espacio.s }]}>{nombre}</Text>
-          {l.map((f, i) => <FilaFecha key={f.clave} f={f} ultima={i === l.length - 1} onPress={() => setEditando(f)} />)}
-        </Tarjeta>
-      ))}
+      {porMateria.map(([nombre, l], i) => {
+        const nivel = nivelDe.get(nombre)?.nivel ?? null;
+        const nuevoNivel = i === 0 || (nivelDe.get(porMateria[i - 1][0])?.nivel ?? null) !== nivel;
+        return (
+          <View key={nombre}>
+            {nuevoNivel && <Text style={[s.etiqueta, { marginTop: i === 0 ? 0 : espacio.m, marginBottom: espacio.s }]}>{nivel == null ? 'Sin nivel' : nombreNivel(nivel)}</Text>}
+            <Tarjeta estilo={{ paddingVertical: espacio.xs }}>
+              <Text style={[s.filaTitulo, { paddingTop: espacio.s }]}>{nombre}</Text>
+              {l.map((f, j) => <FilaFecha key={f.clave} f={f} ultima={j === l.length - 1} onPress={() => setEditando(f)} />)}
+            </Tarjeta>
+          </View>
+        );
+      })}
     </>
   );
 
@@ -430,7 +442,7 @@ export default function HorarioFinalesAdmin() {
         izquierda={<>{datosGenerales}{acciones}</>}
         derecha={<>{lista}</>}
       />
-      <EditorFecha fila={editando} materias={materias} vistas={vistas} onListo={aplicarEdicion} onCerrar={() => setEditando(null)} />
+      <EditorFecha fila={editando} materias={materiasPorNivel} vistas={vistas} onListo={aplicarEdicion} onCerrar={() => setEditando(null)} />
       {lector.vista}
     </Pantalla>
   );
