@@ -392,3 +392,27 @@ test('grilla FCQ: cada clase sabe de qué hoja es (para elegir el nivel de la ho
   const r = leerHorarioClases(filasDeOcr(ocr('horario-fcq')), MATERIAS_IQ, null, FICHAS_IQ);
   for (const c of r.clases) assert.equal(typeof c.pagina, 'number');
 });
+
+test('grilla FCQ: "Cálculo" en una hoja de 2.º nivel del plan 2018 es "Cálculo II"', () => {
+  const m2018 = [...new Set(FICHAS_IQ.filter((f) => f.plan === 2018).map((f) => f.nombre))];
+  const r = leerHorarioClases(filasDeOcr(ocr('horario-fcq')), m2018, 2018, FICHAS_IQ);
+  const nombres = new Set(r.clases.map((c) => c.materia));
+  assert.ok(nombres.has('Cálculo II'), [...nombres].join(', '));
+  assert.ok(!nombres.has('Cálculo'));
+});
+
+test('finales por código: el nombre manda aunque la fila traiga docentes, y el código desempata llamados', () => {
+  const m2018 = [...new Set(FICHAS_IQ.filter((f) => f.plan === 2018).map((f) => f.nombre))];
+  const texto = [
+    'SEGUNDO SEMESTRE 2026',
+    // Docentes en la misma fila y "Industria!" por "Industrial".
+    '10040   Legislación Industria! y del Trabajo   102018   8   10   PLAN 2018   EC   1   02-dic   08:00   CYNTHIA MARINA GONZÁLEZ NOGUERA   LOURDES LIZ SANTA CRUZ SCAPPINI   MARIA ELENA SANCHEZ DOMINGUEZ',
+    // Código 17 = Termodinámica I; el OCR leyó "fremmodinámica".
+    '10017   fremmodinámica   102018   4   10   PLAN 2018   1   1   02-dic   14:00   WILSON LOPEZ',
+    // Mismo código (optativa): en un llamado se leyó el número y en el otro no.
+    '10070   Inglés Técnico 1   102018   12   10   OPTATIVAS   EC   2   15-dic   14:00',
+    '10070   Inglés Técnico   102018   12   10   OPTATIVAS   EC   09-feb   14:00',
+  ].join('\n');
+  const r = leerHorarioFinales(texto, m2018, new Date(2026, 10, 25), { fichas: FICHAS_IQ, plan: 2018 });
+  assert.deepEqual([...new Set(r.filas.map((f) => f.materia))].sort(), ['Inglés Técnico I', 'Legislación Industrial y del Trabajo', 'Termodinámica I']);
+});

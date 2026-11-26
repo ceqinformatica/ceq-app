@@ -149,7 +149,7 @@ function posicionEnNormalizado(normalizado: string, desdeClave: number): number 
 
 /** La materia más parecida al texto, si se parece bastante (para nombres cortados o con errores). */
 /** Distancia de edición, cortando en cuanto pasa del máximo. */
-function distancia(a: string, b: string, max: number): number {
+export function distancia(a: string, b: string, max: number): number {
   if (Math.abs(a.length - b.length) > max) return max + 1;
   let previa = Array.from({ length: b.length + 1 }, (_, j) => j);
   for (let i = 1; i <= a.length; i++) {
@@ -418,8 +418,13 @@ export function leerHorarioFinales(texto: string, materias: string[], referencia
     }
     const unido = previo ? `${previo} ${k}` : '';
     const kr = clave(romanosOcr(crudo));
-    let p = materiasEn(kr, lista)[0]?.patron ?? encontradas[0]?.patron ?? parecida(kr, lista) ?? (unido ? materiasEn(unido, lista).pop()?.patron ?? parecida(unido, lista) : null) ?? pendiente;
     const plan = planDeFila(crudo);
+    // Planilla con código y plan por fila: primero se busca solo en el nombre (los docentes de la misma fila confunden).
+    const soloNombre = plan != null ? nombreEntreCodigoYPlan(crudo) : null;
+    const kn = soloNombre ? clave(romanosOcr(soloNombre)) : '';
+    let p =
+      (kn ? materiasEn(kn, lista)[0]?.patron ?? parecida(kn, lista) : null) ??
+      materiasEn(kr, lista)[0]?.patron ?? encontradas[0]?.patron ?? parecida(kr, lista) ?? (unido ? materiasEn(unido, lista).pop()?.patron ?? parecida(unido, lista) : null) ?? pendiente;
     // El código de la planilla (IQ010 = materia 10 del plan) desempata "Cálculo" / "Cálculo 1" / "Cálculo Il".
     const porCodigo = codigoAMateria(crudo, plan, opciones.fichas, lista, kr);
     if (porCodigo) p = porCodigo;
@@ -433,6 +438,25 @@ export function leerHorarioFinales(texto: string, materias: string[], referencia
     // Si hay tabla de columnas y el renglón trae más fechas que columnas, se ignoran las de más.
     agregar(p, columnas ? fechas.slice(0, Math.max(columnas, 1)) : fechas, horas, aula, crudo, plan);
     pendiente = null;
+  }
+
+  // Mismo código y plan = misma materia: si en un llamado se leyó bien ("Inglés Técnico 1") y en otro
+  // no ("Inglés Técnico", sin el número), se usa la que se reconoció.
+  const enLista = new Set(lista.map((p) => p.nombre));
+  const porCodigoLeido = new Map<string, Set<string>>();
+  const codigoDe = (f: FilaFinal) => {
+    const n = f.plan != null ? numeroDeCodigo(f.origen) : null;
+    return n == null ? null : `${f.plan}|${n}`;
+  };
+  for (const f of filas) {
+    const k = codigoDe(f);
+    if (k && f.materia && enLista.has(f.materia)) porCodigoLeido.set(k, new Set([...(porCodigoLeido.get(k) ?? []), f.materia]));
+  }
+  for (const f of filas) {
+    if (f.materia && enLista.has(f.materia)) continue;
+    const k = codigoDe(f);
+    const c = k ? porCodigoLeido.get(k) : undefined;
+    if (c?.size === 1) f.materia = [...c][0];
   }
 
   let elegidas = opciones.plan == null ? filas : filas.filter((f) => f.plan == null || f.plan === opciones.plan);
@@ -504,7 +528,11 @@ function codigoAMateria(crudo: string, plan: number | null, fichas: FichaMateria
   if (!ficha) return null;
   // Confirmación: la primera palabra del nombre tiene que estar en la fila ("calculo" en "10010 Cálculo Il").
   const primera = clave(ficha.nombre).split(' ').find((w) => w.length >= 4);
-  if (!primera || !new RegExp(`(^| )${escapar(primera)}`).test(leido)) return null;
+  if (!primera) return null;
+  // Con el código ya identificada, alcanza con que se parezca ("fremmodinámica" por "Termodinámica").
+  const tolera = primera.length >= 10 ? 3 : primera.length >= 7 ? 2 : primera.length >= 5 ? 1 : 0;
+  const palabras = leido.split(' ').slice(0, 8);
+  if (!palabras.some((w) => w === primera || (tolera && w.length >= 4 && distancia(w, primera, tolera) <= tolera))) return null;
   return lista.find((p) => p.nombre === ficha.nombre) ?? { nombre: ficha.nombre, clave: clave(ficha.nombre), palabras: clave(ficha.nombre).split(' ') };
 }
 

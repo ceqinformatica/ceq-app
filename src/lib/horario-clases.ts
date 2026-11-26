@@ -483,7 +483,8 @@ function leerGrillaPorMateria(filas: FilaDoc[], lista: Patron[], fichas: FichaMa
     }
     const nombre = limpiarNombre([actual.nombre, resto].filter(Boolean).join(' '));
     // Si no está en la malla (optativas, plan 2008), queda el nombre leído para revisar.
-    const reconocida = materiaDe(nombre, lista);
+    // "Cálculo" en una hoja de nivel 2 es "Cálculo II": se desempata con la malla del plan y nivel de la hoja.
+    const reconocida = materiaDe(nombre, lista) ?? porNivel(nombre, plan, nivel, fichas, lista);
     const materia = reconocida ?? (nombre.length >= 4 ? nombre : null);
     const zona = unirZonas(actual.zona, zonaFin);
     const libres = [...finales];
@@ -632,6 +633,23 @@ function leerGrillaPorMateria(filas: FilaDoc[], lista: Patron[], fichas: FichaMa
     else if (hoja.length) revisar.push({ motivo: 'nivel', texto: `Hoja ${hojasSinNivel[i].pagina + 1}${hojasSinNivel[i].plan ? ` (plan ${hojasSinNivel[i].plan})` : ''}: no leímos el nivel`, plan: hojasSinNivel[i].plan, pagina: hojasSinNivel[i].pagina, zona: hojasSinNivel[i].zona });
   });
   return { clases, revisar };
+}
+
+/**
+ * Materia de la malla que empieza con el nombre leído y es del plan y nivel
+ * de la hoja ("Fenómenos de Transporte" en 8.º nivel → "Fenómenos de
+ * Transporte III"). Solo si hay una sola.
+ */
+function porNivel(nombre: string, plan: number | null, nivel: number | null, fichas: FichaMateria[], lista: Patron[]): string | null {
+  if (nivel == null || !fichas.length) return null;
+  const leido = clave(romanosOcr(nombre)).split(' ').filter(Boolean);
+  if (!leido.length || leido.join('').length < 4) return null;
+  const candidatas = fichas.filter((f) => f.nivel === nivel && (plan == null || f.plan === plan) && lista.some((p) => p.nombre === f.nombre)).filter((f) => {
+    const w = clave(f.nombre).split(' ');
+    return leido.every((x, i) => w[i] === x);
+  });
+  const nombres = [...new Set(candidatas.map((f) => f.nombre))];
+  return nombres.length === 1 ? nombres[0] : null;
 }
 
 /** Nivel más común de las materias de la hoja, según la malla de su plan. */
