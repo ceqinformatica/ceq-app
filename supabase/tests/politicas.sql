@@ -775,6 +775,11 @@ select public.guardar_parcial('30000000-0000-0000-0000-000000000001', '60000000-
   '{"tipo":"regularizacion","periodo":"2026-2","llamado":2}'::jsonb);
 select pg_temp.debe_ser('reintentar la Regu no duplica la evaluación', (select count(*) from public.evaluaciones where id = '60000000-0000-0000-0000-000000000001' and porcentaje = 75), 1);
 select pg_temp.debe_ser('ni el llamado', (select count(*) from public.examenes_finales where tipo = 'regularizacion' and llamado = 2 and evaluacion_id = '60000000-0000-0000-0000-000000000001'), 1);
+select pg_temp.debe_ser('la Regu sin semestre_opuesto queda en semestre normal', (select count(*) from public.examenes_finales where tipo = 'regularizacion' and not semestre_opuesto), 1);
+select public.guardar_parcial('30000000-0000-0000-0000-000000000001', '60000000-0000-0000-0000-000000000001',
+  '{"nombre":"Regularización","componente":"teoria","ponderacion":1,"porcentaje":75,"rendida":true}'::jsonb,
+  '{"tipo":"regularizacion","periodo":"2026-2","llamado":2,"semestre_opuesto":true}'::jsonb);
+select pg_temp.debe_ser('la Regu guarda que fue en semestre opuesto', (select count(*) from public.examenes_finales where tipo = 'regularizacion' and semestre_opuesto), 1);
 select pg_temp.debe_fallar('Recu en el segundo llamado',
   $$select public.guardar_parcial('30000000-0000-0000-0000-000000000001', '60000000-0000-0000-0000-000000000001', '{"nombre":"Recuperatorio","porcentaje":70}'::jsonb, '{"tipo":"recuperatorio","periodo":"2026-2","llamado":2}'::jsonb)$$);
 select pg_temp.debe_ser('un fallo no deja la evaluación a medias', (select count(*) from public.evaluaciones where nombre = 'Recuperatorio'), 0);
@@ -783,6 +788,9 @@ select pg_temp.debe_fallar('Regu después de un final',
 select public.borrar_parcial('60000000-0000-0000-0000-000000000001', true);
 select pg_temp.debe_ser('borrar la Regu borra su llamado', (select count(*) from public.examenes_finales), 0);
 select pg_temp.debe_ser('y la evaluación', (select count(*) from public.evaluaciones where id = '60000000-0000-0000-0000-000000000001'), 0);
+select pg_temp.debe_fallar('Recu en semestre opuesto',
+  $$select public.guardar_parcial('30000000-0000-0000-0000-000000000001', '60000000-0000-0000-0000-000000000002', '{"nombre":"Recuperatorio","porcentaje":70}'::jsonb, '{"tipo":"recuperatorio","periodo":"2026-2","llamado":1,"semestre_opuesto":true}'::jsonb)$$);
+select pg_temp.debe_ser('el Recu en opuesto no deja nada a medias', (select count(*) from public.evaluaciones where id = '60000000-0000-0000-0000-000000000002'), 0);
 -- Opuesto con importados sin ubicar: no se sabe cuántos quedan.
 insert into public.examenes_finales (materia_id, nota, origen) values ('30000000-0000-0000-0000-000000000001', 1, 'extracto'), ('30000000-0000-0000-0000-000000000001', 1, 'extracto');
 select pg_temp.debe_fallar('semestre opuesto con importados sin ubicar', $$select public.cursar_semestre_opuesto('30000000-0000-0000-0000-000000000001')$$);

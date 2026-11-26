@@ -57,6 +57,6 @@ jobs:
           # puede re-ejecutar sin pisar lo que dejan las siguientes.
           for f in supabase/migrations/*.sql; do
             psql -v ON_ERROR_STOP=1 -q -f "$f"
-            case "$f" in *ajustes*|*notificaciones*|*tramites*|*recordatorios*|*recursar*|*carnet*|*recu_o_regu*|*firma_entera*|*periodo_firmadas*|*calendario*|*panel_admin*|*tipo_clase*|*fin_semestre*|*horarios_clases*|*aviso_separado*|*estudiantes_y_encuestas*|*finales_por_id*) psql -v ON_ERROR_STOP=1 -q -f "$f";; esac
+            case "$f" in *ajustes*|*notificaciones*|*tramites*|*recordatorios*|*recursar*|*carnet*|*recu_o_regu*|*firma_entera*|*periodo_firmadas*|*calendario*|*panel_admin*|*tipo_clase*|*fin_semestre*|*horarios_clases*|*aviso_separado*|*estudiantes_y_encuestas*|*finales_por_id*|*parcial_semestre_opuesto*) psql -v ON_ERROR_STOP=1 -q -f "$f";; esac
           done
           psql -v ON_ERROR_STOP=1 -q -f supabase/tests/politicas.sql

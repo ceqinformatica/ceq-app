@@ -487,13 +487,19 @@ export function Insignia({ texto: t, color = colores.marino, fondo = fondos.tarj
 }
 
 /** Control segmentado (pestañas internas). */
-export function Segmentado<T extends string>({ opciones, valor, onCambio }: { opciones: { valor: T; texto: string }[]; valor: T; onCambio: (v: T) => void }) {
+export function Segmentado<T extends string>({ opciones, valor, onCambio, deshabilitadas, estilo }: {
+  opciones: { valor: T; texto: string }[]; valor: T; onCambio: (v: T) => void;
+  /** Opciones que se ven pero no se pueden elegir (por ejemplo, el Recu solo va en el 1.er llamado). */
+  deshabilitadas?: T[];
+  estilo?: ViewStyle;
+}) {
   return (
-    <View style={s.segmentado} accessibilityRole="tablist">
+    <View style={[s.segmentado, estilo]} accessibilityRole="tablist">
       {opciones.map((o) => {
         const activo = o.valor === valor;
+        const apagada = !activo && !!deshabilitadas?.includes(o.valor);
         return (
-          <Pressable key={o.valor} onPress={() => onCambio(o.valor)} accessibilityRole="tab" accessibilityState={{ selected: activo }} style={[s.segmento, activo && s.segmentoActivo]}>
+          <Pressable key={o.valor} onPress={apagada ? undefined : () => onCambio(o.valor)} disabled={apagada} accessibilityRole="tab" accessibilityState={{ selected: activo, disabled: apagada }} style={[s.segmento, activo && s.segmentoActivo, apagada && { opacity: 0.45 }]}>
             <Text style={[s.segmentoTexto, activo && { color: colores.marino, fontFamily: fuentes.semibold }]}>{o.texto}</Text>
           </Pressable>
         );

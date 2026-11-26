@@ -699,7 +699,11 @@ export function tipoEvaluacion(e: { componente: ComponenteDb; nombre: string }):
 export const tieneLab = (evals: { componente: ComponenteDb }[]) => evals.some((e) => e.componente === 'laboratorio');
 
 /** Uso de un llamado de Finales por el Recu o la Regu. */
-export type UsoLlamadoParcial = { tipo: 'recuperatorio' | 'regularizacion'; periodo: string; llamado: 1 | 2 };
+export type UsoLlamadoParcial = {
+  tipo: 'recuperatorio' | 'regularizacion'; periodo: string; llamado: 1 | 2;
+  /** Llamado del semestre opuesto. Lo guarda la migración 20261126010000 (antes se ignora). */
+  semestre_opuesto?: boolean;
+};
 
 /**
  * Guarda una evaluación de Parciales y, si es un Recu o una Regu rendido, su
@@ -719,8 +723,8 @@ export async function guardarParcial(materiaId: string, id: string, datos: Nueva
         if (db.finales.some((f) => f.materia_id === materiaId && !f.cursada_anterior && f.periodo === uso.periodo && f.llamado === uso.llamado && f.id !== actual?.id)) {
           throw new Error('En ese llamado ya cargaste un resultado de final. Elegí otro llamado o cambiá ese resultado en Finales.');
         }
-        if (actual) Object.assign(actual, { ...uso, nota: null, porcentaje: null, evaluacion_id: id, version: (actual.version ?? 1) + 1 });
-        else db.finales.push({ id: idDemo(), usuario_id: UID_DEMO, materia_id: materiaId, created_at: new Date().toISOString(), cursada_anterior: false, version: 1, origen: 'manual', fecha: null, nota: null, porcentaje: null, evaluacion_id: id, ...uso });
+        if (actual) Object.assign(actual, { ...uso, semestre_opuesto: !!uso.semestre_opuesto, nota: null, porcentaje: null, evaluacion_id: id, version: (actual.version ?? 1) + 1 });
+        else db.finales.push({ id: idDemo(), usuario_id: UID_DEMO, materia_id: materiaId, created_at: new Date().toISOString(), cursada_anterior: false, version: 1, origen: 'manual', fecha: null, nota: null, porcentaje: null, evaluacion_id: id, ...uso, semestre_opuesto: !!uso.semestre_opuesto });
       } else if (liberar && actual) {
         db.finales = db.finales.filter((f) => f.id !== actual.id);
       }

@@ -319,7 +319,7 @@ export const nombreLlamado = (n: number) => `${['Primer', 'Segundo', 'Tercer'][n
 export function tituloResultado(f: { tipo?: string | null; nota: number | null }): string {
   switch (f.tipo ?? 'final') {
     case 'pendiente': return 'Resultado pendiente';
-    case 'ausente': return 'Ausente';
+    case 'ausente': return 'No rendí';
     case 'regularizacion': return 'Regu · Regularización';
     case 'recuperatorio': return 'Recu · Recuperación';
     default: return f.nota != null && f.nota >= 2 ? `Aprobada · ${f.nota}` : `Aplazo · ${f.nota ?? 1}`;

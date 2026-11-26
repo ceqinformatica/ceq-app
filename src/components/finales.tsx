@@ -28,7 +28,7 @@ import { calificacionFinal, CONCEPTO, FINAL_MINIMO, finalesNecesarios, finalNece
 import type { ExamenFinalDb } from '../lib/tipos-db';
 import { colores, espacio, fondos, fuentes, radio } from '../tema';
 import { pct } from './academico';
-import { Boton, Campo, Hoja, Mensaje, Opcion, s, Segmentado, Tarjeta } from './ui';
+import { Boton, Campo, Fila, Hoja, Mensaje, Opcion, s, Seccion, Segmentado, Tarjeta } from './ui';
 import { vibrar } from './movimiento';
 import { textoError } from '../lib/errores';
 
@@ -60,7 +60,7 @@ type QuePaso = 'nota' | 'espera' | 'ausente';
 /** Hoja de resultado: null cerrada; `fila` null para uno nuevo. */
 type HojaAbierta = { fila: ExamenFinalDb | null } | null;
 
-export function TarjetaFinales({ materiaId, firma: firmaGuardadaEnMateria, aprobada, onGuardado, semestreOpuesto, anioPlan, periodoFirma }: {
+export function TarjetaFinales({ materiaId, firma: firmaGuardadaEnMateria, aprobada, onGuardado, onSoloNota, semestreOpuesto, anioPlan, periodoFirma }: {
   materiaId: string;
   /** Cursa en el semestre opuesto: sin Recu y con los llamados que le quedan. */
   semestreOpuesto?: boolean;
@@ -73,6 +73,8 @@ export function TarjetaFinales({ materiaId, firma: firmaGuardadaEnMateria, aprob
   aprobada?: boolean;
   /** Después de guardar: recargar la materia (estado y nota). */
   onGuardado: (firma: number | null) => void;
+  /** Aprobada sin los finales: cargar solo la nota (fila al final). */
+  onSoloNota?: () => void;
 }) {
   // La firma recién guardada acá aparece al toque, sin esperar la recarga.
   const [firmaNueva, setFirmaNueva] = useState<number | null>(null);
@@ -127,64 +129,64 @@ export function TarjetaFinales({ materiaId, firma: firmaGuardadaEnMateria, aprob
     onGuardado(firma);
   };
 
+  const puedeRegistrar = todos != null && !aprobada && !recursar && !pendiente;
+
   return (
     <>
-      <Tarjeta>
-        <Text style={{ fontFamily: fuentes.semibold, fontSize: 16, color: colores.texto }} accessibilityRole="header">{titulo}</Text>
-        <Text style={[s.filaDetalle, { marginTop: 2 }]}>Según tus registros</Text>
-        <Text style={[s.cuerpo, { marginTop: 2 }]}>
-          {todos == null ? 'Cargando…' : `${cursada.aplazos} ${cursada.aplazos === 1 ? 'aplazo registrado' : 'aplazos registrados'}`}
-        </Text>
-        {todos != null && !aprobada && !recursar && (
-          <Text style={[s.filaDetalle, { marginTop: 2 }]}>
-            {restantes == null
-              ? 'Finales que te quedan: sin calcular hasta ubicar los importados.'
-              : `Te ${restantes === 1 ? 'queda' : 'quedan'} ${restantes} de ${LLAMADOS_POR_MATERIA} finales.`}
-          </Text>
+      <Seccion icono="school-outline">{titulo}</Seccion>
+      <Tarjeta estilo={{ paddingVertical: espacio.xs }}>
+        <Fila
+          icono="document-text-outline"
+          simple
+          titulo="Aplazos registrados"
+          detalle={
+            todos != null && !aprobada && !recursar
+              ? restantes == null
+                ? 'Finales que te quedan: sin calcular hasta ubicar los importados.'
+                : `Te ${restantes === 1 ? 'queda' : 'quedan'} ${restantes} de ${LLAMADOS_POR_MATERIA} finales.`
+              : undefined
+          }
+          derecha={<Text style={{ fontFamily: fuentes.semibold, fontSize: 16, color: colores.texto }}>{todos == null ? '…' : cursada.aplazos}</Text>}
+          ultima={aprobada || recursar}
+        />
+        {!aprobada && !recursar && (
+          <Fila
+            icono="create-outline"
+            simple
+            titulo={firma == null ? 'Cargar tu firma' : `Tu firma: ${pct(firma)}`}
+            detalle={firma == null ? undefined : necesario == null ? 'Con esta firma no alcanza para aprobar el final.' : `Para aprobar necesitás ${pct2(necesario)} en el final.`}
+            onPress={() => setHojaFirma(true)}
+            ultima
+          />
         )}
-        {sinUbicar.length > 0 && (
+      </Tarjeta>
+
+      {sinUbicar.length > 0 && (
+        <Mensaje
+          tipo="info"
+          texto={`${sinUbicar.length === 1 ? 'Hay 1 nota importada' : `Hay ${sinUbicar.length} notas importadas`} del extracto sin semestre ni llamado. El extracto puede traer intentos de cursadas anteriores: tocá cada una en el historial y elegí su semestre y llamado, o marcá que es de una cursada anterior.`}
+        />
+      )}
+      {!aprobada && !recursar && sinUbicar.length === 0 && cursada.aplazos === LLAMADOS_POR_MATERIA - 1 && (
+        <Mensaje tipo="info" texto="Si volvés a aplazar, te corresponde recursar la materia completa." />
+      )}
+      {porConfirmar && (
+        <>
           <Mensaje
             tipo="info"
-            texto={`${sinUbicar.length === 1 ? 'Hay 1 nota importada' : `Hay ${sinUbicar.length} notas importadas`} del extracto sin semestre ni llamado. El extracto puede traer intentos de cursadas anteriores: tocá cada una en el historial y elegí su semestre y llamado, o marcá que es de una cursada anterior.`}
+            texto={`Según tus registros usaste llamados en ${porConfirmar.periodos.map(nombreSemestre).join(' y ').toLowerCase()} sin aprobar. La firma vence después de dos periodos en que se ofrece la materia (Art. 49 y 62), y eso no lo sabemos: confirmalo en Secretaría Académica. Si te dijeron que venció, recursá desde acá.`}
           />
-        )}
+          <Enlace texto="Me confirmaron que venció: volver a cursar" onPress={() => setHojaRecursar('obligatoria')} />
+        </>
+      )}
+      {recursar && <Boton texto="Recursar materia" onPress={() => setHojaRecursar('obligatoria')} estilo={{ marginTop: espacio.m }} />}
+      {!recursar && pendiente && <Boton texto="Completar nota" icono="create-outline" onPress={() => setHoja({ fila: pendiente })} estilo={{ marginTop: espacio.m }} />}
+      {msg && <Mensaje texto={msg.texto} tipo={msg.tipo} />}
 
-        {!aprobada && !recursar && sinUbicar.length === 0 && cursada.aplazos === LLAMADOS_POR_MATERIA - 1 && (
-          <Mensaje tipo="info" texto="Si volvés a aplazar, te corresponde recursar la materia completa." />
-        )}
-        {porConfirmar && (
-          <>
-            <Mensaje
-              tipo="info"
-              texto={`Según tus registros usaste llamados en ${porConfirmar.periodos.map(nombreSemestre).join(' y ').toLowerCase()} sin aprobar. La firma vence después de dos periodos en que se ofrece la materia (Art. 49 y 62), y eso no lo sabemos: confirmalo en Secretaría Académica. Si te dijeron que venció, recursá desde acá.`}
-            />
-            <Enlace texto="Me confirmaron que venció: volver a cursar" onPress={() => setHojaRecursar('obligatoria')} />
-          </>
-        )}
-
-        {!aprobada && !recursar && (
-          <Boton
-            texto={firma == null ? 'Cargar tu firma' : `Firma vigente (${pct(firma)}) · Editar`}
-            variante="fantasma"
-            compacto
-            onPress={() => setHojaFirma(true)}
-            estilo={{ marginTop: espacio.s }}
-          />
-        )}
-
-        {recursar ? (
-          <Boton texto="Recursar materia" onPress={() => setHojaRecursar('obligatoria')} estilo={{ marginTop: espacio.s }} />
-        ) : pendiente ? (
-          <Boton texto="Completar nota" icono="create-outline" onPress={() => setHoja({ fila: pendiente })} estilo={{ marginTop: espacio.s }} />
-        ) : !aprobada ? (
-          <Boton texto="Registrar resultado" icono="add" onPress={() => setHoja({ fila: null })} deshabilitado={todos == null} estilo={{ marginTop: espacio.s }} />
-        ) : null}
-        {msg && <Mensaje texto={msg.texto} tipo={msg.tipo} />}
-
-        <Text style={{ fontFamily: fuentes.semibold, fontSize: 15, color: colores.texto, marginTop: espacio.l }}>Historial</Text>
-        {todos != null && historial.length === 0 && (
-          <Text style={[s.filaDetalle, { marginTop: espacio.xs }]}>Todavía no registraste ningún final.</Text>
-        )}
+      <Seccion icono="time-outline" accion={puedeRegistrar ? { texto: '+ Registrar resultado', onPress: () => setHoja({ fila: null }) } : undefined}>Historial</Seccion>
+      <Tarjeta estilo={{ paddingVertical: historial.length ? espacio.xs : espacio.m }}>
+        {todos == null && <Text style={s.filaDetalle}>Cargando…</Text>}
+        {todos != null && historial.length === 0 && <Text style={s.filaDetalle}>Todavía no registraste ningún final.</Text>}
         {historial.map((f, i) => (
           <FilaResultado
             key={f.id}
@@ -201,6 +203,12 @@ export function TarjetaFinales({ materiaId, firma: firmaGuardadaEnMateria, aprob
           </Text>
         )}
       </Tarjeta>
+
+      {onSoloNota && (
+        <Tarjeta estilo={{ paddingVertical: espacio.xs, marginTop: espacio.m }}>
+          <Fila icono="checkmark-done-outline" simple titulo="Cargar solo la nota" detalle="Si ya aprobaste y no tenés el detalle de los finales." onPress={onSoloNota} ultima />
+        </Tarjeta>
+      )}
 
       {/* Con algún aplazo se puede elegir volver a cursar antes, por ejemplo en el semestre opuesto. */}
       {!aprobada && !recursar && !porConfirmar && cursada.aplazos > 0 && (
@@ -399,11 +407,15 @@ function HojaResultado({ abierta, materiaId, finales, firma, semestreOpuesto, pe
   return (
     <Hoja visible={abierta != null} titulo={fila?.tipo === 'pendiente' ? 'Completar nota' : fila ? 'Editar resultado' : 'Registrar resultado'} onCerrar={onCerrar}>
       <Text style={s.filaDetalle}>{periodo === periodoDe() ? 'Este semestre' : 'Semestre'}</Text>
-      <Text style={{ fontFamily: fuentes.semibold, fontSize: 16, color: colores.texto }}>{nombreSemestre(periodo)}</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: espacio.s, flexWrap: 'wrap' }}>
+        <Text style={{ fontFamily: fuentes.semibold, fontSize: 16, color: colores.texto }}>{nombreSemestre(periodo)}</Text>
+        {periodos.length > 1 && (
+          <Pressable accessibilityRole="button" onPress={() => setEligiendoSemestre(!eligiendoSemestre)} hitSlop={8}>
+            <Text style={{ fontFamily: fuentes.semibold, fontSize: 13, color: colores.azul }}>{eligiendoSemestre ? 'Listo' : 'Cambiar'}</Text>
+          </Pressable>
+        )}
+      </View>
       {semestreOpuesto && periodo === periodoDe() && <Text style={s.filaDetalle}>Semestre opuesto para esta materia</Text>}
-      {periodos.length > 1 && (
-        <Boton texto={eligiendoSemestre ? 'Listo' : 'Cambiar semestre'} variante="fantasma" compacto onPress={() => setEligiendoSemestre(!eligiendoSemestre)} />
-      )}
       {eligiendoSemestre && (
         <View style={{ marginBottom: espacio.s }}>
           {periodos.map((p) => (
@@ -437,7 +449,7 @@ function HojaResultado({ abierta, materiaId, finales, firma, semestreOpuesto, pe
       <Text style={[s.etiqueta, { marginBottom: espacio.s }]}>¿Qué pasó en esa mesa?</Text>
       <Opcion texto="Rendí y tengo la nota" elegida={quePaso === 'nota'} onPress={() => setQuePaso('nota')} />
       <Opcion texto="Rendí y espero la nota" elegida={quePaso === 'espera'} onPress={() => setQuePaso('espera')} />
-      <Opcion texto="Estuve ausente" detalle="No es aplazo y no gasta uno de tus 3 finales." elegida={quePaso === 'ausente'} onPress={() => setQuePaso('ausente')} />
+      <Opcion texto="No rendí" detalle="No es aplazo ni gasta uno de tus 3 finales." elegida={quePaso === 'ausente'} onPress={() => setQuePaso('ausente')} />
 
       {quePaso === 'nota' && (
         <>
