@@ -67,7 +67,7 @@ export function FichaMateria({ nombre, codigo, estado, notaFinal, faltan, onPres
 }
 
 export function InsigniaSemaforo({ semaforo, firma }: { semaforo: Semaforo; firma?: boolean }) {
-  if (firma) return <Insignia texto="Tenés firma" color={colores.verde} fondo={fondos.verdeFondo} icono="checkmark-circle" />;
+  if (firma) return <Insignia texto="Llegás a la firma" color={colores.verde} fondo={fondos.verdeFondo} icono="checkmark-circle" />;
   const c = coloresSemaforo[semaforo];
   const icono: Record<Semaforo, NombreIcono> = { verde: 'trending-up', amarillo: 'warning', rojo: 'close-circle', sin_datos: 'remove-circle-outline' };
   return <Insignia texto={c.nombre} color={c.texto} fondo={c.fondo} icono={icono[semaforo]} />;
@@ -90,7 +90,7 @@ export function semaforoVisible(r: ResultadoFirma): Semaforo {
 
 /** Frase corta que resume el resultado de firma. */
 export function resumenFirma(r: ResultadoFirma): string {
-  if (r.firma) return 'Hoy cumplís todo lo que pide la firma. Mantené la asistencia.';
+  if (r.firma) return 'Hoy cumplís todo lo que pide la firma. Cuando termine, registrala en la materia.';
   if (r.teoria.imposible || r.laboratorio?.imposible) return 'Con lo que falta ya no llegás al mínimo.';
   if (r.asistencia.faltasDisponibles != null && r.asistencia.faltasDisponibles < 0) return 'Superaste el límite de faltas.';
   const partes: string[] = [];

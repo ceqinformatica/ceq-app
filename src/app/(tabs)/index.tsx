@@ -197,7 +197,7 @@ export default function Inicio() {
                 <Pressable key={m.id} onPress={() => router.push(`/firma/${m.id}`)} accessibilityRole="button" accessibilityLabel={`${m.nombre}: ${m.firma ? 'tenés firma' : c.nombre}`} style={[est.firma, i < datos.firmas.length - 1 && s.filaLinea]}>
                   <View style={[est.semaforo, { backgroundColor: c.texto }]} />
                   <Text style={[s.filaTitulo, { flex: 1 }]} numberOfLines={1}>{m.nombre}</Text>
-                  <Text style={[s.filaDetalle, { fontFamily: fuentes.semibold, color: c.texto }]}>{m.firma ? 'Tenés firma' : m.teoria != null ? pct(m.teoria) : c.nombre}</Text>
+                  <Text style={[s.filaDetalle, { fontFamily: fuentes.semibold, color: c.texto }]}>{m.firma ? 'Llegás a la firma' : m.teoria != null ? pct(m.teoria) : c.nombre}</Text>
                   <Ionicons name="chevron-forward" size={16} color={colores.textoTenue} />
                 </Pressable>
               );
