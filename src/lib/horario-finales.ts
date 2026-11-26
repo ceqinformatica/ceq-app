@@ -26,6 +26,10 @@ export interface FilaFinal {
   aula: string | null;
   /** Plan de la fila ("IQ2018", "PLAN 2018"), si lo dice. */
   plan?: number | null;
+  /** Planes en los que va esta mesa (la misma materia y fecha en 2018 y 2026 queda una sola fila con los dos). */
+  planes?: number[];
+  /** "SEMESTRE OPUESTO" en la fila: mesa de una materia del otro semestre. */
+  opuesto?: boolean;
   /** Renglón del PDF de donde salió (para revisar). */
   origen: string;
 }
@@ -43,6 +47,8 @@ export interface OpcionesLectura {
   fichas?: FichaMateria[];
   /** Con un plan elegido, solo las filas de ese plan (y las que no lo dicen). */
   plan?: number | null;
+  /** Varios planes a la vez (por ejemplo 2018 y 2026): solo sus filas (y las que no lo dicen). Gana sobre `plan`. */
+  planes?: number[];
 }
 
 export interface LecturaHorario {
@@ -247,7 +253,9 @@ function planDeFila(crudo: string): number | null {
 function codigoCrudo(crudo: string): string | null {
   const m = /^\W*([a-z0-9|]{1,2}\s?[-.]?\s?[0-9o]{2,3})\b/i.exec(crudo);
   if (!m) return null;
-  if (/^\d{1,2}\s?[-/.]\s?\d{1,2}$/.test(m[1].trim()) || /\b\d{1,2}[-/]\d{1,2}[-/]/.test(crudo.slice(0, 12))) return null;
+  // "15-12" es una fecha, salvo que la fila traiga el plan por sigla ("1Q2026"): ahí es "IQ-12" mal leído.
+  const conSigla = /\b[a-z0-9|]{2}\s?20[0-4]\d\b/i.test(crudo.slice(m[0].length));
+  if ((!conSigla && /^\d{1,2}\s?[-/.]\s?\d{1,2}$/.test(m[1].trim())) || /\b\d{1,2}[-/]\d{1,2}[-/]/.test(crudo.slice(0, 12))) return null;
   return m[1].toLowerCase().replace(/[\s.-]/g, '').replace(/o/g, '0').replace(/[|l]/g, '1');
 }
 
@@ -365,7 +373,7 @@ export function leerHorarioFinales(texto: string, materias: string[], referencia
       const unica = horas.length === 1 || new Set(horas.map((h) => h.hora)).size === 1 ? horas[0]?.hora : undefined;
       const hora = propia?.hora ?? unica ?? horaGeneral;
       const llamado = fechas.length > 1 ? Math.min(i + 1, 5) : seccion;
-      filas.push({ materia: p?.nombre ?? null, llamado, fecha: f.fecha, hora, aula, plan, origen });
+      filas.push({ materia: p?.nombre ?? null, llamado, fecha: f.fecha, hora, aula, plan, planes: plan != null ? [plan] : [], opuesto: /\bopuest/.test(normalizar(origen)), origen });
     });
   };
 
@@ -475,15 +483,22 @@ export function leerHorarioFinales(texto: string, materias: string[], referencia
     if (leido.length && leido.every((x, i) => w[i] === x)) f.materia = materia;
   }
 
-  let elegidas = opciones.plan == null ? filas : filas.filter((f) => f.plan == null || f.plan === opciones.plan);
+  const quiero = opciones.planes?.length ? opciones.planes : opciones.plan != null ? [opciones.plan] : null;
+  let elegidas = quiero == null ? filas : filas.filter((f) => f.plan == null || quiero.includes(f.plan));
   // Sin "1er llamado" en el documento (una fila por mesa): el llamado sale del orden de las fechas de cada materia.
   if (!vioLlamados && !columnas) elegidas = numerarLlamados(elegidas);
-  // Sin duplicados (misma materia, llamado y fecha).
-  const vistas = new Set<string>();
+  // Sin duplicados (misma materia, llamado y fecha): si viene de dos planes, queda una fila con los dos.
+  const vistas = new Map<string, FilaFinal>();
   const unicas = elegidas.filter((f) => {
     const k = `${f.materia ?? f.origen}|${f.llamado}|${f.fecha}`;
-    if (vistas.has(k)) return false;
-    vistas.add(k);
+    const previa = vistas.get(k);
+    if (previa) {
+      previa.planes = [...new Set([...(previa.planes ?? []), ...(f.planes ?? [])])].sort((a, b) => a - b);
+      previa.opuesto = Boolean(previa.opuesto || f.opuesto);
+      previa.hora = previa.hora ?? f.hora;
+      return false;
+    }
+    vistas.set(k, f);
     return true;
   });
   return { filas: unicas, sinUsar };
@@ -592,6 +607,19 @@ export function detectarPlan(texto: string): number | null {
   const n = normalizar(texto.split('\n').slice(0, 25).join(' '));
   const m = /\b(?:plan(?: de estudios?)?|proyecto academico|malla(?: curricular)?)\s*(?:n\s*)?:?\s*(20[0-4]\d)\b/.exec(n);
   return m ? Number(m[1]) : null;
+}
+
+/**
+ * Planes que nombran las filas del PDF ("IQ2018", "PLAN 2026"), de menor a
+ * mayor. Un año en una sola fila es una mala lectura ("102015" por "IQ2018").
+ */
+export function planesDelTexto(texto: string): number[] {
+  const veces = new Map<number, number>();
+  for (const l of texto.split('\n')) {
+    const p = planDeFila(l);
+    if (p != null) veces.set(p, (veces.get(p) ?? 0) + 1);
+  }
+  return [...veces].filter(([, n]) => n >= 2).map(([p]) => p).sort((a, b) => a - b);
 }
 
 /** "2026-12-07" → "07/12/2026" (para los campos de fecha). */
