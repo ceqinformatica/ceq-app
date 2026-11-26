@@ -1,13 +1,15 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { nombreEstadoMateria, nombreNivel, pct, SelectorEstado, type VistaMateria } from '../../components/academico';
 import { TarjetaFinales, TarjetaNotaNecesaria } from '../../components/finales';
+import { FormEvaluacion, ICONO_TIPO } from '../../components/form-evaluacion';
+import { esRecuperatorio, esRegularizacion } from '../../lib/reglamento-fcq';
 import { esSeminario } from '../../lib/finales';
 import { AvisoSinConexion, BarraSuperior, Boton, Campo, Cargando, EstadoVacio, Fila, Insignia, Mensaje, Pantalla, s, Seccion, Tarjeta } from '../../components/ui';
 import { useSesion } from '../../context/SesionProvider';
-import { aAsistencia, aEvaluacion, cargarFirmas, cargarMalla, deshacerRecursada, guardarEstadoMateria, guardarFirma, REGLA_POR_DEFECTO, reglaDe, tieneLab } from '../../datos/academico';
+import { aAsistencia, aEvaluacion, cargarFirmas, tipoEvaluacion, cargarMalla, deshacerRecursada, guardarEstadoMateria, guardarFirma, REGLA_POR_DEFECTO, reglaDe, tieneLab } from '../../datos/academico';
 import { evaluarFirma, porcentajeEvaluacion, promedioFirma } from '../../lib/firma';
 import type { EvaluacionDb } from '../../lib/tipos-db';
 import { promedioGeneralFcq } from '../../lib/reglamento-fcq';
@@ -86,6 +88,8 @@ export default function DetalleMateria() {
   // Estados explícitos: cargando (null o de otra materia), lista, o error con reintento.
   const [evaluaciones, setEvaluaciones] = useState<{ id: string; lista: EvaluacionDb[] | null; error?: string } | null>(null);
   const [intentoEvaluaciones, setIntentoEvaluaciones] = useState(0);
+  // Hoja de evaluación abierta: una para editar o 'nueva'.
+  const [editando, setEditando] = useState<EvaluacionDb | 'nueva' | null>(null);
 
   useEffect(() => {
     if (!verParciales || !malla || !id) return;
@@ -209,8 +213,17 @@ export default function DetalleMateria() {
       {/* Finales: se cargan los finales; con uno aprobado la materia queda aprobada sola. */}
       {vista === 'finales' && !soloNota && (
         <>
-          <TarjetaFinales key={versionFinales} materiaId={materia.id} periodoFirma={actual?.periodo} semestreOpuesto={actual?.semestreOpuesto} anioPlan={malla?.plan?.anio} firma={firmaGuardada} aprobada={actual?.estado === 'aprobada'} onGuardado={() => recargar()} />
-          {sinFinalesCargados && <Boton texto="La aprobé y no tengo los finales: cargar solo la nota" variante="fantasma" compacto onPress={() => elegirSoloNota(true)} />}
+          <TarjetaFinales
+            key={versionFinales}
+            materiaId={materia.id}
+            periodoFirma={actual?.periodo}
+            semestreOpuesto={actual?.semestreOpuesto}
+            anioPlan={malla?.plan?.anio}
+            firma={firmaGuardada}
+            aprobada={actual?.estado === 'aprobada'}
+            onGuardado={() => recargar()}
+            onSoloNota={sinFinalesCargados ? () => elegirSoloNota(true) : undefined}
+          />
         </>
       )}
       {vista === 'finales' && soloNota && (
@@ -288,8 +301,8 @@ export default function DetalleMateria() {
       {/* Parciales: las evaluaciones, registrar la firma y cuánto necesita en el final. */}
       {verParciales && (
         <>
-          <Seccion accion={{ texto: 'Ver y agregar', onPress: () => router.push(`/firma/${materia.id}`) }}>Evaluaciones</Seccion>
-          <Tarjeta estilo={{ paddingVertical: espacio.xs }} onPress={() => router.push(`/firma/${materia.id}`)} etiqueta="Ver y agregar evaluaciones">
+          <Seccion icono="document-text-outline" accion={evaluaciones?.id === materia.id && evaluaciones.lista ? { texto: '+ Agregar', onPress: () => setEditando('nueva') } : undefined}>Evaluaciones</Seccion>
+          <Tarjeta estilo={{ paddingVertical: espacio.xs }}>
             {evaluaciones?.id !== materia.id ? (
               <Text style={[s.filaDetalle, { paddingVertical: espacio.m }]}>Cargando…</Text>
             ) : evaluaciones.lista == null ? (
@@ -298,19 +311,57 @@ export default function DetalleMateria() {
                 <Boton texto="Reintentar" variante="fantasma" compacto icono="refresh" onPress={() => setIntentoEvaluaciones((n) => n + 1)} estilo={{ marginTop: espacio.s }} />
               </View>
             ) : evaluaciones.lista.length === 0 ? (
-              <Text style={[s.filaDetalle, { paddingVertical: espacio.m }]}>Todavía no cargaste parciales. Tocá para agregarlos.</Text>
+              <View style={{ paddingVertical: espacio.m }}>
+                <Text style={s.filaDetalle}>Todavía no cargaste parciales{materia.tiene_laboratorio ? ' ni el laboratorio' : ''}.</Text>
+                <Boton texto="Agregar evaluación" variante="fantasma" compacto icono="add" onPress={() => setEditando('nueva')} estilo={{ marginTop: espacio.s, alignSelf: 'flex-start' }} />
+              </View>
             ) : (
-              evaluaciones.lista.map((e, i) => {
-                const p = porcentajeEvaluacion(aEvaluacion(e));
+              (['teoria', 'laboratorio'] as const).map((comp) => {
+                const lista = evaluaciones.lista!.filter((e) => e.componente === comp);
+                if (!lista.length) return null;
                 return (
-                  <View key={e.id} style={{ paddingVertical: espacio.m, borderTopWidth: i === 0 ? 0 : 1, borderTopColor: colores.lineaSuave }}>
-                    <Text style={s.filaTitulo}>{e.nombre}</Text>
-                    <Text style={s.filaDetalle}>{e.rendida && p != null ? pct(Math.round(p * 10) / 10) : 'Pendiente'}</Text>
+                  <View key={comp} style={{ paddingTop: espacio.s }}>
+                    <Text style={[s.filaDetalle, { fontFamily: fuentes.semibold }]}>{comp === 'teoria' ? 'Teoría' : 'Laboratorio'}</Text>
+                    {lista.map((e, i) => {
+                      const p = porcentajeEvaluacion(aEvaluacion(e));
+                      return (
+                        <Fila
+                          key={e.id}
+                          icono={ICONO_TIPO[tipoEvaluacion(e)]}
+                          simple
+                          titulo={e.nombre}
+                          derecha={
+                            e.rendida && p != null
+                              ? <Text style={{ fontFamily: fuentes.semibold, fontSize: 15, color: colores.texto }}>{pct(Math.round(p * 10) / 10)}</Text>
+                              : <Insignia texto="Pendiente" color={colores.gris} fondo={fondos.grisFondo} />
+                          }
+                          onPress={() => setEditando(e)}
+                          ultima={i === lista.length - 1}
+                        />
+                      );
+                    })}
                   </View>
                 );
               })
             )}
           </Tarjeta>
+          <Pressable accessibilityRole="link" onPress={() => router.push(`/firma/${materia.id}`)} hitSlop={8} style={{ alignSelf: 'flex-start', paddingVertical: espacio.xs, marginTop: espacio.xs }}>
+            <Text style={{ fontFamily: fuentes.semibold, fontSize: 13, color: colores.azul }}>Ver detalle y asistencia</Text>
+          </Pressable>
+          <FormEvaluacion
+            visible={editando != null}
+            evaluacion={editando === 'nueva' ? null : editando}
+            materiaId={materia.id}
+            onCerrar={() => setEditando(null)}
+            onGuardado={() => {
+              setEditando(null);
+              vibrar('exito');
+              setIntentoEvaluaciones((n) => n + 1);
+            }}
+            sinRecuperatorio={actual?.semestreOpuesto}
+            cursaOpuesto={actual?.semestreOpuesto}
+            otrasRecuRegu={(evaluaciones?.lista ?? []).filter((e) => (esRecuperatorio(e) || esRegularizacion(e)) && e.rendida && (editando === 'nueva' || e.id !== editando?.id)).length}
+          />
           {guardado !== 'firmada' && (
             <Boton
               texto="Registrar firma obtenida"
@@ -327,7 +378,7 @@ export default function DetalleMateria() {
               texto={`Al registrar la firma se borra ${finalesAprobados.length === 1 ? `el final aprobado que cargaste (nota ${finalesAprobados[0].nota})` : 'los finales aprobados que cargaste'} y deja de contar en tu promedio. Los aplazos se conservan.`}
             />
           )}
-          <Seccion estilo={{ marginTop: espacio.l }}>¿Cuánto necesitás en el final?</Seccion>
+          <Seccion icono="calculator-outline" estilo={{ marginTop: espacio.l }}>¿Cuánto necesitás en el final?</Seccion>
           <TarjetaNotaNecesaria
             firma={firmaGuardada ?? (firmaEstimada?.id === materia.id ? firmaEstimada.valor : null)}
             estimada={firmaGuardada == null}
