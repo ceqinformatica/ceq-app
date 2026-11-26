@@ -392,3 +392,42 @@ test('grilla FCQ: cada clase sabe de qué hoja es (para elegir el nivel de la ho
   const r = leerHorarioClases(filasDeOcr(ocr('horario-fcq')), MATERIAS_IQ, null, FICHAS_IQ);
   for (const c of r.clases) assert.equal(typeof c.pagina, 'number');
 });
+
+test('grilla FCQ: "Cálculo" en una hoja de 2.º nivel del plan 2018 es "Cálculo II"', () => {
+  const m2018 = [...new Set(FICHAS_IQ.filter((f) => f.plan === 2018).map((f) => f.nombre))];
+  const r = leerHorarioClases(filasDeOcr(ocr('horario-fcq')), m2018, 2018, FICHAS_IQ);
+  const nombres = new Set(r.clases.map((c) => c.materia));
+  assert.ok(nombres.has('Cálculo II'), [...nombres].join(', '));
+  assert.ok(!nombres.has('Cálculo'));
+});
+
+test('finales por código: el nombre manda aunque la fila traiga docentes, y el código desempata llamados', () => {
+  const m2018 = [...new Set(FICHAS_IQ.filter((f) => f.plan === 2018).map((f) => f.nombre))];
+  const texto = [
+    'SEGUNDO SEMESTRE 2026',
+    // Docentes en la misma fila y "Industria!" por "Industrial".
+    '10040   Legislación Industria! y del Trabajo   102018   8   10   PLAN 2018   EC   1   02-dic   08:00   CYNTHIA MARINA GONZÁLEZ NOGUERA   LOURDES LIZ SANTA CRUZ SCAPPINI   MARIA ELENA SANCHEZ DOMINGUEZ',
+    // Código 17 = Termodinámica I; el OCR leyó "fremmodinámica".
+    '10017   fremmodinámica   102018   4   10   PLAN 2018   1   1   02-dic   14:00   WILSON LOPEZ',
+    // Mismo código (optativa): en un llamado se leyó el número y en el otro no.
+    '10070   Inglés Técnico 1   102018   12   10   OPTATIVAS   EC   2   15-dic   14:00',
+    '10070   Inglés Técnico   102018   12   10   OPTATIVAS   EC   09-feb   14:00',
+  ].join('\n');
+  const r = leerHorarioFinales(texto, m2018, new Date(2026, 10, 25), { fichas: FICHAS_IQ, plan: 2018 });
+  assert.deepEqual([...new Set(r.filas.map((f) => f.materia))].sort(), ['Inglés Técnico I', 'Legislación Industrial y del Trabajo', 'Termodinámica I']);
+});
+
+test('finales por código: sin falsos positivos', () => {
+  const leer = (filas: string[]) =>
+    leerHorarioFinales(['SEGUNDO SEMESTRE 2026', ...filas, 'a 01-dic', 'b 02-dic', 'c 03-dic'].join('\n'), MATERIAS_IQ, new Date(2026, 10, 25), { fichas: FICHAS_IQ }).filas.map((f) => f.materia);
+  // Un nombre leído exacto no lo reemplaza un código mal leído con un nombre solo parecido ("bioquímica" ~ "química").
+  assert.deepEqual(leer(['10025   Química Orgánica   102018   3   10   PLAN 2018   EC   1   02-dic   08:00']).slice(0, 1), ['Química Orgánica']);
+  // Mismo código, otra materia: no se copia.
+  assert.deepEqual(leer(['10007   Geometría Analítica   102018   1   10   SEMESTRE   17-dic   08:00', '10007   Fxqzw Lmnop   102018   2   10   SEMESTRE   18-dic   08:00']).slice(0, 2), ['Geometría Analítica', 'Fxqzw Lmnop']);
+  assert.deepEqual(leer(['10070   Optativa: Inglés Técnico I   102018   12   10   OPTATIVAS   EC   15-dic   14:00', '10070   Optativa: Ciencia de Alimentos   102018   12   10   OPTATIVAS   EC   16-dic   14:00']).slice(0, 2), ['Inglés Técnico I', 'Ciencia de Alimentos']);
+  // Otro prefijo con el mismo número no es el mismo código.
+  assert.equal(leer(['IQ-05   Química General   IQ2026   1   10   25-nov   14:00', 'CB-05   Matemática Básica   IQ2026   1   10   09-dic   14:00'])[1], 'Matemática Básica');
+  // Una fecha al principio no es un código.
+  const conFecha = leerHorarioFinales('SEGUNDO SEMESTRE 2026\n15-12 Química Orgánica Plan 2018 08:00\n15-12 Termodnmca Avnzd Plan 2018 10:00', MATERIAS_IQ, new Date(2026, 10, 25), { fichas: FICHAS_IQ });
+  assert.deepEqual(conFecha.filas.map((f) => f.materia).filter(Boolean), ['Química Orgánica']);
+});
