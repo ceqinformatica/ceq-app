@@ -12,12 +12,12 @@ import { BarraSuperior, Boton, Campo, Cargando, Chip, Fila, Hoja, Insignia, Mens
 import { useTema } from '../../context/TemaProvider';
 import { cargarCarreras } from '../../datos/admin';
 import {
-  borrarHorario, bytesDeArchivo, cargarHorario, crearHorario, fichasDeMaterias, guardarFechas, materiasDeCarrera, ocultarHorario, publicarHorario, renombrarHorario,
+  aniosDePlanes, borrarHorario, bytesDeArchivo, cargarHorario, crearHorario, fichasDeMaterias, guardarFechas, materiasDeCarrera, ocultarHorario, publicarHorario, renombrarHorario,
   urlPdfHorario, type FechaEditable,
 } from '../../datos/finales-oficiales';
 import { estadoAviso, TEXTO_AVISO } from '../../lib/aviso-publicacion';
 import { textoError } from '../../lib/errores';
-import { detectarCarrera, detectarPlan, isoATexto, leerHorarioFinales, textoAIso, textoLlamado, tituloSugerido, type FichaMateria } from '../../lib/horario-finales';
+import { detectarCarrera, detectarPlan, isoATexto, leerHorarioFinales, planesDelTexto, textoAIso, textoLlamado, tituloSugerido, type FichaMateria } from '../../lib/horario-finales';
 import { compararPorNivel, nivelesPorMateria } from '../../lib/orden-niveles';
 import { nombreNivel } from '../../components/academico';
 import { confianzaMedia, filasDeOcr, textoDeFilas, ubicar, type FilaDoc, type Zona } from '../../lib/ocr/documento';
@@ -28,7 +28,10 @@ import { colores, espacio, fondos } from '../../tema';
 const volver = () => (router.canGoBack() ? router.back() : router.replace('/admin/horarios-finales'));
 
 /** Fila en edición: la materia puede faltar hasta que el admin la elija. */
-type Fila = Omit<FechaEditable, 'materia'> & { clave: string; materia: string | null; origen?: string; zona?: Zona | null };
+type Fila = Omit<FechaEditable, 'materia'> & { clave: string; materia: string | null; origen?: string; zona?: Zona | null; planes?: number[]; opuesto?: boolean };
+
+/** "Plan 2018", "Planes 2018 y 2026". */
+const textoPlanes = (p: number[]) => (p.length === 1 ? `Plan ${p[0]}` : `Planes ${p.slice(0, -1).join(', ')} y ${p[p.length - 1]}`);
 
 let contador = 0;
 const nuevaClave = () => `f${++contador}`;
@@ -61,7 +64,10 @@ export default function HorarioFinalesAdmin() {
   const [filas, setFilas] = useState<Fila[]>([]);
   const [leyendo, setLeyendo] = useState(false);
   const [progreso, setProgreso] = useState<string | null>(null);
-  const [plan, setPlan] = useState<number | null>(null);
+  // Planes elegidos para leer el PDF (vacío = todos); los que nombra el PDF y los de la carrera.
+  const [planesElegidos, setPlanesElegidos] = useState<number[]>([]);
+  const [planesPdf, setPlanesPdf] = useState<number[]>([]);
+  const [planesCarrera, setPlanesCarrera] = useState<number[]>([]);
   const [escaneado, setEscaneado] = useState(false);
   const lector = useLectorOcr();
   const [editando, setEditando] = useState<Fila | null>(null);
@@ -93,26 +99,39 @@ export default function HorarioFinalesAdmin() {
 
   // Materias de la carrera elegida (para reconocer y para elegir a mano).
   useEffect(() => {
+    setPlanesCarrera([]);
     if (!carreraId) return setFichas([]);
-    fichasDeMaterias(carreraId).then(setFichas).catch(() => setFichas([]));
+    let activo = true;
+    fichasDeMaterias(carreraId).then((f) => activo && setFichas(f)).catch(() => activo && setFichas([]));
+    aniosDePlanes(carreraId).then((p) => activo && setPlanesCarrera(p)).catch(() => {});
+    return () => {
+      activo = false;
+    };
   }, [carreraId]);
+  const unPlan = planesElegidos.length === 1 ? planesElegidos[0] : null;
+  // Tocar un plan lo suma o lo saca (2018 + 2026 = ambos).
+  // El último plan marcado no se desmarca (para ver todos está "Todos").
+  const elegirPlan = (p: number) => setPlanesElegidos((v) => (v.includes(p) ? (v.length > 1 ? v.filter((x) => x !== p) : v) : [...v, p].sort((a, b) => a - b)));
+  // Planes para elegir: los del PDF y los de la carrera.
+  const opcionesPlan = useMemo(() => [...new Set([...planesPdf, ...planesCarrera])].sort((a, b) => a - b), [planesPdf, planesCarrera]);
 
   useEffect(() => {
     if (!carreraId) return setMaterias([]);
     let activo = true;
-    materiasDeCarrera(carreraId, plan).then((m) => activo && setMaterias(m)).catch(() => {});
+    materiasDeCarrera(carreraId, unPlan).then((m) => activo && setMaterias(m)).catch(() => {});
     return () => {
       activo = false;
     };
-  }, [carreraId, plan]);
+  }, [carreraId, unPlan]);
 
   // Al tener el texto y las materias, se detecta todo (y se vuelve a detectar si cambia la carrera).
   useEffect(() => {
     if (texto == null || !materias.length) return;
-    // Con un plan elegido quedan solo sus filas (en planillas con "IQ2018" / "IQ2026" por fila).
-    const r = leerHorarioFinales(texto, materias, new Date(), { fichas, plan });
-    setFilas(r.filas.map((f) => ({ clave: nuevaClave(), materia: f.materia, llamado: f.llamado, fecha: f.fecha, hora: f.hora, aula: f.aula, origen: f.origen, zona: escaneo ? ubicar(escaneo.filas, f.origen) : null })));
-  }, [texto, materias, fichas, plan, escaneo]);
+    // Con planes elegidos quedan solo sus filas (en planillas con "IQ2018" / "IQ2026" por fila);
+    // la misma mesa en los dos planes queda una sola fila con ambos.
+    const r = leerHorarioFinales(texto, materias, new Date(), { fichas, planes: planesElegidos });
+    setFilas(r.filas.map((f) => ({ clave: nuevaClave(), materia: f.materia, llamado: f.llamado, fecha: f.fecha, hora: f.hora, aula: f.aula, origen: f.origen, zona: escaneo ? ubicar(escaneo.filas, f.origen) : null, planes: f.planes, opuesto: f.opuesto })));
+  }, [texto, materias, fichas, planesElegidos, escaneo]);
 
   const elegirPdf = async () => {
     setError(null);
@@ -149,7 +168,12 @@ export default function HorarioFinalesAdmin() {
       }
       setPdf({ bytes, nombre: a.name ?? 'horario.pdf' });
       setTexto(t);
-      setPlan(detectarPlan(t));
+      // Por defecto, todos los planes que nombra el PDF ("ambos" si trae 2018 y 2026).
+      const enPdf = planesDelTexto(t);
+      const unico = detectarPlan(t);
+      const delPdf = enPdf.length ? enPdf : unico != null ? [unico] : [];
+      setPlanesPdf(delPdf);
+      setPlanesElegidos(delPdf);
       if (!t.trim()) {
         setFilas([]);
         setAviso((v) => v ?? 'No encontramos texto en este PDF. Podés cargar las fechas a mano y el PDF queda para que lo vean los estudiantes.');
@@ -181,7 +205,7 @@ export default function HorarioFinalesAdmin() {
     return l.sort((a, b) => pag(a) - pag(b));
   }, [filas, materias]);
   // Nivel de cada materia (del plan elegido; si no, el primero en que aparece), para ordenar por nivel y no alfabéticamente.
-  const nivelDe = useMemo(() => nivelesPorMateria(fichas, plan), [fichas, plan]);
+  const nivelDe = useMemo(() => nivelesPorMateria(fichas, unPlan), [fichas, unPlan]);
   const porMateria = useMemo(() => {
     const m = new Map<string, Fila[]>();
     for (const f of filas) if (f.materia) m.set(f.materia, [...(m.get(f.materia) ?? []), f]);
@@ -332,11 +356,18 @@ export default function HorarioFinalesAdmin() {
               <Chip key={c.id} texto={c.sigla ?? c.nombre} elegido={carreraId === c.id} onPress={nuevo ? () => { setCarreraId(c.id); setDetectada(false); } : undefined} />
             ))}
           </View>
-          {plan && nuevo ? (
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: espacio.s, marginBottom: espacio.m }}>
-              <Insignia texto={`Plan ${plan} (detectado en el PDF)`} icono="school-outline" />
-              <Chip texto="Usar todos los planes" icono="close" onPress={() => setPlan(null)} />
-            </View>
+          {nuevo && texto && opcionesPlan.length > 0 ? (
+            <>
+              <Text style={s.etiqueta}>Plan{planesPdf.length ? ` (en el PDF: ${textoPlanes(planesPdf).replace(/^Planes? /, '')})` : ''}</Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: espacio.s, marginBottom: espacio.m }}>
+                {opcionesPlan.map((p) => (
+                  <Chip key={p} texto={`Plan ${p}`} elegido={planesElegidos.includes(p)} onPress={() => { elegirPlan(p); setCambios(true); }} />
+                ))}
+                {opcionesPlan.length > 1 ? (
+                  <Chip texto={opcionesPlan.length === 2 ? 'Ambos' : 'Todos'} elegido={!planesElegidos.length || opcionesPlan.every((p) => planesElegidos.includes(p))} onPress={() => { setPlanesElegidos([]); setCambios(true); }} />
+                ) : null}
+              </View>
+            </>
           ) : null}
           <Campo etiqueta="Título" value={titulo} onChangeText={(t) => { setTitulo(t); setCambios(true); }} maxLength={120} placeholder="Ej.: Finales diciembre 2026" />
         </>
@@ -455,6 +486,12 @@ function FilaFecha({ f, ultima, onPress, mostrarOrigen }: { f: Fila; ultima: boo
         <Text style={s.filaDetalle}>
           <Text style={{ color: colores.texto }}>{textoLlamado(f.llamado)}</Text> · {fechaCorta(f.fecha)}{f.hora ? ` · ${f.hora.slice(0, 5)} h` : ''}{f.aula ? ` · ${f.aula}` : ''}
         </Text>
+        {f.planes?.length || f.opuesto ? (
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: espacio.xs, marginTop: 4 }}>
+            {f.planes?.length ? <Insignia texto={textoPlanes(f.planes)} icono="school-outline" /> : null}
+            {f.opuesto ? <Insignia texto="Semestre opuesto" icono="swap-horizontal-outline" color={colores.gris} fondo={fondos.grisFondo} /> : null}
+          </View>
+        ) : null}
         {mostrarOrigen && f.origen ? <Text style={[s.filaDetalle, { fontSize: 12, marginTop: 2 }]} numberOfLines={2}>"{f.origen}"</Text> : null}
       </View>
       <Ionicons name="create-outline" size={18} color={colores.textoSuave} />

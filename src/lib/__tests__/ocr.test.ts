@@ -10,7 +10,7 @@ import { readFileSync } from 'node:fs';
 import { celdasDeRenglon, filasDeOcr, renglones, textoDeOcr, ubicar, type PaginaOcr, type PalabraOcr, type RenglonOcr } from '../ocr/documento.ts';
 const textoDeRenglon = (r: RenglonOcr) => celdasDeRenglon(r).map((c) => c.texto).join('   ');
 import { categoriaDe, leerCalendarioPdf } from '../calendario-pdf.ts';
-import { detectarPlan, fechasCortasEn, leerHorarioFinales, romanosOcr } from '../horario-finales.ts';
+import { detectarPlan, fechasCortasEn, leerHorarioFinales, planesDelTexto, romanosOcr } from '../horario-finales.ts';
 import { HTML_OCR, URLS_OCR } from '../ocr/pagina-ocr.ts';
 import { diaDe, leerHorarioClases, limpiarNombre, nivelEn, planesDeHojas, planesEn, rangoEn, seccionEn, tipoEn } from '../horario-clases.ts';
 import type { FilaDoc } from '../ocr/documento.ts';
@@ -312,6 +312,36 @@ test('finales: 2018 y 2026 en días distintos de la misma semana son el mismo ll
   const texto = 'SEGUNDO SEMESTRE 2026\nIQ001   Química General   IQ2018   25-nov   14:00\nIQ-05   Química General   IQ2026   27-nov   14:00\nIQ001   Química General   IQ2018   09-dic   14:00\nIQ-05   Química General   IQ2026   11-dic   14:00';
   const r = leerHorarioFinales(texto, ['Química General'], new Date(2026, 6, 1));
   assert.deepEqual(r.filas.map((f) => `${f.plan} ${f.llamado} ${f.fecha}`).sort(), ['2018 1 2026-11-25', '2018 2 2026-12-09', '2026 1 2026-11-27', '2026 2 2026-12-11']);
+});
+
+test('finales: la misma mesa en 2018 y 2026 queda una fila con los dos planes; "semestre opuesto" se marca', () => {
+  const texto = 'SEGUNDO SEMESTRE 2026\nIQ001   Química General   IQ2018   25-nov   14:00\nIQ-05   Química General   IQ2026   25-nov   14:00\nIQ003   Física I   IQ2018   SEMESTRE OPUESTO   26-nov   08:00\nIQ-07   Física I   IQ2026   27-nov   08:00';
+  assert.deepEqual(planesDelTexto(texto), [2018, 2026]);
+  // Un año leído mal en una sola fila no es un plan.
+  const conMal = `${texto}\nIQ013   Química Orgánica   102015   26-nov   14:00\nIQ013   Química Orgánica   IQ2018   10-dic   14:00`;
+  assert.deepEqual(planesDelTexto(conMal), [2018, 2026]);
+  // ... y esa fila no se pierde al filtrar por los planes del PDF.
+  const rm = leerHorarioFinales(conMal, ['Química General', 'Física I', 'Química Orgánica'], new Date(2026, 6, 1), { planes: planesDelTexto(conMal) });
+  assert.deepEqual(rm.filas.filter((f) => f.materia === 'Química Orgánica').map((f) => `${f.llamado} ${f.fecha}`), ['1 2026-11-26', '2 2026-12-10']);
+  const r = leerHorarioFinales(texto, ['Química General', 'Física I'], new Date(2026, 6, 1), { planes: [2018, 2026] });
+  const ver = r.filas.map((f) => `${f.materia} ${f.fecha} ${f.planes?.join('+')}${f.opuesto ? ' opuesto' : ''}`).sort();
+  assert.deepEqual(ver, ['Física I 2026-11-26 2018 opuesto', 'Física I 2026-11-27 2026', 'Química General 2026-11-25 2018+2026']);
+  // Solo 2026: quedan sus filas.
+  const s26 = leerHorarioFinales(texto, ['Química General', 'Física I'], new Date(2026, 6, 1), { planes: [2026] });
+  assert.deepEqual(s26.filas.map((f) => `${f.materia} ${f.planes?.join('+')}`).sort(), ['Física I 2026', 'Química General 2026']);
+});
+
+test('finales: un plan de la carrera nombrado en una sola fila se sigue filtrando', () => {
+  const texto = 'SEGUNDO SEMESTRE 2026\nIQ001   Química General   IQ2018   25-nov   14:00\nIQ003   Física I   IQ2018   26-nov   14:00\nIQ-05   Bioquímica   IQ2026   27-nov   08:00';
+  const fichas = [2018, 2026].map((plan) => ({ nombre: 'Química General', plan, orden: null, nivel: null }));
+  const r = leerHorarioFinales(texto, ['Química General', 'Física I', 'Bioquímica'], new Date(2026, 6, 1), { fichas, planes: [2018] });
+  assert.deepEqual(r.filas.map((f) => f.materia).sort(), ['Física I', 'Química General']);
+});
+
+test('finales: "10-01" con la sigla del plan en la fila es un código, no una fecha', () => {
+  const texto = 'SEGUNDO SEMESTRE 2026\n10-01   Química General   1Q2026   25-nov   14:00\n10-02   Física I   1Q2026   26-nov   14:00\n10-01   Química General   1Q2026   09-dic   14:00';
+  const r = leerHorarioFinales(texto, ['Química General', 'Física I'], new Date(2026, 6, 1));
+  assert.deepEqual(r.filas.map((f) => `${f.materia} ${f.llamado} ${f.fecha}`).sort(), ['Física I 1 2026-11-26', 'Química General 1 2026-11-25', 'Química General 2 2026-12-09']);
 });
 
 test('limpiarNombre no corta la primera letra con tilde', () => {
