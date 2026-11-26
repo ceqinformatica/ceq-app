@@ -116,16 +116,20 @@ function Navegacion() {
 
   const conCarrera = Boolean(perfil?.plan_id);
   const esAdmin = conCarrera && perfil?.rol === 'admin';
+  // Adónde ir cuando la pantalla abierta queda prohibida (p. ej. al iniciar
+  // sesión). Sin esto, expo-router elige la primera pantalla libre, que podía
+  // ser auth/pin, y quedaba en blanco.
+  const inicio = !sesion ? '/login' : conCarrera ? '/' : '/onboarding';
   return (
     <>
     <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: fondos.fondo }, animation: 'slide_from_right' }}>
-      <Stack.Protected guard={!sesion}>
+      <Stack.Protected guard={!sesion} redirectTo={inicio}>
         <Stack.Screen name="login" />
       </Stack.Protected>
-      <Stack.Protected guard={Boolean(sesion) && !conCarrera}>
+      <Stack.Protected guard={Boolean(sesion) && !conCarrera} redirectTo={inicio}>
         <Stack.Screen name="onboarding" />
       </Stack.Protected>
-      <Stack.Protected guard={Boolean(sesion) && conCarrera}>
+      <Stack.Protected guard={Boolean(sesion) && conCarrera} redirectTo={inicio}>
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="perfil" />
         <Stack.Screen name="pin" />
@@ -143,7 +147,7 @@ function Navegacion() {
         <Stack.Screen name="tramite/[id]" />
         <Stack.Screen name="finales-fechas" />
       </Stack.Protected>
-      <Stack.Protected guard={Boolean(sesion) && esAdmin}>
+      <Stack.Protected guard={Boolean(sesion) && esAdmin} redirectTo={inicio}>
         <Stack.Screen name="admin" />
       </Stack.Protected>
       <Stack.Screen name="auth/callback" />
