@@ -2,7 +2,7 @@ import * as LocalAuthentication from 'expo-local-authentication';
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 import { clavesPin } from './pin';
-import { cuentaActual, pinActivo } from './pinGuardado';
+import { cuentaActual } from './pinGuardado';
 
 /**
  * Desbloqueo con huella o rostro.
@@ -19,13 +19,11 @@ const clave = () => clavesPin(cuentaActual())?.biometria ?? null;
 
 /**
  * La huella guardada a la vieja (una para todo el celular) pasa a la primera
- * cuenta con PIN que entra: es la que la tenía activa junto con su PIN. Una
- * cuenta sin PIN no la hereda (si no, otra cuenta del mismo celular, como una
- * de prueba, pedía la huella de la cuenta personal).
+ * cuenta que entra, como el PIN viejo: casi siempre es la del dueño que la
+ * activó. Así ninguna cuenta que se bloqueaba deja de bloquearse.
  */
 async function migrarLegado(c: string) {
   if ((await SecureStore.getItemAsync(LEGADO)) !== '1') return;
-  if (!(await pinActivo().catch(() => false))) return;
   await SecureStore.setItemAsync(c, '1');
   await SecureStore.deleteItemAsync(LEGADO);
 }

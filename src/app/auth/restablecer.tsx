@@ -22,7 +22,7 @@ const salirDeAca = () => router.replace('/');
 export default function Restablecer() {
   useTema();
   const { sesion } = useSesion();
-  const params = useLocalSearchParams<{ code?: string; modo?: string; error?: string; error_description?: string }>();
+  const params = useLocalSearchParams<{ code?: string; sb_flow_id?: string; modo?: string; error?: string; error_description?: string }>();
   const cambiar = params.modo === 'cambiar';
   const errorEnlace = params.error_description ?? params.error;
   const [estado, setEstado] = useState<Estado>(params.code ? 'canjeando' : 'formulario');
@@ -36,13 +36,13 @@ export default function Restablecer() {
 
   useEffect(() => {
     if (typeof params.code !== 'string') return;
-    canjearCodigo(params.code).then((e) => {
+    canjearCodigo(params.code, typeof params.sb_flow_id === 'string' ? params.sb_flow_id : null).then((e) => {
       if (e) {
         setErrorInicial(traducirErrorClave(e));
         setEstado('error');
       } else setEstado('formulario');
     });
-  }, [params.code]);
+  }, [params.code, params.sb_flow_id]);
 
   // Sin código, sin sesión o con un error en el enlace: no hay a qué cuenta cambiarle la contraseña.
   const sinCuenta = estado === 'formulario' && !sesion && !MODO_DEMO;
