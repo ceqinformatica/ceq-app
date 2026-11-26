@@ -190,13 +190,15 @@ export function FormEvaluacion({ visible, evaluacion, materiaId, onCerrar, onGua
       {usaLlamado && (
         <View style={{ marginBottom: espacio.s }}>
           <Text style={[s.etiqueta, { marginBottom: espacio.s }]}>Semestre del llamado</Text>
-          <Segmentado
-            opciones={[{ valor: 'normal', texto: 'Normal' }, { valor: 'opuesto', texto: 'Opuesto' }]}
-            valor={opuestoUsado ? 'opuesto' : 'normal'}
-            onCambio={(v) => setOpuesto(v === 'opuesto')}
-            deshabilitadas={tipo === 'recuperatorio' ? ['opuesto'] : undefined}
-            estilo={{ marginBottom: espacio.xs }}
-          />
+          {/* El Recu no se rinde en semestre opuesto (Josie, 2026-11-26): solo la Regu elige. */}
+          {tipo === 'regularizacion' && (
+            <Segmentado
+              opciones={[{ valor: 'normal', texto: 'Normal' }, { valor: 'opuesto', texto: 'Opuesto' }]}
+              valor={opuestoUsado ? 'opuesto' : 'normal'}
+              onCambio={(v) => setOpuesto(v === 'opuesto')}
+              estilo={{ marginBottom: espacio.xs }}
+            />
+          )}
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: espacio.s, marginBottom: espacio.m, flexWrap: 'wrap' }}>
             <Text style={s.filaDetalle}>{nombreSemestre(periodo)}</Text>
             <Enlace texto={eligiendoSemestre ? 'Listo' : 'Cambiar'} onPress={() => setEligiendoSemestre(!eligiendoSemestre)} />
@@ -217,7 +219,7 @@ export function FormEvaluacion({ visible, evaluacion, materiaId, onCerrar, onGua
           />
           <Text style={s.filaDetalle}>
             {tipo === 'recuperatorio'
-              ? 'El Recu se rinde solo en el primer llamado del semestre normal. Al guardar, aparecerá en el historial de Finales como parcial. Conservás tus oportunidades de final.'
+              ? 'El Recu se rinde solo en el primer llamado y no en semestre opuesto. Al guardar, aparecerá en el historial de Finales como parcial. Conservás tus oportunidades de final.'
               : 'Al guardar, aparecerá en el historial de Finales como parcial. Conservás tus oportunidades de final.'}
           </Text>
         </View>
@@ -227,15 +229,21 @@ export function FormEvaluacion({ visible, evaluacion, materiaId, onCerrar, onGua
       <Segmentado opciones={[{ valor: 'si', texto: 'Sí, tengo la nota' }, { valor: 'no', texto: 'Todavía no o falté' }]} valor={rendida} onCambio={setRendida} />
       {rendida === 'si' && (
         <>
-          <Segmentado opciones={[{ valor: 'porcentaje', texto: 'Porcentaje' }, { valor: 'puntaje', texto: 'Puntaje' }]} valor={modo} onCambio={setModo} />
           {modo === 'porcentaje' ? (
-            <Campo etiqueta="Sacaste (%)" value={porcentaje} onChangeText={setPorcentaje} keyboardType="decimal-pad" placeholder="Ej. 72" />
+            <Campo etiqueta="Sacaste (%)" value={porcentaje} onChangeText={setPorcentaje} keyboardType="decimal-pad" placeholder="Ej. 72" estilo={{ marginBottom: espacio.xs }} />
           ) : (
             <View style={{ flexDirection: 'row', gap: espacio.m }}>
-              <Campo etiqueta="Puntos obtenidos" value={obtenido} onChangeText={setObtenido} keyboardType="decimal-pad" estilo={{ flex: 1 }} />
-              <Campo etiqueta="Puntaje total" value={total} onChangeText={setTotal} keyboardType="decimal-pad" estilo={{ flex: 1 }} />
+              <Campo etiqueta="Puntos que sacaste" value={obtenido} onChangeText={setObtenido} keyboardType="decimal-pad" placeholder="Ej. 36" estilo={{ flex: 1, marginBottom: espacio.xs }} />
+              <Campo etiqueta="De un total de" value={total} onChangeText={setTotal} keyboardType="decimal-pad" placeholder="Ej. 50" estilo={{ flex: 1, marginBottom: espacio.xs }} />
             </View>
           )}
+          {/* Quien no sabe el porcentaje carga los puntos y la app lo calcula. */}
+          <View style={{ marginBottom: espacio.m }}>
+            <Enlace
+              texto={modo === 'porcentaje' ? 'Sé los puntos, no el porcentaje' : 'Sé el porcentaje'}
+              onPress={() => setModo(modo === 'porcentaje' ? 'puntaje' : 'porcentaje')}
+            />
+          </View>
           {vistaPrevia != null && Number.isFinite(vistaPrevia) && <Mensaje tipo="info" texto={`Equivale a ${pct(Math.round(vistaPrevia * 10) / 10)}`} />}
         </>
       )}
