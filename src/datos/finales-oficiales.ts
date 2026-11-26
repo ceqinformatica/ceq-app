@@ -4,7 +4,7 @@
  */
 import { Platform } from 'react-native';
 import { supabase } from '../lib/supabase';
-import { mismaMateria, textoLlamado, type FichaMateria, type FilaFinal } from '../lib/horario-finales';
+import { esDeTuPlan, mismaMateria, textoLlamado, type FichaMateria, type FilaFinal } from '../lib/horario-finales';
 import type { EstadoMateriaDb, FechaFinalDb, HorarioFinalesDb } from '../lib/tipos-db';
 import { db, esperar, idDemo, MODO_DEMO, UID_DEMO } from './demo';
 import { lanzar } from '../lib/errores';
@@ -17,6 +17,9 @@ export interface FechaEditable {
   fecha: string;
   hora: string | null;
   aula: string | null;
+  /** Planes de la mesa (vacío = todos los planes). */
+  planes?: number[];
+  semestre_opuesto?: boolean;
 }
 
 /* ---------------- Panel ---------------- */
@@ -105,7 +108,7 @@ export async function crearHorario(carreraId: string, titulo: string, pdf: Uint8
     const id = idDemo();
     const ahora = new Date().toISOString();
     db.horariosFinales.unshift({ id, carrera_id: carreraId, titulo, pdf_path: null, publicado: false, publicado_en: null, avisado_en: null, creado_por: UID_DEMO, created_at: ahora, updated_at: ahora });
-    db.fechasFinales.push(...fechas.map((f) => ({ ...f, id: idDemo(), horario_id: id, created_at: ahora })));
+    db.fechasFinales.push(...fechas.map((f) => ({ ...f, planes: f.planes ?? [], semestre_opuesto: Boolean(f.semestre_opuesto), id: idDemo(), horario_id: id, created_at: ahora })));
     return id;
   }
   let path: string | null = null;
@@ -136,12 +139,12 @@ export async function guardarFechas(horarioId: string, fechas: FechaEditable[]) 
     await esperar(300);
     const ahora = new Date().toISOString();
     db.fechasFinales = db.fechasFinales.filter((f) => f.horario_id !== horarioId);
-    db.fechasFinales.push(...fechas.map((f) => ({ ...f, id: idDemo(), horario_id: horarioId, created_at: ahora })));
+    db.fechasFinales.push(...fechas.map((f) => ({ ...f, planes: f.planes ?? [], semestre_opuesto: Boolean(f.semestre_opuesto), id: idDemo(), horario_id: horarioId, created_at: ahora })));
     return;
   }
   const { error } = await supabase.rpc('guardar_fechas_finales', {
     p_horario: horarioId,
-    p_fechas: fechas.map((f) => ({ materia: f.materia.trim(), llamado: f.llamado, fecha: f.fecha, hora: f.hora, aula: f.aula })),
+    p_fechas: fechas.map((f) => ({ materia: f.materia.trim(), llamado: f.llamado, fecha: f.fecha, hora: f.hora, aula: f.aula, planes: f.planes ?? [], semestre_opuesto: Boolean(f.semestre_opuesto) })),
   });
   lanzar(error);
 }
@@ -198,7 +201,7 @@ export async function urlPdfHorario(path: string | null): Promise<string | null>
 export function filasParaGuardar(filas: (FilaFinal & { materia: string | null })[]): FechaEditable[] {
   return filas
     .filter((f): f is FilaFinal & { materia: string } => Boolean(f.materia))
-    .map((f) => ({ materia: f.materia, llamado: f.llamado, fecha: f.fecha, hora: f.hora, aula: f.aula }));
+    .map((f) => ({ materia: f.materia, llamado: f.llamado, fecha: f.fecha, hora: f.hora, aula: f.aula, planes: f.planes ?? [], semestre_opuesto: Boolean(f.opuesto) }));
 }
 
 /* ---------------- Estudiante ---------------- */
@@ -230,6 +233,7 @@ export async function cargarMisFinales(carreraId: string | null | undefined, pla
   let materias: { id: string; nombre: string }[];
   let estados: { materia_id: string; estado: EstadoMateriaDb }[];
   let eventos: { titulo: string; fecha: string }[];
+  let anioPlan: number | null = null;
   if (MODO_DEMO) {
     await esperar();
     horarios = db.horariosFinales.filter((h) => h.publicado && h.carrera_id === carreraId);
@@ -237,25 +241,30 @@ export async function cargarMisFinales(carreraId: string | null | undefined, pla
     materias = db.materias;
     estados = db.estados;
     eventos = db.eventos.filter((e) => e.usuario_id === UID_DEMO);
+    anioPlan = db.planes.find((p) => p.id === planId)?.anio ?? null;
   } else {
     const rH = await supabase.from('horarios_finales').select('*').eq('carrera_id', carreraId).eq('publicado', true).order('publicado_en', { ascending: false }).limit(10);
     lanzar(rH.error);
     horarios = rH.data ?? [];
     const ids = horarios.map((h) => h.id);
-    const [rF, rM, rS, rE] = await Promise.all([
+    const [rF, rM, rS, rE, rP] = await Promise.all([
       ids.length
         ? supabase.from('fechas_finales').select('*').in('horario_id', ids).gte('fecha', hoy).order('fecha').order('hora').limit(2000)
         : Promise.resolve({ data: [], error: null }),
       planId ? supabase.from('materias').select('id, nombre').eq('plan_id', planId) : Promise.resolve({ data: [], error: null }),
       supabase.from('materias_estudiante').select('materia_id, estado'),
       supabase.from('eventos').select('titulo, fecha').not('usuario_id', 'is', null).gte('fecha', desde.toISOString()).limit(300),
+      planId ? supabase.from('planes').select('anio').eq('id', planId).maybeSingle() : Promise.resolve({ data: null, error: null }),
     ]);
     lanzar(rF.error); lanzar(rM.error); lanzar(rS.error); lanzar(rE.error);
     fechas = (rF.data ?? []) as FechaFinalDb[];
     materias = (rM.data ?? []) as { id: string; nombre: string }[];
     estados = (rS.data ?? []) as typeof estados;
     eventos = (rE.data ?? []) as typeof eventos;
+    anioPlan = (rP.data as { anio: number | null } | null)?.anio ?? null;
   }
+  // Solo las mesas de tu plan (las que no dicen plan valen para todos).
+  fechas = fechas.filter((f) => esDeTuPlan(f, anioPlan));
   const estadoDe = new Map(estados.map((e) => [e.materia_id, e.estado]));
   const lista: FinalOficial[] = fechas.map((f) => {
     const m = materias.find((x) => mismaMateria(x.nombre, f.materia));

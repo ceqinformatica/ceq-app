@@ -594,6 +594,15 @@ select pg_temp.debe_ser('guarda las fechas de una vez', public.guardar_fechas_fi
   '[{"materia":"Química General","llamado":1,"fecha":"2026-12-07","hora":"08:00"},{"materia":"Química General","llamado":2,"fecha":"2026-12-21","hora":""},{"materia":"Física I","llamado":1,"fecha":"2026-12-09","hora":"13:30","aula":"Aula 3"}]'::jsonb), 3);
 select pg_temp.debe_fallar('fecha inválida no guarda nada', $$select public.guardar_fechas_finales('60000000-0000-0000-0000-000000000001', '[{"materia":"Física I","llamado":1,"fecha":"2026-13-40"}]'::jsonb)$$);
 select pg_temp.debe_ser('las fechas siguen enteras tras el error', (select count(*) from public.fechas_finales), 3);
+-- Plan y semestre opuesto: opcionales; sin ellos, todos los planes.
+select pg_temp.debe_ser('sin planes = todos', (select count(*) from public.fechas_finales where planes = '{}' and not semestre_opuesto), 3);
+select pg_temp.debe_ser('guarda planes y semestre opuesto', public.guardar_fechas_finales('60000000-0000-0000-0000-000000000001',
+  '[{"materia":"Química General","llamado":1,"fecha":"2026-12-07","hora":"08:00","planes":[2026,2018,2018]},{"materia":"Química General","llamado":2,"fecha":"2026-12-21","planes":[2018],"semestre_opuesto":true},{"materia":"Física I","llamado":1,"fecha":"2026-12-09","hora":"13:30","aula":"Aula 3"}]'::jsonb), 3);
+select pg_temp.debe_ser('planes sin repetir y en orden', (select count(*) from public.fechas_finales where materia = 'Química General' and llamado = 1 and planes = '{2018,2026}'), 1);
+select pg_temp.debe_ser('marca de semestre opuesto', (select count(*) from public.fechas_finales where semestre_opuesto and planes = '{2018}'), 1);
+select pg_temp.debe_fallar('plan fuera de rango no guarda', $$select public.guardar_fechas_finales('60000000-0000-0000-0000-000000000001', '[{"materia":"Física I","llamado":1,"fecha":"2026-12-09","planes":[18]}]'::jsonb)$$);
+select pg_temp.debe_fallar('planes con otro formato no guarda', $$select public.guardar_fechas_finales('60000000-0000-0000-0000-000000000001', '[{"materia":"Física I","llamado":1,"fecha":"2026-12-09","planes":"2018"}]'::jsonb)$$);
+select pg_temp.debe_ser('las fechas siguen tras los errores', (select count(*) from public.fechas_finales), 3);
 select pg_temp.como('00000000-0000-0000-0000-00000000000b');
 select pg_temp.debe_ser('Beto no ve el borrador', (select count(*) from public.horarios_finales), 0);
 select pg_temp.debe_ser('Beto no ve sus fechas', (select count(*) from public.fechas_finales), 0);

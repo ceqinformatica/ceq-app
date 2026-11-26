@@ -164,7 +164,7 @@ export const db = {
     ['Química Orgánica I', 1, 9, '08:00', null], ['Física II', 1, 11, '07:30', null], ['Microbiología', 1, 13, '08:00', null],
     ['Química Analítica I', 2, 22, '08:00', 'Aula 12'], ['Fisicoquímica I', 2, 24, '13:30', null], ['Bioquímica', 2, 26, '08:00', 'Aula 7'],
   ] as const).map(([materia, llamado, dias, hora, aula], i): FechaFinalDb => ({
-    id: `ff${i + 1}`, horario_id: 'hf1', materia, llamado, fecha: enDias(dias).slice(0, 10), hora, aula, created_at: enDias(-1),
+    id: `ff${i + 1}`, horario_id: 'hf1', materia, llamado, fecha: enDias(dias).slice(0, 10), hora, aula, planes: [], semestre_opuesto: materia === 'Física II', created_at: enDias(-1),
   })),
   horariosClases: [
     { id: 'hc1', carrera_id: 'car-1', plan_anio: 2018, titulo: 'Horario de clases · 2.º periodo ' + ahora.getFullYear(), pdf_path: null, publicado: true, publicado_en: enDias(-3), avisado_en: enDias(-3), creado_por: null, created_at: enDias(-3), updated_at: enDias(-3) },

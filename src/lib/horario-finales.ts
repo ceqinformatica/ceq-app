@@ -624,6 +624,9 @@ export function detectarPlan(texto: string): number | null {
   return m ? Number(m[1]) : null;
 }
 
+/** La mesa va para tu plan: sin planes (o sin saber tu plan) vale para todos. */
+export const esDeTuPlan = (f: { planes?: number[] | null }, anioPlan: number | null) => anioPlan == null || !f.planes?.length || f.planes.includes(anioPlan);
+
 /**
  * Planes que nombran las filas del PDF ("IQ2018", "PLAN 2026"), de menor a
  * mayor. Un año en una sola fila es una mala lectura ("102015" por "IQ2018").
