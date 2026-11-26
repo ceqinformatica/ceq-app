@@ -1,14 +1,32 @@
 import * as LocalAuthentication from 'expo-local-authentication';
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
+import { clavesPin } from './pin';
+import { cuentaActual } from './pinGuardado';
 
 /**
  * Desbloqueo con huella o rostro.
  *
  * Los datos biométricos nunca salen del celular: el sistema operativo solo
- * responde "sí, es el dueño". La preferencia se guarda cifrada en el celular.
+ * responde "sí, es el dueño". La preferencia se guarda cifrada en el celular,
+ * por cuenta (como el PIN): si en el mismo celular se entra con otra cuenta,
+ * esa no pide la huella de la primera.
  */
-const CLAVE = 'ceq_biometria_activa';
+/** Antes la huella era una sola para todo el celular. */
+const LEGADO = 'ceq_biometria_activa';
+
+const clave = () => clavesPin(cuentaActual())?.biometria ?? null;
+
+/**
+ * La huella guardada a la vieja (una para todo el celular) pasa a la primera
+ * cuenta que entra, como el PIN viejo: casi siempre es la del dueño que la
+ * activó. Así ninguna cuenta que se bloqueaba deja de bloquearse.
+ */
+async function migrarLegado(c: string) {
+  if ((await SecureStore.getItemAsync(LEGADO)) !== '1') return;
+  await SecureStore.setItemAsync(c, '1');
+  await SecureStore.deleteItemAsync(LEGADO);
+}
 
 export async function biometriaDisponible(): Promise<{ disponible: boolean; nombre: string }> {
   if (Platform.OS === 'web') return { disponible: false, nombre: 'Biometría' };
@@ -23,7 +41,10 @@ export async function biometriaDisponible(): Promise<{ disponible: boolean; nomb
 
 export async function biometriaActiva(): Promise<boolean> {
   if (Platform.OS === 'web') return false;
-  return (await SecureStore.getItemAsync(CLAVE)) === '1';
+  const c = clave();
+  if (!c) return false;
+  await migrarLegado(c).catch(() => {});
+  return (await SecureStore.getItemAsync(c)) === '1';
 }
 
 export async function verificarIdentidad(motivo = 'Desbloqueá Portal CEQ'): Promise<boolean> {
@@ -38,10 +59,13 @@ export async function verificarIdentidad(motivo = 'Desbloqueá Portal CEQ'): Pro
 /** Activa la biometría solo si el dueño la confirma en ese momento. */
 export async function activarBiometria(): Promise<boolean> {
   const ok = await verificarIdentidad('Confirmá para activar el desbloqueo');
-  if (ok) await SecureStore.setItemAsync(CLAVE, '1');
+  const c = clave();
+  if (!c) return false;
+  if (ok) await SecureStore.setItemAsync(c, '1');
   return ok;
 }
 
 export async function desactivarBiometria() {
-  await SecureStore.deleteItemAsync(CLAVE);
+  const c = clave();
+  if (c) await SecureStore.deleteItemAsync(c);
 }

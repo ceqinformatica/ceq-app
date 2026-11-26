@@ -56,3 +56,20 @@ export function proveedoresVisibles(ajustes: { external?: Record<string, unknown
   if (ajustes.external.azure === true) lista.push('microsoft');
   return lista;
 }
+
+/**
+ * Página del CEQ que reciben los enlaces de los correos (confirmar cuenta,
+ * contraseña nueva, PIN nuevo). Gmail abre los enlaces en su propio navegador,
+ * que no deja saltar solo a ceqapp:// y se quedaba en blanco; esa página
+ * muestra un botón que abre la app con el mismo código.
+ */
+export const PAGINA_ENLACES = 'https://ceqinformatica.github.io/abrir.html';
+
+/**
+ * Dirección que va en el enlace del correo para volver a `ruta` de la app.
+ * Con la app instalada (ceqapp://) pasa por PAGINA_ENLACES; en desarrollo
+ * (exp://, web) se usa la dirección directa.
+ */
+export function urlParaCorreo(urlApp: string, ruta: string): string {
+  return urlApp.startsWith('ceqapp://') ? `${PAGINA_ENLACES}?ruta=${encodeURIComponent(ruta)}` : urlApp;
+}

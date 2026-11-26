@@ -24,7 +24,10 @@ propio se puede; 30 alcanza).
 ## 2. Direcciones de retorno
 
 Authentication → URL Configuration → Redirect URLs: tienen que estar
-**`ceqapp://**`** y, para probar con Expo Go, **`exp://**`** (así están hoy).
+**`ceqapp://**`**, **`https://ceqinformatica.github.io/abrir.html**`** (la
+página que reciben los enlaces de los correos con la app instalada: Gmail no
+deja saltar solo a ceqapp:// y quedaba en blanco) y, para probar con Expo Go,
+**`exp://**`**.
 Tienen que ser con comodín: la app agrega `?sb_flow_id=…` a cada dirección de
 retorno, y Supabase compara también esa parte, así que direcciones exactas
 (`ceqapp://auth/pin`) dejarían de coincidir y fallarían el registro, la

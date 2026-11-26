@@ -31,3 +31,11 @@ test('valida los datos de Creá tu cuenta', () => {
   assert.match(problemaRegistro({ ...ok, clave: 'abc', repetida: 'abc' }, 6)!, /al menos 6/);
   assert.match(problemaRegistro({ ...ok, repetida: 'clave124' }, 6)!, /no coinciden/);
 });
+
+test('enlaces de correo: con la app instalada pasan por la página del CEQ', async () => {
+  const { urlParaCorreo, PAGINA_ENLACES } = await import('../acceso.ts');
+  assert.equal(urlParaCorreo('ceqapp://auth/callback', 'auth/callback'), `${PAGINA_ENLACES}?ruta=auth%2Fcallback`);
+  assert.equal(urlParaCorreo('ceqapp://auth/pin', 'auth/pin'), `${PAGINA_ENLACES}?ruta=auth%2Fpin`);
+  // En desarrollo (Expo Go) se usa la dirección directa.
+  assert.equal(urlParaCorreo('exp://192.168.0.5:8081/--/auth/callback', 'auth/callback'), 'exp://192.168.0.5:8081/--/auth/callback');
+});

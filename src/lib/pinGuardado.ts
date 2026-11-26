@@ -22,6 +22,9 @@ export function fijarCuentaPin(uid: string | null) {
   cuenta = uid;
 }
 
+/** La cuenta fijada con fijarCuentaPin (la huella también es de cada cuenta). */
+export const cuentaActual = () => cuenta;
+
 const claves = () => {
   const c = clavesPin(cuenta);
   if (!c) throw new Error('sin-cuenta');

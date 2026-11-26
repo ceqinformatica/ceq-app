@@ -10,13 +10,13 @@ import { useTema } from '../../context/TemaProvider';
 // acá; el de Google ya lo canjea entrarConGoogle() y no se repite.
 export default function Callback() {
   useTema();
-  const { code } = useLocalSearchParams<{ code?: string }>();
+  const { code, sb_flow_id } = useLocalSearchParams<{ code?: string; sb_flow_id?: string }>();
   const [listo, setListo] = useState(!code);
 
   useEffect(() => {
     if (typeof code !== 'string') return;
-    canjearCodigo(code).finally(() => setListo(true));
-  }, [code]);
+    canjearCodigo(code, typeof sb_flow_id === 'string' ? sb_flow_id : null).finally(() => setListo(true));
+  }, [code, sb_flow_id]);
 
   if (listo) return <Redirect href="/" />;
   return (
