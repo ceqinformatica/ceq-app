@@ -106,11 +106,11 @@ export function Pantalla({ children, scroll = true, estilo, cabecera, refrescand
   );
   return (
     <EvitaTeclado estilo={s.pantalla}>
-    <SafeAreaView style={[s.pantalla, marca && { backgroundColor: fondos.franja }]} edges={marca ? ['left', 'right'] : ['top', 'left', 'right']}>
+    <SafeAreaView style={s.pantalla} edges={marca ? ['left', 'right'] : ['top', 'left', 'right']}>
       {barra}
-      {/* Con barra fija, el contenido va en una hoja de esquinas redondeadas que recorta lo que se desplaza por debajo. */}
+      {/* Como en iOS, la barra fija tiene el mismo color que el fondo y una línea finita la separa del contenido que se desplaza. */}
       {/* Sin fundido de la pantalla entera: mientras entra, una pantalla semitransparente dejaba ver la anterior detrás. */}
-      <View style={[{ flex: 1, backgroundColor: fondos.fondo }, marca && s.hojaContenido]}>
+      <View style={{ flex: 1, backgroundColor: fondos.fondo }}>
         {cuerpo}
       </View>
     </SafeAreaView>
@@ -132,7 +132,7 @@ export function BarraPortal({ derecha, sinPerfil }: { derecha?: ReactNode; sinPe
       <View style={[s.cabeceraBarra, { paddingTop: insets.top + espacio.s }, ancho]}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: espacio.s, flexShrink: 1 }}>
           <View style={s.cabeceraLogo}>
-            <Image source={logoCeq} style={{ width: 24, height: 24 }} accessibilityLabel="Logo del CEQ" />
+            <Image source={logoCeq} style={{ width: 22, height: 22 }} accessibilityLabel="Logo del CEQ" />
           </View>
           <Text style={s.cabeceraMarca} numberOfLines={1}>Portal CEQ</Text>
           <Text style={s.cabeceraMarcaSub} numberOfLines={1}>FCQ · UNA</Text>
@@ -141,7 +141,7 @@ export function BarraPortal({ derecha, sinPerfil }: { derecha?: ReactNode; sinPe
           <View style={s.cabeceraAcciones}>
             {derecha}
             {derecha && !sinPerfil ? <View style={s.cabeceraSeparador} /> : null}
-            {!sinPerfil ? <BotonIcono icono="person-circle-outline" etiqueta="Abrir mi perfil" plano tamano={26} onPress={() => router.push('/perfil')} /> : null}
+            {!sinPerfil ? <BotonIcono icono="person-circle" etiqueta="Abrir mi perfil" plano tamano={30} onPress={() => router.push('/perfil')} /> : null}
           </View>
         ) : null}
       </View>
@@ -165,7 +165,6 @@ export function CabeceraMarca({ titulo, sub, children, compacta, sinConexion }: 
   return (
     <View>
       <View style={[s.cabeceraCuerpo, { paddingBottom: compacta ? espacio.xl + espacio.s : espacio.xxl + espacio.m }]}>
-        <View style={s.cabeceraBurbuja} pointerEvents="none" />
         <View style={ancho}>
           {titulo ? <Text style={s.cabeceraTitulo} accessibilityRole="header">{titulo}</Text> : null}
           <Aparecer distancia={10}>
@@ -238,7 +237,7 @@ export function Titulo({ children, sub }: { children: ReactNode; sub?: ReactNode
 export function Seccion({ children, accion, estilo, icono }: { children: ReactNode; accion?: { texto: string; onPress: () => void }; estilo?: ViewStyle; icono?: NombreIcono }) {
   return (
     <Aparecer estilo={[s.seccionFila, estilo]} distancia={8}>
-      {icono ? <Ionicons name={icono} size={19} color={colores.marino} /> : null}
+      {icono ? <Ionicons name={icono} size={18} color={colores.marino} /> : null}
       <Text style={s.seccionTexto} accessibilityRole="header">{children}</Text>
       {accion && (
         <Pressable onPress={accion.onPress} hitSlop={10} accessibilityRole="link" style={{ marginLeft: 'auto', flexDirection: 'row', alignItems: 'center', gap: 2 }}>
@@ -279,14 +278,17 @@ export function Tarjeta({ children, estilo, variante = 'blanca', onPress, etique
 }
 
 const variantesTarjeta = (): Record<string, ViewStyle> => ({
-  blanca: { backgroundColor: fondos.superficieBlanca, ...sombras.suave },
+  blanca: { backgroundColor: fondos.superficieBlanca },
   celeste: { backgroundColor: fondos.tarjeta },
-  marino: { backgroundColor: fondos.marino, ...sombras.media },
-  borde: { backgroundColor: fondos.superficieBlanca, borderWidth: 1, borderColor: colores.lineaSuave },
+  marino: { backgroundColor: fondos.marino },
+  borde: { backgroundColor: fondos.superficieBlanca },
 });
 
-/** Fila de lista: ícono en hexágono suave, textos y algo a la derecha. */
-export function Fila({ icono, colorIcono = colores.marino, fondoIcono = fondos.tarjeta, titulo, detalle, derecha, onPress, ultima, simple }: {
+/**
+ * Fila de lista al estilo de Ajustes de iOS: ícono blanco en un cuadradito
+ * azul, textos, y la línea separadora empieza después del ícono.
+ */
+export function Fila({ icono, colorIcono = colores.blanco, fondoIcono = fondos.marino, titulo, detalle, derecha, onPress, ultima, simple }: {
   icono?: NombreIcono; colorIcono?: string; fondoIcono?: string; titulo: string; detalle?: string;
   derecha?: ReactNode; onPress?: () => void; ultima?: boolean;
   /** Ícono suelto, sin el cuadradito de fondo (estilo menú). */
@@ -296,24 +298,26 @@ export function Fila({ icono, colorIcono = colores.marino, fondoIcono = fondos.t
     <>
       {icono && (simple ? (
         <View style={s.filaIconoSimple}>
-          <Ionicons name={icono} size={21} color={colorIcono} />
+          <Ionicons name={icono} size={21} color={colorIcono === colores.blanco ? colores.marino : colorIcono} />
         </View>
       ) : (
         <View style={[s.filaIcono, { backgroundColor: fondoIcono }]}>
-          <Ionicons name={icono} size={19} color={colorIcono} />
+          <Ionicons name={icono} size={17} color={colorIcono} />
         </View>
       ))}
-      <View style={{ flex: 1 }}>
-        <Text style={s.filaTitulo} numberOfLines={2}>{titulo}</Text>
-        {detalle ? <Text style={s.filaDetalle} numberOfLines={2}>{detalle}</Text> : null}
+      <View style={[s.filaCuerpo, !ultima && s.filaLinea]}>
+        <View style={{ flex: 1 }}>
+          <Text style={s.filaTitulo} numberOfLines={2}>{titulo}</Text>
+          {detalle ? <Text style={s.filaDetalle} numberOfLines={2}>{detalle}</Text> : null}
+        </View>
+        {derecha ?? (onPress ? <Ionicons name="chevron-forward" size={16} color={colores.textoTenue} /> : null)}
       </View>
-      {derecha ?? (onPress ? <Ionicons name="chevron-forward" size={18} color={colores.textoTenue} /> : null)}
     </>
   );
-  const estilo = [s.fila, !ultima && s.filaLinea];
+  const estilo = s.fila;
   if (!onPress) return <View style={estilo}>{cuerpo}</View>;
   return (
-    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={titulo} style={({ pressed }) => [...estilo, pressed && { opacity: 0.6 }]}>
+    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={titulo} style={({ pressed }) => [estilo, pressed && { opacity: 0.55 }]}>
       {cuerpo}
     </Pressable>
   );
@@ -356,7 +360,7 @@ export function Boton({
       ) : (
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: espacio.s }}>
           {icono && <Ionicons name={icono} size={compacto ? 17 : 19} color={v.color} />}
-          <Text style={[s.botonTexto, compacto && { fontSize: 13.5 }, { color: v.color }]}>{etiqueta.toUpperCase()}</Text>
+          <Text style={[s.botonTexto, compacto && { fontSize: 15 }, { color: v.color }]}>{etiqueta}</Text>
         </View>
       )}
     </PressableAnimado>
@@ -364,10 +368,11 @@ export function Boton({
 }
 
 const variantesBoton = (): Record<string, { caja: ViewStyle; presionado: ViewStyle; color: string }> => ({
-  primario: { caja: { backgroundColor: fondos.marino, ...sombras.suave }, presionado: { backgroundColor: fondos.marinoProfundo }, color: colores.blanco },
-  secundario: { caja: { backgroundColor: fondos.superficieBlanca, borderWidth: 1.5, borderColor: colores.marino }, presionado: { backgroundColor: fondos.tarjeta }, color: colores.marino },
-  peligro: { caja: { backgroundColor: fondos.rojoFondo }, presionado: { opacity: 0.8 }, color: colores.rojo },
-  fantasma: { caja: { backgroundColor: 'transparent' }, presionado: { backgroundColor: fondos.tarjeta }, color: colores.marino },
+  primario: { caja: { backgroundColor: fondos.marino }, presionado: { opacity: 0.85 }, color: colores.blanco },
+  // Botón "teñido" de iOS: relleno suave del color de marca, sin borde.
+  secundario: { caja: { backgroundColor: fondos.tarjeta }, presionado: { opacity: 0.75 }, color: colores.marino },
+  peligro: { caja: { backgroundColor: fondos.rojoFondo }, presionado: { opacity: 0.75 }, color: colores.rojo },
+  fantasma: { caja: { backgroundColor: 'transparent' }, presionado: { opacity: 0.5 }, color: colores.marino },
   claro: { caja: { backgroundColor: fondos.blanco }, presionado: { backgroundColor: colores.cielo }, color: colores.marinoFijo },
 });
 
@@ -382,9 +387,9 @@ export function BotonIcono({ icono, etiqueta, onPress, claro, plano, tamano = 22
       accessibilityRole="button"
       accessibilityLabel={etiqueta}
       hitSlop={6}
-      style={({ pressed }) => [s.botonIcono, plano ? null : claro ? { backgroundColor: 'rgba(255,255,255,0.14)' } : { backgroundColor: fondos.superficieBlanca, ...sombras.suave }, pressed && { opacity: 0.6 }]}
+      style={({ pressed }) => [s.botonIcono, plano ? null : claro ? { backgroundColor: 'rgba(255,255,255,0.18)' } : { backgroundColor: fondos.relleno }, pressed && { opacity: 0.5 }]}
     >
-      <Ionicons name={icono} size={tamano} color={claro && !plano ? colores.blanco : colores.marino} />
+      <Ionicons name={icono} size={plano ? tamano : Math.min(tamano, 19)} color={claro && !plano ? colores.blanco : plano ? colores.marino : colores.textoSuave} />
     </Pressable>
   );
 }
@@ -416,7 +421,7 @@ export function Campo({ etiqueta, ayuda, estilo, limpiable, ...props }: TextInpu
           accessibilityLabel={etiqueta}
           accessibilityHint={ayuda}
           placeholderTextColor={colores.textoTenue}
-          style={[s.campo, foco && { borderColor: colores.marino, borderWidth: 1.5 }, props.multiline && { minHeight: 110, paddingTop: espacio.m, textAlignVertical: 'top' }, limpiable && { paddingRight: 44 }]}
+          style={[s.campo, foco && { borderColor: colores.marino }, props.multiline && { minHeight: 110, paddingTop: espacio.m, textAlignVertical: 'top' }, limpiable && { paddingRight: 44 }]}
           {...props}
           onFocus={(e) => { setFoco(true); props.onFocus?.(e); }}
           onBlur={(e) => { setFoco(false); props.onBlur?.(e); }}
@@ -452,7 +457,7 @@ export function Opcion({ texto: t, detalle, elegida, onPress, icono }: { texto: 
         <Text style={s.opcionTexto}>{t}</Text>
         {detalle ? <Text style={s.filaDetalle}>{detalle}</Text> : null}
       </View>
-      <View style={[s.radio, elegida && { borderColor: colores.marino }]}>{elegida && <View style={s.radioPunto} />}</View>
+      <View style={[s.radio, elegida && { borderColor: colores.marino, backgroundColor: fondos.marino }]}>{elegida && <Ionicons name="checkmark" size={15} color={colores.blanco} />}</View>
     </Pressable>
   );
 }
@@ -468,7 +473,7 @@ export function Chip({ texto: t, elegido, onPress, icono }: { texto: string; ele
       disabled={!onPress}
       accessibilityRole={onPress ? 'button' : undefined}
       accessibilityState={{ selected: elegido }}
-      style={[s.chip, elegido && { backgroundColor: fondos.marino, borderColor: colores.marino }, { transform: [{ scale: escala }] }]}
+      style={[s.chip, elegido && { backgroundColor: fondos.marino }, { transform: [{ scale: escala }] }]}
     >
       {icono && <Ionicons name={icono} size={14} color={elegido ? colores.blanco : colores.marino} />}
       <Text style={[s.chipTexto, elegido && { color: colores.blanco }]}>{t}</Text>
@@ -500,7 +505,7 @@ export function Segmentado<T extends string>({ opciones, valor, onCambio, deshab
         const apagada = !activo && !!deshabilitadas?.includes(o.valor);
         return (
           <Pressable key={o.valor} onPress={apagada ? undefined : () => onCambio(o.valor)} disabled={apagada} accessibilityRole="tab" accessibilityState={{ selected: activo, disabled: apagada }} style={[s.segmento, activo && s.segmentoActivo, apagada && { opacity: 0.45 }]}>
-            <Text style={[s.segmentoTexto, activo && { color: colores.marino, fontFamily: fuentes.semibold }]}>{o.texto}</Text>
+            <Text style={[s.segmentoTexto, activo && { color: colores.texto, fontFamily: fuentes.semibold }]}>{o.texto}</Text>
           </Pressable>
         );
       })}
@@ -588,11 +593,11 @@ export function EstadoVacio({ icono, titulo, texto: t, accion }: { icono: Nombre
   return (
     <View style={s.vacio}>
       <View style={s.vacioIcono}>
-        <Ionicons name={icono} size={28} color={colores.marino} />
+        <Ionicons name={icono} size={40} color={colores.textoTenue} />
       </View>
       <Text style={s.vacioTitulo}>{titulo}</Text>
       {t ? <Text style={s.vacioTexto}>{t}</Text> : null}
-      {accion && <Boton texto={accion.texto} onPress={accion.onPress} variante="secundario" compacto estilo={{ marginTop: espacio.m, alignSelf: 'center' }} />}
+      {accion && <Boton texto={accion.texto} onPress={accion.onPress} variante="secundario" compacto estilo={{ marginTop: espacio.l, alignSelf: 'center' }} />}
     </View>
   );
 }
@@ -600,7 +605,7 @@ export function EstadoVacio({ icono, titulo, texto: t, accion }: { icono: Nombre
 export function Cargando({ texto: t }: { texto?: string }) {
   return (
     <View style={{ paddingVertical: espacio.xxl, alignItems: 'center', gap: espacio.m }}>
-      <ActivityIndicator color={colores.marino} size="large" />
+      <ActivityIndicator color={colores.textoTenue} size="large" />
       {t ? <Text style={s.filaDetalle}>{t}</Text> : null}
     </View>
   );
@@ -667,8 +672,11 @@ export function Hoja({ visible, titulo, onCerrar, children }: { visible: boolean
         <Animated.View style={[s.hoja, estiloHoja, movimiento]} pointerEvents={visible ? 'auto' : 'none'}>
           {!centrada && <View style={s.hojaAsa} />}
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: espacio.l, paddingTop: centrada ? espacio.m : 0 }}>
-            <Text style={[s.barraTitulo, { textAlign: 'left' }]}>{mostrado.titulo}</Text>
-            <BotonIcono icono="close" etiqueta="Cerrar" onPress={onCerrar} tamano={20} />
+            <View style={{ width: 30 }} />
+            <Text style={s.barraTitulo} numberOfLines={2} accessibilityRole="header">{mostrado.titulo}</Text>
+            <Pressable onPress={onCerrar} accessibilityRole="button" accessibilityLabel="Cerrar" hitSlop={10} style={({ pressed }) => [s.hojaCerrar, pressed && { opacity: 0.5 }]}>
+              <Ionicons name="close" size={18} color={colores.textoSuave} />
+            </Pressable>
           </View>
           <ScrollView keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive" showsVerticalScrollIndicator={false} style={{ flexShrink: 1 }}>
             {mostrado.children}
@@ -701,110 +709,109 @@ export const s = crearEstilos(() => ({
   pantalla: { flex: 1, backgroundColor: fondos.fondo },
   contenido: { padding: espacio.l, paddingBottom: espacio.xxxl + espacio.xl },
 
-  cabecera: { backgroundColor: fondos.franja },
-  cabeceraBarra: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: espacio.m, paddingHorizontal: espacio.l, paddingBottom: espacio.s + 2 },
-  cabeceraLogo: { width: 34, height: 34, borderRadius: 17, backgroundColor: fondos.blanco, alignItems: 'center', justifyContent: 'center' },
-  cabeceraMarca: { fontFamily: fuentes.bold, fontSize: 17, color: colores.marinoOscuro },
-  cabeceraMarcaSub: { fontFamily: fuentes.medium, fontSize: 12.5, color: colores.marinoOscuro, flexShrink: 1 },
-  cabeceraAcciones: { flexDirection: 'row', alignItems: 'center', backgroundColor: fondos.superficieBlanca, borderRadius: 999, paddingHorizontal: 4, paddingVertical: 2, ...sombras.suave },
-  cabeceraSeparador: { width: StyleSheet.hairlineWidth, alignSelf: 'stretch', marginVertical: 8, backgroundColor: colores.linea },
-  cabeceraCuerpo: { paddingHorizontal: espacio.l, paddingTop: espacio.m, overflow: 'hidden' },
-  hojaContenido: { backgroundColor: fondos.fondo, borderTopLeftRadius: radio.xl + 6, borderTopRightRadius: radio.xl + 6, overflow: 'hidden' },
-  cabeceraBurbuja: { position: 'absolute', left: -70, top: -40, width: 150, height: 170, borderRadius: 85, backgroundColor: fondos.burbuja },
-  cabeceraTitulo: { fontFamily: fuentes.bold, fontSize: 32, lineHeight: 38, color: colores.marinoOscuro, letterSpacing: -0.5 },
-  cabeceraSub: { ...texto.cuerpo, color: colores.marinoOscuro, marginTop: 2 },
+  cabecera: { backgroundColor: fondos.fondo, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colores.linea },
+  cabeceraBarra: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: espacio.m, paddingHorizontal: espacio.l, paddingBottom: espacio.s },
+  cabeceraLogo: { width: 30, height: 30, borderRadius: 8, backgroundColor: fondos.blanco, alignItems: 'center', justifyContent: 'center' },
+  cabeceraMarca: { fontFamily: fuentes.semibold, fontSize: 17, letterSpacing: -0.35, color: colores.texto },
+  cabeceraMarcaSub: { fontFamily: fuentes.regular, fontSize: 13, color: colores.textoSuave, flexShrink: 1 },
+  cabeceraAcciones: { flexDirection: 'row', alignItems: 'center', gap: 2 },
+  cabeceraSeparador: { width: 0 },
+  cabeceraCuerpo: { paddingHorizontal: espacio.l, paddingTop: espacio.m },
+  cabeceraTitulo: { ...texto.display, color: colores.texto },
+  cabeceraSub: { fontFamily: fuentes.regular, fontSize: 15, lineHeight: 20, letterSpacing: -0.15, color: colores.textoSuave, marginTop: 2 },
 
   encabezado: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: espacio.xl },
   marca: { fontFamily: fuentes.bold, fontSize: 22, color: colores.marino, letterSpacing: 1 },
   barraSuperior: { flexDirection: 'row', alignItems: 'center', gap: espacio.s, marginBottom: espacio.l },
-  barraTitulo: { flex: 1, textAlign: 'center', fontFamily: fuentes.semibold, fontSize: 17, color: colores.marino },
+  barraTitulo: { flex: 1, textAlign: 'center', fontFamily: fuentes.semibold, fontSize: 17, letterSpacing: -0.35, color: colores.texto },
 
-  titulo: { fontFamily: fuentes.semibold, fontSize: 24, lineHeight: 30, color: colores.marino, textTransform: 'uppercase', letterSpacing: 0.4 },
-  sub: { fontFamily: fuentes.regular, fontSize: 15, lineHeight: 21, color: colores.textoSuave, marginTop: 4 },
+  titulo: { ...texto.titulo, fontSize: 28, lineHeight: 34, letterSpacing: -0.7, color: colores.texto },
+  sub: { fontFamily: fuentes.regular, fontSize: 15, lineHeight: 20, color: colores.textoSuave, marginTop: 4 },
   cuerpo: { ...texto.cuerpo, color: colores.texto },
-  fuerte: { fontFamily: fuentes.bold, fontSize: 17, color: colores.marino },
-  enlace: { fontFamily: fuentes.semibold, fontSize: 13.5, color: colores.azul },
+  fuerte: { fontFamily: fuentes.semibold, fontSize: 17, letterSpacing: -0.3, color: colores.texto },
+  enlace: { fontFamily: fuentes.regular, fontSize: 15, letterSpacing: -0.15, color: colores.azul },
 
   tarjeta: { borderRadius: radio.l, padding: espacio.l, marginBottom: espacio.m },
 
-  fila: { flexDirection: 'row', alignItems: 'center', gap: espacio.m, paddingVertical: espacio.m },
+  fila: { flexDirection: 'row', alignItems: 'center', gap: espacio.m, minHeight: 48 },
+  filaCuerpo: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: espacio.s, paddingVertical: espacio.m - 1, alignSelf: 'stretch' },
   filaLinea: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colores.linea },
-  filaIcono: { width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  filaIcono: { width: 30, height: 30, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
   filaIconoSimple: { width: 26, alignItems: 'center', justifyContent: 'center' },
-  filaTitulo: { fontFamily: fuentes.semibold, fontSize: 15, lineHeight: 20, color: colores.texto },
-  filaDetalle: { fontFamily: fuentes.regular, fontSize: 13, lineHeight: 18, color: colores.textoSuave },
+  filaTitulo: { fontFamily: fuentes.regular, fontSize: 16, lineHeight: 21, letterSpacing: -0.25, color: colores.texto },
+  filaDetalle: { fontFamily: fuentes.regular, fontSize: 13, lineHeight: 18, letterSpacing: -0.05, color: colores.textoSuave },
 
-  boton: { minHeight: 52, borderRadius: radio.m, alignItems: 'center', justifyContent: 'center', paddingHorizontal: espacio.l, marginTop: espacio.s },
-  botonCompacto: { minHeight: 40, paddingHorizontal: espacio.m, marginTop: 0 },
-  botonTexto: { fontFamily: fuentes.semibold, fontSize: 14.5, letterSpacing: 0.6 },
-  botonIcono: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  boton: { minHeight: 50, borderRadius: radio.pill, alignItems: 'center', justifyContent: 'center', paddingHorizontal: espacio.xl, marginTop: espacio.s },
+  botonCompacto: { minHeight: 36, paddingHorizontal: espacio.l, marginTop: 0 },
+  botonTexto: { fontFamily: fuentes.semibold, fontSize: 17, letterSpacing: -0.35 },
+  botonIcono: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
   flotante: {
     position: 'absolute', right: espacio.l, bottom: espacio.l, flexDirection: 'row', alignItems: 'center', gap: espacio.s,
     backgroundColor: fondos.marino, paddingHorizontal: espacio.l, height: 52, borderRadius: radio.pill, ...sombras.fuerte,
   },
-  pildoraSinConexion: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', marginTop: espacio.s, paddingHorizontal: espacio.m, paddingVertical: 6, borderRadius: 999, backgroundColor: fondos.superficieBlanca },
+  pildoraSinConexion: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', marginTop: espacio.s, paddingHorizontal: espacio.m, paddingVertical: 6, borderRadius: 999, backgroundColor: fondos.relleno },
   pildoraSinConexionTexto: { fontFamily: fuentes.medium, fontSize: 12.5, color: colores.marino, flexShrink: 1 },
   flotanteTexto: { fontFamily: fuentes.semibold, fontSize: 15, color: colores.blanco },
 
-  etiqueta: { fontFamily: fuentes.medium, fontSize: 13.5, color: colores.marinoOscuro, marginBottom: espacio.xs + 2 },
+  etiqueta: { fontFamily: fuentes.regular, fontSize: 13, letterSpacing: -0.05, color: colores.textoSuave, marginBottom: espacio.xs + 2, marginLeft: espacio.xs },
   campo: {
-    backgroundColor: fondos.superficieBlanca, borderWidth: 1, borderColor: colores.linea, borderRadius: radio.m,
-    paddingHorizontal: espacio.m + 2, minHeight: 50, fontSize: 16, fontFamily: fuentes.regular, color: colores.texto,
+    backgroundColor: fondos.superficieBlanca, borderWidth: 1, borderColor: colores.lineaSuave, borderRadius: radio.m,
+    paddingHorizontal: espacio.m + 2, minHeight: 48, fontSize: 16, letterSpacing: -0.2, fontFamily: fuentes.regular, color: colores.texto,
   },
   campoBorrar: { position: 'absolute', right: 0, top: 0, bottom: 0, width: 44, alignItems: 'center', justifyContent: 'center' },
   opcion: {
-    flexDirection: 'row', alignItems: 'center', gap: espacio.m, borderWidth: 1, borderColor: colores.lineaSuave, borderRadius: radio.l,
+    flexDirection: 'row', alignItems: 'center', gap: espacio.m, borderRadius: radio.m,
     padding: espacio.m + 2, marginBottom: espacio.s, backgroundColor: fondos.superficieBlanca,
   },
-  opcionElegida: { borderColor: colores.marino, borderWidth: 1.5, backgroundColor: fondos.tarjeta },
-  opcionTexto: { fontFamily: fuentes.semibold, fontSize: 15.5, color: colores.marino },
-  radio: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: colores.linea, alignItems: 'center', justifyContent: 'center' },
+  opcionElegida: {},
+  opcionTexto: { fontFamily: fuentes.medium, fontSize: 16, letterSpacing: -0.25, color: colores.texto },
+  radio: { width: 22, height: 22, borderRadius: 11, borderWidth: 1.5, borderColor: colores.linea, alignItems: 'center', justifyContent: 'center' },
   radioPunto: { width: 10, height: 10, borderRadius: 5, backgroundColor: colores.marino },
 
   chip: {
-    flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: espacio.m, height: 34, borderRadius: radio.pill,
-    borderWidth: 1, borderColor: colores.linea, backgroundColor: fondos.superficieBlanca,
+    flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: espacio.m + 2, height: 32, borderRadius: radio.pill,
+    backgroundColor: fondos.relleno,
   },
-  chipTexto: { fontFamily: fuentes.medium, fontSize: 13.5, color: colores.marino },
+  chipTexto: { fontFamily: fuentes.medium, fontSize: 14, letterSpacing: -0.15, color: colores.texto },
   insignia: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 3, borderRadius: radio.pill, alignSelf: 'flex-start' },
-  insigniaTexto: { fontFamily: fuentes.semibold, fontSize: 11.5, letterSpacing: 0.2 },
+  insigniaTexto: { fontFamily: fuentes.semibold, fontSize: 12, letterSpacing: 0 },
 
-  segmentado: { flexDirection: 'row', backgroundColor: fondos.lineaSuave, borderRadius: radio.m, padding: 3, marginBottom: espacio.l },
-  segmento: { flex: 1, height: 36, alignItems: 'center', justifyContent: 'center', borderRadius: radio.m - 3 },
-  segmentoActivo: { backgroundColor: fondos.superficieBlanca, ...sombras.suave },
-  segmentoTexto: { fontFamily: fuentes.medium, fontSize: 14, color: colores.textoSuave },
+  segmentado: { flexDirection: 'row', backgroundColor: fondos.relleno, borderRadius: 9, padding: 2, marginBottom: espacio.l },
+  segmento: { flex: 1, height: 32, alignItems: 'center', justifyContent: 'center', borderRadius: 7 },
+  segmentoActivo: { backgroundColor: fondos.seleccion, ...sombras.media },
+  segmentoTexto: { fontFamily: fuentes.medium, fontSize: 13.5, letterSpacing: -0.1, color: colores.texto },
 
-  contador: { flexDirection: 'row', alignItems: 'center', backgroundColor: fondos.tarjeta, borderRadius: radio.m, padding: 3 },
-  contadorBoton: { width: 34, height: 34, borderRadius: 9, backgroundColor: fondos.superficieBlanca, alignItems: 'center', justifyContent: 'center' },
-  contadorValor: { minWidth: 40, textAlign: 'center', fontFamily: fuentes.bold, fontSize: 16, color: colores.marino },
+  contador: { flexDirection: 'row', alignItems: 'center', backgroundColor: fondos.relleno, borderRadius: 9, padding: 2 },
+  contadorBoton: { width: 40, height: 32, borderRadius: 7, alignItems: 'center', justifyContent: 'center' },
+  contadorValor: { minWidth: 36, textAlign: 'center', fontFamily: fuentes.semibold, fontSize: 16, color: colores.texto },
 
   mensaje: {
     flexDirection: 'row', alignItems: 'center', gap: espacio.s, paddingVertical: espacio.m, paddingHorizontal: espacio.m,
-    borderRadius: radio.l, marginVertical: espacio.s, backgroundColor: fondos.superficieBlanca, borderWidth: 1, borderColor: colores.lineaSuave,
-    ...sombras.suave,
+    borderRadius: radio.l, marginVertical: espacio.s, backgroundColor: fondos.superficieBlanca,
   },
   mensajeIcono: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
-  mensajeTitulo: { fontFamily: fuentes.semibold, fontSize: 14.5, color: colores.texto, marginBottom: 2 },
+  mensajeTitulo: { fontFamily: fuentes.semibold, fontSize: 15, letterSpacing: -0.2, color: colores.texto, marginBottom: 2 },
   // Sin flex: 1: en Android estiraba el texto a todo el alto y quedaba arriba, descentrado.
-  mensajeTexto: { flexShrink: 1, fontFamily: fuentes.medium, fontSize: 14.5, lineHeight: 20, color: colores.texto },
+  mensajeTexto: { flexShrink: 1, fontFamily: fuentes.regular, fontSize: 15, lineHeight: 20, letterSpacing: -0.15, color: colores.texto },
   mensajeLinea: { alignSelf: 'center', maxWidth: 340, marginVertical: espacio.s, paddingHorizontal: espacio.s },
   mensajeLineaTexto: { fontFamily: fuentes.medium, fontSize: 14, lineHeight: 20, color: colores.texto, textAlign: 'center' },
 
   vacio: { alignItems: 'center', paddingVertical: espacio.l, paddingHorizontal: espacio.m },
-  vacioIcono: { width: 58, height: 58, borderRadius: 18, backgroundColor: fondos.tarjeta, alignItems: 'center', justifyContent: 'center', marginBottom: espacio.m },
-  vacioTitulo: { fontFamily: fuentes.semibold, fontSize: 16, color: colores.marino, textAlign: 'center' },
+  vacioIcono: { alignItems: 'center', justifyContent: 'center', marginBottom: espacio.s },
+  vacioTitulo: { fontFamily: fuentes.semibold, fontSize: 19, letterSpacing: -0.4, color: colores.texto, textAlign: 'center' },
   vacioTexto: { ...texto.chico, color: colores.textoSuave, textAlign: 'center', marginTop: espacio.xs, maxWidth: 300 },
 
   item: { flex: 1, fontFamily: fuentes.regular, fontSize: 15, lineHeight: 21, color: colores.texto },
   punto: { width: 6, height: 6, borderRadius: 3, backgroundColor: colores.marino, marginTop: 8 },
-  seccion: { ...texto.etiqueta, color: colores.marino, marginBottom: espacio.s, marginTop: espacio.m },
+  seccion: { ...texto.etiqueta, color: colores.textoSuave, marginBottom: espacio.s, marginTop: espacio.m, marginLeft: espacio.xs },
   seccionFila: { flexDirection: 'row', alignItems: 'center', gap: espacio.s, marginBottom: espacio.m, marginTop: espacio.m },
-  seccionTexto: { fontFamily: fuentes.bold, fontSize: 17, color: colores.texto },
+  seccionTexto: { fontFamily: fuentes.bold, fontSize: 20, letterSpacing: -0.45, color: colores.texto },
 
-  veloFondo: { backgroundColor: 'rgba(14, 58, 85, 0.45)' },
+  veloFondo: { backgroundColor: 'rgba(0, 0, 0, 0.32)' },
   hoja: {
-    backgroundColor: fondos.fondo, borderTopLeftRadius: radio.xl, borderTopRightRadius: radio.xl, paddingHorizontal: espacio.l,
-    paddingTop: espacio.s, maxHeight: '88%',
+    backgroundColor: fondos.fondo, borderTopLeftRadius: radio.xl + 6, borderTopRightRadius: radio.xl + 6, paddingHorizontal: espacio.l,
+    paddingTop: espacio.s - 2, maxHeight: '90%',
   },
-  hojaAsa: { alignSelf: 'center', width: 40, height: 5, borderRadius: 3, backgroundColor: fondos.linea, marginBottom: espacio.m },
+  hojaAsa: { alignSelf: 'center', width: 36, height: 5, borderRadius: 3, backgroundColor: fondos.linea, marginBottom: espacio.m },
+  hojaCerrar: { width: 30, height: 30, borderRadius: 15, backgroundColor: fondos.relleno, alignItems: 'center', justifyContent: 'center' },
 }));

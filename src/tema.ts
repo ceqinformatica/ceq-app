@@ -1,10 +1,12 @@
 import { Platform, StyleSheet, type ImageStyle, type TextStyle, type ViewStyle } from 'react-native';
 
 /**
- * Identidad visual del CEQ: cabeceras con degradado azul y ondas, azul
- * del CEQ para textos y botones, tarjetas blancas sobre fondo azul muy
- * claro y tipografía Inter. Sin verdes ni naranjas: los estados se
- * distinguen con tonos de azul y gris. Cambiar algo acá lo cambia en toda la app.
+ * Identidad visual del CEQ con el estilo de las apps de Apple: fondo gris
+ * agrupado, fichas blancas sin bordes, títulos grandes en negro, el azul
+ * del CEQ solo para lo que se toca (botones, enlaces, íconos) y separadores
+ * finitos. Tipografía Inter con la escala de iOS. Sin verdes ni naranjas:
+ * los estados se distinguen con tonos de azul y gris. Cambiar algo acá lo
+ * cambia en toda la app.
  *
  * Hay dos temas (claro y oscuro). Cada color tiene dos usos:
  * - `colores.x` para texto, íconos y bordes (la "tinta").
@@ -26,17 +28,17 @@ const claro = {
   cielo: '#DCE8F8',         // fondos destacados
   celeste: '#CFE0F6',
   celesteVivo: '#8DB8EE',   // detalles sobre fondo marino
-  tarjeta: '#EEF4FC',       // fondo de tarjetas (igual que la web)
+  tarjeta: '#EAF1FA',       // relleno teñido de azul (íconos, avisos suaves)
 
   // Superficies y texto
-  fondo: '#F3F7FC',
-  fondoSuave: '#F5F9FE',
+  fondo: '#F2F2F7',         // fondo agrupado de iOS
+  fondoSuave: '#F7F7FA',
   superficieBlanca: '#FFFFFF',
-  texto: '#17233A',
-  textoSuave: '#55657E',
-  textoTenue: '#8896AB',
-  linea: '#D6E2F2',
-  lineaSuave: '#E7EEF8',
+  texto: '#0B0B0F',
+  textoSuave: '#6C6C72',
+  textoTenue: '#8E8E93',
+  linea: '#D1D1D6',         // separadores
+  lineaSuave: '#E5E5EA',
   blanco: '#FFFFFF',
 
   // Estados (semáforo de firma, avisos)
@@ -51,9 +53,9 @@ const claro = {
 
   // Alias usados por las pantallas
   primario: '#1B4B9B',
-  primarioSuave: '#EEF4FC',
-  superficie: '#EEF4FC',
-  borde: '#D6E2F2',
+  primarioSuave: '#EAF1FA',
+  superficie: '#EAF1FA',
+  borde: '#D1D1D6',
 
   // Marino de marca que no cambia con el tema (texto sobre fondos blancos fijos: logo, QR, botón claro)
   marinoFijo: '#1B4B9B',
@@ -62,8 +64,15 @@ const claro = {
   celesteMarca: '#1E5BB0',
 
   // Franja superior de las pantallas (barra "Portal CEQ") y burbuja decorativa del título
-  franja: '#C8DBF0',
-  burbuja: '#DDEAF8',
+  franja: '#F2F2F7',
+  burbuja: '#E4EEF9',
+
+  // Rellenos neutros al estilo iOS: pista de controles segmentados, chips, buscador
+  relleno: '#E9E9EE',
+  // Segmento elegido / superficie elevada
+  seleccion: '#FFFFFF',
+  // Barra de pestañas (material casi opaco)
+  barra: 'rgba(249, 249, 251, 0.94)',
 
   // Pantallas de acceso (portada, iniciar sesión, crear cuenta): cabecera celeste claro y marcas de regla
   cabeceraAcceso: '#C6E3F7',
@@ -82,16 +91,16 @@ const tintaOscura: Paleta = {
   cielo: '#D9EFFB',
   celeste: '#C6E6F8',
   celesteVivo: '#8FD0F3',
-  tarjeta: '#16223A',
+  tarjeta: '#15243A',
 
-  fondo: '#0B1222',
-  fondoSuave: '#0E1628',
-  superficieBlanca: '#131D33',
-  texto: '#E4EAF3',
-  textoSuave: '#A3B0C6',
-  textoTenue: '#76849C',
-  linea: '#26344F',
-  lineaSuave: '#1C2840',
+  fondo: '#000000',
+  fondoSuave: '#0A0A0C',
+  superficieBlanca: '#1C1C1E',
+  texto: '#F5F5F7',
+  textoSuave: '#A1A1A8',
+  textoTenue: '#7C7C83',
+  linea: '#38383A',
+  lineaSuave: '#2C2C2E',
   blanco: '#FFFFFF',
 
   verde: '#86B0F0',
@@ -101,16 +110,19 @@ const tintaOscura: Paleta = {
   rojo: '#F08A80',
   rojoFondo: '#3B1B19',
   gris: '#9AA8B5',
-  grisFondo: '#18223A',
+  grisFondo: '#2C2C2E',
 
   primario: '#9DBFF2',
-  primarioSuave: '#16223A',
-  superficie: '#16223A',
-  borde: '#26344F',
+  primarioSuave: '#15243A',
+  superficie: '#15243A',
+  borde: '#38383A',
   marinoFijo: '#1B4B9B',
   celesteMarca: '#8CCDF2',
-  franja: '#14233F',
-  burbuja: '#122038',
+  franja: '#000000',
+  burbuja: '#16263F',
+  relleno: '#2C2C2E',
+  seleccion: '#5A5A5F',
+  barra: 'rgba(22, 22, 24, 0.94)',
   cabeceraAcceso: '#1A2D52',
   regla: '#3A5A85',
 };
@@ -191,28 +203,32 @@ export const fuentes = {
   bold: 'Inter_700Bold',
 };
 
-/** Escala tipográfica. Los títulos van en mayúsculas, como en la web. */
+/**
+ * Escala tipográfica con las proporciones de iOS (Large Title, Title,
+ * Headline, Body, Footnote...). El espaciado entre letras depende del
+ * tamaño: negativo en los títulos grandes y casi cero en el texto corrido.
+ */
 export const texto = {
-  display: { fontFamily: fuentes.bold, fontSize: 30, lineHeight: 36, letterSpacing: -0.4 },
-  titulo: { fontFamily: fuentes.semibold, fontSize: 22, lineHeight: 28, letterSpacing: 0.2 },
-  subtitulo: { fontFamily: fuentes.semibold, fontSize: 17, lineHeight: 23 },
-  cuerpo: { fontFamily: fuentes.regular, fontSize: 15, lineHeight: 22 },
-  cuerpoFuerte: { fontFamily: fuentes.semibold, fontSize: 15, lineHeight: 22 },
-  chico: { fontFamily: fuentes.regular, fontSize: 13, lineHeight: 18 },
-  etiqueta: { fontFamily: fuentes.semibold, fontSize: 11.5, lineHeight: 15, letterSpacing: 0.9, textTransform: 'uppercase' as const },
-  numero: { fontFamily: fuentes.bold, fontSize: 28, lineHeight: 32, letterSpacing: -0.5 },
+  display: { fontFamily: fuentes.bold, fontSize: 34, lineHeight: 41, letterSpacing: -0.9 },
+  titulo: { fontFamily: fuentes.bold, fontSize: 22, lineHeight: 28, letterSpacing: -0.45 },
+  subtitulo: { fontFamily: fuentes.semibold, fontSize: 17, lineHeight: 22, letterSpacing: -0.3 },
+  cuerpo: { fontFamily: fuentes.regular, fontSize: 16, lineHeight: 22, letterSpacing: -0.2 },
+  cuerpoFuerte: { fontFamily: fuentes.semibold, fontSize: 16, lineHeight: 22, letterSpacing: -0.25 },
+  chico: { fontFamily: fuentes.regular, fontSize: 13, lineHeight: 18, letterSpacing: -0.05 },
+  etiqueta: { fontFamily: fuentes.medium, fontSize: 12.5, lineHeight: 16, letterSpacing: 0.1, textTransform: 'uppercase' as const },
+  numero: { fontFamily: fuentes.bold, fontSize: 28, lineHeight: 34, letterSpacing: -0.7 },
 };
 
 export const espacio = { xxs: 2, xs: 4, s: 8, m: 12, l: 16, xl: 24, xxl: 32, xxxl: 48 };
-export const radio = { s: 8, m: 12, l: 16, xl: 22, pill: 9999 };
+export const radio = { s: 8, m: 12, l: 14, xl: 20, pill: 9999 };
 
-/** Sombras suaves teñidas de celeste profundo (iOS/web) y elevación (Android). */
+/** Sombras neutras y muy suaves, como en iOS (en las listas agrupadas casi no se ven). */
 function sombra(altura: number, opacidad: number, desenfoque: number, elevacion: number): ViewStyle {
   return Platform.select<ViewStyle>({
-    android: { elevation: elevacion, shadowColor: '#123C88' },
-    web: { boxShadow: `0px ${altura}px ${desenfoque}px rgba(18, 60, 136, ${opacidad})` } as ViewStyle,
+    android: { elevation: elevacion, shadowColor: '#000000' },
+    web: { boxShadow: `0px ${altura}px ${desenfoque}px rgba(0, 0, 0, ${opacidad})` } as ViewStyle,
     default: {
-      shadowColor: '#123C88',
+      shadowColor: '#000000',
       shadowOffset: { width: 0, height: altura },
       shadowOpacity: opacidad,
       shadowRadius: desenfoque / 2,
@@ -221,9 +237,9 @@ function sombra(altura: number, opacidad: number, desenfoque: number, elevacion:
 }
 
 export const sombras = {
-  suave: sombra(2, 0.06, 10, 2),
-  media: sombra(6, 0.1, 20, 5),
-  fuerte: sombra(12, 0.18, 32, 10),
+  suave: sombra(1, 0.04, 6, 1),
+  media: sombra(6, 0.08, 24, 4),
+  fuerte: sombra(14, 0.16, 40, 10),
 };
 
 const oscuro = () => esquema === 'oscuro';

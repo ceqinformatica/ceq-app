@@ -1,8 +1,8 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import type { MaterialTopTabBarProps } from 'expo-router/js-top-tabs';
 import { type ComponentProps } from 'react';
-import { Animated, Pressable, Text, View } from 'react-native';
-import { colores, fondos, fuentes, sombras } from '../tema';
+import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
+import { colores, fondos, fuentes } from '../tema';
 import { vibrar } from './movimiento';
 
 type Icono = ComponentProps<typeof Ionicons>['name'];
@@ -19,10 +19,12 @@ export const ICONOS_PESTANAS: Record<string, string> = {
 export const ANCHO_BARRA_LATERAL = 104;
 
 /**
- * Barra de pestañas propia: la pastilla celeste detrás del ícono sigue al
- * dedo mientras se desliza entre páginas (lee `position` del deslizador),
- * así no hay saltos ni la página anterior asomando. Abajo en el celular y
- * a la izquierda en tablet horizontal.
+ * Barra de pestañas al estilo iOS: material casi opaco con una línea finita
+ * arriba, ícono relleno y en el color de marca en la pestaña elegida, gris
+ * en las demás. El cambio de ícono sigue al dedo mientras se desliza entre
+ * páginas (lee `position` del deslizador). Abajo en el celular y a la
+ * izquierda en tablet horizontal (como la barra lateral del iPad, con la
+ * pestaña elegida resaltada).
  */
 export function BarraPestanas({ state, descriptors, emitter, jumpTo, position, insets, lateral }: MaterialTopTabBarProps & { lateral: boolean }) {
   const abajo = Math.max(insets.bottom, 6);
@@ -30,10 +32,10 @@ export function BarraPestanas({ state, descriptors, emitter, jumpTo, position, i
     <View
       accessibilityRole="tablist"
       style={[
-        { backgroundColor: fondos.superficieBlanca, ...sombras.media },
+        { backgroundColor: fondos.barra, borderColor: colores.linea },
         lateral
-          ? { position: 'absolute', left: -ANCHO_BARRA_LATERAL, top: 0, bottom: 0, width: ANCHO_BARRA_LATERAL, paddingTop: insets.top + 12, gap: 6 }
-          : { flexDirection: 'row', height: 62 + abajo, paddingTop: 6, paddingBottom: abajo, paddingLeft: insets.left, paddingRight: insets.right },
+          ? { position: 'absolute', left: -ANCHO_BARRA_LATERAL, top: 0, bottom: 0, width: ANCHO_BARRA_LATERAL, paddingTop: insets.top + 12, gap: 6, borderRightWidth: StyleSheet.hairlineWidth }
+          : { flexDirection: 'row', height: 54 + abajo, paddingTop: 5, paddingBottom: abajo, paddingLeft: insets.left, paddingRight: insets.right, borderTopWidth: StyleSheet.hairlineWidth },
       ]}
     >
       {state.routes.map((route, i) => {
@@ -58,24 +60,23 @@ export function BarraPestanas({ state, descriptors, emitter, jumpTo, position, i
             accessibilityLabel={titulo}
             style={lateral ? { alignItems: 'center', paddingVertical: 8 } : { flex: 1, alignItems: 'center', justifyContent: 'center' }}
           >
-            <View style={{ width: 56, height: 32, alignItems: 'center', justifyContent: 'center' }}>
-              <Animated.View
-                style={{
-                  position: 'absolute', width: 56, height: 32, borderRadius: 16, backgroundColor: fondos.cielo,
-                  opacity: cerca, transform: [{ scaleX: cerca.interpolate({ inputRange: [0, 1], outputRange: [0.5, 1] }) }],
-                }}
-              />
+            <View style={{ width: 56, height: lateral ? 34 : 28, alignItems: 'center', justifyContent: 'center' }}>
+              {lateral ? (
+                <Animated.View
+                  style={{ position: 'absolute', width: 56, height: 34, borderRadius: 10, backgroundColor: fondos.relleno, opacity: cerca }}
+                />
+              ) : null}
               {/* Contorno y relleno superpuestos: el relleno aparece a medida que la página llega. */}
               <Animated.View style={{ position: 'absolute', opacity: cerca.interpolate({ inputRange: [0, 1], outputRange: [1, 0] }) }}>
-                <Ionicons name={`${base}-outline` as Icono} color={colores.textoSuave} size={21} />
+                <Ionicons name={`${base}-outline` as Icono} color={colores.textoTenue} size={24} />
               </Animated.View>
-              <Animated.View style={{ opacity: cerca, transform: [{ scale: cerca.interpolate({ inputRange: [0, 1], outputRange: [0.9, 1] }) }] }}>
-                <Ionicons name={base as Icono} color={colores.marino} size={21} />
+              <Animated.View style={{ opacity: cerca }}>
+                <Ionicons name={base as Icono} color={colores.marino} size={24} />
               </Animated.View>
             </View>
             <Text
               numberOfLines={1}
-              style={{ fontFamily: elegida ? fuentes.bold : fuentes.semibold, fontSize: 11, marginTop: 3, color: elegida ? colores.marino : colores.textoSuave }}
+              style={{ fontFamily: fuentes.medium, fontSize: 10.5, letterSpacing: 0.1, marginTop: 1, color: elegida ? colores.marino : colores.textoTenue }}
             >
               {titulo}
             </Text>

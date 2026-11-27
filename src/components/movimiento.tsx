@@ -8,6 +8,11 @@ import { AccessibilityInfo, Animated, Easing, Platform, Pressable, Text, type St
  * teléfono: si está activado, las cosas aparecen directamente.
  */
 
+/** Curva de salida fuerte para lo que entra o responde al toque. */
+export const CURVA_SALIDA = Easing.bezier(0.23, 1, 0.32, 1);
+/** Curva de las hojas de iOS (abrir y cerrar). */
+export const CURVA_HOJA = Easing.bezier(0.32, 0.72, 0, 1);
+
 let reducido = false;
 AccessibilityInfo.isReduceMotionEnabled?.()
   .then((r) => { reducido = r; })
@@ -43,7 +48,7 @@ export function vibrar(tipo: 'toque' | 'exito' = 'toque') {
 }
 
 /** Estilo animado de entrada (opacidad y desplazamiento), para combinar con otros. */
-export function useAparecer(retraso = 0, distancia = 14) {
+export function useAparecer(retraso = 0, distancia = 8) {
   const r = useReducido();
   const v = useRef(new Animated.Value(reducido ? 1 : 0)).current;
   useEffect(() => {
@@ -52,7 +57,7 @@ export function useAparecer(retraso = 0, distancia = 14) {
       v.setValue(1);
       return;
     }
-    const a = Animated.timing(v, { toValue: 1, duration: 380, delay: retraso, easing: Easing.out(Easing.cubic), useNativeDriver: Platform.OS !== 'web' });
+    const a = Animated.timing(v, { toValue: 1, duration: 360, delay: retraso, easing: CURVA_SALIDA, useNativeDriver: Platform.OS !== 'web' });
     a.start();
     return () => a.stop();
   }, [v, retraso, r]);
@@ -60,7 +65,7 @@ export function useAparecer(retraso = 0, distancia = 14) {
 }
 
 /** Aparece subiendo un poco y ganando opacidad. `retraso` en ms para escalonar. */
-export function Aparecer({ children, retraso = 0, estilo, distancia = 14 }: {
+export function Aparecer({ children, retraso = 0, estilo, distancia = 8 }: {
   children: ReactNode; retraso?: number; estilo?: StyleProp<ViewStyle>; distancia?: number;
 }) {
   const { opacity, translateY } = useAparecer(retraso, distancia);
@@ -78,11 +83,13 @@ export function usePresion(hasta = 0.96) {
     escala,
     onPressIn: () => {
       if (reducido) return;
-      Animated.spring(escala, { toValue: hasta, speed: 40, bounciness: 0, useNativeDriver: nativo }).start();
+      // Respuesta inmediata al apoyar el dedo (curva de salida fuerte, 120 ms).
+      Animated.timing(escala, { toValue: hasta, duration: 120, easing: CURVA_SALIDA, useNativeDriver: nativo }).start();
     },
     onPressOut: () => {
       if (reducido) return;
-      Animated.spring(escala, { toValue: 1, speed: 14, bounciness: 10, useNativeDriver: nativo }).start();
+      // Vuelve con un resorte casi sin rebote, como los botones de iOS.
+      Animated.spring(escala, { toValue: 1, stiffness: 420, damping: 30, mass: 1, useNativeDriver: nativo }).start();
     },
   };
 }
@@ -141,13 +148,14 @@ export function useEntradaFlotante(visible: boolean) {
     if (visible) {
       setMontado(true);
       if (r) { progreso.setValue(1); return; }
-      const a = Animated.spring(progreso, { toValue: 1, speed: 16, bounciness: 4, useNativeDriver: nativo });
+      // Resorte críticamente amortiguado (sin pasarse), con la respuesta de las hojas de iOS.
+      const a = Animated.spring(progreso, { toValue: 1, stiffness: 320, damping: 36, mass: 1, overshootClamping: true, useNativeDriver: nativo });
       a.start();
       return () => a.stop();
     }
     if (r) { progreso.setValue(0); setMontado(false); return; }
     let vivo = true;
-    const a = Animated.timing(progreso, { toValue: 0, duration: 170, easing: Easing.in(Easing.quad), useNativeDriver: nativo });
+    const a = Animated.timing(progreso, { toValue: 0, duration: 240, easing: CURVA_HOJA, useNativeDriver: nativo });
     a.start(({ finished }) => { if (finished && vivo) setMontado(false); });
     return () => { vivo = false; a.stop(); };
   }, [visible, r, progreso]);
