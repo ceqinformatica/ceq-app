@@ -712,7 +712,7 @@ export const s = crearEstilos(() => ({
   cabecera: { backgroundColor: fondos.fondo, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colores.linea },
   cabeceraBarra: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: espacio.m, paddingHorizontal: espacio.l, paddingBottom: espacio.s },
   cabeceraLogo: { width: 30, height: 30, borderRadius: 8, backgroundColor: fondos.blanco, alignItems: 'center', justifyContent: 'center' },
-  cabeceraMarca: { fontFamily: fuentes.semibold, fontSize: 17, letterSpacing: -0.35, color: colores.texto },
+  cabeceraMarca: { fontFamily: fuentes.bold, fontSize: 17, letterSpacing: -0.35, color: colores.texto },
   cabeceraMarcaSub: { fontFamily: fuentes.regular, fontSize: 13, color: colores.textoSuave, flexShrink: 1 },
   cabeceraAcciones: { flexDirection: 'row', alignItems: 'center', gap: 2 },
   cabeceraSeparador: { width: 0 },
@@ -723,13 +723,13 @@ export const s = crearEstilos(() => ({
   encabezado: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: espacio.xl },
   marca: { fontFamily: fuentes.bold, fontSize: 22, color: colores.marino, letterSpacing: 1 },
   barraSuperior: { flexDirection: 'row', alignItems: 'center', gap: espacio.s, marginBottom: espacio.l },
-  barraTitulo: { flex: 1, textAlign: 'center', fontFamily: fuentes.semibold, fontSize: 17, letterSpacing: -0.35, color: colores.texto },
+  barraTitulo: { flex: 1, textAlign: 'center', fontFamily: fuentes.bold, fontSize: 17, letterSpacing: -0.35, color: colores.texto },
 
   titulo: { ...texto.titulo, fontSize: 28, lineHeight: 34, letterSpacing: -0.7, color: colores.texto },
   sub: { fontFamily: fuentes.regular, fontSize: 15, lineHeight: 20, color: colores.textoSuave, marginTop: 4 },
   cuerpo: { ...texto.cuerpo, color: colores.texto },
-  fuerte: { fontFamily: fuentes.semibold, fontSize: 17, letterSpacing: -0.3, color: colores.texto },
-  enlace: { fontFamily: fuentes.regular, fontSize: 15, letterSpacing: -0.15, color: colores.azul },
+  fuerte: { fontFamily: fuentes.bold, fontSize: 17, letterSpacing: -0.3, color: colores.texto },
+  enlace: { fontFamily: fuentes.semibold, fontSize: 15, letterSpacing: -0.15, color: colores.azul },
 
   tarjeta: { borderRadius: radio.l, padding: espacio.l, marginBottom: espacio.m },
 
@@ -738,7 +738,7 @@ export const s = crearEstilos(() => ({
   filaLinea: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colores.linea },
   filaIcono: { width: 30, height: 30, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
   filaIconoSimple: { width: 26, alignItems: 'center', justifyContent: 'center' },
-  filaTitulo: { fontFamily: fuentes.regular, fontSize: 16, lineHeight: 21, letterSpacing: -0.25, color: colores.texto },
+  filaTitulo: { fontFamily: fuentes.semibold, fontSize: 16, lineHeight: 21, letterSpacing: -0.25, color: colores.texto },
   filaDetalle: { fontFamily: fuentes.regular, fontSize: 13, lineHeight: 18, letterSpacing: -0.05, color: colores.textoSuave },
 
   boton: { minHeight: 50, borderRadius: radio.pill, alignItems: 'center', justifyContent: 'center', paddingHorizontal: espacio.xl, marginTop: espacio.s },
@@ -753,7 +753,7 @@ export const s = crearEstilos(() => ({
   pildoraSinConexionTexto: { fontFamily: fuentes.medium, fontSize: 12.5, color: colores.marino, flexShrink: 1 },
   flotanteTexto: { fontFamily: fuentes.semibold, fontSize: 15, color: colores.blanco },
 
-  etiqueta: { fontFamily: fuentes.regular, fontSize: 13, letterSpacing: -0.05, color: colores.textoSuave, marginBottom: espacio.xs + 2, marginLeft: espacio.xs },
+  etiqueta: { fontFamily: fuentes.medium, fontSize: 13, letterSpacing: -0.05, color: colores.textoSuave, marginBottom: espacio.xs + 2 },
   campo: {
     backgroundColor: fondos.superficieBlanca, borderWidth: 1, borderColor: colores.lineaSuave, borderRadius: radio.m,
     paddingHorizontal: espacio.m + 2, minHeight: 48, fontSize: 16, letterSpacing: -0.2, fontFamily: fuentes.regular, color: colores.texto,
@@ -764,7 +764,7 @@ export const s = crearEstilos(() => ({
     padding: espacio.m + 2, marginBottom: espacio.s, backgroundColor: fondos.superficieBlanca,
   },
   opcionElegida: {},
-  opcionTexto: { fontFamily: fuentes.medium, fontSize: 16, letterSpacing: -0.25, color: colores.texto },
+  opcionTexto: { fontFamily: fuentes.semibold, fontSize: 16, letterSpacing: -0.25, color: colores.texto },
   radio: { width: 22, height: 22, borderRadius: 11, borderWidth: 1.5, borderColor: colores.linea, alignItems: 'center', justifyContent: 'center' },
   radioPunto: { width: 10, height: 10, borderRadius: 5, backgroundColor: colores.marino },
 
@@ -772,14 +772,14 @@ export const s = crearEstilos(() => ({
     flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: espacio.m + 2, height: 32, borderRadius: radio.pill,
     backgroundColor: fondos.relleno,
   },
-  chipTexto: { fontFamily: fuentes.medium, fontSize: 14, letterSpacing: -0.15, color: colores.texto },
+  chipTexto: { fontFamily: fuentes.semibold, fontSize: 14, letterSpacing: -0.15, color: colores.texto },
   insignia: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 3, borderRadius: radio.pill, alignSelf: 'flex-start' },
   insigniaTexto: { fontFamily: fuentes.semibold, fontSize: 12, letterSpacing: 0 },
 
   segmentado: { flexDirection: 'row', backgroundColor: fondos.relleno, borderRadius: 9, padding: 2, marginBottom: espacio.l },
   segmento: { flex: 1, height: 32, alignItems: 'center', justifyContent: 'center', borderRadius: 7 },
   segmentoActivo: { backgroundColor: fondos.seleccion, ...sombras.media },
-  segmentoTexto: { fontFamily: fuentes.medium, fontSize: 13.5, letterSpacing: -0.1, color: colores.texto },
+  segmentoTexto: { fontFamily: fuentes.semibold, fontSize: 13.5, letterSpacing: -0.1, color: colores.texto },
 
   contador: { flexDirection: 'row', alignItems: 'center', backgroundColor: fondos.relleno, borderRadius: 9, padding: 2 },
   contadorBoton: { width: 40, height: 32, borderRadius: 7, alignItems: 'center', justifyContent: 'center' },
@@ -790,7 +790,7 @@ export const s = crearEstilos(() => ({
     borderRadius: radio.l, marginVertical: espacio.s, backgroundColor: fondos.superficieBlanca,
   },
   mensajeIcono: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
-  mensajeTitulo: { fontFamily: fuentes.semibold, fontSize: 15, letterSpacing: -0.2, color: colores.texto, marginBottom: 2 },
+  mensajeTitulo: { fontFamily: fuentes.bold, fontSize: 15, letterSpacing: -0.2, color: colores.texto, marginBottom: 2 },
   // Sin flex: 1: en Android estiraba el texto a todo el alto y quedaba arriba, descentrado.
   mensajeTexto: { flexShrink: 1, fontFamily: fuentes.regular, fontSize: 15, lineHeight: 20, letterSpacing: -0.15, color: colores.texto },
   mensajeLinea: { alignSelf: 'center', maxWidth: 340, marginVertical: espacio.s, paddingHorizontal: espacio.s },
@@ -798,12 +798,12 @@ export const s = crearEstilos(() => ({
 
   vacio: { alignItems: 'center', paddingVertical: espacio.l, paddingHorizontal: espacio.m },
   vacioIcono: { alignItems: 'center', justifyContent: 'center', marginBottom: espacio.s },
-  vacioTitulo: { fontFamily: fuentes.semibold, fontSize: 19, letterSpacing: -0.4, color: colores.texto, textAlign: 'center' },
+  vacioTitulo: { fontFamily: fuentes.bold, fontSize: 19, letterSpacing: -0.4, color: colores.texto, textAlign: 'center' },
   vacioTexto: { ...texto.chico, color: colores.textoSuave, textAlign: 'center', marginTop: espacio.xs, maxWidth: 300 },
 
   item: { flex: 1, fontFamily: fuentes.regular, fontSize: 15, lineHeight: 21, color: colores.texto },
   punto: { width: 6, height: 6, borderRadius: 3, backgroundColor: colores.marino, marginTop: 8 },
-  seccion: { ...texto.etiqueta, color: colores.textoSuave, marginBottom: espacio.s, marginTop: espacio.m, marginLeft: espacio.xs },
+  seccion: { ...texto.etiqueta, color: colores.textoSuave, marginBottom: espacio.s, marginTop: espacio.m },
   seccionFila: { flexDirection: 'row', alignItems: 'center', gap: espacio.s, marginBottom: espacio.m, marginTop: espacio.m },
   seccionTexto: { fontFamily: fuentes.bold, fontSize: 20, letterSpacing: -0.45, color: colores.texto },
 

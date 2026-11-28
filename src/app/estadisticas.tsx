@@ -74,7 +74,7 @@ export default function Estadisticas() {
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: espacio.l }}>
             <AnilloProgreso porcentaje={e.progreso.porcentaje} tamano={104} etiqueta="de la carrera" />
             <View style={{ flex: 1, gap: espacio.xs }}>
-              <Text style={s.etiqueta}>Avance</Text>
+              <Text style={s.fuerte}>Avance de la carrera</Text>
               <Text style={[s.cuerpo, { color: colores.texto }]}>
                 {e.exigidas - e.faltan} de {e.exigidas} materias
                 {unidad ? `\n${numero(e.progreso.aprobado)} de ${numero(e.progreso.total)} ${unidad}` : ''}
