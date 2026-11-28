@@ -106,11 +106,11 @@ export function Pantalla({ children, scroll = true, estilo, cabecera, refrescand
   );
   return (
     <EvitaTeclado estilo={s.pantalla}>
-    <SafeAreaView style={[s.pantalla, marca && { backgroundColor: fondos.franja }]} edges={marca ? ['left', 'right'] : ['top', 'left', 'right']}>
+    <SafeAreaView style={s.pantalla} edges={marca ? ['left', 'right'] : ['top', 'left', 'right']}>
       {barra}
-      {/* Con barra fija, el contenido va en una hoja de esquinas redondeadas que recorta lo que se desplaza por debajo. */}
+      {/* Como en iOS, la barra fija tiene el mismo color que el fondo y una línea finita la separa del contenido que se desplaza. */}
       {/* Sin fundido de la pantalla entera: mientras entra, una pantalla semitransparente dejaba ver la anterior detrás. */}
-      <View style={[{ flex: 1, backgroundColor: fondos.fondo }, marca && s.hojaContenido]}>
+      <View style={{ flex: 1, backgroundColor: fondos.fondo }}>
         {cuerpo}
       </View>
     </SafeAreaView>
@@ -132,7 +132,7 @@ export function BarraPortal({ derecha, sinPerfil }: { derecha?: ReactNode; sinPe
       <View style={[s.cabeceraBarra, { paddingTop: insets.top + espacio.s }, ancho]}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: espacio.s, flexShrink: 1 }}>
           <View style={s.cabeceraLogo}>
-            <Image source={logoCeq} style={{ width: 24, height: 24 }} accessibilityLabel="Logo del CEQ" />
+            <Image source={logoCeq} style={{ width: 22, height: 22 }} accessibilityLabel="Logo del CEQ" />
           </View>
           <Text style={s.cabeceraMarca} numberOfLines={1}>Portal CEQ</Text>
           <Text style={s.cabeceraMarcaSub} numberOfLines={1}>FCQ · UNA</Text>
@@ -141,7 +141,7 @@ export function BarraPortal({ derecha, sinPerfil }: { derecha?: ReactNode; sinPe
           <View style={s.cabeceraAcciones}>
             {derecha}
             {derecha && !sinPerfil ? <View style={s.cabeceraSeparador} /> : null}
-            {!sinPerfil ? <BotonIcono icono="person-circle-outline" etiqueta="Abrir mi perfil" plano tamano={26} onPress={() => router.push('/perfil')} /> : null}
+            {!sinPerfil ? <BotonIcono icono="person-circle" etiqueta="Abrir mi perfil" plano tamano={30} onPress={() => router.push('/perfil')} /> : null}
           </View>
         ) : null}
       </View>
@@ -709,14 +709,13 @@ export const s = crearEstilos(() => ({
   pantalla: { flex: 1, backgroundColor: fondos.fondo },
   contenido: { padding: espacio.l, paddingBottom: espacio.xxxl + espacio.xl },
 
-  cabecera: { backgroundColor: fondos.franja },
-  cabeceraBarra: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: espacio.m, paddingHorizontal: espacio.l, paddingBottom: espacio.s + 2 },
-  cabeceraLogo: { width: 34, height: 34, borderRadius: 17, backgroundColor: fondos.blanco, alignItems: 'center', justifyContent: 'center' },
-  cabeceraMarca: { fontFamily: fuentes.bold, fontSize: 17, letterSpacing: -0.3, color: colores.marinoOscuro },
-  cabeceraMarcaSub: { fontFamily: fuentes.medium, fontSize: 12.5, color: colores.marinoOscuro, flexShrink: 1 },
-  cabeceraAcciones: { flexDirection: 'row', alignItems: 'center', backgroundColor: fondos.superficieBlanca, borderRadius: 999, paddingHorizontal: 4, paddingVertical: 2, ...sombras.media },
-  cabeceraSeparador: { width: StyleSheet.hairlineWidth, alignSelf: 'stretch', marginVertical: 8, backgroundColor: colores.linea },
-  hojaContenido: { backgroundColor: fondos.fondo, borderTopLeftRadius: radio.xl + 8, borderTopRightRadius: radio.xl + 8, overflow: 'hidden' },
+  cabecera: { backgroundColor: fondos.fondo, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colores.linea },
+  cabeceraBarra: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: espacio.m, paddingHorizontal: espacio.l, paddingBottom: espacio.s },
+  cabeceraLogo: { width: 30, height: 30, borderRadius: 8, backgroundColor: fondos.blanco, alignItems: 'center', justifyContent: 'center' },
+  cabeceraMarca: { fontFamily: fuentes.semibold, fontSize: 17, letterSpacing: -0.35, color: colores.texto },
+  cabeceraMarcaSub: { fontFamily: fuentes.regular, fontSize: 13, color: colores.textoSuave, flexShrink: 1 },
+  cabeceraAcciones: { flexDirection: 'row', alignItems: 'center', gap: 2 },
+  cabeceraSeparador: { width: 0 },
   cabeceraCuerpo: { paddingHorizontal: espacio.l, paddingTop: espacio.m },
   cabeceraTitulo: { ...texto.display, color: colores.texto },
   cabeceraSub: { fontFamily: fuentes.regular, fontSize: 15, lineHeight: 20, letterSpacing: -0.15, color: colores.textoSuave, marginTop: 2 },
