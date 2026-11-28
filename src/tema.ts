@@ -31,7 +31,7 @@ const claro = {
   tarjeta: '#EAF1FA',       // relleno teñido de azul (íconos, avisos suaves)
 
   // Superficies y texto
-  fondo: '#F3F7FC',         // fondo agrupado, apenas celeste
+  fondo: '#F2F2F7',         // fondo agrupado de iOS
   fondoSuave: '#F7F7FA',
   superficieBlanca: '#FFFFFF',
   texto: '#0B0B0F',
@@ -64,7 +64,7 @@ const claro = {
   celesteMarca: '#1E5BB0',
 
   // Franja superior de las pantallas (barra "Portal CEQ") y burbuja decorativa del título
-  franja: '#C8DBF0',
+  franja: '#F2F2F7',
   burbuja: '#E4EEF9',
 
   // Rellenos neutros al estilo iOS: pista de controles segmentados, chips, buscador
